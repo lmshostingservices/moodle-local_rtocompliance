@@ -1,5 +1,29 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * local_rtocompliance file.
+ *
+ * @package    local_rtocompliance
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ */
+
 require_once(__DIR__ . '/../../config.php');
+require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
@@ -159,14 +183,14 @@ var WFM_RATIOS = { 'face-to-face': 20, 'online': 12, 'workplace': 15, 'mixed': 2
 var WFM_MODE_LABELS = { 'face-to-face': 'Face-to-Face', 'online': 'Online', 'workplace': 'Workplace-Based', 'mixed': 'Mixed/Blended' };
 
 function wfmParseUnits(raw) {
-  var lines = raw.split('\n').map(function(l){ return l.trim(); }).filter(function(l){ return l.length > 0; });
-  return lines.map(function(line) {
+  var lines = raw.split('\n').map(function (l){ return l.trim(); }).filter(function (l){ return l.length > 0; });
+  return lines.map(function (line) {
     var parts = line.split('|');
     var unit = parts[0] ? parts[0].trim() : '';
     var trainer = parts[1] ? parts[1].trim() : '';
     var isGap = !trainer || trainer.toLowerCase().indexOf('no trainer') !== -1 || trainer === '-' || trainer === '';
     return { unit: unit, trainer: isGap ? '' : trainer, gap: isGap };
-  }).filter(function(r){ return r.unit !== ''; });
+  }).filter(function (r){ return r.unit !== ''; });
 }
 
 function wfmRun() {
@@ -259,10 +283,10 @@ function wfmRun() {
   var mappingAlerts = [];
   var mappingOutEl = document.getElementById('wfm-mapping-output');
   if (units.length > 0) {
-    var gapCount = units.filter(function(u){ return u.gap; }).length;
+    var gapCount = units.filter(function (u){ return u.gap; }).length;
     var tableHtml = '<h5 style="margin:1rem 0 0.5rem;font-weight:700;">Unit-to-Trainer Assignment</h5>' +
       '<table class="wfm-mapping-table"><thead><tr><th>Unit Code</th><th>Assigned Trainer</th><th>Status</th></tr></thead><tbody>';
-    units.forEach(function(u) {
+    units.forEach(function (u) {
       var rowClass = u.gap ? 'gap-row' : 'ok-row';
       var status = u.gap ? '&#10005; GAP — no qualified trainer assigned' : '&#10003; Assigned';
       tableHtml += '<tr class="'+rowClass+'"><td>'+u.unit+'</td><td>'+(u.trainer||'<em>Not assigned</em>')+'</td><td>'+status+'</td></tr>';
@@ -282,12 +306,12 @@ function wfmRun() {
   var allAlerts = alerts.concat(mappingAlerts);
   var alertsEl = document.getElementById('wfm-alerts');
   alertsEl.innerHTML = '<div style="margin-top:0.75rem;">' +
-    allAlerts.map(function(a) { return '<div class="wfm-alert '+a.type+'">'+a.msg+'</div>'; }).join('') +
+    allAlerts.map(function (a) { return '<div class="wfm-alert '+a.type+'">'+a.msg+'</div>'; }).join('') +
     '</div>';
 
   // Compliance statement
   var today = new Date().toLocaleDateString('en-AU', {day:'2-digit',month:'long',year:'numeric'});
-  var gapUnits = units.filter(function(u){ return u.gap; });
+  var gapUnits = units.filter(function (u){ return u.gap; });
   var compText = 'WORKFORCE MANAGEMENT COMPLIANCE STATEMENT\n';
   compText += 'Generated: ' + today + '\n\n';
   compText += 'The RTO uses a structured workforce management system that continuously monitors student numbers, delivery requirements, assessment load, and trainer capacity in accordance with Standard 3.1 of the Standards for Registered Training Organisations (RTOs) 2025.\n\n';
@@ -308,10 +332,10 @@ function wfmRun() {
   if (units.length > 0) {
     compText += 'UNIT-TO-TRAINER MAPPING\n';
     compText += 'Total units in scope: ' + units.length + '\n';
-    compText += 'Units with assigned trainer: ' + units.filter(function(u){return !u.gap;}).length + '\n';
+    compText += 'Units with assigned trainer: ' + units.filter(function (u){return !u.gap;}).length + '\n';
     compText += 'Coverage gaps: ' + gapUnits.length + '\n';
     if (gapUnits.length > 0) {
-      compText += 'Gap units: ' + gapUnits.map(function(u){return u.unit;}).join(', ') + '\n';
+      compText += 'Gap units: ' + gapUnits.map(function (u){return u.unit;}).join(', ') + '\n';
       compText += 'ACTION: Recruit or assign a trainer with verified vocational competency for each gap unit listed above.\n';
     } else {
       compText += 'All units have a qualified trainer assigned. The RTO has verified vocational competency evidence for each trainer-unit assignment.\n';

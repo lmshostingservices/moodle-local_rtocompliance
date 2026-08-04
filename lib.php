@@ -1,4 +1,27 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * local_rtocompliance file.
+ *
+ * @package    local_rtocompliance
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ */
+
 defined('MOODLE_INTERNAL') || die();
 // FIX-LIB-DOUBLE-LOAD (v5.9.55): Guard against lib.php being loaded twice on symlinked
 // Moodle installs (confirmed root cause of a 4-week HTTP 500 on soa_issue.php and
@@ -1704,7 +1727,7 @@ function local_rtocompliance_render_sidebar(): string {
         'play-sq'    => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><polygon points="10 8 16 12 10 16 10 8"/></svg>',
     ];
 
-    $icon = function(string $name) use ($icons): string {
+    $icon = function (string $name) use ($icons): string {
         $svg = $icons[$name] ?? $icons['help'];
         return '<span class="rtoc-sb-icon">' . $svg . '</span>';
     };
@@ -2324,7 +2347,7 @@ CSSEND;
     if (false) { // DEAD CODE: preserves the heredoc delimiter JSEND so PHP parses cleanly
     $html .= <<<'JSEND'
 <script>
-(function() {
+(function () {
     var STORAGE_KEY = 'rtoc_sb_collapsed';
     var SB_W  = 258;
     var SB_CW = 62;
@@ -2341,19 +2364,19 @@ CSSEND;
     // -- MOBILE: slide-in overlay ------------------------------------------
     function setupMobile() {
         if (mobileBtn) {
-            mobileBtn.addEventListener('click', function() {
+            mobileBtn.addEventListener('click', function () {
                 sidebar.classList.toggle('rtoc-sb-mobile-open');
                 if (overlay) overlay.classList.toggle('rtoc-overlay-visible');
             });
         }
         if (overlay) {
-            overlay.addEventListener('click', function() {
+            overlay.addEventListener('click', function () {
                 sidebar.classList.remove('rtoc-sb-mobile-open');
                 overlay.classList.remove('rtoc-overlay-visible');
             });
         }
-        sidebar.querySelectorAll('.rtoc-sb-item').forEach(function(a) {
-            a.addEventListener('click', function() {
+        sidebar.querySelectorAll('.rtoc-sb-item').forEach(function (a) {
+            a.addEventListener('click', function () {
                 sidebar.classList.remove('rtoc-sb-mobile-open');
                 if (overlay) overlay.classList.remove('rtoc-overlay-visible');
             });
@@ -2382,7 +2405,7 @@ CSSEND;
     }
 
     if (toggleBtn) {
-        toggleBtn.addEventListener('click', function() {
+        toggleBtn.addEventListener('click', function () {
             var willCollapse = !sidebar.classList.contains('rtoc-sb-is-collapsed');
             applyCollapsed(willCollapse);
             localStorage.setItem(STORAGE_KEY, willCollapse ? '1' : '0');
@@ -2405,8 +2428,8 @@ CSSEND;
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ siteId: siteid, apiKey: apikey })
         })
-        .then(function(r) { return r.ok ? r.json() : null; })
-        .then(function(d) {
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
             if (!d) return;
             if (d.isUnlimited || d.creditsRaw === -1) {
                 valEl.textContent = 'Unlimited';
@@ -2417,7 +2440,7 @@ CSSEND;
                 valEl.style.color = bal < 10 ? '#f87171' : (bal < 50 ? '#fbbf24' : '#93c5fd');
             }
         })
-        .catch(function() { /* silent — credits widget is non-critical UI */ });
+        .catch(function () { /* silent — credits widget is non-critical UI */ });
     }
 
     // -- Init --------------------------------------------------------------
@@ -2441,7 +2464,7 @@ CSSEND;
         // Auto-scroll: push the page so Moodle's fixed primary header stays visible
         // but ALL secondary chrome (secondary-nav, breadcrumbs, page-header) scrolls away,
         // leaving plugin content flush against the bottom edge of the fixed header.
-        setTimeout(function() {
+        setTimeout(function () {
             if (window.scrollY > 80) return; // user already scrolled — respect their position
             // Measure the actual height of Moodle's fixed primary navbar at runtime.
             var navEl = document.querySelector('.navbar.fixed-top')
@@ -2464,7 +2487,7 @@ CSSEND;
 
     document.addEventListener('DOMContentLoaded', doInit);
 
-    window.addEventListener('resize', function() {
+    window.addEventListener('resize', function () {
         if (!isMobile()) {
             applyCollapsed(localStorage.getItem(STORAGE_KEY) === '1');
             sidebar.classList.remove('rtoc-sb-mobile-open');
@@ -2724,7 +2747,7 @@ function local_rtocompliance_send_certificate_email(object $cert, object $user):
     // the temp PDF even if email_to_user() throws an uncaught exception before
     // the explicit @unlink() below is reached.  The shutdown callback is a no-op
     // if the file has already been deleted by the normal path.
-    register_shutdown_function(function() use ($temppath) {
+    register_shutdown_function(function () use ($temppath) {
         if (file_exists($temppath)) {
             @unlink($temppath);
         }

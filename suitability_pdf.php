@@ -1,4 +1,27 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * local_rtocompliance file.
+ *
+ * @package    local_rtocompliance
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ */
+
 // PDF report for a completed pre-enrolment suitability review.
 // AUDIT-REWRITE (v4.2.47): provides downloadable evidence for ASQA audit
 // of Standard 2 PI 2(a) & 2(b) — structured review + system-generated
@@ -72,7 +95,7 @@ $pdf->Line(15, $pdf->GetY(), 195, $pdf->GetY());
 $pdf->Ln(4);
 
 // Helper to render a labelled row.
-$row = function(string $label, string $value) use ($pdf) {
+$row = function (string $label, string $value) use ($pdf) {
     $pdf->SetFont('helvetica', 'B', 9);
     $pdf->SetTextColor(60, 60, 60);
     $pdf->Cell(60, 6, $label, 0, 0, 'L');

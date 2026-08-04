@@ -1,5 +1,21 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
 require_once(__DIR__ . '/../../config.php');
+require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
@@ -19,6 +35,9 @@ $PAGE->set_heading(get_string('surveys', 'local_rtocompliance'));
  * @param string $type   'learner' or 'employer'
  * @param int    $year   Survey period year (e.g. 2026)
  * @param int    $count  Number of completed responses available for analysis
+ * @package    local_rtocompliance
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
 function rtoc_render_run_analysis_form($type, $year, $count) {
     $confirmmsg = "Run AI analysis on {$count} completed " . ($type === 'employer' ? 'employer' : 'learner')

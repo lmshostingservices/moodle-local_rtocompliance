@@ -1,4 +1,19 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
 namespace local_rtocompliance\usi;
 
 defined('MOODLE_INTERNAL') || die();
@@ -11,6 +26,9 @@ defined('MOODLE_INTERNAL') || die();
  * 
  * Based on MAS-ST Service Definition v1.1 (June 2024)
  * https://softwareauthorisations.ato.gov.au/R3.0/S007v1.3/service.svc
+ * @package    local_rtocompliance
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
 class usi_registry_client {
     

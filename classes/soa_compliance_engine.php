@@ -1,4 +1,19 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
 // v4.6.101 MULTI-UNIT-SOA — Backend compliance engine.
 // Fetches eligible units for a student from Moodle course completions,
 // runs per-unit AQF/ASQA compliance checks, groups units into suggested
@@ -14,7 +29,6 @@ namespace local_rtocompliance;
 defined('MOODLE_INTERNAL') || die();
 
 class soa_compliance_engine {
-
     // AVETMISS outcome codes that mean "competency achieved".
     const COMPETENT_OUTCOMES = ['20', '51', '52', '81', '82'];
 
@@ -44,7 +58,10 @@ class soa_compliance_engine {
      * @param int  $userid
      * @param bool $override   When true, include units with non-competent outcomes
      * @return stdClass[]
-     */
+ * @package    local_rtocompliance
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ */
     public static function get_eligible_units(int $userid, bool $override = false): array {
         global $DB;
 
@@ -168,7 +185,7 @@ class soa_compliance_engine {
             $units[] = $u;
         }
 
-        usort($units, function($a, $b) {
+        usort($units, function ($a, $b) {
             $c = strcmp($a->categoryname, $b->categoryname);
             return $c !== 0 ? $c : strcmp($a->unitcode, $b->unitcode);
         });
@@ -242,7 +259,7 @@ class soa_compliance_engine {
             }
             $groups[$key]['units'][] = $unit;
         }
-        usort($groups, function($a, $b) { return count($b['units']) - count($a['units']); });
+        usort($groups, function ($a, $b) { return count($b['units']) - count($a['units']); });
         return array_values($groups);
     }
 

@@ -1,4 +1,27 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * local_rtocompliance file.
+ *
+ * @package    local_rtocompliance
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ */
+
 // v4.2.36 CERTIFICATES-REDESIGN — Substantial UX overhaul.
 //
 // Replaces the previous filter-tabs + 50-card grid with a proper management UI:
@@ -15,6 +38,7 @@
 // Top section (clause banner + stat cards + USI alert) is unchanged from v4.2.35.
 
 require_once(__DIR__ . '/../../config.php');
+require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
@@ -528,7 +552,7 @@ echo html_writer::end_div();
 echo html_writer::end_div();
 
 // ── Helper closure: build action button HTML for one cert ───────────────────
-$buildActions = function($cert, $usiMissing, $isReplacedOriginal) use ($USER) {
+$buildActions = function ($cert, $usiMissing, $isReplacedOriginal) use ($USER) {
     $sesskey = sesskey();
     $out = '';
     $replacedTitle = 'Original cert preserved for audit trail — see the replacement row for actions';
@@ -680,7 +704,7 @@ if (!$certs) {
     );
 } else if ($view === 'table') {
     // Sortable column header link helper.
-    $sortLink = function($column, $label) use ($baseparams, $sort, $dir, $view) {
+    $sortLink = function ($column, $label) use ($baseparams, $sort, $dir, $view) {
         $newdir = ($sort === $column && $dir === 'ASC') ? 'DESC' : 'ASC';
         $url = new moodle_url('/local/rtocompliance/certificates.php',
             $baseparams + ['view' => $view, 'sort' => $column, 'dir' => $newdir]);
@@ -883,7 +907,7 @@ $bulkEndpoint    = (new moodle_url('/local/rtocompliance/bulk_action_cert.php'))
 </div>
 <?php endif; ?>
 <script>
-(function() {
+(function () {
     'use strict';
     var EMAIL_URL   = <?php echo json_encode($emailEndpoint); ?>;
     var REISSUE_URL = <?php echo json_encode($reissueEndpoint); ?>;
@@ -902,8 +926,8 @@ $bulkEndpoint    = (new moodle_url('/local/rtocompliance/bulk_action_cert.php'))
     }
 
     // Email button — one-click AJAX, no confirm dialog.
-    document.querySelectorAll('.rtoc-cert-email-btn').forEach(function(btn) {
-        btn.addEventListener('click', function() {
+    document.querySelectorAll('.rtoc-cert-email-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
             var id = btn.dataset.certId;
             var sesskey = btn.dataset.sesskey;
             setBtnBusy(btn, true, 'Sending...');
@@ -916,19 +940,19 @@ $bulkEndpoint    = (new moodle_url('/local/rtocompliance/bulk_action_cert.php'))
                 body: fd,
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
                 credentials: 'same-origin'
-            }).then(function(r) {
-                return r.json().then(function(j) { return { ok: r.ok, body: j }; });
-            }).then(function(res) {
+            }).then(function (r) {
+                return r.json().then(function (j) { return { ok: r.ok, body: j }; });
+            }).then(function (res) {
                 if (res.body && res.body.ok) {
                     btn.textContent = 'Emailed';
                     btn.classList.remove('btn-secondary');
                     btn.classList.add('btn-success');
-                    setTimeout(function() { window.location.reload(); }, 800);
+                    setTimeout(function () { window.location.reload(); }, 800);
                 } else {
                     setBtnBusy(btn, false);
                     alert('Email failed: ' + ((res.body && res.body.error) || 'Unknown error'));
                 }
-            }).catch(function(e) {
+            }).catch(function (e) {
                 setBtnBusy(btn, false);
                 alert('Email request failed: ' + e.message);
             });
@@ -936,8 +960,8 @@ $bulkEndpoint    = (new moodle_url('/local/rtocompliance/bulk_action_cert.php'))
     });
 
     // Reissue button — confirm prompt (cost disclosure), then AJAX.
-    document.querySelectorAll('.rtoc-cert-reissue-btn').forEach(function(btn) {
-        btn.addEventListener('click', function() {
+    document.querySelectorAll('.rtoc-cert-reissue-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
             var id        = btn.dataset.certId;
             var num       = btn.dataset.certNumber;
             var name      = btn.dataset.fullname;
@@ -958,14 +982,14 @@ $bulkEndpoint    = (new moodle_url('/local/rtocompliance/bulk_action_cert.php'))
                 body: fd,
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
                 credentials: 'same-origin'
-            }).then(function(r) {
-                return r.json().then(function(j) { return { ok: r.ok, body: j }; });
-            }).then(function(res) {
+            }).then(function (r) {
+                return r.json().then(function (j) { return { ok: r.ok, body: j }; });
+            }).then(function (res) {
                 if (res.body && res.body.ok) {
                     btn.textContent = 'Reissued: ' + res.body.new_certnumber;
                     btn.classList.remove('btn-warning');
                     btn.classList.add('btn-success');
-                    setTimeout(function() { window.location.reload(); }, 1000);
+                    setTimeout(function () { window.location.reload(); }, 1000);
                 } else {
                     setBtnBusy(btn, false);
                     var err = (res.body && res.body.error) || 'Unknown error';
@@ -977,7 +1001,7 @@ $bulkEndpoint    = (new moodle_url('/local/rtocompliance/bulk_action_cert.php'))
                         alert('Reissue failed: ' + err);
                     }
                 }
-            }).catch(function(e) {
+            }).catch(function (e) {
                 setBtnBusy(btn, false);
                 alert('Reissue request failed: ' + e.message);
             });
@@ -985,8 +1009,8 @@ $bulkEndpoint    = (new moodle_url('/local/rtocompliance/bulk_action_cert.php'))
     });
 
     // Delete button — confirm, then AJAX revoke.
-    document.querySelectorAll('.rtoc-cert-delete-btn').forEach(function(btn) {
-        btn.addEventListener('click', function() {
+    document.querySelectorAll('.rtoc-cert-delete-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
             var id      = btn.dataset.certId;
             var num     = btn.dataset.certNumber;
             var name    = btn.dataset.fullname;
@@ -1006,19 +1030,19 @@ $bulkEndpoint    = (new moodle_url('/local/rtocompliance/bulk_action_cert.php'))
                 body: fd,
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
                 credentials: 'same-origin'
-            }).then(function(r) {
-                return r.json().then(function(j) { return { ok: r.ok, body: j }; });
-            }).then(function(res) {
+            }).then(function (r) {
+                return r.json().then(function (j) { return { ok: r.ok, body: j }; });
+            }).then(function (res) {
                 if (res.body && res.body.ok) {
                     btn.textContent = 'Deleted';
                     btn.classList.remove('btn-outline-danger');
                     btn.classList.add('btn-secondary');
-                    setTimeout(function() { window.location.reload(); }, 800);
+                    setTimeout(function () { window.location.reload(); }, 800);
                 } else {
                     setBtnBusy(btn, false);
                     alert('Delete failed: ' + ((res.body && res.body.error) || 'Unknown error'));
                 }
-            }).catch(function(e) {
+            }).catch(function (e) {
                 setBtnBusy(btn, false);
                 alert('Delete request failed: ' + e.message);
             });
@@ -1041,7 +1065,7 @@ $bulkEndpoint    = (new moodle_url('/local/rtocompliance/bulk_action_cert.php'))
 
     function selectedIds() {
         var out = [];
-        rowChecks.forEach(function(cb) { if (cb.checked) { out.push(cb.value); } });
+        rowChecks.forEach(function (cb) { if (cb.checked) { out.push(cb.value); } });
         return out;
     }
 
@@ -1055,22 +1079,22 @@ $bulkEndpoint    = (new moodle_url('/local/rtocompliance/bulk_action_cert.php'))
         }
     }
 
-    rowChecks.forEach(function(cb) { cb.addEventListener('change', refreshBar); });
+    rowChecks.forEach(function (cb) { cb.addEventListener('change', refreshBar); });
 
     if (selectAll) {
-        selectAll.addEventListener('change', function() {
-            rowChecks.forEach(function(cb) { cb.checked = selectAll.checked; });
+        selectAll.addEventListener('change', function () {
+            rowChecks.forEach(function (cb) { cb.checked = selectAll.checked; });
             refreshBar();
         });
     }
 
-    btnClear.addEventListener('click', function() {
-        rowChecks.forEach(function(cb) { cb.checked = false; });
+    btnClear.addEventListener('click', function () {
+        rowChecks.forEach(function (cb) { cb.checked = false; });
         refreshBar();
     });
 
     function setBarBusy(busy) {
-        [btnEmail, btnZip, btnCsv, btnClear].forEach(function(b) { b.disabled = busy; });
+        [btnEmail, btnZip, btnCsv, btnClear].forEach(function (b) { b.disabled = busy; });
     }
 
     function makeInput(name, val) {
@@ -1082,7 +1106,7 @@ $bulkEndpoint    = (new moodle_url('/local/rtocompliance/bulk_action_cert.php'))
     }
 
     // Email — AJAX, returns JSON summary.
-    btnEmail.addEventListener('click', function() {
+    btnEmail.addEventListener('click', function () {
         var ids = selectedIds();
         if (ids.length === 0) { return; }
         if (!confirm('Email ' + ids.length + ' certificate(s) to their students?\n\nAlready-emailed, USI-blocked, and replaced certificates will be skipped automatically.\n\nNo credits are charged for emailing.')) {
@@ -1102,9 +1126,9 @@ $bulkEndpoint    = (new moodle_url('/local/rtocompliance/bulk_action_cert.php'))
             body: fd,
             headers: { 'X-Requested-With': 'XMLHttpRequest' },
             credentials: 'same-origin'
-        }).then(function(r) {
-            return r.json().then(function(j) { return { ok: r.ok, body: j }; });
-        }).then(function(res) {
+        }).then(function (r) {
+            return r.json().then(function (j) { return { ok: r.ok, body: j }; });
+        }).then(function (res) {
             setBarBusy(false);
             btnEmail.textContent = origLabel;
             if (!res.body || !res.body.ok) {
@@ -1118,7 +1142,7 @@ $bulkEndpoint    = (new moodle_url('/local/rtocompliance/bulk_action_cert.php'))
                       '  Failed:  ' + c.failed;
             alert(msg);
             window.location.reload();
-        }).catch(function(e) {
+        }).catch(function (e) {
             setBarBusy(false);
             btnEmail.textContent = origLabel;
             alert('Bulk email request failed: ' + e.message);
@@ -1126,7 +1150,7 @@ $bulkEndpoint    = (new moodle_url('/local/rtocompliance/bulk_action_cert.php'))
     });
 
     // Download ZIP — submit a form so the browser handles the binary download.
-    btnZip.addEventListener('click', function() {
+    btnZip.addEventListener('click', function () {
         var ids = selectedIds();
         if (ids.length === 0) { return; }
         var f = document.createElement('form');
@@ -1142,7 +1166,7 @@ $bulkEndpoint    = (new moodle_url('/local/rtocompliance/bulk_action_cert.php'))
     });
 
     // Export CSV — also a form submit (binary stream).
-    btnCsv.addEventListener('click', function() {
+    btnCsv.addEventListener('click', function () {
         var ids = selectedIds();
         if (ids.length === 0) { return; }
         var f = document.createElement('form');

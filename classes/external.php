@@ -1,4 +1,27 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * local_rtocompliance file.
+ *
+ * @package    local_rtocompliance
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ */
+
 namespace local_rtocompliance;
 
 defined('MOODLE_INTERNAL') || die();
@@ -15,7 +38,6 @@ use external_multiple_structure;
 use local_rtocompliance\audit_logger;
 
 class external extends external_api {
-
     public static function get_student_parameters() {
         return new external_function_parameters([
             'userid' => new external_value(PARAM_INT, 'Moodle user ID', VALUE_REQUIRED),
@@ -861,7 +883,7 @@ class external extends external_api {
 
         // Helper: walk parent chain to find the depth-0 (root) ancestor of a category.
         // Max 10 hops to guard against cyclic data.
-        $getRootCatId = function(int $catid) use ($catParentMap) : int {
+        $getRootCatId = function (int $catid) use ($catParentMap) : int {
             $hops = 0;
             while (isset($catParentMap[$catid]) && $catParentMap[$catid] !== 0 && $hops < 10) {
                 $catid = $catParentMap[$catid];
@@ -973,7 +995,7 @@ class external extends external_api {
         // keeps the extra payload minimal (only genuinely relevant courses added).
         // Courses added here get rootcatid=0 so the JS knows they are cross-package.
         if ($categoryid > 0 && !empty($unitdata)) {
-            $tgaUnitCodes    = array_map(function($u) { return strtoupper($u['unitcode']); }, $unitdata);
+            $tgaUnitCodes    = array_map(function ($u) { return strtoupper($u['unitcode']); }, $unitdata);
             $subtreeCourseIds = array_column($moodlecourses, 'id');
             $crossRs = $DB->get_recordset_sql(
                 "SELECT id, shortname, fullname, category, idnumber, sortorder

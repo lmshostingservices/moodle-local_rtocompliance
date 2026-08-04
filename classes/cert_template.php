@@ -67,7 +67,6 @@ defined('MOODLE_INTERNAL') || die();
 require_once(__DIR__ . '/certificate_validator.php');
 
 class cert_template {
-
     /**
      * v4.3.0 CERT-TEMPLATE-AUDIENCES — supported audience codes.
      *

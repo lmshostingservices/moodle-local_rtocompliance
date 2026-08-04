@@ -1,5 +1,21 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
 require_once(__DIR__ . '/../../config.php');
+require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
@@ -53,8 +69,11 @@ $riskfactorkeys  = ['new_product', 'new_trainer', 'high_enrolments', 'high_compl
 /**
  * Decode a stored selection field into ['keys' => [...], 'notes' => '...'].
  * Supports the new JSON format and the legacy "key1, key2\nFreeform notes" format.
+ * @package    local_rtocompliance
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
-$rtoc_decode_selection = function($raw, $validkeys) {
+$rtoc_decode_selection = function ($raw, $validkeys) {
     $result = ['keys' => [], 'notes' => ''];
     if (empty($raw)) {
         return $result;
@@ -251,14 +270,14 @@ echo '<div id="rtoc-val-ai-config"'
     . ' style="display:none;"></div>';
 ?>
 <script>
-(function() {
+(function () {
     var cfg = document.getElementById('rtoc-val-ai-config');
     if (!cfg) return;
     var API_KEY  = cfg.getAttribute('data-api-key')  || '';
     var API_BASE = cfg.getAttribute('data-api-base') || 'https://lms-labs.com';
 
     // Wait for Moodle's own JS to finish initialising the form.
-    document.addEventListener('DOMContentLoaded', function() { injectBtn(); });
+    document.addEventListener('DOMContentLoaded', function () { injectBtn(); });
     if (document.readyState === 'loading') {
         // DOMContentLoaded not yet fired — listener above covers us.
     } else {
@@ -293,7 +312,7 @@ echo '<div id="rtoc-val-ai-config"'
         wrap.appendChild(status);
         ta.parentNode.insertBefore(wrap, ta.nextSibling);
 
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function () {
             // Gather checked methodology checkboxes.
             // FIX-METHODOLOGY-CHECKBOX: Use hardcoded element IDs matching the exact Moodle
             // rendering pattern (id_methodologiesgroup_method_<code>) for reliable detection
@@ -302,7 +321,7 @@ echo '<div id="rtoc-val-ai-config"'
                               'industry_feedback', 'moderator_review', 'compliance_check', 'rpl_review',
                               'observation_review', 'benchmarking'];
             var checked = [];
-            methodKeys.forEach(function(key) {
+            methodKeys.forEach(function (key) {
                 var cb = document.getElementById('id_methodologiesgroup_method_' + key);
                 if (cb && cb.checked) {
                     checked.push(key);
@@ -313,7 +332,7 @@ echo '<div id="rtoc-val-ai-config"'
                 var fallbackCbs = document.querySelectorAll(
                     'input[type="checkbox"][name^="methodologiesgroup"], input[type="checkbox"][name*="method_"]'
                 );
-                fallbackCbs.forEach(function(cb) {
+                fallbackCbs.forEach(function (cb) {
                     if (cb.checked && cb.value && cb.value !== '0' && cb.value !== '1') {
                         checked.push(cb.value);
                     }
@@ -344,8 +363,8 @@ echo '<div id="rtoc-val-ai-config"'
                     productcode: productcode
                 })
             })
-            .then(function(r) { return r.json(); })
-            .then(function(d) {
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
                 btn.disabled = false;
                 if (d.success && d.text) {
                     ta.value = d.text;
@@ -357,7 +376,7 @@ echo '<div id="rtoc-val-ai-config"'
                     status.textContent = 'Error: ' + (d.error || 'Unknown error');
                 }
             })
-            .catch(function(err) {
+            .catch(function (err) {
                 btn.disabled = false;
                 status.style.color = '#dc2626';
                 status.textContent = 'Network error: ' + err.message;

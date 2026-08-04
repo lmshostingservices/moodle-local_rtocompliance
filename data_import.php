@@ -1,4 +1,27 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * local_rtocompliance file.
+ *
+ * @package    local_rtocompliance
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ */
+
 // AVETMISS NAT file import for local_rtocompliance.
 // Parses NAT00010, NAT00080, NAT00085, NAT00120, NAT00130 fixed-width text files
 // exported from Wisenet and other AVETMISS-compliant Student Management Systems.
@@ -14,7 +37,7 @@ function _di_log(string $step): void {
     @file_put_contents($_di_log, $line, FILE_APPEND);
     error_log('[RTOC-DI] ' . $step);
 }
-register_shutdown_function(function() {
+register_shutdown_function(function () {
     $err = error_get_last();
     if ($err) {
         _di_log('SHUTDOWN fatal type=' . $err['type'] . ' msg=' . $err['message'] . ' in ' . $err['file'] . ':' . $err['line']);
@@ -1336,7 +1359,7 @@ function local_rtocompliance_rebuild_archive_index(): array {
     }
 
     // Helper: build a human-readable full path for a category
-    $buildFullPath = function(object $cat) use ($catMap): string {
+    $buildFullPath = function (object $cat) use ($catMap): string {
         $pathIds = array_filter(explode('/', $cat->path), 'strlen');
         $names   = [];
         foreach ($pathIds as $pid) {
@@ -1348,7 +1371,7 @@ function local_rtocompliance_rebuild_archive_index(): array {
     };
 
     // Helper: build ancestor text (all ancestor names concatenated, excluding self)
-    $buildAncestorText = function(object $cat) use ($catMap): string {
+    $buildAncestorText = function (object $cat) use ($catMap): string {
         $pathIds    = array_filter(explode('/', $cat->path), 'strlen');
         $ancestorIds = array_slice($pathIds, 0, -1);
         $parts      = [];
@@ -1551,7 +1574,7 @@ function local_rtocompliance_nat_lines(array $file): Generator {
     // Fix: after reading each line, check whether it is valid UTF-8; if not, convert it
     // from ISO-8859-1 to UTF-8 via mb_convert_encoding().  Lines that are already valid
     // UTF-8 (the common case) are passed through unchanged.
-    $ensure_utf8 = function(string $l): string {
+    $ensure_utf8 = function (string $l): string {
         return mb_check_encoding($l, 'UTF-8') ? $l : mb_convert_encoding($l, 'UTF-8', 'ISO-8859-1');
     };
 
@@ -2208,13 +2231,13 @@ if ($action === 'foe_trace' && $importid) {
     }
 
     // Helper: green tick / red cross badge
-    $tracePass = function(string $msg) {
+    $tracePass = function (string $msg) {
         return '<span style="color:#155724;background:#d4edda;padding:2px 8px;border-radius:4px;font-weight:600;">&#10003; PASS</span> ' . $msg;
     };
-    $traceFail = function(string $msg) {
+    $traceFail = function (string $msg) {
         return '<span style="color:#721c24;background:#f8d7da;padding:2px 8px;border-radius:4px;font-weight:600;">&#10007; FAIL</span> ' . $msg;
     };
-    $traceWarn = function(string $msg) {
+    $traceWarn = function (string $msg) {
         return '<span style="color:#856404;background:#fff3cd;padding:2px 8px;border-radius:4px;font-weight:600;">&#9888; WARN</span> ' . $msg;
     };
 
@@ -2540,7 +2563,7 @@ if ($action === 'foe_progress' && $importid) {
     $backJson   = json_encode($_backUrl);
     echo <<<FOEJS
 <script>
-(function(){
+(function (){
   var batchid  = {$batchJson};
   var total    = {$totalJson};
   var sesskey  = {$sesskeyJson};
@@ -2560,8 +2583,8 @@ if ($action === 'foe_progress' && $importid) {
     fd.append('batchid', batchid);
     fd.append('sesskey', sesskey);
     fetch(ajaxUrl, {method: 'POST', body: fd})
-      .then(function(r) { return r.json(); })
-      .then(function(d) {
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
         // Catch the case where the batch was never created (pending rows never
         // inserted). This can happen on a double-submit or sesskey timeout during
         // fix_overenrolments_apply. The URL total param would still show a
@@ -2617,7 +2640,7 @@ if ($action === 'foe_progress' && $importid) {
           setTimeout(nextChunk, 250);
         }
       })
-      .catch(function(e) {
+      .catch(function (e) {
         document.getElementById('foe-status').innerHTML =
           '<span class="text-danger"><strong>Error:</strong> ' + e.message + '</span> — reload the page to retry.';
       });
@@ -3249,7 +3272,7 @@ if (($action === 'fix_overenrolments' || $action === 'fix_overenrolments_apply')
         }
 
         // ── Block 5: Actual $foeToUnenrol rows for this client ─────────────
-        $_dbFoeRows = array_filter($foeToUnenrol, function($_fr) use ($_debugCid) {
+        $_dbFoeRows = array_filter($foeToUnenrol, function ($_fr) use ($_debugCid) {
             return $_fr['clientid'] === $_debugCid;
         });
         $debugOut .= '<p style="margin:0.6rem 0 0.2rem;"><strong>5. Rows in $foeToUnenrol for this client:</strong> ';
@@ -3465,7 +3488,7 @@ function foeFilter() {
     var q = (document.getElementById("foe-search").value || "").toLowerCase().trim();
     var rows = document.querySelectorAll("tr[data-foe-search]");
     var shown = 0, total = rows.length;
-    rows.forEach(function(tr) {
+    rows.forEach(function (tr) {
         var match = !q || tr.getAttribute("data-foe-search").indexOf(q) !== -1;
         tr.style.display = match ? "" : "none";
         if (match) shown++;
@@ -3478,8 +3501,8 @@ function foeFilter() {
         lbl.textContent = "";
     }
     // Show/hide category headings based on whether any of their table rows are visible
-    document.querySelectorAll(".foe-cat-table").forEach(function(tbl) {
-        var hasVisible = Array.from(tbl.querySelectorAll("tr[data-foe-search]")).some(function(r) {
+    document.querySelectorAll(".foe-cat-table").forEach(function (tbl) {
+        var hasVisible = Array.from(tbl.querySelectorAll("tr[data-foe-search]")).some(function (r) {
             return r.style.display !== "none";
         });
         var wrap = tbl.closest(".table-responsive");
@@ -3491,7 +3514,7 @@ function foeFilter() {
     });
 }
 // Auto-focus the search box when the page loads
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener("DOMContentLoaded", function () {
     var box = document.getElementById("foe-search");
     if (box) box.focus();
 });
@@ -4419,7 +4442,7 @@ if ($action === 'do_archive_link' && $_SERVER['REQUEST_METHOD'] === 'POST' && co
      * Score a Moodle course against an intake group.
      * Returns 0-100; higher = better match.
      */
-    $scoreMatch = function(object $course, array $group) use ($allCourses): int {
+    $scoreMatch = function (object $course, array $group) use ($allCourses): int {
         $score = 0;
         $label  = strtoupper($course->catname . ' ' . $course->parentcatname . ' ' . $course->fullname . ' ' . $course->shortname);
         $offerDesc = strtoupper($group['offerDesc'] ?? '');
@@ -4965,18 +4988,18 @@ if ($action === 'verify_nat') {
                 // Filter JS
                 echo '<script>
 function verifyFilter(f) {
-    document.querySelectorAll(".verify-row").forEach(function(row) {
+    document.querySelectorAll(".verify-row").forEach(function (row) {
         var s = row.getAttribute("data-status");
         if (f === "all") row.style.display = "";
         else if (f === "ok") row.style.display = (s === "ok") ? "" : "none";
         else row.style.display = (s !== "ok") ? "" : "none";
     });
-    document.querySelectorAll(".verify-filter-btn").forEach(function(btn) {
+    document.querySelectorAll(".verify-filter-btn").forEach(function (btn) {
         btn.classList.toggle("btn-primary", btn.getAttribute("data-filter") === f);
         btn.classList.toggle("btn-outline-secondary", btn.getAttribute("data-filter") !== f);
     });
 }
-document.addEventListener("DOMContentLoaded", function() { verifyFilter("issues"); });
+document.addEventListener("DOMContentLoaded", function () { verifyFilter("issues"); });
 </script>';
 
                 // Re-run button + backfill link
@@ -5223,7 +5246,7 @@ if ($action === 'backfill_records') {
             // 4. Process each clientid that is missing from Student Records
             require_once($CFG->dirroot . '/user/lib.php');
 
-            $toProcess = array_filter($allClientIds, function($cid) use ($existingClientMap) {
+            $toProcess = array_filter($allClientIds, function ($cid) use ($existingClientMap) {
                 return !isset($existingClientMap[$cid]);
             });
 
@@ -5783,7 +5806,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'finalizenat' && confir
     $matchMethodCarry = (optional_param('match_method', 'email', PARAM_ALPHA) === 'studentid')
         ? 'studentid' : 'email';
     // Fallback: if POST has no match_method, use whatever was stored at upload time.
-    if (!isset($_POST['match_method'])) {
+    if (optional_param('match_method', '', PARAM_TEXT) === '') {
         $matchMethodCarry = ($SESSION->rtocompliance_nat_match_method ?? 'email') === 'studentid'
             ? 'studentid' : 'email';
     }
@@ -7846,7 +7869,7 @@ if ($action === 'autoenrol' && $importid) {
 
     // ── 6. Sort: auto → review → manual; within each group: family, year DESC, sem ──
     $p2SortOrd = ['auto' => 0, 'review' => 1, 'manual' => 2];
-    uasort($p2Groups, function($a, $b) use ($p2SortOrd) {
+    uasort($p2Groups, function ($a, $b) use ($p2SortOrd) {
         $sa = $p2SortOrd[$a['status']] ?? 2;
         $sb = $p2SortOrd[$b['status']] ?? 2;
         if ($sa !== $sb) return $sa - $sb;
@@ -8173,10 +8196,10 @@ if ($action === 'autoenrol' && $importid) {
 
         // Submit guard JS.
         echo '<script>';
-        echo '(function() {';
+        echo '(function () {';
         echo '  var form = document.getElementById("rtoc-autoenrol-form");';
         echo '  if (!form) return;';
-        echo '  form.addEventListener("submit", function(e) {';
+        echo '  form.addEventListener("submit", function (e) {';
         echo '    e.preventDefault();';
         echo '    var skUrl = ' . $p2JsSkip . ';';
         echo '    var qi = form.querySelectorAll("input[name=\'qualcodes[]\']");';

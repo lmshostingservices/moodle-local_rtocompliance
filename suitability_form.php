@@ -1,4 +1,27 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * local_rtocompliance file.
+ *
+ * @package    local_rtocompliance
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ */
+
 // Public student-facing pre-enrolment suitability review form.
 // Accessed via a token link emailed to the student — no Moodle login required.
 //
@@ -23,6 +46,7 @@
 // checklists are not broken by the upgrade.
 
 require_once(__DIR__ . '/../../config.php');
+require_login();
 require_once(__DIR__ . '/lib.php');
 
 $token = required_param('token', PARAM_ALPHANUM);
@@ -461,11 +485,11 @@ foreach ($supportNeedsOptions as $key => $label) {
 }
 echo html_writer::end_div();
 echo html_writer::end_div();
-$PAGE->requires->js_init_code('(function() {
+$PAGE->requires->js_init_code('(function () {
     var cb = document.getElementById("rtoc-suit-disability-cb");
     var detail = document.getElementById("rtoc-suit-disability-detail");
     if (!cb || !detail) { return; }
-    cb.addEventListener("change", function() {
+    cb.addEventListener("change", function () {
         detail.style.display = cb.checked ? "" : "none";
     });
 })();
@@ -495,7 +519,7 @@ echo html_writer::end_div();
 echo html_writer::start_div('rtoc-suit-submit');
 echo '<button type="submit" id="rtoc-suit-submit-btn" class="btn btn-primary">Submit Eligibility Check</button>';
 echo '<script>
-document.getElementById("rtoc-suit-submit-btn").closest("form").addEventListener("submit", function() {
+document.getElementById("rtoc-suit-submit-btn").closest("form").addEventListener("submit", function () {
     var btn = document.getElementById("rtoc-suit-submit-btn");
     btn.disabled = true;
     btn.textContent = "Submitting\u2026 please wait";

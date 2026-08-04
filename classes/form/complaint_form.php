@@ -1,4 +1,27 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * local_rtocompliance file.
+ *
+ * @package    local_rtocompliance
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ */
+
 namespace local_rtocompliance\form;
 
 defined('MOODLE_INTERNAL') || die();
@@ -6,7 +29,6 @@ defined('MOODLE_INTERNAL') || die();
 require_once($CFG->libdir . '/formslib.php');
 
 class complaint_form extends \moodleform {
-
     protected function definition() {
         global $CFG, $DB;
         $mform = $this->_form;
@@ -179,7 +201,7 @@ class complaint_form extends \moodleform {
     <span id="rtoc-resolution-ai-status" style="margin-left:8px;font-size:0.82em;color:#666;display:none;">Generating...</span>
 </div>
 <script>
-(function() {
+(function () {
     "use strict";
     function rtocStripMd(t) {
         return t.replace(/^#{1,6}\s+/gm,'').replace(/\*\*\*([^*]+)\*\*\*/g,'$1').replace(/\*\*([^*]+)\*\*/g,'$1').replace(/\*([^*\n]+)\*/g,'$1').replace(/__([^_]+)__/g,'$1').replace(/_([^_\n]+)_/g,'$1').replace(/^>\s+/gm,'').replace(/\n{3,}/g,'\n\n').trim();
@@ -187,7 +209,7 @@ class complaint_form extends \moodleform {
     function rtocResolutionAiInit() {
         var btn = document.getElementById("rtoc-resolution-ai-btn");
         if (!btn) return;
-        btn.addEventListener("click", function() {
+        btn.addEventListener("click", function () {
             var status = document.getElementById("rtoc-resolution-ai-status");
             var textarea = document.getElementById("id_resolution");
             var cat = document.querySelector("select[name='category']");
@@ -217,8 +239,8 @@ class complaint_form extends \moodleform {
                 headers: {"Content-Type": "application/x-www-form-urlencoded"},
                 body: params.toString()
             })
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
                 btn.disabled = false;
                 status.style.display = "none";
                 if (data.success) {
@@ -227,7 +249,7 @@ class complaint_form extends \moodleform {
                     alert(data.error || "AI generation failed. Check AI configuration.");
                 }
             })
-            .catch(function() {
+            .catch(function () {
                 btn.disabled = false;
                 status.style.display = "none";
                 alert("AI request failed. Please try again.");

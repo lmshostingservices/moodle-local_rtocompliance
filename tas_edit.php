@@ -1,5 +1,29 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * local_rtocompliance file.
+ *
+ * @package    local_rtocompliance
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ */
+
 require_once(__DIR__ . '/../../config.php');
+require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once($CFG->libdir . '/formslib.php');
 require_once(__DIR__ . '/lib.php');
@@ -110,7 +134,7 @@ class tas_form extends moodleform {
 </div>
 </div>
 <script>
-(function(){
+(function (){
   var aqfTable = {
     "Cert I":          { acsf:"Level 1",   acsfShort:"ACSF Level 1",   entry:"No formal prerequisites. Open entry for all learners.", school:"Year 9 or below equivalent" },
     "Cert II":         { acsf:"Level 2",   acsfShort:"ACSF Level 2",   entry:"Basic literacy and numeracy skills recommended. No formal qualifications required.", school:"Year 10 equivalent" },
@@ -142,14 +166,14 @@ class tas_form extends moodleform {
   var schoolEqEl = document.getElementById("rtoc-school-eq");
   var statusEl = document.getElementById("rtoc-cohort-status");
 
-  selEl.addEventListener("change", function(){
+  selEl.addEventListener("change", function (){
     var level = selEl.value;
     if (!level) { gridEl.style.display="none"; schoolEl.style.display="none"; return; }
     var info = aqfTable[level];
     schoolEqEl.textContent = info.school;
     schoolEl.style.display = "block";
     checkboxEl.innerHTML = "";
-    allCohorts.forEach(function(c,i){
+    allCohorts.forEach(function (c,i){
       var applicable = c.levels.indexOf(level) !== -1;
       var div = document.createElement("div");
       div.style.cssText = "display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:4px;background:"+(applicable?"#e8f5e9":"#f5f5f5")+";border:1px solid "+(applicable?"#a5d6a7":"#e0e0e0")+";";
@@ -166,19 +190,19 @@ class tas_form extends moodleform {
     gridEl.style.display = "block";
   });
 
-  document.getElementById("rtoc-apply-section2").addEventListener("click", function(){
+  document.getElementById("rtoc-apply-section2").addEventListener("click", function (){
     var level = selEl.value;
     if (!level) { statusEl.textContent="Please select an AQF level first."; return; }
     var info = aqfTable[level];
     var selected = [];
-    allCohorts.forEach(function(c,i){
+    allCohorts.forEach(function (c,i){
       var cb = document.getElementById("rtoc-cohort-"+i);
       if (cb && cb.checked) selected.push(c);
     });
     if (!selected.length) { statusEl.textContent="Tick at least one cohort."; return; }
 
     var cohortText = "Target learner cohorts for this " + level + " qualification include:\n\n";
-    selected.forEach(function(c){
+    selected.forEach(function (c){
       cohortText += "- " + c.name + " (ACSF " + c.acsf + ")\n";
     });
     cohortText += "\nMature-age learners (4+ years industry experience) are also eligible subject to LLN assessment.";
@@ -202,9 +226,9 @@ class tas_form extends moodleform {
     statusEl.style.color = "#2e7d32";
   });
 
-  document.getElementById("rtoc-clear-cohorts").addEventListener("click", function(){
+  document.getElementById("rtoc-clear-cohorts").addEventListener("click", function (){
     var cbs = checkboxEl.querySelectorAll("input[type=checkbox]");
-    cbs.forEach(function(cb){ cb.checked=false; });
+    cbs.forEach(function (cb){ cb.checked=false; });
     statusEl.textContent = "";
   });
 })();
@@ -444,29 +468,29 @@ class tas_form extends moodleform {
 function rtocAmUpdate(){
     var checks = document.querySelectorAll(".rtoc-am-check:checked");
     var arr = [];
-    checks.forEach(function(c){ arr.push(c.value); });
+    checks.forEach(function (c){ arr.push(c.value); });
     var extra = document.getElementById("rtoc-am-additional");
     if(extra && extra.value.trim()) arr.push("OTHER: " + extra.value.trim());
     var hidden = document.querySelector("input[name=\'assessmentmethods\']");
     if(hidden) hidden.value = JSON.stringify({v:2, selected:arr});
     var saved = document.getElementById("rtoc-am-saved");
-    if(saved){ saved.style.display="block"; setTimeout(function(){ saved.style.display="none"; }, 1500); }
+    if(saved){ saved.style.display="block"; setTimeout(function (){ saved.style.display="none"; }, 1500); }
 }
 function rtocAmSelectAll(state){
-    document.querySelectorAll(".rtoc-am-check").forEach(function(c){ c.checked=state; });
+    document.querySelectorAll(".rtoc-am-check").forEach(function (c){ c.checked=state; });
     rtocAmUpdate();
 }
-document.addEventListener("DOMContentLoaded", function(){
+document.addEventListener("DOMContentLoaded", function (){
     var hidden = document.querySelector("input[name=\'assessmentmethods\']");
     if(!hidden || !hidden.value) return;
     var parsed = null;
     try{ parsed = JSON.parse(hidden.value); }catch(e){}
     if(parsed && parsed.v===2 && Array.isArray(parsed.selected)){
         var others = [];
-        parsed.selected.forEach(function(s){
+        parsed.selected.forEach(function (s){
             if(s.indexOf("OTHER: ")===0){ others.push(s.replace("OTHER: ","")); return; }
             var checks = document.querySelectorAll(".rtoc-am-check");
-            checks.forEach(function(c){ if(c.value===s) c.checked=true; });
+            checks.forEach(function (c){ if(c.value===s) c.checked=true; });
         });
         if(others.length){
             var ex=document.getElementById("rtoc-am-additional");
@@ -760,7 +784,7 @@ echo html_writer::end_div();
 $form->display();
 
 echo '<script>
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener("DOMContentLoaded", function () {
 
     var AQF_VOLUME = {
         1: {label:"Certificate I", low:600, high:1200},
@@ -825,8 +849,8 @@ document.addEventListener("DOMContentLoaded", function() {
     function generateSchedule(units, startDate, hrsPerWeek) {
         var schedule = [];
         var current = getMonday(new Date(startDate));
-        var coreUnits = units.filter(function(u) { return u.CoreUnit; });
-        var electiveUnits = units.filter(function(u) { return !u.CoreUnit; });
+        var coreUnits = units.filter(function (u) { return u.CoreUnit; });
+        var electiveUnits = units.filter(function (u) { return !u.CoreUnit; });
         var orderedUnits = coreUnits.concat(electiveUnits);
 
         for (var i = 0; i < orderedUnits.length; i++) {
@@ -942,8 +966,8 @@ document.addEventListener("DOMContentLoaded", function() {
             var tgaUrl = "/local/rtocompliance/ajax.php?action=tga_qualification&sesskey=" + encodeURIComponent(tgaSesskey) + "&code=" + encodeURIComponent(qualCode);
 
             fetch(tgaUrl)
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
                 if (!data.success || !data.units || data.units.length === 0) {
                     statusEl.innerHTML = "<span style=\\"color:#cc0000;\\">No units found for " + qualCode + ". You can fill in the fields manually.</span>";
                     generateBtn.disabled = false;
@@ -954,7 +978,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 var units = data.units;
                 var aqfLevel = detectAQFLevel(qualCode, qualTitle);
                 var schedule = generateSchedule(units, startDate, hrsPerWeek);
-                var deliveryWeeks = schedule.filter(function(s) { return s.type !== "holiday"; }).length;
+                var deliveryWeeks = schedule.filter(function (s) { return s.type !== "holiday"; }).length;
                 var breakdown = calculateBreakdown(units.length, aqfLevel, hrsPerWeek);
 
                 var scheduleText = "Week | Unit Code | Unit Title | Hours | Dates | Type\\n";
@@ -985,7 +1009,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 // Fall back to unit-count * hrs/week only if TGA data has no hours.
                 var tgaNominalHours = (data.qualification && data.qualification.NominalHours) ? data.qualification.NominalHours : 0;
                 if (!tgaNominalHours) {
-                    tgaNominalHours = units.reduce(function(sum, u) { return sum + (u.NominalHours || 0); }, 0);
+                    tgaNominalHours = units.reduce(function (sum, u) { return sum + (u.NominalHours || 0); }, 0);
                 }
                 if (nominalEl) nominalEl.value = tgaNominalHours > 0 ? tgaNominalHours : units.length * hrsPerWeek;
                 if (durationEl) durationEl.value = deliveryWeeks;
@@ -999,7 +1023,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 html += "<table style=\\"width:100%;border-collapse:collapse;\\">";
                 html += "<tr><td style=\\"padding:4px 12px;font-weight:bold;\\">Qualification</td><td style=\\"padding:4px 12px;\\">" + qualTitle + " (" + qualCode + ")</td></tr>";
                 html += "<tr><td style=\\"padding:4px 12px;font-weight:bold;\\">AQF Level</td><td style=\\"padding:4px 12px;\\">" + breakdown.aqfLabel + " (Level " + aqfLevel + ")</td></tr>";
-                html += "<tr><td style=\\"padding:4px 12px;font-weight:bold;\\">Total Units</td><td style=\\"padding:4px 12px;\\">" + units.length + " (" + units.filter(function(u){return u.CoreUnit;}).length + " core, " + units.filter(function(u){return !u.CoreUnit;}).length + " elective)</td></tr>";
+                html += "<tr><td style=\\"padding:4px 12px;font-weight:bold;\\">Total Units</td><td style=\\"padding:4px 12px;\\">" + units.length + " (" + units.filter(function (u){return u.CoreUnit;}).length + " core, " + units.filter(function (u){return !u.CoreUnit;}).length + " elective)</td></tr>";
                 html += "<tr><td style=\\"padding:4px 12px;font-weight:bold;\\">Delivery Weeks</td><td style=\\"padding:4px 12px;\\">" + deliveryWeeks + " weeks (inc. assessment)</td></tr>";
                 html += "<tr><td style=\\"padding:4px 12px;font-weight:bold;\\">Volume of Learning</td><td style=\\"padding:4px 12px;\\">" + breakdown.total + " hours (AQF range: " + breakdown.aqfRange + ")</td></tr>";
                 html += "</table>";
@@ -1009,7 +1033,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 statusEl.innerHTML = "<span style=\\"color:#28a745;font-weight:bold;\\">Plan generated - fields populated below.</span>";
                 generateBtn.disabled = false;
             })
-            .catch(function(err) {
+            .catch(function (err) {
                 statusEl.innerHTML = "<span style=\\"color:#cc0000;\\">Error: " + err.message + "</span>";
                 generateBtn.disabled = false;
             });
@@ -1029,13 +1053,13 @@ document.addEventListener("DOMContentLoaded", function() {
                         legend.click();
                     }
                 }
-                setTimeout(function() {
+                setTimeout(function () {
                     sectionHeader.scrollIntoView({ behavior: "smooth", block: "start" });
                     fieldset = sectionHeader.closest("fieldset");
                     if (fieldset) {
                         fieldset.style.outline = "2px solid #3b82f6";
                         fieldset.style.borderRadius = "8px";
-                        setTimeout(function() {
+                        setTimeout(function () {
                             fieldset.style.outline = "";
                             fieldset.style.borderRadius = "";
                         }, 3000);

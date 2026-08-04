@@ -38,7 +38,6 @@ defined('MOODLE_INTERNAL') || die();
 require_once(__DIR__ . '/cert_template.php');
 
 class cert_template_renderer {
-
     /**
      * Render a template to raw PDF bytes.
      *

@@ -1,4 +1,27 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * local_rtocompliance file.
+ *
+ * @package    local_rtocompliance
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ */
+
 // v4.8.106 ARCHIVE-COURSE-PICKER — Course picker now groups courses by Moodle category path
 // (shows archive courses organised under their Qualification > Archive label). A live search
 // input lets admins type to narrow down hundreds of courses instantly. The filter bar on the
@@ -24,6 +47,7 @@
 //   - Course IS nationally recognised + qualification + student completed SOME unit-courses only  → Statement of Attainment
 
 require_once(__DIR__ . '/../../config.php');
+require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 require_once(__DIR__ . '/classes/cert_template.php');
@@ -148,10 +172,10 @@ function gcFilterCourses(query) {
     var sel = document.getElementById('gc-course-picker');
     var groups = sel.querySelectorAll('optgroup');
     var visible = 0;
-    groups.forEach(function(og) {
+    groups.forEach(function (og) {
         var ogLabel  = og.getAttribute('label').toLowerCase();
         var ogVisible = false;
-        og.querySelectorAll('option').forEach(function(opt) {
+        og.querySelectorAll('option').forEach(function (opt) {
             var text = opt.textContent.toLowerCase();
             var show = q === '' || text.indexOf(q) !== -1 || ogLabel.indexOf(q) !== -1;
             opt.style.display = show ? '' : 'none';
@@ -381,7 +405,7 @@ $dummyresolution = local_rtocompliance_resolve_cert_types_for_course($courseid, 
 $nationally      = ($dummyresolution['reason'] !== 'non_accredited');
 
 $certtypelabels  = local_rtocompliance_get_certificate_types();
-$predictedtypes  = array_map(function($t) use ($certtypelabels) {
+$predictedtypes  = array_map(function ($t) use ($certtypelabels) {
     return $certtypelabels[$t] ?? $t;
 }, $dummyresolution['certtypes']);
 
@@ -544,14 +568,14 @@ $filteredcompleters = $allcompleters;
 if ($groupid > 0 && !empty($coursegroups[$groupid])) {
     $groupmembers = groups_get_members($groupid, 'u.id');
     $groupmemberids = array_keys($groupmembers);
-    $filteredcompleters = array_filter($allcompleters, function($c) use ($groupmemberids) {
+    $filteredcompleters = array_filter($allcompleters, function ($c) use ($groupmemberids) {
         return in_array($c->userid, $groupmemberids);
     });
 }
 
 // ── Apply individual student filter ──────────────────────────────────────────
 if ($studentid > 0) {
-    $filteredcompleters = array_filter($allcompleters, function($c) use ($studentid) {
+    $filteredcompleters = array_filter($allcompleters, function ($c) use ($studentid) {
         return (int)$c->userid === $studentid;
     });
 }
@@ -1014,7 +1038,7 @@ echo html_writer::start_tag('tbody');
 foreach ($completers as $comp) {
     $res    = local_rtocompliance_resolve_cert_types_for_course($courseid, $comp->userid);
     $types  = $res['certtypes'];
-    $labels = array_map(function($t) use ($certtypelabels) { return $certtypelabels[$t] ?? $t; }, $types);
+    $labels = array_map(function ($t) use ($certtypelabels) { return $certtypelabels[$t] ?? $t; }, $types);
 
     $allissued = true;
     $certnums  = [];

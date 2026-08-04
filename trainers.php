@@ -1,5 +1,21 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
 require_once(__DIR__ . '/../../config.php');
+require_login();
 ini_set('memory_limit', '512M');
 
 require_once($CFG->libdir . '/adminlib.php');
@@ -24,6 +40,9 @@ function rtoc_mb_substr($s, $start, $len) {
  * @param  string $raw  Raw DB value
  * @return array  ['text' => string, 'error' => bool]
  *   'error' is true only when the value is clearly corrupt/unreadable JSON.
+ * @package    local_rtocompliance
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
 function rtoc_decode_vocqual(string $raw): array {
     $raw = trim($raw);
@@ -41,7 +60,7 @@ function rtoc_decode_vocqual(string $raw): array {
         }
 
         // Helper to format one qualification object
-        $fmt = function($item): string {
+        $fmt = function ($item): string {
             if (is_string($item)) return trim($item);
             if (!is_array($item))  return '';
             $code  = trim($item['code']     ?? $item['qualcode'] ?? '');

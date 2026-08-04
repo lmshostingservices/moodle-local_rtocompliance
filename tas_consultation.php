@@ -1,5 +1,29 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * local_rtocompliance file.
+ *
+ * @package    local_rtocompliance
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ */
+
 require_once(__DIR__ . '/../../config.php');
+require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once($CFG->libdir . '/formslib.php');
 require_once(__DIR__ . '/lib.php');
@@ -548,7 +572,7 @@ function rtocAppendDropdown(selectId, textareaId) {
     }
     if (!chosen.length) { return; }
     var existing = ta.value.trim();
-    var addition = chosen.map(function(v){ return "- " + v; }).join("\n");
+    var addition = chosen.map(function (v){ return "- " + v; }).join("\n");
     ta.value = existing ? existing + "\n" + addition : addition;
     for (var j = 0; j < sel.options.length; j++) { sel.options[j].selected = false; }
 }
@@ -566,7 +590,7 @@ function rtocAppendChecked(gridId, textareaId) {
     var chosen = [];
     for (var i = 0; i < boxes.length; i++) { chosen.push(boxes[i].value); }
     var existing = ta.value.trim();
-    var addition = chosen.map(function(v){ return "- " + v; }).join("\n");
+    var addition = chosen.map(function (v){ return "- " + v; }).join("\n");
     ta.value = existing ? existing + "\n" + addition : addition;
     for (var j = 0; j < boxes.length; j++) { boxes[j].checked = false; }
 }
@@ -695,7 +719,7 @@ if ($form) {
 // (participant info, ticked categories, the other free-text answers above
 // it) and posts to ajax.php?action=ai_draft_text.
 echo html_writer::script('
-(function() {
+(function () {
     var ajax = "' . $CFG->wwwroot . '/local/rtocompliance/ajax.php";
     var buttons = document.querySelectorAll("#rtoc-ai-consult-feedback, #rtoc-ai-consult-training, #rtoc-ai-consult-assessment");
     if (!buttons.length) return;
@@ -710,15 +734,15 @@ echo html_writer::script('
     }
     function gridChecked(gridId) {
         var labels = [];
-        document.querySelectorAll("#" + gridId + " input[type=checkbox]:checked").forEach(function(cb) {
+        document.querySelectorAll("#" + gridId + " input[type=checkbox]:checked").forEach(function (cb) {
             var lbl = cb.parentElement && cb.parentElement.textContent;
             if (lbl) labels.push(lbl.trim());
         });
         return labels.join("; ");
     }
 
-    buttons.forEach(function(btn) {
-        btn.addEventListener("click", function() {
+    buttons.forEach(function (btn) {
+        btn.addEventListener("click", function () {
             var targetId = btn.getAttribute("data-target");
             var ctx      = btn.getAttribute("data-context");
             var statusEl = document.getElementById(btn.id + "-status");
@@ -752,8 +776,8 @@ echo html_writer::script('
             }
 
             fetch(ajax, { method: "POST", body: fd, credentials: "same-origin" })
-                .then(function(r) { return r.json(); })
-                .then(function(j) {
+                .then(function (r) { return r.json(); })
+                .then(function (j) {
                     btn.disabled = false;
                     if (j && j.success && j.text) {
                         target.value = j.text;
@@ -764,7 +788,7 @@ echo html_writer::script('
                         statusEl.classList.add("is-error");
                     }
                 })
-                .catch(function(e) {
+                .catch(function (e) {
                     btn.disabled = false;
                     statusEl.textContent = "Network error: " + e.message;
                     statusEl.classList.add("is-error");

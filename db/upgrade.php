@@ -1,4 +1,19 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
 defined('MOODLE_INTERNAL') || die();
 
 /**
@@ -6,6 +21,9 @@ defined('MOODLE_INTERNAL') || die();
  * local_rtocompliance_students and local_rtocompliance_usilog,
  * dropping and recreating any indexes that touch that column first.
  * Called from savepoints 2026051700222 and 2026051700224.
+ * @package    local_rtocompliance
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
 function local_rtocompliance_upgrade_widen_usi($dbman) {
     // --- local_rtocompliance_students ---
@@ -656,7 +674,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         ];
 
         // Helper function to parse date from multiple formats.
-        $parsedate = function($datestr) {
+        $parsedate = function ($datestr) {
             $datestr = trim($datestr);
             if (empty($datestr)) {
                 return false;
@@ -12450,7 +12468,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
 
     if ($oldversion < 2026072800279) {
         // FIX-AMD-NAMED-DEFINE (v5.9.279): cert_template_editor.js amd/src had an
-        // anonymous define([], function() {}) — the named define fix that was applied
+        // anonymous define([], function () {}) — the named define fix that was applied
         // to amd/build/ in a prior session was never synced back to amd/src/.
         // Result: the src and build diverged (different md5), and any future rebuild
         // from src would have shipped an anonymous define, triggering the Moodle
@@ -12458,7 +12476,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         // (confirmed bug — see moodle-amd-jquery-default-error memory note).
         //
         // Fix: amd/src/cert_template_editor.js line 25 updated to named define:
-        //   define('local_rtocompliance/cert_template_editor', [], function() {
+        //   define('local_rtocompliance/cert_template_editor', [], function () {
         // All three AMD files rebuilt (src → build, terser → min).
         //
         // Also fixed: BUILD_INFO.json was stuck at "version": "5.9.267" (stale by

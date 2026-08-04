@@ -1,4 +1,27 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * local_rtocompliance file.
+ *
+ * @package    local_rtocompliance
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ */
+
 // Bulk suitability checklist sender.
 // Two modes (action param):
 //   bulk_send  – POST a list of userids[] from the students.php checkbox form
@@ -6,6 +29,7 @@
 //                with no suitability record for the chosen TAS
 
 require_once(__DIR__ . '/../../config.php');
+require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
@@ -216,7 +240,7 @@ if (empty($tas_records)) {
     echo html_writer::end_tag('form');
     echo html_writer::end_div();
 
-    echo html_writer::script('(function() {
+    echo html_writer::script('(function () {
         var gaps = ' . json_encode($gapcount) . ';
         var sel  = document.getElementById("tasid");
         var cnt  = document.getElementById("gap-count");

@@ -26,7 +26,6 @@ defined('MOODLE_INTERNAL') || die();
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class before_standard_head_html_generation {
-
     /**
      * Callback for before_standard_head_html_generation hook.
      *

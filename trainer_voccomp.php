@@ -1,5 +1,29 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * local_rtocompliance file.
+ *
+ * @package    local_rtocompliance
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ */
+
 require_once(__DIR__ . '/../../config.php');
+require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once($CFG->libdir . '/formslib.php');
 require_once(__DIR__ . '/lib.php');
@@ -451,7 +475,7 @@ echo html_writer::end_div();
 // button.  Posts seed fields to ajax.php?action=ai_draft_text and writes the
 // returned text into the textarea.
 echo html_writer::script('
-(function() {
+(function () {
     var btn = document.getElementById("rtoc-ai-voccomp-desc");
     if (!btn) return;
     var status = document.getElementById("rtoc-ai-voccomp-desc-status");
@@ -478,7 +502,7 @@ echo html_writer::script('
         return d.value + "/" + m.value + "/" + y.value;
     }
 
-    btn.addEventListener("click", function() {
+    btn.addEventListener("click", function () {
         if (target && target.value && target.value.length > 30) {
             if (!confirm("This will replace the existing description.  Continue?")) return;
         }
@@ -499,9 +523,9 @@ echo html_writer::script('
         fd.append("seed[totalhours]",    val("id_totalhours"));
 
         fetch(ajax, { method: "POST", body: fd, credentials: "same-origin" })
-            .then(function(r) {
+            .then(function (r) {
                 var st = r.status;
-                return r.text().then(function(raw) {
+                return r.text().then(function (raw) {
                     try {
                         var j = JSON.parse(raw);
                         j.__httpStatus = st;
@@ -511,7 +535,7 @@ echo html_writer::script('
                     }
                 });
             })
-            .then(function(j) {
+            .then(function (j) {
                 btn.disabled = false;
                 if (j && j.success && j.text) {
                     target.value = j.text;
@@ -523,7 +547,7 @@ echo html_writer::script('
                     status.classList.add("is-error");
                 }
             })
-            .catch(function(e) {
+            .catch(function (e) {
                 btn.disabled = false;
                 status.textContent = "Network error: " + e.message;
                 status.classList.add("is-error");

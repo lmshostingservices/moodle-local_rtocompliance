@@ -33,7 +33,6 @@ defined('MOODLE_INTERNAL') || die();
  * Hook callbacks for local_rtocompliance before_footer_html_generation.
  */
 class before_footer_html_generation {
-
     /**
      * Callback for core\hook\output\before_footer_html_generation hook.
      *

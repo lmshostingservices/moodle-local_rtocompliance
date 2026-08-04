@@ -1,5 +1,29 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * local_rtocompliance file.
+ *
+ * @package    local_rtocompliance
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ */
+
 require_once(__DIR__ . '/../../config.php');
+require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 require_once($CFG->libdir . '/tablelib.php');
@@ -394,7 +418,7 @@ if (!$_usi_api_configured) {
   </div>
 </div>
 <script>
-(function() {
+(function () {
     var dismissed = sessionStorage.getItem("rtoc_usi_modal_dismissed");
     if (!dismissed) {
         var overlay = document.getElementById("rtoc-usi-modal-overlay");
@@ -406,7 +430,7 @@ function rtocDismissUsiModal() {
     var overlay = document.getElementById("rtoc-usi-modal-overlay");
     if (overlay) { overlay.style.display = "none"; }
 }
-document.addEventListener("keydown", function(e) {
+document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") { rtocDismissUsiModal(); }
 });
 </script>';
@@ -1064,7 +1088,7 @@ echo '</form>'; // closes student-action-form
 
 // ── JS for checkboxes + bulk send ─────────────────────────────────────────────
 echo html_writer::script('
-(function() {
+(function () {
     var selectAll  = document.getElementById("selectall-cb");
     var sendBtn    = document.getElementById("bulk-send-btn");
     var tasSelect  = document.getElementById("bulk-tasid");
@@ -1083,16 +1107,16 @@ echo html_writer::script('
     }
 
     if (selectAll) {
-        selectAll.addEventListener("change", function() {
-            document.querySelectorAll(".student-cb:not([disabled])").forEach(function(cb) {
+        selectAll.addEventListener("change", function () {
+            document.querySelectorAll(".student-cb:not([disabled])").forEach(function (cb) {
                 cb.checked = selectAll.checked;
             });
             refreshBtn();
         });
     }
 
-    document.querySelectorAll(".student-cb").forEach(function(cb) {
-        cb.addEventListener("change", function() {
+    document.querySelectorAll(".student-cb").forEach(function (cb) {
+        cb.addEventListener("change", function () {
             refreshBtn();
             if (selectAll && !cb.checked) selectAll.checked = false;
         });
@@ -1103,7 +1127,7 @@ echo html_writer::script('
     }
 
     if (sendBtn) {
-        sendBtn.addEventListener("click", function() {
+        sendBtn.addEventListener("click", function () {
             if (!tasSelect || !tasSelect.value) {
                 alert("' . get_string('suitability_bulk_select_tas', 'local_rtocompliance') . '");
                 return;
@@ -1117,7 +1141,7 @@ echo html_writer::script('
             var inp = document.createElement("input");
             inp.type = "hidden"; inp.name = "tasid"; inp.value = tasSelect.value;
             fields.appendChild(inp);
-            checked.forEach(function(cb) {
+            checked.forEach(function (cb) {
                 var uid = document.createElement("input");
                 uid.type = "hidden"; uid.name = "userids[]"; uid.value = cb.dataset.userid;
                 fields.appendChild(uid);
@@ -1137,7 +1161,7 @@ echo html_writer::script('
         unsuspendBtn.disabled = countChecked() === 0;
     }
 
-    document.querySelectorAll(".student-cb").forEach(function(cb) {
+    document.querySelectorAll(".student-cb").forEach(function (cb) {
         cb.addEventListener("change", refreshUnsuspendBtn);
     });
     if (selectAll) {
@@ -1145,7 +1169,7 @@ echo html_writer::script('
     }
 
     if (unsuspendBtn && studentActionForm) {
-        unsuspendBtn.addEventListener("click", function() {
+        unsuspendBtn.addEventListener("click", function () {
             var checked = document.querySelectorAll(".student-cb:checked");
             if (!checked.length) {
                 alert("Please select at least one student.");
@@ -1222,7 +1246,7 @@ echo html_writer::script('
         rtocPositionMenu(btn, menu);
     }
 
-    document.addEventListener("click", function(e) {
+    document.addEventListener("click", function (e) {
         var btn = e.target && e.target.closest && e.target.closest(".rtoc-act-btn");
         if (btn) {
             e.stopPropagation();
@@ -1256,13 +1280,13 @@ echo html_writer::script('
         var dismiss = document.createElement("button");
         dismiss.textContent = "\u00d7";
         dismiss.style.cssText = "float:right;background:none;border:none;cursor:pointer;color:#b91c1c;font-size:14px;line-height:1;padding:0 0 0 6px;";
-        dismiss.addEventListener("click", function() { el.remove(); });
+        dismiss.addEventListener("click", function () { el.remove(); });
         el.prepend(dismiss);
         cell.appendChild(el);
-        setTimeout(function() { if (el.parentNode) el.remove(); }, 10000);
+        setTimeout(function () { if (el.parentNode) el.remove(); }, 10000);
     }
 
-    document.addEventListener("click", function(e) {
+    document.addEventListener("click", function (e) {
         var btn = e.target && e.target.closest && e.target.closest(".rtoc-usi-verify-btn");
         if (!btn) return;
         e.preventDefault();  // VERIFY-BTN-FORM-FIX (v5.9.298): prevent the button from submitting
@@ -1292,8 +1316,8 @@ echo html_writer::script('
             headers: { "Accept": "application/json" },
             credentials: "same-origin"
         })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
             if (!data || typeof data.html === "undefined") {
                 cell.innerHTML = origHtml;
                 rtocShowVerifyError(cell, "Verification request failed — please try again.");
@@ -1304,7 +1328,7 @@ echo html_writer::script('
                 rtocShowVerifyError(cell, data.message);
             }
         })
-        .catch(function() {
+        .catch(function () {
             cell.innerHTML = origHtml;
             rtocShowVerifyError(cell, "Could not reach the verification service — check your connection.");
         });

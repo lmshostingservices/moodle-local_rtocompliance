@@ -1,4 +1,27 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * local_rtocompliance file.
+ *
+ * @package    local_rtocompliance
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ */
+
 // v4.6.101 MULTI-UNIT-SOA — Issue a Statement of Attainment for multiple units.
 //
 // World-class multi-unit SOA wizard for Australian RTOs. Features:
@@ -26,7 +49,7 @@ if (!function_exists('_soa_log')) {
         error_log('[RTOC-SOA] ' . $step);
     }
 }
-register_shutdown_function(function() {
+register_shutdown_function(function () {
     $err = error_get_last();
     if ($err) {
         _soa_log('SHUTDOWN fatal type=' . $err['type'] . ' msg=' . $err['message'] . ' in ' . $err['file'] . ':' . $err['line']);
@@ -37,6 +60,7 @@ register_shutdown_function(function() {
 _soa_log('START pid=' . getmypid() . ' method=' . ($_SERVER['REQUEST_METHOD'] ?? '?') . ' uri=' . ($_SERVER['REQUEST_URI'] ?? '?'));
 
 require_once(__DIR__ . '/../../config.php');
+require_login();
 _soa_log('config.php loaded');
 try { set_config('_soa_cp', json_encode(['t' => date('c'), 'pid' => getmypid(), 'step' => 'config_loaded']), 'local_rtocompliance'); } catch (\Throwable $_e) {}
 
@@ -352,7 +376,7 @@ echo <<<'HTML'
 #rtoc-soa-loading.active { display:flex!important; }
 </style>
 <script>
-(function(){
+(function (){
   var AJAX     = _SOA_AJAX;
   var SESSKEY  = _SOA_SESSKEY;
   var allUnits = [];
@@ -399,7 +423,7 @@ echo <<<'HTML'
 
   // Auto-populate Step 3 qual code/name from a group's category data
   function autoPopulateQualFromGroup(catid) {
-    var grp = allGroups.find(function(g){ return String(g.categoryid) === String(catid); });
+    var grp = allGroups.find(function (g){ return String(g.categoryid) === String(catid); });
     if (!grp || !grp.units || !grp.units.length) return;
     var sampleUnit = grp.units[0];
     var catidnum   = sampleUnit.categoryidnumber || '';
@@ -407,8 +431,8 @@ echo <<<'HTML'
     var qcEl = qs('#rtoc-soa-qualcode');
     var qnEl = qs('#rtoc-soa-qualname');
     // Only auto-fill if the field is currently empty
-    if (qcEl && !qcEl.value && catidnum) { qcEl.value = catidnum; qcEl.style.background='#f0fdf4'; setTimeout(function(){ qcEl.style.background=''; }, 1200); }
-    if (qnEl && !qnEl.value && catname)  { qnEl.value = catname;  qnEl.style.background='#f0fdf4'; setTimeout(function(){ qnEl.style.background=''; }, 1200); }
+    if (qcEl && !qcEl.value && catidnum) { qcEl.value = catidnum; qcEl.style.background='#f0fdf4'; setTimeout(function (){ qcEl.style.background=''; }, 1200); }
+    if (qnEl && !qnEl.value && catname)  { qnEl.value = catname;  qnEl.style.background='#f0fdf4'; setTimeout(function (){ qnEl.style.background=''; }, 1200); }
     // Reveal Step 3 card if hidden
     var oc = qs('#rtoc-soa-options-card');
     if (oc) oc.style.display = 'block';
@@ -437,9 +461,9 @@ echo <<<'HTML'
     fd.append('sesskey', SESSKEY);
     for (var k in params) fd.append(k, params[k]);
     fetch(AJAX, {method:'POST', body:fd})
-      .then(function(r){ return r.json(); })
+      .then(function (r){ return r.json(); })
       .then(cb)
-      .catch(function(e){ cb({ok:false, error:String(e)}); });
+      .catch(function (e){ cb({ok:false, error:String(e)}); });
   }
 
   // ── Student picker ─────────────────────────────────────────────────────────
@@ -453,7 +477,7 @@ echo <<<'HTML'
   //   • × clear button to reset and pick a different student
   var userSel = qs('#rtoc-soa-userid');
 
-  (function() {
+  (function () {
     var wrap = qs('#rtoc-picker-wrap');
 
     // Search input
@@ -483,8 +507,8 @@ echo <<<'HTML'
 
     // Build option list from hidden native select (labels already "Surname, Firstname (email)")
     var opts = Array.from(userSel.options)
-      .filter(function(o){ return o.value !== ''; })
-      .map(function(o){
+      .filter(function (o){ return o.value !== ''; })
+      .map(function (o){
         var label = o.text;
         var emailMatch = label.match(/\(([^)]+)\)$/);
         var email = emailMatch ? emailMatch[1] : '';
@@ -509,7 +533,7 @@ echo <<<'HTML'
 
     function showDropdown(q) {
       var q2 = q.toLowerCase().trim();
-      visible = opts.filter(function(o){
+      visible = opts.filter(function (o){
         return !q2 || o.label.toLowerCase().indexOf(q2) > -1;
       }).slice(0, 80);
       activeIdx = -1;
@@ -528,7 +552,7 @@ echo <<<'HTML'
         : count + (count === 80 ? '+' : '') + ' student' + (count !== 1 ? 's' : '') + (q2 ? ' matching \u201c' + q2 + '\u201d' : '');
       dropdown.appendChild(hdr);
 
-      visible.forEach(function(o, idx) {
+      visible.forEach(function (o, idx) {
         var item = document.createElement('div');
         item.style.cssText = 'padding:9px 12px;cursor:pointer;border-bottom:1px solid #f3f4f6;';
         item.setAttribute('data-idx', String(idx));
@@ -539,17 +563,17 @@ echo <<<'HTML'
           '</div>' +
           '<div style="font-size:0.76rem;color:#9ca3af;margin-top:2px;">' + hi(o.email, q2) + '</div>';
 
-        item.addEventListener('mouseenter', function(){ setActive(idx); });
+        item.addEventListener('mouseenter', function (){ setActive(idx); });
         var _md = false;
-        item.addEventListener('mousedown', function(e){ e.preventDefault(); _md = true; selectOpt(o); });
-        item.addEventListener('click', function(){ if (_md){ _md=false; return; } selectOpt(o); });
+        item.addEventListener('mousedown', function (e){ e.preventDefault(); _md = true; selectOpt(o); });
+        item.addEventListener('click', function (){ if (_md){ _md=false; return; } selectOpt(o); });
         dropdown.appendChild(item);
       });
     }
 
     function setActive(idx) {
       activeIdx = idx;
-      Array.from(dropdown.querySelectorAll('[data-idx]')).forEach(function(el, i){
+      Array.from(dropdown.querySelectorAll('[data-idx]')).forEach(function (el, i){
         el.style.background = (i === idx) ? '#eff6ff' : '';
       });
     }
@@ -589,16 +613,16 @@ echo <<<'HTML'
       searchInput.focus();
     }
 
-    searchInput.addEventListener('focus', function(){
+    searchInput.addEventListener('focus', function (){
       if (!searchInput.readOnly) showDropdown(searchInput.value);
     });
-    searchInput.addEventListener('input', function(){
+    searchInput.addEventListener('input', function (){
       showDropdown(this.value);
     });
-    searchInput.addEventListener('blur', function(){
-      setTimeout(function(){ dropdown.style.display='none'; }, 200);
+    searchInput.addEventListener('blur', function (){
+      setTimeout(function (){ dropdown.style.display='none'; }, 200);
     });
-    searchInput.addEventListener('keydown', function(e){
+    searchInput.addEventListener('keydown', function (e){
       if (dropdown.style.display === 'none' && !searchInput.readOnly) {
         showDropdown(searchInput.value); return;
       }
@@ -620,7 +644,7 @@ echo <<<'HTML'
       }
     });
 
-    clearBtn.addEventListener('mousedown', function(e){ e.preventDefault(); clearPicker(); });
+    clearBtn.addEventListener('mousedown', function (e){ e.preventDefault(); clearPicker(); });
   })();
 
   function onStudentChange(userid) {
@@ -634,7 +658,7 @@ echo <<<'HTML'
     var card = qs('#rtoc-student-card');
     card.style.display = 'block';
     card.innerHTML = '<div style="color:#6b7280;font-size:0.82rem;">Loading student info...</div>';
-    post({action:'getstudent', userid:userid}, function(r){
+    post({action:'getstudent', userid:userid}, function (r){
       if (!r.ok || r.data.error) {
         card.innerHTML = '<div style="color:#dc2626;font-size:0.82rem;">Student not found</div>';
         return;
@@ -671,7 +695,7 @@ echo <<<'HTML'
     qs('#rtoc-soa-units-panel').style.display = 'block';
     qs('#rtoc-unit-tbody').innerHTML = '<tr><td colspan="7" style="padding:20px;text-align:center;color:#9ca3af;">Loading...</td></tr>';
 
-    post({action:'getunits', userid:userid}, function(r){
+    post({action:'getunits', userid:userid}, function (r){
       if (!r.ok) {
         qs('#rtoc-unit-tbody').innerHTML = '<tr><td colspan="7" style="padding:20px;text-align:center;color:#dc2626;">'+escHtml(r.error)+'</td></tr>';
         return;
@@ -694,7 +718,7 @@ echo <<<'HTML'
     var sel = qs('#rtoc-unit-filter-group');
     sel.innerHTML = '<option value="">All qualifications</option>';
     var seen = {};
-    allUnits.forEach(function(u){
+    allUnits.forEach(function (u){
       if (!seen[u.categoryid]) {
         seen[u.categoryid] = true;
         var o = document.createElement('option');
@@ -718,7 +742,7 @@ echo <<<'HTML'
     var tsFrom = dateFrom ? (new Date(dateFrom).getTime() / 1000) : 0;
     var tsTo   = dateTo   ? (new Date(dateTo + 'T23:59:59').getTime() / 1000) : 0;
 
-    return allUnits.filter(function(u){
+    return allUnits.filter(function (u){
       // Text search — unit code, title, and TP prefix
       if (q) {
         var tp = tpPrefix(u.unitcode).toLowerCase();
@@ -751,7 +775,7 @@ echo <<<'HTML'
     var filtered = getFilteredUnits();
 
     // Sort
-    filtered.sort(function(a, b){
+    filtered.sort(function (a, b){
       var av, bv;
       if (sortCol === 'code')    { av = a.unitcode;          bv = b.unitcode; }
       else if (sortCol === 'title')   { av = a.unittitle;    bv = b.unittitle; }
@@ -788,7 +812,7 @@ echo <<<'HTML'
     // Preserve checked state by courseid
     var checked = getCheckedCourseIds();
 
-    tbody.innerHTML = filtered.map(function(u){
+    tbody.innerHTML = filtered.map(function (u){
       var isChecked = checked[u.courseid] ? 'checked' : '';
       var tp = tpPrefix(u.unitcode);
       var tpBadge = tp
@@ -809,14 +833,14 @@ echo <<<'HTML'
     }).join('');
 
     // Bind row checkboxes
-    qsa('.rtoc-unit-cb').forEach(function(cb){
+    qsa('.rtoc-unit-cb').forEach(function (cb){
       cb.addEventListener('change', updateSelectionSummary);
     });
   }
 
   function getCheckedCourseIds() {
     var map = {};
-    qsa('.rtoc-unit-cb:checked').forEach(function(cb){ map[cb.dataset.courseid] = true; });
+    qsa('.rtoc-unit-cb:checked').forEach(function (cb){ map[cb.dataset.courseid] = true; });
     return map;
   }
 
@@ -827,8 +851,8 @@ echo <<<'HTML'
       container.innerHTML = '<div style="color:#9ca3af;font-size:0.85rem;">No qualification groups detected. Ensure courses are placed inside category folders in Moodle.</div>';
       return;
     }
-    container.innerHTML = allGroups.map(function(g){
-      var compliantCount = g.units.filter(function(u){ return u.compliant; }).length;
+    container.innerHTML = allGroups.map(function (g){
+      var compliantCount = g.units.filter(function (u){ return u.compliant; }).length;
       var totalCount = g.units.length;
       // Progress fraction for the group
       var progressPct = totalCount ? Math.round((compliantCount / totalCount) * 100) : 0;
@@ -857,7 +881,7 @@ echo <<<'HTML'
           '</div>'+
         '</div>'+
         '<div class="rtoc-group-card-body">'+
-          g.units.map(function(u){
+          g.units.map(function (u){
             var tp = tpPrefix(u.unitcode);
             var tpSpan = tp ? '<span style="font-size:10px;font-family:monospace;background:#f1f5f9;color:#475569;padding:1px 4px;border-radius:3px;margin-right:4px;">'+escHtml(tp)+'</span>' : '';
             return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #f3f4f6;">'+
@@ -874,8 +898,8 @@ echo <<<'HTML'
     }).join('');
   }
 
-  window.selectGroup = function(catid, compliantOnly) {
-    allUnits.forEach(function(u){
+  window.selectGroup = function (catid, compliantOnly) {
+    allUnits.forEach(function (u){
       if (String(u.categoryid) !== String(catid)) return;
       if (compliantOnly && !u.compliant) return;
       var cb = qs('.rtoc-unit-cb[data-courseid="'+u.courseid+'"]');
@@ -889,12 +913,12 @@ echo <<<'HTML'
   };
 
   // ── Selection summary + compliance gate ───────────────────────────────────
-  window.updateSelectionSummary = function() {
+  window.updateSelectionSummary = function () {
     var checked = getCheckedCourseIds();
-    var selected = allUnits.filter(function(u){ return checked[u.courseid]; });
+    var selected = allUnits.filter(function (u){ return checked[u.courseid]; });
     var errCount  = 0;
     var warnCount = 0;
-    selected.forEach(function(u){
+    selected.forEach(function (u){
       if (u.compliance.errors   && u.compliance.errors.length)   errCount++;
       if (u.compliance.warnings && u.compliance.warnings.length) warnCount++;
     });
@@ -929,7 +953,7 @@ echo <<<'HTML'
   };
 
   // ── Table sorting ─────────────────────────────────────────────────────────
-  qs('#rtoc-unit-table').addEventListener('click', function(e){
+  qs('#rtoc-unit-table').addEventListener('click', function (e){
     var th = e.target.closest('th[data-sort]');
     if (!th) return;
     var col = th.dataset.sort;
@@ -940,7 +964,7 @@ echo <<<'HTML'
 
   // ── Filters ───────────────────────────────────────────────────────────────
   ['#rtoc-unit-search','#rtoc-unit-filter-group','#rtoc-unit-filter-compliance',
-   '#rtoc-unit-filter-outcome','#rtoc-unit-date-from','#rtoc-unit-date-to'].forEach(function(sel){
+   '#rtoc-unit-filter-outcome','#rtoc-unit-date-from','#rtoc-unit-date-to'].forEach(function (sel){
     var el = qs(sel);
     if (el) el.addEventListener('input', renderTable);
     if (el) el.addEventListener('change', renderTable);
@@ -951,9 +975,9 @@ echo <<<'HTML'
   // Clear all filters button
   var clearFiltersBtn = qs('#rtoc-unit-clear-filters');
   if (clearFiltersBtn) {
-    clearFiltersBtn.addEventListener('click', function(){
+    clearFiltersBtn.addEventListener('click', function (){
       var ids = ['#rtoc-unit-search','#rtoc-unit-filter-group','#rtoc-unit-filter-compliance','#rtoc-unit-filter-outcome','#rtoc-unit-date-from','#rtoc-unit-date-to'];
-      ids.forEach(function(sel){ var el = qs(sel); if (el) el.value = ''; });
+      ids.forEach(function (sel){ var el = qs(sel); if (el) el.value = ''; });
       var hie = qs('#rtoc-unit-hide-issued');
       if (hie) hie.checked = false;
       renderTable();
@@ -963,7 +987,7 @@ echo <<<'HTML'
   // ── Document type selector — update labels and show/hide ref fields ────────
   var doctype = qs('#rtoc-soa-doctype');
   if (doctype) {
-    doctype.addEventListener('change', function(){
+    doctype.addEventListener('change', function (){
       var val = this.value;
       var refFields = qs('#rtoc-soa-ref-fields');
       var codeLabel = qs('#rtoc-soa-refcode-label');
@@ -990,20 +1014,20 @@ echo <<<'HTML'
   }
 
   // ── Select all / deselect ─────────────────────────────────────────────────
-  qs('#rtoc-select-all').addEventListener('change', function(){
+  qs('#rtoc-select-all').addEventListener('change', function (){
     var on = this.checked;
-    qsa('.rtoc-unit-cb').forEach(function(cb){ cb.checked = on; });
+    qsa('.rtoc-unit-cb').forEach(function (cb){ cb.checked = on; });
     updateSelectionSummary();
   });
-  qs('#rtoc-select-compliant').addEventListener('click', function(){
-    qsa('.rtoc-unit-cb').forEach(function(cb){
+  qs('#rtoc-select-compliant').addEventListener('click', function (){
+    qsa('.rtoc-unit-cb').forEach(function (cb){
       var tr = cb.closest('tr');
       cb.checked = tr && tr.dataset.haserr === '0';
     });
     updateSelectionSummary();
   });
-  qs('#rtoc-deselect-all').addEventListener('click', function(){
-    qsa('.rtoc-unit-cb').forEach(function(cb){ cb.checked = false; });
+  qs('#rtoc-deselect-all').addEventListener('click', function (){
+    qsa('.rtoc-unit-cb').forEach(function (cb){ cb.checked = false; });
     updateSelectionSummary();
   });
 
@@ -1011,17 +1035,17 @@ echo <<<'HTML'
   qs('#rtoc-soa-bypass').addEventListener('change', updateSelectionSummary);
 
   // ── Generate SOA ──────────────────────────────────────────────────────────
-  qs('#rtoc-soa-generate-btn').addEventListener('click', function(){
+  qs('#rtoc-soa-generate-btn').addEventListener('click', function (){
     // Use outer-scope selectedUserId (set by the student picker) as the
     // reliable source; fall back to the hidden native select as a safety net.
     var userid = selectedUserId || qs('#rtoc-soa-userid').value;
     if (!userid) { alert('Please select a student first.'); return; }
 
     var checked = getCheckedCourseIds();
-    var selected = allUnits.filter(function(u){ return checked[u.courseid]; });
+    var selected = allUnits.filter(function (u){ return checked[u.courseid]; });
     if (!selected.length) { alert('Please select at least one unit.'); return; }
 
-    var courseids = JSON.stringify(selected.map(function(u){ return u.courseid; }));
+    var courseids = JSON.stringify(selected.map(function (u){ return u.courseid; }));
 
     var params = {
       action:    'generatesoa',
@@ -1040,7 +1064,7 @@ echo <<<'HTML'
     var btn = qs('#rtoc-soa-generate-btn');
     btn.disabled = true;
 
-    post(params, function(r){
+    post(params, function (r){
       overlay.classList.remove('active');
       btn.disabled = false;
       var resultEl = qs('#rtoc-soa-result');
@@ -1056,14 +1080,14 @@ echo <<<'HTML'
           '<a href="'+r.viewurl+'" class="btn btn-sm btn-secondary">View All Certificates</a>'+
           '</div>';
         // Clear selection
-        qsa('.rtoc-unit-cb').forEach(function(cb){ cb.checked = false; });
+        qsa('.rtoc-unit-cb').forEach(function (cb){ cb.checked = false; });
         updateSelectionSummary();
         // Reload units to reflect newly issued SOA
         loadUnits(userid);
       } else {
         var detail = '';
         if (r.detail && r.detail.length) {
-          detail = '<ul style="margin:6px 0 0;padding-left:16px;">'+r.detail.map(function(d){ return '<li>'+escHtml(d)+'</li>'; }).join('')+'</ul>';
+          detail = '<ul style="margin:6px 0 0;padding-left:16px;">'+r.detail.map(function (d){ return '<li>'+escHtml(d)+'</li>'; }).join('')+'</ul>';
         }
         resultEl.innerHTML =
           '<div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:14px;color:#991b1b;">'+

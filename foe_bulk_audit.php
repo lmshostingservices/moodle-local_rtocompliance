@@ -1,4 +1,27 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * local_rtocompliance file.
+ *
+ * @package    local_rtocompliance
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ */
+
 // ─────────────────────────────────────────────────────────────────────────────
 // FOE Bulk Deletion Audit  (local_rtocompliance v5.9.150)
 //
@@ -35,6 +58,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 require_once(__DIR__ . '/../../config.php');
+require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
@@ -533,7 +557,7 @@ foreach ([
     echo '<li class="nav-item">'
        . '<a class="nav-link' . ($id === 'all' ? ' active' : '') . '" href="#" '
        . 'onclick="fbaFilter(' . json_encode($fverdict) . ');'
-       . 'document.querySelectorAll(\'#fba-tabs .nav-link\').forEach(function(x){x.classList.remove(\'active\')});'
+       . 'document.querySelectorAll(\'#fba-tabs .nav-link\').forEach(function (x){x.classList.remove(\'active\')});'
        . 'this.classList.add(\'active\');return false;" '
        . 'id="fba-tabs">' . _fba_h($label) . '</a>'
        . '</li>';
@@ -619,7 +643,7 @@ echo '<p class="mt-3">'
 ?>
 <script>
 function fbaFilter(verdict) {
-    document.querySelectorAll('#fba-tbody tr').forEach(function(row) {
+    document.querySelectorAll('#fba-tbody tr').forEach(function (row) {
         row.style.display = (verdict === '' || row.getAttribute('data-verdict') === verdict) ? '' : 'none';
     });
 }

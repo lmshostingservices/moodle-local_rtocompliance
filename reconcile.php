@@ -1,4 +1,27 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * local_rtocompliance file.
+ *
+ * @package    local_rtocompliance
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ */
+
 // ─────────────────────────────────────────────────────────────────────────────
 // NAT Enrolment Reconciliation Tool  (v1.0.0 — local_rtocompliance v5.9.102)
 //
@@ -457,7 +480,7 @@ if ($action === 'natdownload' && $importid) {
     $ndDate = date('Ymd', (int)$ndImport->timecreated);
 
     // Build CSV string from headers + rows (recordset-compatible).
-    $ndMakeCsv = function(array $headers, $rows) {
+    $ndMakeCsv = function (array $headers, $rows) {
         $buf = "\xEF\xBB\xBF"; // UTF-8 BOM
         $fh  = fopen('php://memory', 'w+');
         fputcsv($fh, $headers);
@@ -1081,7 +1104,7 @@ if ($action === 'analyse' && $importid) {
     // email/USI link to this qual's clientid is plausible).
 
     // Helper: store a matched user
-    $storeMatch = function(string $lcCid, object $u, string $path = 'A')
+    $storeMatch = function (string $lcCid, object $u, string $path = 'A')
         use (&$clientToUid, &$uidToDetails, &$natUnits, &$clientMatchPath) {
         if ($lcCid === '' || !isset($natUnits[$lcCid]) || isset($clientToUid[$lcCid])) return;
         $clientToUid[$lcCid]        = (int)$u->id;
@@ -4169,7 +4192,7 @@ if ($action === 'analyse' && $importid) {
 
             // ── v5.9.170 Three-file routing by numeric confidence ─────────────
             // Helper: strip newlines/CR that confuse Moodle's csv_import_reader
-            $_sc = function($v) { return str_replace(["\r\n", "\r", "\n"], ' ', (string)$v); };
+            $_sc = function ($v) { return str_replace(["\r\n", "\r", "\n"], ' ', (string)$v); };
             $_splitPct  = (int)($_meta['confidence_pct'] ?? 80);
             $_sn        = $_cd ? $_sc($_cd->shortname) : '';
             if ($_splitPct >= 95) {

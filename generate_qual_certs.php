@@ -1,4 +1,27 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * local_rtocompliance file.
+ *
+ * @package    local_rtocompliance
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ */
+
 // GEN-BY-QUAL (v5.2.72) — Suspended students now appear in the completion list with a
 // SUSPENDED badge. Certificate generation works regardless of account status — completing
 // a qualification is a historical fact independent of current account state. Admins can
@@ -17,6 +40,7 @@
 // and always issues Testamur + Record of Results — never SoA or Completion Cert.
 
 require_once(__DIR__ . '/../../config.php');
+require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 require_once(__DIR__ . '/classes/cert_template.php');
@@ -567,12 +591,12 @@ echo html_writer::tag('label',
     ['for' => 'gq-sendemail', 'style' => 'font-size:0.87rem;color:#374151;cursor:pointer;margin:0;font-weight:400;']
 );
 echo html_writer::tag('a', 'Select all',
-    ['href' => '#', 'onclick' => 'document.querySelectorAll(".gq-cbx").forEach(function(cb){cb.checked=true;}); return false;',
+    ['href' => '#', 'onclick' => 'document.querySelectorAll(".gq-cbx").forEach(function (cb){cb.checked=true;}); return false;',
      'style' => 'font-size:0.85rem;text-decoration:none;color:#2563eb;']
 );
 echo html_writer::tag('span', '/', ['style' => 'color:#9ca3af;']);
 echo html_writer::tag('a', 'None',
-    ['href' => '#', 'onclick' => 'document.querySelectorAll(".gq-cbx").forEach(function(cb){cb.checked=false;}); return false;',
+    ['href' => '#', 'onclick' => 'document.querySelectorAll(".gq-cbx").forEach(function (cb){cb.checked=false;}); return false;',
      'style' => 'font-size:0.85rem;text-decoration:none;color:#2563eb;']
 );
 echo html_writer::end_div();
@@ -583,7 +607,7 @@ echo '<table class="generaltable" style="width:100%;">';
 echo '<thead><tr style="background:#f1f5f9;">';
 echo '<th style="width:36px;padding:10px 8px;">'
     . '<input type="checkbox" id="gq-selectall" title="Select/deselect all"'
-    . ' onchange="document.querySelectorAll(\'.gq-cbx\').forEach(function(cb){cb.checked=this.checked;}.bind(this));" checked>'
+    . ' onchange="document.querySelectorAll(\'.gq-cbx\').forEach(function (cb){cb.checked=this.checked;}.bind(this));" checked>'
     . '</th>';
 echo '<th style="padding:10px 8px;">Student</th>';
 echo '<th style="padding:10px 8px;">Email</th>';

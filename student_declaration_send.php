@@ -1,4 +1,27 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * local_rtocompliance file.
+ *
+ * @package    local_rtocompliance
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ */
+
 // student_declaration_send.php — Send a Student Declaration to selected students.
 // FIX-RTO-DECL-SELECT (v4.0.78): replaced "send to all N students" button with a
 // checkbox-selection table so admin can target 1 or more specific students.
@@ -6,6 +29,7 @@
 // POST now accepts userids[] (selected array) instead of userid=0 (all).
 
 require_once(__DIR__ . '/../../config.php');
+require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
@@ -81,8 +105,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && confirm_sesskey()) {
 
     // Accept either userids[] (new multi-select) or legacy single userid.
     $raw_ids = [];
-    if (!empty($_POST['userids']) && is_array($_POST['userids'])) {
-        foreach ($_POST['userids'] as $raw) {
+    if (!empty(optional_param_array('userids', [], PARAM_INT)) && is_array(optional_param_array('userids', [], PARAM_INT))) {
+        foreach (optional_param_array('userids', [], PARAM_INT) as $raw) {
             $i = (int)$raw;
             if ($i > 0) {
                 $raw_ids[] = $i;
@@ -322,7 +346,7 @@ $baseUrl = new moodle_url('/local/rtocompliance/student_declaration_send.php');
 $filterBar = '<div class="rtoc-filter-bar" style="margin-bottom:1rem;">';
 $filterBar .= '<div class="rtoc-filter-fields">';
 
-$filterBtn = function($label, $value, $count, $current) use ($baseUrl, $search) {
+$filterBtn = function ($label, $value, $count, $current) use ($baseUrl, $search) {
     $active = ($current === $value) ? ' btn-primary' : ' btn-outline-secondary';
     $url = clone $baseUrl;
     $url->param('declfilter', $value);
@@ -444,7 +468,7 @@ echo html_writer::end_div(); // .compliance-container
 
 // ── JS for checkbox counter ───────────────────────────────────────────────────
 echo html_writer::script('
-(function() {
+(function () {
     var sendBtn   = document.getElementById("decl-send-btn");
     var countSpan = document.getElementById("decl-count");
     var selectAll = document.getElementById("selectall-decl");
@@ -455,16 +479,16 @@ echo html_writer::script('
         if (sendBtn)   sendBtn.disabled = (checked === 0);
     }
 
-    document.querySelectorAll(".decl-student-cb").forEach(function(cb) {
-        cb.addEventListener("change", function() {
+    document.querySelectorAll(".decl-student-cb").forEach(function (cb) {
+        cb.addEventListener("change", function () {
             updateCount();
             if (selectAll && !cb.checked) selectAll.indeterminate = true;
         });
     });
 
     if (selectAll) {
-        selectAll.addEventListener("change", function() {
-            document.querySelectorAll(".decl-student-cb:not([disabled])").forEach(function(cb) {
+        selectAll.addEventListener("change", function () {
+            document.querySelectorAll(".decl-student-cb:not([disabled])").forEach(function (cb) {
                 cb.checked = selectAll.checked;
             });
             updateCount();

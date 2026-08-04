@@ -1,4 +1,27 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * local_rtocompliance file.
+ *
+ * @package    local_rtocompliance
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ */
+
 // DIAG-v5.9.50: Step-by-step breadcrumb logging. Each marker writes to a file in
 // /tmp AND to the PHP error log AND to Moodle DB config (fallback).
 // Check /tmp/rtoc_sc_*.txt or PHP error log, or run in Moodle DB:
@@ -13,7 +36,7 @@ if (!function_exists('_sc_log')) {
         error_log('[RTOC-SC] ' . $step);
     }
 }
-register_shutdown_function(function() {
+register_shutdown_function(function () {
     $err = error_get_last();
     if ($err) {
         _sc_log('SHUTDOWN fatal type=' . $err['type'] . ' msg=' . $err['message'] . ' in ' . $err['file'] . ':' . $err['line']);
@@ -24,6 +47,7 @@ register_shutdown_function(function() {
 _sc_log('START pid=' . getmypid() . ' method=' . ($_SERVER['REQUEST_METHOD'] ?? '?') . ' uri=' . ($_SERVER['REQUEST_URI'] ?? '?'));
 
 require_once(__DIR__ . '/../../config.php');
+require_login();
 _sc_log('config.php loaded');
 try { set_config('_sc_cp', json_encode(['t' => date('c'), 'pid' => getmypid(), 'step' => 'config_loaded']), 'local_rtocompliance'); } catch (\Throwable $_e) {}
 
@@ -1981,8 +2005,8 @@ echo '<style>
 </style>';
 
 echo '<script>
-document.querySelectorAll(".faq-question").forEach(function(question) {
-    question.addEventListener("click", function() {
+document.querySelectorAll(".faq-question").forEach(function (question) {
+    question.addEventListener("click", function () {
         var item = this.closest(".faq-item");
         item.classList.toggle("open");
     });

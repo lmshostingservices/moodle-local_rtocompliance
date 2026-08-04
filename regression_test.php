@@ -1,4 +1,27 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * local_rtocompliance file.
+ *
+ * @package    local_rtocompliance
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ */
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Complaint Student Acceptance Test Engine  (local_rtocompliance v5.9.127)
 //
@@ -23,6 +46,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 require_once(dirname(dirname(dirname(__FILE__))) . '/config.php');
+require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
@@ -504,7 +528,7 @@ foreach ($regressionCases as $i => $rc) {
     }
 
     // Sort: not_enrolled first (most interesting), then archived, then active.
-    usort($natTrace, function($a, $b) {
+    usort($natTrace, function ($a, $b) {
         $ord = ['not_enrolled' => 0, 'archived' => 1, 'active' => 2];
         return ($ord[$a['moodle_status']] ?? 0) <=> ($ord[$b['moodle_status']] ?? 0);
     });
@@ -690,7 +714,7 @@ echo '<div class="rtoc-main-content" style="max-width:1200px;margin:0 auto;paddi
 
   <!-- Card header (click to expand/collapse) -->
   <div style="background:<?= $headerBg ?>;padding:0.55rem 0.9rem;display:flex;align-items:center;gap:0.7rem;flex-wrap:wrap;cursor:pointer;border-radius:4px 4px 0 0;"
-       onclick="(function(el){el.style.display=el.style.display==='none'?'block':'none';})(document.getElementById('rtbd<?= $i ?>'));">
+       onclick="(function (el){el.style.display=el.style.display==='none'?'block':'none';})(document.getElementById('rtbd<?= $i ?>'));">
     <span style="font-size:1.1em;font-weight:700;color:<?= $headerClr ?>;">
       <?= $res['pass'] ? '&#10003;' : '&#10007;' ?>
     </span>
