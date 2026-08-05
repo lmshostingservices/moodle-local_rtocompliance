@@ -229,6 +229,9 @@ if ($action === 'upload_nat_dobs' && confirm_sesskey()) {
     $parsedRows  = 0;
     $skippedRows = 0;
     $clientToDob = [];
+    // LOG-UNREADABLE: collect (clientid → raw DOB string) for rows that fail the
+    // parse check so admins can see exactly which identifiers had bad dates.
+    $unreadableRows = []; // ['clientid' => 'XXXXXXX', 'raw_dob' => '...', 'reason' => '...']
 
     if ($lines === false || count($lines) === 0) {
         redirect(new moodle_url('/local/rtocompliance/students.php'),
@@ -239,12 +242,16 @@ if ($action === 'upload_nat_dobs' && confirm_sesskey()) {
         // Need at least 81 chars to read the DOB field (positions 73-80 inclusive).
         if (strlen($line) < 81) {
             $skippedRows++;
+            // Can't reliably extract clientid from a truncated line.
+            $unreadableRows[] = ['clientid' => '(line too short: ' . strlen($line) . ' chars)', 'raw_dob' => '', 'reason' => 'line_too_short'];
             continue;
         }
         $clientid = trim(substr($line, 0, 10));
         $dobStr   = trim(substr($line, 73, 8));
         if ($clientid === '' || strlen($dobStr) !== 8 || !ctype_digit($dobStr)) {
             $skippedRows++;
+            $reason = $clientid === '' ? 'empty_clientid' : (strlen($dobStr) !== 8 ? 'dob_wrong_length' : 'dob_non_digit');
+            $unreadableRows[] = ['clientid' => $clientid ?: '(empty)', 'raw_dob' => $dobStr, 'reason' => $reason];
             continue;
         }
         // First DOB seen for this client ID wins (same policy as sync_dobs_from_nat).
@@ -255,10 +262,16 @@ if ($action === 'upload_nat_dobs' && confirm_sesskey()) {
     }
 
     if (empty($clientToDob)) {
+        $unreadableDetail = '';
+        if (!empty($unreadableRows)) {
+            $sample = array_slice($unreadableRows, 0, 20);
+            $lines2 = array_map(fn($r) => $r['clientid'] . ' raw_dob=' . (strlen($r['raw_dob']) ? $r['raw_dob'] : '(blank)') . ' (' . $r['reason'] . ')', $sample);
+            $unreadableDetail = ' First ' . count($sample) . ' unreadable: ' . implode('; ', $lines2) . (count($unreadableRows) > 20 ? ' ...' : '');
+        }
         redirect(new moodle_url('/local/rtocompliance/students.php'),
             "No valid DOB records found in the uploaded file ($parsedRows rows parsed, $skippedRows skipped). "
             . "This parser expects a standard fixed-width NAT00080 file (AVETMISS 8.0). "
-            . "For tab-delimited or variant formats, use the Data Import page.",
+            . "For tab-delimited or variant formats, use the Data Import page.$unreadableDetail",
             null, \core\output\notification::NOTIFY_WARNING);
     }
 
@@ -268,11 +281,22 @@ if ($action === 'upload_nat_dobs' && confirm_sesskey()) {
         $dd = (int)substr($dobStr, 0, 2);
         $mm = (int)substr($dobStr, 2, 2);
         $yy = (int)substr($dobStr, 4, 4);
-        if ($dd < 1 || $dd > 31 || $mm < 1 || $mm > 12 || $yy < 1900 || $yy > 2100) continue;
+        if ($dd < 1 || $dd > 31 || $mm < 1 || $mm > 12 || $yy < 1900 || $yy > 2100) {
+            // Calendar values are out of range — classify as unreadable.
+            $unreadableRows[] = ['clientid' => $clientid, 'raw_dob' => $dobStr, 'reason' => 'calendar_out_of_range'];
+            continue;
+        }
         $ts = gmmktime(12, 0, 0, $mm, $dd, $yy);
-        if ($ts === false || $ts <= 0) continue;
+        if ($ts === false || $ts <= 0) {
+            $unreadableRows[] = ['clientid' => $clientid, 'raw_dob' => $dobStr, 'reason' => 'gmmktime_failed'];
+            continue;
+        }
         $clientToTs[$clientid] = (int)$ts;
     }
+
+    // LOG-UNMATCHED: track which clientids were successfully parsed but not matched
+    // to any student in either Path A or Path B.
+    $matchedClientids = []; // clientids that were actually updated
 
     $updated = 0;
     if (!empty($clientToTs)) {
@@ -291,6 +315,7 @@ if ($action === 'upload_nat_dobs' && confirm_sesskey()) {
                 $DB->update_record('local_rtocompliance_students', (object)[
                     'id' => $row->id, 'dateofbirth' => $ts, 'timemodified' => time(),
                 ]);
+                $matchedClientids[$row->clientid] = true;
                 $updated++;
             }
             // Path B: match via mdl_user.idnumber = clientid (catches students whose
@@ -312,15 +337,46 @@ if ($action === 'upload_nat_dobs' && confirm_sesskey()) {
                     $upd->clientid = trim($ur->idnumber); // backfill clientid for future Path A
                 }
                 $DB->update_record('local_rtocompliance_students', $upd);
+                $matchedClientids[trim($ur->idnumber)] = true;
                 $updated++;
             }
         }
     }
 
+    // Build the unmatched list: parsed-and-valid clientids that never hit Path A or B.
+    $unmatchedClientids = array_values(array_diff(array_keys($clientToTs), array_keys($matchedClientids)));
+
+    // Log full detail to Moodle debugging so it's queryable without cluttering the UI.
     $fname = s(basename($upload['name']));
+    $unreadableCount = count($unreadableRows);
+    $unmatchedCount  = count($unmatchedClientids);
+
+    if ($unreadableCount > 0) {
+        $detail = array_map(
+            fn($r) => $r['clientid'] . ' raw_dob=' . (strlen($r['raw_dob']) ? $r['raw_dob'] : '(blank)') . ' (' . $r['reason'] . ')',
+            $unreadableRows
+        );
+        debugging('[DOB upload] ' . $unreadableCount . ' unreadable row(s) in ' . $fname . ': ' . implode('; ', $detail), DEBUG_DEVELOPER);
+    }
+    if ($unmatchedCount > 0) {
+        debugging('[DOB upload] ' . $unmatchedCount . ' unmatched clientid(s) in ' . $fname . ' (no student in Path A or B): ' . implode(', ', $unmatchedClientids), DEBUG_DEVELOPER);
+    }
+
+    // Build the admin-visible notification message.
+    $msg = "DOB sync complete: $updated student record(s) updated from $parsedRows NAT00080 rows in '$fname'.";
+    if ($unreadableCount > 0) {
+        $sampleUnread = array_slice($unreadableRows, 0, 10);
+        $unreadList   = implode(', ', array_map(fn($r) => $r['clientid'] . ' (' . $r['raw_dob'] . ')', $sampleUnread));
+        $msg .= " $unreadableCount unreadable date(s) — clientid (raw DOB): $unreadList" . ($unreadableCount > 10 ? ' …' : '') . '.';
+    }
+    if ($unmatchedCount > 0) {
+        $sampleUnmatch = array_slice($unmatchedClientids, 0, 10);
+        $msg .= " $unmatchedCount not matched to any student — clientid(s): " . implode(', ', $sampleUnmatch) . ($unmatchedCount > 10 ? ' …' : '') . '.';
+    }
+
     redirect(
         new moodle_url('/local/rtocompliance/students.php', ['filter' => 'usimissingdob']),
-        "DOB sync complete: $updated student record(s) updated from $parsedRows NAT00080 rows in '$fname'.",
+        $msg,
         null,
         $updated > 0 ? \core\output\notification::NOTIFY_SUCCESS : \core\output\notification::NOTIFY_WARNING
     );

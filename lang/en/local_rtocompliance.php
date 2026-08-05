@@ -613,6 +613,20 @@ $string['privacy:metadata:students:dateofbirth'] = 'Date of birth';
 $string['privacy:metadata:students:indigenousstatus'] = 'Indigenous status code';
 $string['privacy:metadata:students:countryofbirth'] = 'Country of birth code';
 $string['privacy:metadata:students:disabilityflag'] = 'Disability flag';
+// Task #101: Plain-English field descriptions for remaining students table fields
+// and the complaints/appeals/rpl tables declared in get_metadata().
+$string['privacy:metadata:students:firstname'] = 'Student first name as stored in the AVETMISS profile';
+$string['privacy:metadata:students:lastname'] = 'Student last name as stored in the AVETMISS profile';
+$string['privacy:metadata:students:sex'] = 'Sex as reported for AVETMISS (M/F/X/@ not stated)';
+$string['privacy:metadata:students:surveycontactphone'] = 'Phone number used to contact the student for quality-indicator surveys';
+$string['privacy:metadata:students:surveycontactemail'] = 'Email address used to contact the student for quality-indicator surveys';
+$string['privacy:metadata:students:buildingname'] = 'Building or property name component of the student\'s residential address';
+$string['privacy:metadata:students:unitno'] = 'Unit or apartment number component of the student\'s residential address';
+$string['privacy:metadata:students:streetno'] = 'Street number component of the student\'s residential address';
+$string['privacy:metadata:students:streetname'] = 'Street name component of the student\'s residential address';
+$string['privacy:metadata:students:suburb'] = 'Suburb or town component of the student\'s residential address';
+$string['privacy:metadata:students:postcode'] = 'Postcode component of the student\'s residential address';
+$string['privacy:metadata:students:statecode'] = 'State or territory code component of the student\'s residential address (AVETMISS code)';
 
 $string['privacy:metadata:enrolments'] = 'Training activity enrolment records for AVETMISS reporting';
 $string['privacy:metadata:enrolments:studentid'] = 'The student record ID';
@@ -654,6 +668,24 @@ $string['privacy:metadata:cricos_coe'] = 'Confirmation of Enrolment records';
 $string['privacy:metadata:cricos_coe:cricosstudentid'] = 'CRICOS student record ID';
 $string['privacy:metadata:cricos_coe:coenumber'] = 'CoE number';
 $string['privacy:metadata:cricos_coe:coursestartdate'] = 'Course start date';
+// Task #101: Plain-English field descriptions for complaints, appeals, and RPL tables.
+$string['privacy:metadata:complaints'] = 'Formal complaints lodged with or about the RTO, including complainant contact details, the nature of the complaint, and its resolution.';
+$string['privacy:metadata:complaints:complainantname'] = 'Full name of the person who lodged the complaint';
+$string['privacy:metadata:complaints:complainantemail'] = 'Email address of the complainant';
+$string['privacy:metadata:complaints:complainantphone'] = 'Phone number of the complainant';
+$string['privacy:metadata:complaints:description'] = 'Full description of the complaint as submitted';
+$string['privacy:metadata:complaints:resolution'] = 'Outcome or resolution applied to the complaint';
+$string['privacy:metadata:appeals'] = 'Formal assessment appeals lodged by students, including appellant contact details, the grounds for appeal, and the outcome.';
+$string['privacy:metadata:appeals:appellantname'] = 'Full name of the student who lodged the appeal';
+$string['privacy:metadata:appeals:appellantemail'] = 'Email address of the appellant';
+$string['privacy:metadata:appeals:appellantphone'] = 'Phone number of the appellant';
+$string['privacy:metadata:appeals:groundsforappeal'] = 'The stated reasons for the appeal';
+$string['privacy:metadata:appeals:outcome'] = 'Decision or outcome applied to the appeal';
+$string['privacy:metadata:rpl'] = 'Recognition of Prior Learning records, capturing evidence submitted by students and the resulting decisions.';
+$string['privacy:metadata:rpl:studentid'] = 'Internal RTO Compliance student record ID (foreign key to student profile)';
+$string['privacy:metadata:rpl:evidence'] = 'Description or reference to evidence supplied by the student to support the RPL claim';
+$string['privacy:metadata:rpl:decision'] = 'The RPL decision (e.g. granted, not granted, partially granted)';
+$string['privacy:metadata:rpl:decisiondate'] = 'Date the RPL decision was made';
 
 $string['email_certificate_confirm'] = 'Are you sure you want to email the {$a->certtype} (#{$a->certnumber}) to {$a->fullname} at {$a->email}?';
 $string['email_certificate_subject'] = 'Your {$a} Certificate';

@@ -342,6 +342,19 @@ $complianceSummary = \local_rtocompliance\cache_helper::get_compliance_summary()
 
 $missingusi       = $metrics['missing_usi'];
 $pendingCerts     = $metrics['pending_certs'];
+
+// Task #151: Count orphaned autocert queue entries — pending rows whose qual builder
+// no longer exists. These will never auto-complete and need manual cleanup.
+$orphanedAutocerts = 0;
+if ($dbman->table_exists('local_rtocompliance_autocerts') && $dbman->table_exists('local_rtocompliance_qualbuilder')) {
+    $orphanedAutocerts = $DB->count_records_sql(
+        "SELECT COUNT(*) FROM {local_rtocompliance_autocerts} a
+         WHERE a.status = 'pending'
+           AND NOT EXISTS (
+               SELECT 1 FROM {local_rtocompliance_qualbuilder} q WHERE q.id = a.qualbuilderid
+           )"
+    );
+}
 $dbman            = $DB->get_manager();
 $now              = time();
 
@@ -561,6 +574,9 @@ if ($manualReviewUSI > 0) {
 }
 if ($pendingCerts > 0) {
     $qa2Items[] = ['severity' => 'info', 'value' => $pendingCerts, 'label' => get_string('pending_certificates', 'local_rtocompliance'), 'icon' => 'award', 'url' => '/local/rtocompliance/certificates.php'];
+}
+if ($orphanedAutocerts > 0) {
+    $qa2Items[] = ['severity' => 'warning', 'value' => $orphanedAutocerts, 'label' => 'Orphaned Autocert Entries (qual deleted)', 'icon' => 'alert-circle', 'url' => '/local/rtocompliance/certificates.php'];
 }
 if (!empty($qa2Items)) {
     $actionGroups[] = ['heading' => 'QA2 – Learner Support', 'headingClass' => 'action-group-qa', 'items' => $qa2Items];

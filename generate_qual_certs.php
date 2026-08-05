@@ -565,6 +565,25 @@ if (empty($allcompleters)) {
     exit;
 }
 
+// Task #132: Multi-page RoR notice — shown when the qualification's unit count
+// exceeds a single page's capacity (~25 units). Helps admins know in advance that
+// issued certificates will span more than one page, and links to the cert audit view.
+// The threshold is conservative; actual overflow depends on template field height.
+define('ROR_MULTIPAGE_UNIT_THRESHOLD', 25);
+$isMultiPage = count($allunits) >= ROR_MULTIPAGE_UNIT_THRESHOLD;
+if ($isMultiPage) {
+    $certHubUrl = (new moodle_url('/local/rtocompliance/certificates.php', [
+        'qualcode' => urlencode($qual->qualificationcode),
+    ]))->out(false);
+    echo '<div class="alert alert-info mt-2 mb-3" style="border-left:4px solid #2563eb;">'
+        . '<strong>Multi-page Record of Results:</strong> This qualification has '
+        . count($allunits) . ' units of competency — student certificates will span '
+        . ceil(count($allunits) / ROR_MULTIPAGE_UNIT_THRESHOLD) . ' or more pages. '
+        . 'The cert Preview button shows all pages. '
+        . '<a href="' . s($certHubUrl) . '" class="alert-link">View issued certificates →</a>'
+        . '</div>';
+}
+
 // ── Generation form ───────────────────────────────────────────────────────────
 $formurl = new moodle_url('/local/rtocompliance/generate_qual_certs.php', [
     'qualid'  => $qualid,
@@ -613,6 +632,9 @@ echo '<th style="padding:10px 8px;">Student</th>';
 echo '<th style="padding:10px 8px;">Email</th>';
 echo '<th style="padding:10px 8px;">All Units Completed</th>';
 echo '<th style="padding:10px 8px;">Existing Certificates</th>';
+if ($isMultiPage) {
+    echo '<th style="padding:10px 8px;">RoR Pages</th>';
+}
 echo '</tr></thead><tbody>';
 
 foreach ($allcompleters as $student) {
@@ -661,6 +683,13 @@ foreach ($allcompleters as $student) {
     echo '<td style="padding:8px;color:#6b7280;">' . htmlspecialchars($student->email) . '</td>';
     echo '<td style="padding:8px;color:#374151;">' . userdate($student->timecompleted, '%d %b %Y') . '</td>';
     echo '<td style="padding:8px;">' . $certbadge . '</td>';
+    if ($isMultiPage) {
+        $estimatedPages = (int) ceil(count($allunits) / ROR_MULTIPAGE_UNIT_THRESHOLD);
+        echo '<td style="padding:8px;">'
+            . '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:4px;font-size:0.78rem;font-weight:600;">~'
+            . $estimatedPages . ' page' . ($estimatedPages > 1 ? 's' : '') . '</span>'
+            . '</td>';
+    }
     echo '</tr>';
 }
 

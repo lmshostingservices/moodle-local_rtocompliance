@@ -235,6 +235,61 @@ class nat_generator {
         );
         if ($stateFundedMissingCode > 0) {
             $this->warnings[] = "$stateFundedMissingCode government-funded enrolments are missing state funding codes";
+
+            // Task #26: When state funding codes are missing, also identify which states
+            // have no default configured in settings — so admins know exactly what to fix.
+            $stateDefaults = [
+                'QLD' => get_config('local_rtocompliance', 'qld_funding_code_default'),
+                'NSW' => get_config('local_rtocompliance', 'nsw_funding_code_default'),
+                'VIC' => get_config('local_rtocompliance', 'vic_funding_code_default'),
+                'SA'  => get_config('local_rtocompliance', 'sa_funding_code_default'),
+                'WA'  => get_config('local_rtocompliance', 'wa_funding_code_default'),
+                'TAS' => get_config('local_rtocompliance', 'tas_funding_code_default'),
+                'NT'  => get_config('local_rtocompliance', 'nt_funding_code_default'),
+                'ACT' => get_config('local_rtocompliance', 'act_funding_code_default'),
+            ];
+            $unconfiguredStates = array_keys(array_filter($stateDefaults, fn($v) => empty($v)));
+            if (!empty($unconfiguredStates)) {
+                $this->warnings[] = "No default state funding code is configured for: "
+                    . implode(', ', $unconfiguredStates)
+                    . " — government-funded enrolments from these states will have blank state funding codes in NAT00120. "
+                    . "Set defaults under Site Administration → Plugins → Local plugins → AI RTO Compliance → State Funding.";
+            }
+        }
+
+        // Task #39: Warn if government-funded enrolments in the reporting period have no
+        // purchasing contract identifier (NAT00120 pos 125-136). This field is mandatory
+        // for QLD DESBT and other state authority contracts. A blank field is written
+        // silently — this warning surfaces the issue before NCVER submission.
+        $missingContract = $DB->count_records_sql(
+            "SELECT COUNT(*) FROM {local_rtocompliance_enrolments}
+             WHERE fundingsourcenat IN ('11','13','15')
+               AND (purchasingcontract1 IS NULL OR purchasingcontract1 = '')
+               AND activitystartdate <= ?
+               AND (activityenddate IS NULL OR activityenddate = 0 OR activityenddate >= ?)",
+            [$this->periodend, $this->periodstart]
+        );
+        if ($missingContract > 0) {
+            $this->warnings[] = "$missingContract government-funded enrolments have no purchasing contract identifier — "
+                . "NAT00120 field at position 125-136 will be blank. "
+                . "For QLD (DESBT) and other state contracts, enter the contract ID on each enrolment before submitting to NCVER.";
+        }
+
+        // Task #120: Count enrolments in the reporting period with no qualification code
+        // (programcode). These are scoped to the reporting year — the count reflects what is
+        // actually missing from this submission, not a global all-time total. Enrolments with
+        // no programcode are excluded from NAT00130 and may fail NCVER validation for NAT00120.
+        $missingProgramCode = $DB->count_records_sql(
+            "SELECT COUNT(*) FROM {local_rtocompliance_enrolments}
+             WHERE (programcode IS NULL OR programcode = '')
+               AND activitystartdate <= ?
+               AND (activityenddate IS NULL OR activityenddate = 0 OR activityenddate >= ?)",
+            [$this->periodend, $this->periodstart]
+        );
+        if ($missingProgramCode > 0) {
+            $this->warnings[] = "$missingProgramCode enrolments in the $this->year reporting period have no qualification code — "
+                . "they will be excluded from NAT00130 and may fail NCVER validation. "
+                . "Assign a qualification code to each enrolment before submitting.";
         }
 
         // Bug 38: Warn about prior-year ongoing activities (activitystartdate before

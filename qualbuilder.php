@@ -189,7 +189,11 @@ if (empty($products)) {
             ? (int)$product->totalunits
             : (int)$product->unitcount;
 
-        $linkedtext = $product->linkedcount . '/' . $displayTotal;
+        // Task #85: cap displayed linked count at displayTotal so the fraction never
+        // exceeds 1/1 (100%). Stale map entries can leave linkedcount > totalunits when
+        // units are removed from packaging rules after courses were already mapped.
+        $displayLinked = min((int)$product->linkedcount, $displayTotal);
+        $linkedtext = $displayLinked . '/' . $displayTotal;
         if ($product->linkedcount < $displayTotal) {
             $linkedtext = html_writer::tag('span', $linkedtext, ['class' => 'text-warning']);
         } else {

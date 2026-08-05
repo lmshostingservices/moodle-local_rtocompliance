@@ -195,6 +195,12 @@ class cert_template_renderer {
         // many lines each unit name wraps to.  The old approach of three
         // independent fixed-height MultiCells caused cols 1 & 3 to clip
         // after ~11 units whenever col2 contained long wrapping names.
+        //
+        // Task #128/#129: Multi-page continuation — when rows overflow the field
+        // boundary, AddPage() is called and remaining rows continue from the same
+        // top-of-field Y position on the new page. Optional column headers (attrs
+        // col1_header, col2_header, col3_header) are rendered both at the start of
+        // the table and again at the top of each continuation page (Task #129).
         if ($kind === 'ror_table') {
             $rowsjson = $payload['qualification.units_ror_rows_json'] ?? '[]';
             $rows = json_decode($rowsjson, true);
@@ -218,15 +224,43 @@ class cert_template_renderer {
             $fontsize = (float)($field['fontsize'] ?? 10);
             $maxY     = $y + $h;
 
+            // Derive page orientation from page dimensions for continuation pages.
+            $pageOrientation = ($pagew > $pageh) ? 'L' : 'P';
+
+            // Optional column header labels — re-rendered on every page (Task #129).
+            $col1Header = (string)($field['col1_header'] ?? '');
+            $col2Header = (string)($field['col2_header'] ?? '');
+            $col3Header = (string)($field['col3_header'] ?? '');
+            $hasHeaders = ($col1Header !== '' || $col2Header !== '' || $col3Header !== '');
+
             $pdf->SetFont($font, '', $fontsize);
             $pdf->SetTextColor(0, 0, 0);
 
-            $curY = $y;
-            foreach ($rows as $row) {
-                if ($curY >= $maxY) {
-                    break;
-                }
+            // Helper closure: render bold header row at $atY, return new Y after.
+            $renderHeaderRow = function(float $atY) use (
+                $pdf, $font, $fontsize, $c1w, $c2w, $c3w, $c1x, $c2x, $c3x,
+                $col1Header, $col2Header, $col3Header
+            ): float {
+                $pdf->SetFont($font, 'B', $fontsize);
+                $hh1 = $pdf->getStringHeight($c1w, $col1Header, false, true, '', 0);
+                $hh2 = $pdf->getStringHeight($c2w, $col2Header, false, true, '', 0);
+                $hh3 = $pdf->getStringHeight($c3w, $col3Header, false, true, '', 0);
+                $hdrH = max($hh1, $hh2, $hh3, 5.0);
+                $pdf->MultiCell($c1w, 0, $col1Header, 0, 'L', false, 0, $c1x, $atY, true, 0, false, true, $hdrH, 'T', false);
+                $pdf->MultiCell($c2w, 0, $col2Header, 0, 'L', false, 0, $c2x, $atY, true, 0, false, true, $hdrH, 'T', false);
+                $pdf->MultiCell($c3w, 0, $col3Header, 0, 'L', false, 0, $c3x, $atY, true, 0, false, true, $hdrH, 'T', false);
+                $pdf->SetFont($font, '', $fontsize);
+                return $atY + $hdrH;
+            };
 
+            $curY = $y;
+
+            // Render headers at the top of the first page.
+            if ($hasHeaders) {
+                $curY = $renderHeaderRow($curY);
+            }
+
+            foreach ($rows as $row) {
                 $sem    = isset($row['semester']) ? (string)$row['semester'] : '';
                 $name   = isset($row['name'])     ? (string)$row['name']     : '';
                 $result = isset($row['result'])   ? (string)$row['result']   : '';
@@ -237,11 +271,13 @@ class cert_template_renderer {
                 $h3 = $pdf->getStringHeight($c3w, $result, false, true, '', 0);
                 $rowH = max($h1, $h2, $h3, 4.0); // minimum 4 mm per row
 
-                // Clip final row if it would overflow the field boundary.
-                if ($curY + $rowH > $maxY + 0.5) {
-                    $rowH = $maxY - $curY;
-                    if ($rowH <= 0.5) {
-                        break;
+                // Overflow → add continuation page and re-render headers (Tasks #128 & #129).
+                if ($curY + $rowH > $maxY) {
+                    $pdf->AddPage($pageOrientation, [$pagew, $pageh]);
+                    $curY = $y;      // same field-top position on the new page
+                    $maxY = $y + $h; // reset page boundary
+                    if ($hasHeaders) {
+                        $curY = $renderHeaderRow($curY);
                     }
                 }
 
