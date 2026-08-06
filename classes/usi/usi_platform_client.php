@@ -460,10 +460,6 @@ class usi_platform_client {
             'certBytes' => (int) ($data['certBytes'] ?? 0),
             'orgId'     => (string) ($data['orgId'] ?? $org_id),
             'testMode'  => (bool) ($data['testMode'] ?? $test_mode),
-            // apiKey is returned by the platform on first registration AND when the
-            // plugin's stored key has drifted (cert-proves-ownership path).  The caller
-            // (usi_settings.php) must save this into Moodle config immediately.
-            'apiKey'    => isset($data['apiKey']) ? (string) $data['apiKey'] : null,
         ];
     }
 }

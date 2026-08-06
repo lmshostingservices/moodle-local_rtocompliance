@@ -100,38 +100,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && confirm_sesskey()) {
         $client = new \local_rtocompliance\usi\usi_platform_client(['test_mode' => (bool) $testmode]);
         $result = $client->upload_cert($certb64, $certpass, $orgid, (bool) $testmode, $notifmail);
         if (!empty($result['ok'])) {
-            // If the platform returned an apiKey (new registration or key-drift recovery),
-            // save it immediately into plugin config so subsequent uploads and verify
-            // calls authenticate correctly.  Without this the admin is permanently locked
-            // out after the first upload because the auto-generated key is never saved.
-            $returnedApiKey = isset($result['apiKey']) && strlen((string) $result['apiKey']) >= 16
-                ? (string) $result['apiKey'] : null;
-            if ($returnedApiKey !== null) {
-                set_config('apikey', $returnedApiKey, 'local_rtocompliance');
-                // Also update Central Config (local_aiconfig) if installed, so all plugins
-                // that read from aiconfig pick up the correct key immediately.
-                $aiconfiglib = $CFG->dirroot . '/local/aiconfig/lib.php';
-                if (file_exists($aiconfiglib)) {
-                    require_once($aiconfiglib);
-                    set_config('apikey', $returnedApiKey, 'local_aiconfig');
-                }
-                // Update the local variable so the status panel below reflects the new key.
-                $apikey = $returnedApiKey;
-                $apiconfigured = ($apiurl !== '' && $siteid !== '' && $apikey !== '');
-            }
-
             $message = get_string('usi_pertenant_uploaded', 'local_rtocompliance', [
                 'bytes' => (int) ($result['certBytes'] ?? 0),
                 'org'   => s($result['orgId'] ?? $orgid),
                 'mode'  => $testmode ? 'EVTE (test)' : 'PRODUCTION',
             ]);
-            // Append the saved-key notice so the admin knows it was auto-saved.
-            if ($returnedApiKey !== null) {
-                $message .= '<br><strong>&#x2705; Platform API key saved automatically.</strong> '
-                    . 'Your API key is: <code style="background:#f3f4f6;padding:2px 8px;border-radius:4px;">'
-                    . s($returnedApiKey) . '</code> '
-                    . 'It has been saved to your Plugin Settings → Platform API tab.';
-            }
             $messageclass = 'alert-success';
         } else {
             $message = get_string('usi_pertenant_upload_failed', 'local_rtocompliance')
