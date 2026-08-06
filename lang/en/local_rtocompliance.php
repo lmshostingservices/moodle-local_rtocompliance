@@ -3096,6 +3096,13 @@ $string['usi_pertenant_help_troubleshoot_authority']  = '<b>Your RTO does not ap
 $string['usi_pertenant_help_troubleshoot_password']   = '<b>Password lost</b> — there is no recovery. Create a brand new Machine Credential in RAM and re-upload it here. The old one can be deleted from RAM.';
 $string['usi_pertenant_help_troubleshoot_rejection']  = '<b>USI Registry rejects the credential</b> — the most likely cause is a TOID/ABN mismatch (credential was created against the wrong business). Verify the credential\'s subject in the Current status panel above and confirm it matches your TOID.';
 
+// Platform API key display strings
+$string['usi_pertenant_apikey_label']     = 'Platform API key';
+$string['usi_pertenant_apikey_saved']     = '(saved)';
+$string['usi_pertenant_apikey_not_set']   = '(not set — check Plugin Settings → Platform API)';
+$string['usi_pertenant_config_source']    = 'Reading from';
+$string['usi_pertenant_siteid_mismatch']  = 'Config mismatch: uploads use site ID <strong>{$a->aiconfig}</strong> (local_aiconfig) but Platform API tab shows <strong>{$a->rtocompliance}</strong> (local_rtocompliance). Update both to match so all plugins use the same site.';
+
 
 // CERT-TEMPLATE-BUILDER (v4.2.40) — visual certificate template builder strings.
 $string['cert_templates']                       = 'Certificate Templates';

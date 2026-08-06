@@ -58,7 +58,31 @@ $apiurl = trim((string) (get_config('local_rtocompliance', 'apiurl') ?: 'https:/
 $siteid = trim((string) get_config('local_rtocompliance', 'siteid'));
 $apikey = trim((string) get_config('local_rtocompliance', 'apikey'));
 
-$apiconfigured = ($apiurl !== '' && $siteid !== '' && $apikey !== '');
+// Also read Central Config (local_aiconfig) values so we can display which source
+// usi_platform_client will actually use and detect site-ID mismatches.
+$aiconfiglib       = $CFG->dirroot . '/local/aiconfig/lib.php';
+$aiconfigInstalled = file_exists($aiconfiglib);
+$aiSiteid          = '';
+$aiApikey          = '';
+if ($aiconfigInstalled) {
+    require_once($aiconfiglib);
+    if (function_exists('local_aiconfig_get_siteid')) {
+        $aiSiteid = trim((string) (local_aiconfig_get_siteid('local_rtocompliance') ?: ''));
+    }
+    if (function_exists('local_aiconfig_get_apikey')) {
+        $aiApikey = trim((string) (local_aiconfig_get_apikey('local_rtocompliance') ?: ''));
+    }
+}
+// The platform client gives local_aiconfig priority when both are installed.
+$configSource   = ($aiconfigInstalled && ($aiSiteid !== '' || $aiApikey !== ''))
+                  ? 'local_aiconfig'
+                  : 'local_rtocompliance';
+$effectiveApikey = ($configSource === 'local_aiconfig' && $aiApikey !== '') ? $aiApikey : $apikey;
+$effectiveSiteid = ($configSource === 'local_aiconfig' && $aiSiteid !== '') ? $aiSiteid : $siteid;
+// Mismatch: aiconfig provides a siteid that differs from the rtocompliance siteid.
+$siteidMismatch  = $aiconfigInstalled && $aiSiteid !== '' && $siteid !== '' && $aiSiteid !== $siteid;
+
+$apiconfigured = ($apiurl !== '' && $effectiveSiteid !== '' && $effectiveApikey !== '');
 
 $message = '';
 $messageclass = '';
@@ -100,6 +124,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && confirm_sesskey()) {
         $client = new \local_rtocompliance\usi\usi_platform_client(['test_mode' => (bool) $testmode]);
         $result = $client->upload_cert($certb64, $certpass, $orgid, (bool) $testmode, $notifmail);
         if (!empty($result['ok'])) {
+            // If the platform returned an apiKey (new registration or key-drift recovery),
+            // save it immediately into plugin config so subsequent uploads and verify
+            // calls authenticate correctly.  Without this the admin is permanently locked
+            // out after the first upload because the auto-generated key is never saved.
+            $returnedApiKey = isset($result['apiKey']) && strlen((string) $result['apiKey']) >= 16
+                ? (string) $result['apiKey'] : null;
+            if ($returnedApiKey !== null) {
+                set_config('apikey', $returnedApiKey, 'local_rtocompliance');
+                // Also update Central Config (local_aiconfig) if installed, so all plugins
+                // that read from aiconfig pick up the correct key immediately.
+                $aiconfiglib = $CFG->dirroot . '/local/aiconfig/lib.php';
+                if (file_exists($aiconfiglib)) {
+                    require_once($aiconfiglib);
+                    set_config('apikey', $returnedApiKey, 'local_aiconfig');
+                }
+                // Update local variables so the status panel below reflects the new key.
+                $apikey = $returnedApiKey;
+                $effectiveApikey = $returnedApiKey;
+                $apiconfigured = ($apiurl !== '' && $effectiveSiteid !== '' && $effectiveApikey !== '');
+            }
+
             $message = get_string('usi_pertenant_uploaded', 'local_rtocompliance', [
                 'bytes' => (int) ($result['certBytes'] ?? 0),
                 'org'   => s($result['orgId'] ?? $orgid),
@@ -121,7 +166,7 @@ if ($apiconfigured) {
     \core\session\manager::write_close();
     $mcurl = new \curl();
     $mcurl->setopt(['CURLOPT_TIMEOUT' => 12, 'CURLOPT_SSL_VERIFYPEER' => true, 'CURLOPT_SSL_VERIFYHOST' => 2]);
-    $mcurl->setHeader(['X-Site-Id: ' . $siteid, 'X-Api-Key: ' . $apikey]);
+    $mcurl->setHeader(['X-Site-Id: ' . $effectiveSiteid, 'X-Api-Key: ' . $effectiveApikey]);
     $resp = $mcurl->get(rtrim($apiurl, '/') . '/api/usi/status');
     $code = (int) $mcurl->info['http_code'];
     if ($code === 200 && $resp) {
@@ -201,7 +246,51 @@ if ($status && !empty($status['ok'])) {
 } else {
     echo '<div class="alert alert-warning" style="margin:0;">' . get_string('usi_pertenant_err_status', 'local_rtocompliance') . '</div>';
 }
+
+// ── Platform API key sub-panel ─────────────────────────────────────────────
+// Always shown so admins can confirm or diagnose their key without contacting support.
+$keylen = strlen($effectiveApikey);
+if ($keylen >= 16) {
+    $maskedKey = substr($effectiveApikey, 0, 8) . '••••••••' . substr($effectiveApikey, -8);
+} else if ($keylen > 0) {
+    $half = (int) ceil($keylen / 4);
+    $maskedKey = substr($effectiveApikey, 0, $half) . str_repeat('•', $keylen - $half * 2) . substr($effectiveApikey, -$half);
+} else {
+    $maskedKey = '';
+}
+
+echo '<div style="margin-top:16px;padding-top:14px;border-top:1px solid #f3f4f6;">';
+echo '<div style="font-size:13px;color:#374151;display:grid;grid-template-columns:200px 1fr;gap:6px 16px;">';
+
+// API key row
+echo '<div><b>' . get_string('usi_pertenant_apikey_label', 'local_rtocompliance') . ':</b></div>';
+if ($maskedKey !== '') {
+    echo '<div>';
+    echo '<code style="background:#f3f4f6;padding:2px 8px;border-radius:4px;letter-spacing:.05em;">' . s($maskedKey) . '</code> ';
+    echo '<span style="color:#10b981;font-size:12px;">' . get_string('usi_pertenant_apikey_saved', 'local_rtocompliance') . '</span>';
+    echo '</div>';
+} else {
+    echo '<div style="color:#6b7280;font-style:italic;">' . get_string('usi_pertenant_apikey_not_set', 'local_rtocompliance') . '</div>';
+}
+
+// Config source row
+echo '<div><b>' . get_string('usi_pertenant_config_source', 'local_rtocompliance') . ':</b></div>';
+echo '<div><code style="background:#f3f4f6;padding:2px 6px;border-radius:4px;font-size:12px;">' . s($configSource) . '</code></div>';
+
 echo '</div>';
+
+// Site-ID mismatch warning
+if ($siteidMismatch) {
+    echo '<div class="alert alert-warning" style="margin-top:12px;margin-bottom:0;font-size:13px;">';
+    echo get_string('usi_pertenant_siteid_mismatch', 'local_rtocompliance', [
+        'aiconfig'      => s($aiSiteid),
+        'rtocompliance' => s($siteid),
+    ]);
+    echo '</div>';
+}
+
+echo '</div>'; // end API key sub-panel
+echo '</div>'; // end status panel
 
 // Upload form
 echo '<div style="background:white;border:1px solid #e5e7eb;border-radius:8px;padding:20px;margin-bottom:20px;">';
