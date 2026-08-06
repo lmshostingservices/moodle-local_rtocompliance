@@ -1,0 +1,2354 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<XMLDB PATH="local/rtocompliance/db" VERSION="20260502" COMMENT="XMLDB file for RTO Compliance plugin">
+  <TABLES>
+    <!-- Student AVETMISS profile data (NAT00080/85/90/100) -->
+    <TABLE NAME="local_rtocompliance_students" COMMENT="Student AVETMISS profile and demographic data">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="Moodle user ID"/>
+        <!-- NAT00080 Client fields -->
+        <FIELD NAME="clientid" TYPE="char" LENGTH="10" NOTNULL="false" COMMENT="RTO-assigned client identifier"/>
+        <FIELD NAME="usi" TYPE="char" LENGTH="15" NOTNULL="false" COMMENT="Unique Student Identifier (10–12 chars per AVETMISS 8.0; field sized to 15 for vendor tolerance)"/>
+        <FIELD NAME="usiverified" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="USI verified with USI Registry"/>
+        <FIELD NAME="usiverifieddate" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Timestamp when USI was verified"/>
+        <FIELD NAME="firstname" TYPE="char" LENGTH="100" NOTNULL="false" COMMENT="Student first name for USI verification"/>
+        <FIELD NAME="lastname" TYPE="char" LENGTH="100" NOTNULL="false" COMMENT="Student last name for USI verification"/>
+        <FIELD NAME="dateofbirth" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Date of birth timestamp"/>
+        <FIELD NAME="sex" TYPE="char" LENGTH="1" NOTNULL="false" COMMENT="M=Male, F=Female, @=Not stated"/>
+        <FIELD NAME="indigenousstatus" TYPE="char" LENGTH="1" NOTNULL="true" DEFAULT="@" COMMENT="1=Aboriginal, 2=Torres Strait, 3=Both, 4=Neither, @=Not stated"/>
+        <FIELD NAME="countryofbirth" TYPE="char" LENGTH="4" NOTNULL="true" DEFAULT="1101" COMMENT="SACC country code"/>
+        <FIELD NAME="languageathome" TYPE="char" LENGTH="4" NOTNULL="true" DEFAULT="1201" COMMENT="ASCL language code - 1201=English"/>
+        <FIELD NAME="englishproficiency" TYPE="char" LENGTH="1" NOTNULL="true" DEFAULT="@" COMMENT="1=Very well, 2=Well, 3=Not well, 4=Not at all, @=Not stated"/>
+        <FIELD NAME="disabilityflag" TYPE="char" LENGTH="1" NOTNULL="true" DEFAULT="N" COMMENT="Y=Yes, N=No, @=Not stated"/>
+        <FIELD NAME="disabilitytypes" TYPE="char" LENGTH="50" NOTNULL="false" COMMENT="Comma-separated NAT00090 disability type codes"/>
+        <!-- NAT00085 Postal address -->
+        <FIELD NAME="buildingname" TYPE="char" LENGTH="50" NOTNULL="false"/>
+        <FIELD NAME="unitno" TYPE="char" LENGTH="30" NOTNULL="false"/>
+        <FIELD NAME="streetno" TYPE="char" LENGTH="15" NOTNULL="false"/>
+        <FIELD NAME="streetname" TYPE="char" LENGTH="70" NOTNULL="false"/>
+        <FIELD NAME="suburb" TYPE="char" LENGTH="50" NOTNULL="false"/>
+        <FIELD NAME="postcode" TYPE="char" LENGTH="4" NOTNULL="false"/>
+        <FIELD NAME="statecode" TYPE="char" LENGTH="2" NOTNULL="false" COMMENT="01=NSW, 02=VIC, 03=QLD, 04=SA, 05=WA, 06=TAS, 07=NT, 08=ACT, 09=Other"/>
+        <!-- NAT00100 Prior education -->
+        <FIELD NAME="highestschoollevel" TYPE="char" LENGTH="2" NOTNULL="true" DEFAULT="@@" COMMENT="02=Y12, 08=Y11, 09=Y10, 10=Y9 or lower, 11=Never attended, 12=Left school before Y9, @@=Not stated"/>
+        <FIELD NAME="yearschoolcompleted" TYPE="char" LENGTH="4" NOTNULL="false" COMMENT="4-digit year or @@@@ if not stated"/>
+        <FIELD NAME="priorachevement1" TYPE="char" LENGTH="3" NOTNULL="false" COMMENT="NAT00100 prior education code"/>
+        <FIELD NAME="priorachevement2" TYPE="char" LENGTH="3" NOTNULL="false"/>
+        <FIELD NAME="priorachevement3" TYPE="char" LENGTH="3" NOTNULL="false"/>
+        <FIELD NAME="priorachevement4" TYPE="char" LENGTH="3" NOTNULL="false"/>
+        <FIELD NAME="atschoolflag" TYPE="char" LENGTH="1" NOTNULL="true" DEFAULT="N" COMMENT="Y=At school, N=Not at school"/>
+        <!-- NAT00080 Employment and Study fields (AVETMISS 2.3) -->
+        <FIELD NAME="labourforcestatus" TYPE="char" LENGTH="2" NOTNULL="true" DEFAULT="@@" COMMENT="01-08 employment status, @@=Not stated"/>
+        <FIELD NAME="studyreason" TYPE="char" LENGTH="2" NOTNULL="true" DEFAULT="@@" COMMENT="01-12 study reason, @@=Not stated"/>
+        <FIELD NAME="prioreducationflag" TYPE="char" LENGTH="1" NOTNULL="true" DEFAULT="@" COMMENT="Y=Has prior ed, N=No prior ed, @=Not stated"/>
+        <!-- Survey contact (AVETMISS 2.3 Survey Contact Status A/E/M/N) -->
+        <FIELD NAME="surveycontactstatus" TYPE="char" LENGTH="1" NOTNULL="true" DEFAULT="N" COMMENT="A=Agrees, E=Valid excuse, M=No mail contact, N=Does not agree"/>
+        <FIELD NAME="surveycontactemail" TYPE="char" LENGTH="255" NOTNULL="false"/>
+        <FIELD NAME="surveycontactphone" TYPE="char" LENGTH="20" NOTNULL="false"/>
+        <!-- State-specific fields -->
+        <FIELD NAME="qldlui" TYPE="char" LENGTH="10" NOTNULL="false" COMMENT="QLD Learner Unique Identifier"/>
+        <FIELD NAME="viccohortid" TYPE="char" LENGTH="20" NOTNULL="false" COMMENT="VIC Commencing Program Cohort Identifier"/>
+        <FIELD NAME="nswsmartskilled" TYPE="char" LENGTH="20" NOTNULL="false" COMMENT="NSW Smart and Skilled contract ID"/>
+        <FIELD NAME="waraptid" TYPE="char" LENGTH="20" NOTNULL="false" COMMENT="WA RAPT identifier"/>
+        <FIELD NAME="schooltype" TYPE="char" LENGTH="3" NOTNULL="false" COMMENT="School type for school-based students: GOV=Government, CAT=Catholic, IND=Independent, OTH=Other"/>
+        <!-- Metadata -->
+        <FIELD NAME="profilecomplete" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="All mandatory fields completed"/>
+        <FIELD NAME="validationerrors" TYPE="text" NOTNULL="false" COMMENT="JSON array of validation errors"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="userid" TYPE="foreign-unique" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="usi" UNIQUE="false" FIELDS="usi"/>
+        <INDEX NAME="clientid" UNIQUE="false" FIELDS="clientid"/>
+        <INDEX NAME="profilecomplete" UNIQUE="false" FIELDS="profilecomplete"/>
+        <INDEX NAME="statecode" UNIQUE="false" FIELDS="statecode"/>
+        <INDEX NAME="usi_usiverified" UNIQUE="false" FIELDS="usi,usiverified"/>
+        <INDEX NAME="usiverified_dateofbirth" UNIQUE="false" FIELDS="usiverified,dateofbirth"/>
+        <INDEX NAME="userid_profilecomplete" UNIQUE="false" FIELDS="userid,profilecomplete"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Enrolment tracking for NAT00120/NAT00130 -->
+    <TABLE NAME="local_rtocompliance_enrolments" COMMENT="Training activity enrolment records for AVETMISS">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="studentid" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="FK to local_rtocompliance_students"/>
+        <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="Moodle course ID"/>
+        <!-- Program/Qualification details (NAT00030) -->
+        <FIELD NAME="programid" TYPE="char" LENGTH="10" NOTNULL="false" COMMENT="AVETMISS program/qualification identifier"/>
+        <FIELD NAME="programcode" TYPE="char" LENGTH="12" NOTNULL="false" COMMENT="National qualification code e.g. BSB50420"/>
+        <FIELD NAME="programname" TYPE="char" LENGTH="100" NOTNULL="false"/>
+        <!-- Subject/Unit details (NAT00060) -->
+        <FIELD NAME="subjectid" TYPE="char" LENGTH="12" NOTNULL="false" COMMENT="AVETMISS subject identifier"/>
+        <FIELD NAME="unitcode" TYPE="char" LENGTH="12" NOTNULL="false" COMMENT="National unit code e.g. BSBWHS411"/>
+        <FIELD NAME="unitname" TYPE="char" LENGTH="100" NOTNULL="false"/>
+        <!-- NAT00120 Training Activity fields -->
+        <FIELD NAME="activitystartdate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="activityenddate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="scheduledhours" TYPE="int" LENGTH="5" NOTNULL="false" COMMENT="Scheduled hours for this unit"/>
+        <FIELD NAME="outcomeidentifier" TYPE="char" LENGTH="2" NOTNULL="true" DEFAULT="00" COMMENT="AVETMISS outcome code"/>
+        <FIELD NAME="manualoutcome" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="1=outcome was manually set by manager via edit form; auto-grading observer/cron MUST NOT overwrite"/>
+        <FIELD NAME="deliverymode" TYPE="char" LENGTH="3" NOTNULL="true" DEFAULT="10" COMMENT="10=Classroom, 20=Electronic, 30=Employment, 40=Other, 90=Not applicable"/>
+        <FIELD NAME="fundingsourcenat" TYPE="char" LENGTH="2" NOTNULL="true" DEFAULT="30" COMMENT="11=Cth recurrent, 13=Cth specific, 15=State recurrent, 20=Fee for service, 30=Domestic FFS"/>
+        <FIELD NAME="fundingsourcestate" TYPE="char" LENGTH="3" NOTNULL="false" COMMENT="State-specific funding code"/>
+        <FIELD NAME="trainingcontractid" TYPE="char" LENGTH="10" NOTNULL="false" COMMENT="Apprenticeship/traineeship contract ID"/>
+        <FIELD NAME="concessionstatus" TYPE="char" LENGTH="1" NOTNULL="false" COMMENT="Fee concession status: F=Full fee, C=Concessional, E=Exempt/Waived"/>
+        <FIELD NAME="purchasingcontract1" TYPE="char" LENGTH="20" NOTNULL="false" COMMENT="State purchasing/contract code 1 (e.g. QLD QS102922)"/>
+        <FIELD NAME="purchasingcontract2" TYPE="char" LENGTH="20" NOTNULL="false" COMMENT="State purchasing/contract code 2"/>
+        <FIELD NAME="purchasingcontract3" TYPE="char" LENGTH="20" NOTNULL="false" COMMENT="State purchasing/contract code 3"/>
+        <FIELD NAME="deliverylocationid" TYPE="char" LENGTH="10" NOTNULL="false" COMMENT="FK to NAT00020 delivery location"/>
+        <FIELD NAME="vetflag" TYPE="char" LENGTH="1" NOTNULL="true" DEFAULT="Y" COMMENT="Y=VET, N=Not VET"/>
+        <FIELD NAME="vetinschoolsflag" TYPE="char" LENGTH="1" NOTNULL="true" DEFAULT="N" COMMENT="Y=VET in Schools, N=Not VETiS"/>
+        <FIELD NAME="commencingprogramid" TYPE="char" LENGTH="1" NOTNULL="true" DEFAULT="3" COMMENT="1=Commenced, 2=Did not commence, 3=Continuing, 4=Recommenced"/>
+        <!-- NAT00130 Program Completed fields -->
+        <FIELD NAME="programcompletedyear" TYPE="char" LENGTH="4" NOTNULL="false"/>
+        <FIELD NAME="programoutcome" TYPE="char" LENGTH="2" NOTNULL="false" COMMENT="01=AQF, 02=Non-AQF, 03=No, 04=Withdrawn, 05=Deferred"/>
+        <!-- Fee information -->
+        <FIELD NAME="tuitionfee" TYPE="number" LENGTH="10" DECIMALS="2" NOTNULL="false"/>
+        <FIELD NAME="feecharged" TYPE="char" LENGTH="1" NOTNULL="true" DEFAULT="Y" COMMENT="Y=Fee charged, N=No fee, P=Partial"/>
+        <FIELD NAME="feeexemption" TYPE="char" LENGTH="2" NOTNULL="false" COMMENT="State fee exemption code"/>
+        <FIELD NAME="govtcontribution" TYPE="number" LENGTH="10" DECIMALS="2" NOTNULL="false"/>
+        <!-- Recognition -->
+        <FIELD NAME="purchasedfrom" TYPE="char" LENGTH="10" NOTNULL="false" COMMENT="RTO ID if purchased from another RTO"/>
+        <FIELD NAME="supersededfrom" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="FK to previous enrolment if superseded"/>
+        <!-- Assessment -->
+        <FIELD NAME="assessoruserid" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Trainer/assessor user ID"/>
+        <FIELD NAME="assessmentdate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <!-- Metadata -->
+        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="active" COMMENT="active/completed/withdrawn/hold"/>
+        <FIELD NAME="holduntil" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Enrolment on hold until date"/>
+        <FIELD NAME="holdreason" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="validationerrors" TYPE="text" NOTNULL="false" COMMENT="JSON array of validation errors"/>
+        <FIELD NAME="exportedinnat" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Last NAT export ID that included this"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="studentid" TYPE="foreign" FIELDS="studentid" REFTABLE="local_rtocompliance_students" REFFIELDS="id"/>
+        <KEY NAME="courseid" TYPE="foreign" FIELDS="courseid" REFTABLE="course" REFFIELDS="id"/>
+        <KEY NAME="assessoruserid" TYPE="foreign" FIELDS="assessoruserid" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="student_course" UNIQUE="false" FIELDS="studentid, courseid"/>
+        <INDEX NAME="student_unit" UNIQUE="false" FIELDS="studentid, unitcode"/>
+        <INDEX NAME="outcomeidentifier" UNIQUE="false" FIELDS="outcomeidentifier"/>
+        <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
+        <INDEX NAME="activitystartdate" UNIQUE="false" FIELDS="activitystartdate"/>
+        <INDEX NAME="programcode" UNIQUE="false" FIELDS="programcode"/>
+        <INDEX NAME="courseid_status" UNIQUE="false" FIELDS="courseid,status"/>
+        <INDEX NAME="studentid_status" UNIQUE="false" FIELDS="studentid,status"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Delivery Locations for NAT00020 -->
+    <TABLE NAME="local_rtocompliance_locations" COMMENT="Training delivery locations for NAT00020">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="locationid" TYPE="char" LENGTH="10" NOTNULL="true" COMMENT="AVETMISS location identifier"/>
+        <FIELD NAME="locationname" TYPE="char" LENGTH="100" NOTNULL="true"/>
+        <FIELD NAME="buildingname" TYPE="char" LENGTH="50" NOTNULL="false"/>
+        <FIELD NAME="streetno" TYPE="char" LENGTH="15" NOTNULL="false"/>
+        <FIELD NAME="streetname" TYPE="char" LENGTH="70" NOTNULL="false"/>
+        <FIELD NAME="suburb" TYPE="char" LENGTH="50" NOTNULL="false"/>
+        <FIELD NAME="postcode" TYPE="char" LENGTH="4" NOTNULL="false"/>
+        <FIELD NAME="statecode" TYPE="char" LENGTH="2" NOTNULL="false" COMMENT="01=NSW, 02=VIC, 03=QLD, etc"/>
+        <FIELD NAME="country" TYPE="char" LENGTH="4" NOTNULL="true" DEFAULT="1101" COMMENT="SACC country code"/>
+        <FIELD NAME="phone" TYPE="char" LENGTH="20" NOTNULL="false"/>
+        <FIELD NAME="email" TYPE="char" LENGTH="100" NOTNULL="false"/>
+        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="active" COMMENT="active/inactive"/>
+        <FIELD NAME="rule9b_approved" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="1=building holds Class 9B classification or equivalent for VET delivery (ASQA Rule 9B)"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="locationid" UNIQUE="true" FIELDS="locationid"/>
+        <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
+        <INDEX NAME="statecode" UNIQUE="false" FIELDS="statecode"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Trainer compliance tracking -->
+    <TABLE NAME="local_rtocompliance_trainers" COMMENT="Trainer credentials and compliance data">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="Moodle user ID"/>
+        <!-- TAE Credential -->
+        <FIELD NAME="taecredential" TYPE="char" LENGTH="50" NOTNULL="false" COMMENT="TAE qualification code e.g. TAE40122"/>
+        <FIELD NAME="taedateachieved" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="taeexpirydate" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="TAE expiry date - NULL means no expiry (Current forever)"/>
+        <FIELD NAME="taeevidence" TYPE="char" LENGTH="255" NOTNULL="false" COMMENT="Path to TAE certificate file"/>
+        <!-- Vocational Qualifications -->
+        <FIELD NAME="vocationalqualifications" TYPE="text" NOTNULL="false" COMMENT="JSON array of vocational qualifications"/>
+        <!-- Industry Currency -->
+        <FIELD NAME="industrycurrency" TYPE="text" NOTNULL="false" COMMENT="Description of industry currency"/>
+        <FIELD NAME="industrycurrencydate" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Last industry currency verification"/>
+        <FIELD NAME="industrycurrencyevidence" TYPE="char" LENGTH="255" NOTNULL="false" COMMENT="Path to industry currency evidence"/>
+        <!-- Vocational Competency -->
+        <FIELD NAME="vocationalcompetency" TYPE="text" NOTNULL="false" COMMENT="Description of vocational competency"/>
+        <FIELD NAME="vocationalcompetencydate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="vocationalcompetencyevidence" TYPE="char" LENGTH="255" NOTNULL="false" COMMENT="Path to vocational competency evidence"/>
+        <!-- CPD -->
+        <FIELD NAME="cpdhours" TYPE="int" LENGTH="5" NOTNULL="true" DEFAULT="0" COMMENT="CPD hours current year"/>
+        <FIELD NAME="cpdlog" TYPE="text" NOTNULL="false" COMMENT="JSON array of CPD activities"/>
+        <!-- Working With Children Check -->
+        <FIELD NAME="wwccnumber" TYPE="char" LENGTH="30" NOTNULL="false" COMMENT="WWCC/Blue Card number"/>
+        <FIELD NAME="wwccstate" TYPE="char" LENGTH="3" NOTNULL="false" COMMENT="State that issued WWCC"/>
+        <FIELD NAME="wwccexpiry" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="WWCC expiry date"/>
+        <FIELD NAME="wwccstatus" TYPE="char" LENGTH="20" NOTNULL="false" COMMENT="current/pending/expired/na"/>
+        <FIELD NAME="wwccevidence" TYPE="char" LENGTH="255" NOTNULL="false" COMMENT="Path to WWCC evidence"/>
+        <!-- Police Check -->
+        <FIELD NAME="policechecknumber" TYPE="char" LENGTH="50" NOTNULL="false" COMMENT="Police check reference number"/>
+        <FIELD NAME="policecheckdate" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Date of police check"/>
+        <FIELD NAME="policecheckexpiry" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Police check expiry (typically 3 years)"/>
+        <FIELD NAME="policecheckstatus" TYPE="char" LENGTH="20" NOTNULL="false" COMMENT="current/expired/pending/na"/>
+        <FIELD NAME="policecheckevidence" TYPE="char" LENGTH="255" NOTNULL="false" COMMENT="Path to police check evidence"/>
+        <!-- Scope Mapping -->
+        <FIELD NAME="scopemapping" TYPE="text" NOTNULL="false" COMMENT="JSON array of qualification codes trainer is approved for"/>
+        <FIELD NAME="scopeunits" TYPE="text" NOTNULL="false" COMMENT="JSON array of specific unit codes trainer is approved for"/>
+        <FIELD NAME="scopenotes" TYPE="text" NOTNULL="false" COMMENT="Notes about scope restrictions"/>
+        <!-- Industry Experience -->
+        <FIELD NAME="industryexperienceyears" TYPE="int" LENGTH="3" NOTNULL="false" COMMENT="Years of industry experience relevant to qualifications delivered"/>
+        <!-- LLN Capability -->
+        <FIELD NAME="llncapability" TYPE="char" LENGTH="100" NOTNULL="false" COMMENT="Trainer LLN (Language, Literacy, Numeracy) capability level"/>
+        <!-- VET Currency -->
+        <FIELD NAME="vetcurrencyyears" TYPE="int" LENGTH="3" NOTNULL="false" COMMENT="Years of VET teaching/assessing currency"/>
+        <FIELD NAME="vetcurrencydate" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Date trainer last gained VET teaching/assessing currency"/>
+        <!-- ASQA Credential Role -->
+        <FIELD NAME="credentialrole" TYPE="text" NOTNULL="false" COMMENT="ASQA roles: comma-separated e.g. 1A,1B,3A,3B"/>
+        <FIELD NAME="industrycurrencytype" TYPE="char" LENGTH="50" NOTNULL="false" COMMENT="Type of industry currency maintained"/>
+        <!-- Manager Sign-off -->
+        <FIELD NAME="managersignoff" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="Manager verified credentials"/>
+        <FIELD NAME="managersignoffby" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="User who signed off"/>
+        <FIELD NAME="managersignoffdate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <!-- Status and Review -->
+        <FIELD NAME="nextreviewdate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="current" COMMENT="current/expiring/expired/inactive"/>
+        <FIELD NAME="compliancestatus" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="pending" COMMENT="compliant/noncompliant/pending"/>
+        <FIELD NAME="complianceissues" TYPE="text" NOTNULL="false" COMMENT="JSON array of compliance issues"/>
+        <FIELD NAME="notes" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="userid" TYPE="foreign-unique" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
+        <KEY NAME="managersignoffby" TYPE="foreign" FIELDS="managersignoffby" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
+        <INDEX NAME="compliancestatus" UNIQUE="false" FIELDS="compliancestatus"/>
+        <INDEX NAME="nextreviewdate" UNIQUE="false" FIELDS="nextreviewdate"/>
+        <INDEX NAME="wwccexpiry" UNIQUE="false" FIELDS="wwccexpiry"/>
+        <INDEX NAME="policecheckexpiry" UNIQUE="false" FIELDS="policecheckexpiry"/>
+        <INDEX NAME="status_compliancestatus" UNIQUE="false" FIELDS="status,compliancestatus"/>
+        <INDEX NAME="status_nextreviewdate" UNIQUE="false" FIELDS="status,nextreviewdate"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Trainer Supervision Logs - ASQA Credential Policy -->
+    <TABLE NAME="local_rtocompliance_supervision" COMMENT="Trainer supervision and direction logs per ASQA Credential Policy">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="trainerid" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="FK to local_rtocompliance_trainers"/>
+        <FIELD NAME="supervisorid" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="Supervising trainer ID"/>
+        <FIELD NAME="supervisiondate" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="supervisiontype" TYPE="char" LENGTH="50" NOTNULL="true" COMMENT="observation/feedback/assessment_review/qa_check/mentoring"/>
+        <FIELD NAME="qualificationcode" TYPE="char" LENGTH="20" NOTNULL="false" COMMENT="Qualification being supervised"/>
+        <FIELD NAME="unitcodes" TYPE="text" NOTNULL="false" COMMENT="Specific units covered"/>
+        <FIELD NAME="duration" TYPE="int" LENGTH="5" NOTNULL="false" COMMENT="Duration in minutes"/>
+        <FIELD NAME="activities" TYPE="text" NOTNULL="false" COMMENT="Description of supervision activities"/>
+        <FIELD NAME="feedback" TYPE="text" NOTNULL="false" COMMENT="Feedback provided to trainee"/>
+        <FIELD NAME="developmentneeds" TYPE="text" NOTNULL="false" COMMENT="Identified development needs"/>
+        <FIELD NAME="actionitems" TYPE="text" NOTNULL="false" COMMENT="Follow-up actions required"/>
+        <FIELD NAME="actionsduedate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="actionscompleted" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="assessmentjudgementrestricted" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="1C/1D roles cannot make final judgements"/>
+        <FIELD NAME="nextsupervisiondate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="evidencedocument" TYPE="char" LENGTH="255" NOTNULL="false"/>
+        <FIELD NAME="managervalidated" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="managervalidatedby" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="managervalidateddate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="notes" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="createdby" TYPE="int" LENGTH="10" NOTNULL="true"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="trainerid" TYPE="foreign" FIELDS="trainerid" REFTABLE="local_rtocompliance_trainers" REFFIELDS="id"/>
+        <KEY NAME="supervisorid" TYPE="foreign" FIELDS="supervisorid" REFTABLE="local_rtocompliance_trainers" REFFIELDS="id"/>
+        <KEY NAME="createdby" TYPE="foreign" FIELDS="createdby" REFTABLE="user" REFFIELDS="id"/>
+        <KEY NAME="managervalidatedby" TYPE="foreign" FIELDS="managervalidatedby" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="trainerid_date" UNIQUE="false" FIELDS="trainerid, supervisiondate"/>
+        <INDEX NAME="supervisiontype" UNIQUE="false" FIELDS="supervisiontype"/>
+        <INDEX NAME="nextsupervisiondate" UNIQUE="false" FIELDS="nextsupervisiondate"/>
+        <INDEX NAME="managervalidated" UNIQUE="false" FIELDS="managervalidated"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Issued certificates -->
+    <TABLE NAME="local_rtocompliance_certs" COMMENT="Issued certificates and credentials">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="Student user ID"/>
+        <FIELD NAME="certnumber" TYPE="char" LENGTH="50" NOTNULL="true" COMMENT="Unique certificate number"/>
+        <FIELD NAME="certtype" TYPE="char" LENGTH="20" NOTNULL="true" COMMENT="testamur/statement/record"/>
+        <FIELD NAME="qualificationcode" TYPE="char" LENGTH="20" NOTNULL="false" COMMENT="e.g. BSB50420"/>
+        <FIELD NAME="qualificationname" TYPE="char" LENGTH="255" NOTNULL="false"/>
+        <FIELD NAME="units" TYPE="text" NOTNULL="false" COMMENT="JSON array of unit codes and names for SoA"/>
+        <FIELD NAME="issuedate" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="expirydate" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Optional expiry for licenses"/>
+        <FIELD NAME="verifytoken" TYPE="char" LENGTH="64" NOTNULL="true" COMMENT="Token for QR verification"/>
+        <FIELD NAME="pdfpath" TYPE="char" LENGTH="255" NOTNULL="false" COMMENT="Path to stored PDF"/>
+        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="issued" COMMENT="issued/revoked/superseded"/>
+        <FIELD NAME="issuedby" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="User who issued"/>
+        <FIELD NAME="emailsent" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="emailsentdate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="notes" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="replacement_of" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="If this cert is a reissue, points to the original cert.id (audit trail). NULL for original certs."/>
+        <FIELD NAME="reissued_at" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Set on the ORIGINAL cert when it has been superseded by a reissue. NULL means this cert is current."/>
+        <FIELD NAME="certtmplid" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="v4.3.0: Saved cert template id used at issue time. Reissues use this exact template; NULL means re-pick at render time (legacy certs)."/>
+        <FIELD NAME="usi" TYPE="char" LENGTH="15" NOTNULL="false" COMMENT="C2: USI snapshotted at issuance time. Forensic audit trail — re-rendering a cert must show the USI that was current when the cert was issued, not the student's current USI (which may have been corrected)."/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
+        <KEY NAME="issuedby" TYPE="foreign" FIELDS="issuedby" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="certnumber" UNIQUE="true" FIELDS="certnumber"/>
+        <INDEX NAME="verifytoken" UNIQUE="true" FIELDS="verifytoken"/>
+        <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
+        <INDEX NAME="certtype" UNIQUE="false" FIELDS="certtype"/>
+        <INDEX NAME="userid_status_idx" UNIQUE="false" FIELDS="userid,status"/>
+        <INDEX NAME="issuedate" UNIQUE="false" FIELDS="issuedate"/>
+        <INDEX NAME="replacement_of" UNIQUE="false" FIELDS="replacement_of"/>
+        <INDEX NAME="certtmplid" UNIQUE="false" FIELDS="certtmplid"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Quality Indicator survey responses -->
+    <TABLE NAME="local_rtocompliance_surveys" COMMENT="QI survey responses">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="surveytype" TYPE="char" LENGTH="20" NOTNULL="true" COMMENT="learner/employer"/>
+        <FIELD NAME="respondentid" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="User ID if known"/>
+        <FIELD NAME="respondentname" TYPE="char" LENGTH="255" NOTNULL="false"/>
+        <FIELD NAME="respondentemail" TYPE="char" LENGTH="255" NOTNULL="false"/>
+        <FIELD NAME="qualificationcode" TYPE="char" LENGTH="20" NOTNULL="false"/>
+        <FIELD NAME="responses" TYPE="text" NOTNULL="true" COMMENT="JSON object of question responses"/>
+        <FIELD NAME="overallsatisfaction" TYPE="int" LENGTH="2" NOTNULL="false" COMMENT="1-5 scale"/>
+        <FIELD NAME="comments" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="year" TYPE="int" LENGTH="4" NOTNULL="true"/>
+        <FIELD NAME="accesstoken" TYPE="char" LENGTH="64" NOTNULL="false" COMMENT="Token for anonymous access"/>
+        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="pending" COMMENT="pending/completed"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timecompleted" TYPE="int" LENGTH="10" NOTNULL="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="respondentid" TYPE="foreign" FIELDS="respondentid" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="surveytype_year" UNIQUE="false" FIELDS="surveytype, year"/>
+        <INDEX NAME="accesstoken" UNIQUE="true" FIELDS="accesstoken"/>
+        <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- NAT export history -->
+    <TABLE NAME="local_rtocompliance_exports" COMMENT="AVETMISS NAT export history">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="exporttype" TYPE="char" LENGTH="50" NOTNULL="true" COMMENT="tva/state/custom"/>
+        <FIELD NAME="periodstart" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="periodend" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="natfiles" TYPE="text" NOTNULL="false" COMMENT="JSON list of generated NAT files"/>
+        <FIELD NAME="recordcount" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="validationerrors" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="validationwarnings" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="validationlog" TYPE="text" NOTNULL="false" COMMENT="JSON validation results"/>
+        <FIELD NAME="filepath" TYPE="char" LENGTH="255" NOTNULL="false" COMMENT="Path to ZIP file"/>
+        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="generated" COMMENT="generated/submitted/error"/>
+        <FIELD NAME="exportedby" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="exportedby" TYPE="foreign" FIELDS="exportedby" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="exporttype_period" UNIQUE="false" FIELDS="exporttype, periodstart, periodend"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Audit log -->
+    <TABLE NAME="local_rtocompliance_log" COMMENT="Compliance audit log">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="action" TYPE="char" LENGTH="50" NOTNULL="true"/>
+        <FIELD NAME="component" TYPE="char" LENGTH="50" NOTNULL="true" COMMENT="trainers/certs/nat/surveys"/>
+        <FIELD NAME="itemid" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="User who performed action"/>
+        <FIELD NAME="targetuserid" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="User affected"/>
+        <FIELD NAME="details" TYPE="text" NOTNULL="false" COMMENT="JSON details"/>
+        <FIELD NAME="ipaddress" TYPE="char" LENGTH="45" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="component_action" UNIQUE="false" FIELDS="component, action"/>
+        <INDEX NAME="timecreated" UNIQUE="false" FIELDS="timecreated"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Detailed audit trail (used by audit_logger class) -->
+    <TABLE NAME="local_rtocompliance_audit" COMMENT="Detailed compliance audit trail">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="action" TYPE="char" LENGTH="30" NOTNULL="true" COMMENT="create/update/delete/view/export/approve/reject"/>
+        <FIELD NAME="entitytype" TYPE="char" LENGTH="50" NOTNULL="true" COMMENT="student/enrolment/trainer/certificate/nat_export/etc"/>
+        <FIELD NAME="entityid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" COMMENT="User who performed the action"/>
+        <FIELD NAME="description" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="olddata" TYPE="text" NOTNULL="false" COMMENT="JSON-encoded previous state"/>
+        <FIELD NAME="newdata" TYPE="text" NOTNULL="false" COMMENT="JSON-encoded new state"/>
+        <FIELD NAME="ipaddress" TYPE="char" LENGTH="45" NOTNULL="false"/>
+        <FIELD NAME="useragent" TYPE="char" LENGTH="255" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="action" UNIQUE="false" FIELDS="action"/>
+        <INDEX NAME="entitytype" UNIQUE="false" FIELDS="entitytype"/>
+        <INDEX NAME="entityid" UNIQUE="false" FIELDS="entityid"/>
+        <INDEX NAME="timecreated" UNIQUE="false" FIELDS="timecreated"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- ============================================================
+         AI FEATURES TABLES
+         For AI-powered survey analysis and compliance prediction
+         ============================================================ -->
+
+    <!-- AI Compliance Alerts - predictive compliance risk alerts -->
+    <TABLE NAME="local_rtocompliance_ai_alerts" COMMENT="AI-generated predictive compliance alerts">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="alerttype" TYPE="char" LENGTH="50" NOTNULL="true" COMMENT="missing_data/deadline/trainer_expiry/student_risk/nat_validation"/>
+        <FIELD NAME="severity" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="medium" COMMENT="critical/high/medium/low/info"/>
+        <FIELD NAME="title" TYPE="char" LENGTH="255" NOTNULL="true"/>
+        <FIELD NAME="description" TYPE="text" NOTNULL="true"/>
+        <FIELD NAME="recommendation" TYPE="text" NOTNULL="false" COMMENT="AI-suggested action"/>
+        <!-- Target entity -->
+        <FIELD NAME="targettype" TYPE="char" LENGTH="50" NOTNULL="false" COMMENT="student/trainer/course/deadline/export"/>
+        <FIELD NAME="targetid" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="targetuserid" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <!-- Risk scoring -->
+        <FIELD NAME="riskscore" TYPE="number" LENGTH="5" DECIMALS="2" NOTNULL="false" COMMENT="0-100 risk score"/>
+        <FIELD NAME="riskfactors" TYPE="text" NOTNULL="false" COMMENT="JSON array of risk factors"/>
+        <FIELD NAME="predictedimpact" TYPE="text" NOTNULL="false" COMMENT="AI-predicted impact if not addressed"/>
+        <!-- Deadline alerts -->
+        <FIELD NAME="duedate" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="When action is required by"/>
+        <FIELD NAME="daysuntildue" TYPE="int" LENGTH="5" NOTNULL="false"/>
+        <!-- Status tracking -->
+        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="active" COMMENT="active/acknowledged/resolved/dismissed"/>
+        <FIELD NAME="acknowledgedby" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="acknowledgeddate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="resolvedby" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="resolveddate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="resolutionnotes" TYPE="text" NOTNULL="false"/>
+        <!-- Notification tracking -->
+        <FIELD NAME="emailsent" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="emailsentdate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <!-- Metadata -->
+        <FIELD NAME="aigenerated" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="1" COMMENT="1=AI generated, 0=System rule"/>
+        <FIELD NAME="aimodel" TYPE="char" LENGTH="50" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="targetuserid" TYPE="foreign" FIELDS="targetuserid" REFTABLE="user" REFFIELDS="id"/>
+        <KEY NAME="acknowledgedby" TYPE="foreign" FIELDS="acknowledgedby" REFTABLE="user" REFFIELDS="id"/>
+        <KEY NAME="resolvedby" TYPE="foreign" FIELDS="resolvedby" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="alerttype" UNIQUE="false" FIELDS="alerttype"/>
+        <INDEX NAME="severity" UNIQUE="false" FIELDS="severity"/>
+        <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
+        <INDEX NAME="duedate" UNIQUE="false" FIELDS="duedate"/>
+        <INDEX NAME="targettype_targetid" UNIQUE="false" FIELDS="targettype, targetid"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- ============================================================
+         CRICOS / INTERNATIONAL STUDENT TABLES
+         For ESOS Act and National Code compliance
+         ============================================================ -->
+
+    <!-- Education Agents - MUST be defined before cricos_students (foreign key dependency) -->
+    <TABLE NAME="local_rtocompliance_cricos_agents" COMMENT="Education agents for National Code Standard 4">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="agentname" TYPE="char" LENGTH="255" NOTNULL="true"/>
+        <FIELD NAME="tradingname" TYPE="char" LENGTH="255" NOTNULL="false"/>
+        <FIELD NAME="abn" TYPE="char" LENGTH="14" NOTNULL="false"/>
+        <FIELD NAME="country" TYPE="char" LENGTH="4" NOTNULL="true" COMMENT="SACC country code"/>
+        <FIELD NAME="address" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="phone" TYPE="char" LENGTH="30" NOTNULL="false"/>
+        <FIELD NAME="email" TYPE="char" LENGTH="255" NOTNULL="false"/>
+        <FIELD NAME="website" TYPE="char" LENGTH="255" NOTNULL="false"/>
+        <!-- Agreement Details -->
+        <FIELD NAME="agreementstart" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="agreementend" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="commissionrate" TYPE="number" LENGTH="5" DECIMALS="2" NOTNULL="false" COMMENT="Commission percentage"/>
+        <!-- Compliance -->
+        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="active" COMMENT="active/suspended/terminated"/>
+        <FIELD NAME="lastauditdate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="compliancerating" TYPE="char" LENGTH="20" NOTNULL="false" COMMENT="good/concerns/poor"/>
+        <FIELD NAME="compliancenotes" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="notes" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
+        <INDEX NAME="country" UNIQUE="false" FIELDS="country"/>
+        <INDEX NAME="agreementend" UNIQUE="false" FIELDS="agreementend"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- CRICOS International Student Records -->
+    <TABLE NAME="local_rtocompliance_cricos_students" COMMENT="International student CRICOS data for ESOS/PRISMS reporting">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="studentid" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="FK to local_rtocompliance_students"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="Moodle user ID"/>
+        <!-- Visa Information -->
+        <FIELD NAME="visasubclass" TYPE="char" LENGTH="10" NOTNULL="false" COMMENT="Student visa subclass e.g. 500"/>
+        <FIELD NAME="visagrantdate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="visaexpirydate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="visagrantnumber" TYPE="char" LENGTH="50" NOTNULL="false"/>
+        <FIELD NAME="visastatus" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="pending" COMMENT="pending/active/expired/cancelled"/>
+        <!-- Passport Details -->
+        <FIELD NAME="passportnumber" TYPE="char" LENGTH="30" NOTNULL="false"/>
+        <FIELD NAME="passportcountry" TYPE="char" LENGTH="4" NOTNULL="false" COMMENT="SACC country code"/>
+        <FIELD NAME="passportexpiry" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <!-- Guardian/Parent (for under 18) -->
+        <FIELD NAME="isunder18" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="guardianname" TYPE="char" LENGTH="255" NOTNULL="false"/>
+        <FIELD NAME="guardianrelationship" TYPE="char" LENGTH="50" NOTNULL="false"/>
+        <FIELD NAME="guardianphone" TYPE="char" LENGTH="30" NOTNULL="false"/>
+        <FIELD NAME="guardianemail" TYPE="char" LENGTH="255" NOTNULL="false"/>
+        <FIELD NAME="guardianaddress" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="cawatype" TYPE="char" LENGTH="30" NOTNULL="false" COMMENT="CAAW welfare type: provider/parent/relative/other"/>
+        <!-- Overseas Health Cover -->
+        <FIELD NAME="ohscprovider" TYPE="char" LENGTH="100" NOTNULL="false" COMMENT="OSHC provider name"/>
+        <FIELD NAME="ohscpolicynumber" TYPE="char" LENGTH="50" NOTNULL="false"/>
+        <FIELD NAME="ohscexpiry" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <!-- Australian Address -->
+        <FIELD NAME="australianaddress" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="australianphone" TYPE="char" LENGTH="30" NOTNULL="false"/>
+        <FIELD NAME="emergencycontact" TYPE="char" LENGTH="255" NOTNULL="false"/>
+        <FIELD NAME="emergencyphone" TYPE="char" LENGTH="30" NOTNULL="false"/>
+        <!-- Study Load -->
+        <FIELD NAME="studyloadstatus" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="fulltime" COMMENT="fulltime/reducedload/suspended"/>
+        <FIELD NAME="reducedloadreason" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="reducedloadapprovaldate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <!-- Education Agent -->
+        <FIELD NAME="agentid" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="FK to local_rtocompliance_cricos_agents"/>
+        <!-- Compliance Status -->
+        <FIELD NAME="compliancestatus" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="compliant" COMMENT="compliant/atrisk/breach"/>
+        <FIELD NAME="lastdetailsconfirmed" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Last 6-monthly confirmation"/>
+        <FIELD NAME="notes" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="studentid" TYPE="foreign-unique" FIELDS="studentid" REFTABLE="local_rtocompliance_students" REFFIELDS="id"/>
+        <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
+        <KEY NAME="agentid" TYPE="foreign" FIELDS="agentid" REFTABLE="local_rtocompliance_cricos_agents" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="visastatus" UNIQUE="false" FIELDS="visastatus"/>
+        <INDEX NAME="visaexpirydate" UNIQUE="false" FIELDS="visaexpirydate"/>
+        <INDEX NAME="compliancestatus" UNIQUE="false" FIELDS="compliancestatus"/>
+        <INDEX NAME="isunder18" UNIQUE="false" FIELDS="isunder18"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Confirmation of Enrolment (CoE) Records -->
+    <TABLE NAME="local_rtocompliance_cricos_coe" COMMENT="Confirmation of Enrolment records for PRISMS">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="cricosstudentid" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="FK to local_rtocompliance_cricos_students"/>
+        <FIELD NAME="coenumber" TYPE="char" LENGTH="20" NOTNULL="true" COMMENT="CoE number from PRISMS"/>
+        <!-- Course Details -->
+        <FIELD NAME="cricoscoursecode" TYPE="char" LENGTH="10" NOTNULL="true" COMMENT="CRICOS course code"/>
+        <FIELD NAME="coursename" TYPE="char" LENGTH="255" NOTNULL="true"/>
+        <FIELD NAME="qualificationcode" TYPE="char" LENGTH="20" NOTNULL="false" COMMENT="e.g. BSB50420"/>
+        <FIELD NAME="deliverylocation" TYPE="char" LENGTH="100" NOTNULL="false"/>
+        <FIELD NAME="deliverymode" TYPE="char" LENGTH="30" NOTNULL="true" DEFAULT="facetofaceattendance"/>
+        <!-- Dates -->
+        <FIELD NAME="coursestartdate" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="courseenddate" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="expectedcourseend" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Original expected end date"/>
+        <FIELD NAME="actualstartdate" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="When student actually started"/>
+        <FIELD NAME="actualenddate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <!-- Study Period -->
+        <FIELD NAME="weeklyhours" TYPE="int" LENGTH="3" NOTNULL="true" DEFAULT="20" COMMENT="Scheduled contact hours per week"/>
+        <FIELD NAME="courseweeks" TYPE="int" LENGTH="4" NOTNULL="false" COMMENT="Total course duration in weeks"/>
+        <!-- Fees -->
+        <FIELD NAME="tuitionfee" TYPE="number" LENGTH="10" DECIMALS="2" NOTNULL="false"/>
+        <FIELD NAME="feespaidtodate" TYPE="number" LENGTH="10" DECIMALS="2" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="nontuitionfees" TYPE="number" LENGTH="10" DECIMALS="2" NOTNULL="false" COMMENT="Materials, admin fees etc"/>
+        <!-- Status -->
+        <FIELD NAME="coestatus" TYPE="char" LENGTH="30" NOTNULL="true" DEFAULT="issued" COMMENT="issued/commenced/completed/cancelled/suspended"/>
+        <FIELD NAME="statusreason" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="statuschangedate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="isprincipalcourse" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="1" COMMENT="Is this the principal course?"/>
+        <!-- PRISMS Reporting -->
+        <FIELD NAME="prismsreported" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="prismsreportdate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="prismstransactionid" TYPE="char" LENGTH="50" NOTNULL="false"/>
+        <FIELD NAME="validationerrors" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="cricosstudentid" TYPE="foreign" FIELDS="cricosstudentid" REFTABLE="local_rtocompliance_cricos_students" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="coenumber" UNIQUE="true" FIELDS="coenumber"/>
+        <INDEX NAME="cricoscoursecode" UNIQUE="false" FIELDS="cricoscoursecode"/>
+        <INDEX NAME="coestatus" UNIQUE="false" FIELDS="coestatus"/>
+        <INDEX NAME="coursestartdate" UNIQUE="false" FIELDS="coursestartdate"/>
+        <INDEX NAME="courseenddate" UNIQUE="false" FIELDS="courseenddate"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Student Course Variations (SCVs) -->
+    <TABLE NAME="local_rtocompliance_cricos_scv" COMMENT="Student Course Variations for PRISMS reporting">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="coeid" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="FK to local_rtocompliance_cricos_coe"/>
+        <FIELD NAME="scvtype" TYPE="char" LENGTH="30" NOTNULL="true" COMMENT="extension/reduction/transfer/suspension/cancellation"/>
+        <FIELD NAME="reason" TYPE="text" NOTNULL="true" COMMENT="Detailed reason for variation"/>
+        <FIELD NAME="reasoncode" TYPE="char" LENGTH="10" NOTNULL="false" COMMENT="Standard reason code"/>
+        <!-- Duration Changes -->
+        <FIELD NAME="originalenddate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="newenddate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="extensionweeks" TYPE="int" LENGTH="4" NOTNULL="false"/>
+        <!-- Suspension/Deferral -->
+        <FIELD NAME="suspensionstart" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="suspensionend" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <!-- Intervention (for course progress issues) -->
+        <FIELD NAME="interventiontype" TYPE="char" LENGTH="50" NOTNULL="false" COMMENT="counselling/studyplan/tutoring/other"/>
+        <FIELD NAME="interventiondetails" TYPE="text" NOTNULL="false"/>
+        <!-- Status -->
+        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="active" COMMENT="pending/active/completed/rejected"/>
+        <FIELD NAME="approvedby" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="approvaldate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <!-- PRISMS Reporting -->
+        <FIELD NAME="prismsreported" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="prismsreportdate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="prismstransactionid" TYPE="char" LENGTH="50" NOTNULL="false"/>
+        <FIELD NAME="effectivedate" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="Date SCV takes effect"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="coeid" TYPE="foreign" FIELDS="coeid" REFTABLE="local_rtocompliance_cricos_coe" REFFIELDS="id"/>
+        <KEY NAME="approvedby" TYPE="foreign" FIELDS="approvedby" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="scvtype" UNIQUE="false" FIELDS="scvtype"/>
+        <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
+        <INDEX NAME="effectivedate" UNIQUE="false" FIELDS="effectivedate"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Attendance Records -->
+    <TABLE NAME="local_rtocompliance_cricos_attendance" COMMENT="International student attendance tracking">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="cricosstudentid" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="coeid" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="weekstartdate" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="Monday of the week"/>
+        <FIELD NAME="scheduledhours" TYPE="number" LENGTH="5" DECIMALS="1" NOTNULL="true" DEFAULT="20"/>
+        <FIELD NAME="attendedhours" TYPE="number" LENGTH="5" DECIMALS="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="absencehours" TYPE="number" LENGTH="5" DECIMALS="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="approvedabsence" TYPE="number" LENGTH="5" DECIMALS="1" NOTNULL="true" DEFAULT="0" COMMENT="Medical/compassionate"/>
+        <FIELD NAME="attendancepercent" TYPE="number" LENGTH="5" DECIMALS="2" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="notes" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="cricosstudentid" TYPE="foreign" FIELDS="cricosstudentid" REFTABLE="local_rtocompliance_cricos_students" REFFIELDS="id"/>
+        <KEY NAME="coeid" TYPE="foreign" FIELDS="coeid" REFTABLE="local_rtocompliance_cricos_coe" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="student_week" UNIQUE="true" FIELDS="cricosstudentid, weekstartdate"/>
+        <INDEX NAME="weekstartdate" UNIQUE="false" FIELDS="weekstartdate"/>
+        <INDEX NAME="attendancepercent" UNIQUE="false" FIELDS="attendancepercent"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Course Progress Tracking -->
+    <TABLE NAME="local_rtocompliance_cricos_progress" COMMENT="International student course progress monitoring">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="cricosstudentid" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="coeid" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="studyperiod" TYPE="char" LENGTH="20" NOTNULL="true" COMMENT="e.g. 2025-T1"/>
+        <FIELD NAME="periodstart" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="periodend" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <!-- Progress Metrics -->
+        <FIELD NAME="unitsattempted" TYPE="int" LENGTH="3" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="unitspassed" TYPE="int" LENGTH="3" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="unitsfailed" TYPE="int" LENGTH="3" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="unitswithdrawnorloa" TYPE="int" LENGTH="3" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="progresspercent" TYPE="number" LENGTH="5" DECIMALS="2" NOTNULL="true" DEFAULT="0"/>
+        <!-- Status -->
+        <FIELD NAME="progressstatus" TYPE="char" LENGTH="30" NOTNULL="true" DEFAULT="satisfactory" COMMENT="satisfactory/atrisk/unsatisfactory"/>
+        <FIELD NAME="interventionrequired" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="interventionid" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="FK to SCV if intervention created"/>
+        <FIELD NAME="notes" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="reviewedby" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="reviewdate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="cricosstudentid" TYPE="foreign" FIELDS="cricosstudentid" REFTABLE="local_rtocompliance_cricos_students" REFFIELDS="id"/>
+        <KEY NAME="coeid" TYPE="foreign" FIELDS="coeid" REFTABLE="local_rtocompliance_cricos_coe" REFFIELDS="id"/>
+        <KEY NAME="reviewedby" TYPE="foreign" FIELDS="reviewedby" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="student_period" UNIQUE="true" FIELDS="cricosstudentid, studyperiod"/>
+        <INDEX NAME="progressstatus" UNIQUE="false" FIELDS="progressstatus"/>
+        <INDEX NAME="interventionrequired" UNIQUE="false" FIELDS="interventionrequired"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- CRICOS Reportable Events (for PRISMS reporting queue) -->
+    <TABLE NAME="local_rtocompliance_cricos_events" COMMENT="Queue of events requiring PRISMS reporting">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="cricosstudentid" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="coeid" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="eventtype" TYPE="char" LENGTH="50" NOTNULL="true" COMMENT="enrolment/noncommencement/termination/variation/addresschange/progress"/>
+        <FIELD NAME="eventdate" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="eventdetails" TYPE="text" NOTNULL="true" COMMENT="JSON details of the event"/>
+        <FIELD NAME="reportingdeadline" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="14 days for u18, 31 days for 18+"/>
+        <!-- Reporting Status -->
+        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="pending" COMMENT="pending/reported/overdue/error"/>
+        <FIELD NAME="reportedby" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="reporteddate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="prismstransactionid" TYPE="char" LENGTH="50" NOTNULL="false"/>
+        <FIELD NAME="errormessage" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="cricosstudentid" TYPE="foreign" FIELDS="cricosstudentid" REFTABLE="local_rtocompliance_cricos_students" REFFIELDS="id"/>
+        <KEY NAME="coeid" TYPE="foreign" FIELDS="coeid" REFTABLE="local_rtocompliance_cricos_coe" REFFIELDS="id"/>
+        <KEY NAME="reportedby" TYPE="foreign" FIELDS="reportedby" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="eventtype" UNIQUE="false" FIELDS="eventtype"/>
+        <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
+        <INDEX NAME="reportingdeadline" UNIQUE="false" FIELDS="reportingdeadline"/>
+        <INDEX NAME="status_deadline" UNIQUE="false" FIELDS="status, reportingdeadline"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Compliance deadlines/reminders -->
+    <TABLE NAME="local_rtocompliance_deadlines" COMMENT="Compliance deadlines and reminders">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="deadlinetype" TYPE="char" LENGTH="50" NOTNULL="true" COMMENT="tva/qi/declaration/audit"/>
+        <FIELD NAME="title" TYPE="char" LENGTH="255" NOTNULL="true"/>
+        <FIELD NAME="description" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="duedate" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="reminderdays" TYPE="int" LENGTH="5" NOTNULL="true" DEFAULT="30"/>
+        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="pending" COMMENT="pending/completed/overdue"/>
+        <FIELD NAME="completedby" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="completeddate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="recurring" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="recurringperiod" TYPE="char" LENGTH="20" NOTNULL="false" COMMENT="yearly/quarterly/monthly"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="completedby" TYPE="foreign" FIELDS="completedby" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="duedate" UNIQUE="false" FIELDS="duedate"/>
+        <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Course settings for RTO compliance -->
+    <TABLE NAME="local_rtocompliance_courses" COMMENT="Course-level RTO compliance settings">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="Moodle course ID"/>
+        <FIELD NAME="nationallyrecognised" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="1=Nationally recognised training requiring AVETMISS data"/>
+        <FIELD NAME="qualificationcode" TYPE="char" LENGTH="20" NOTNULL="false" COMMENT="National qualification code e.g. BSB50420"/>
+        <FIELD NAME="qualificationname" TYPE="char" LENGTH="255" NOTNULL="false" COMMENT="Full qualification name"/>
+        <FIELD NAME="nominalhours" TYPE="int" LENGTH="5" NOTNULL="false" COMMENT="Total nominal hours for qualification"/>
+        <FIELD NAME="cricosregistered" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="1=CRICOS registered course"/>
+        <FIELD NAME="cricoscode" TYPE="char" LENGTH="10" NOTNULL="false" COMMENT="CRICOS course code"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="courseid" TYPE="foreign-unique" FIELDS="courseid" REFTABLE="course" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="nationallyrecognised" UNIQUE="false" FIELDS="nationallyrecognised"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- ============================================================
+         ASQA 2025 PRACTICE GUIDE COMPLIANCE TABLES
+         Complete compliance management for all 14 ASQA modules
+         ============================================================ -->
+
+    <!-- Complaints Register - ASQA Practice Guide Complaints & Appeals -->
+    <TABLE NAME="local_rtocompliance_complaints" COMMENT="Complaints and feedback register">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="reference" TYPE="char" LENGTH="30" NOTNULL="true" COMMENT="Unique complaint reference number"/>
+        <FIELD NAME="complainanttype" TYPE="char" LENGTH="30" NOTNULL="true" DEFAULT="student" COMMENT="student/employer/public/anonymous"/>
+        <FIELD NAME="complainantname" TYPE="char" LENGTH="255" NOTNULL="false"/>
+        <FIELD NAME="complainantemail" TYPE="char" LENGTH="255" NOTNULL="false"/>
+        <FIELD NAME="complainantphone" TYPE="char" LENGTH="30" NOTNULL="false"/>
+        <FIELD NAME="complainantuserid" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Moodle user ID if known"/>
+        <FIELD NAME="isanonymous" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="category" TYPE="char" LENGTH="50" NOTNULL="true" COMMENT="training/assessment/service/conduct/facilities/other"/>
+        <FIELD NAME="subcategory" TYPE="char" LENGTH="100" NOTNULL="false"/>
+        <FIELD NAME="subject" TYPE="char" LENGTH="255" NOTNULL="true"/>
+        <FIELD NAME="description" TYPE="text" NOTNULL="true"/>
+        <FIELD NAME="relatedcourseid" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="relatedtrainerid" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="priority" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="medium" COMMENT="low/medium/high/critical"/>
+        <FIELD NAME="status" TYPE="char" LENGTH="30" NOTNULL="true" DEFAULT="received" COMMENT="received/investigating/resolved/closed/withdrawn"/>
+        <FIELD NAME="datereceived" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="dateacknowledged" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="acknowledgedby" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="assignedto" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="targetresolutiondate" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="20 working days from receipt"/>
+        <FIELD NAME="actualresolutiondate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="resolution" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="outcomesatisfactory" TYPE="int" LENGTH="1" NOTNULL="false" COMMENT="1=Yes, 0=No"/>
+        <FIELD NAME="issystemic" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="Systemic issue identified"/>
+        <FIELD NAME="linkedimprovementid" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="evidence" TYPE="text" NOTNULL="false" COMMENT="JSON array of evidence file paths"/>
+        <FIELD NAME="notes" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="createdby" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="modifiedby" TYPE="int" LENGTH="10" NOTNULL="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="complainantuserid" TYPE="foreign" FIELDS="complainantuserid" REFTABLE="user" REFFIELDS="id"/>
+        <KEY NAME="assignedto" TYPE="foreign" FIELDS="assignedto" REFTABLE="user" REFFIELDS="id"/>
+        <KEY NAME="createdby" TYPE="foreign" FIELDS="createdby" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="reference" UNIQUE="true" FIELDS="reference"/>
+        <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
+        <INDEX NAME="category" UNIQUE="false" FIELDS="category"/>
+        <INDEX NAME="priority" UNIQUE="false" FIELDS="priority"/>
+        <INDEX NAME="datereceived" UNIQUE="false" FIELDS="datereceived"/>
+        <INDEX NAME="issystemic" UNIQUE="false" FIELDS="issystemic"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Appeals Register - Linked to Complaints -->
+    <TABLE NAME="local_rtocompliance_appeals" COMMENT="Appeals register linked to complaints">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="reference" TYPE="char" LENGTH="30" NOTNULL="true" COMMENT="Unique appeal reference"/>
+        <FIELD NAME="complaintid" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="FK to original complaint if applicable"/>
+        <FIELD NAME="appealtype" TYPE="char" LENGTH="50" NOTNULL="true" COMMENT="complaint_outcome/assessment_decision/enrolment/fee/other"/>
+        <FIELD NAME="appellantname" TYPE="char" LENGTH="255" NOTNULL="true"/>
+        <FIELD NAME="appellantemail" TYPE="char" LENGTH="255" NOTNULL="false"/>
+        <FIELD NAME="appellantphone" TYPE="char" LENGTH="30" NOTNULL="false"/>
+        <FIELD NAME="appellantuserid" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="groundsforappeal" TYPE="text" NOTNULL="true"/>
+        <FIELD NAME="originaldecision" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="originaldecisiondate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="status" TYPE="char" LENGTH="30" NOTNULL="true" DEFAULT="lodged" COMMENT="lodged/reviewing/hearing/decided/closed"/>
+        <FIELD NAME="datelodged" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="dateacknowledged" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="hearingdate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="panelmembers" TYPE="text" NOTNULL="false" COMMENT="JSON array of panel member names"/>
+        <FIELD NAME="revieweruserid" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="outcome" TYPE="char" LENGTH="30" NOTNULL="false" COMMENT="upheld/partially_upheld/not_upheld/withdrawn"/>
+        <FIELD NAME="outcomereason" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="decisiondate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="externalreviewoffered" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="externalreviewtaken" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="externalreviewbody" TYPE="char" LENGTH="100" NOTNULL="false"/>
+        <FIELD NAME="evidence" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="notes" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="createdby" TYPE="int" LENGTH="10" NOTNULL="true"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="complaintid" TYPE="foreign" FIELDS="complaintid" REFTABLE="local_rtocompliance_complaints" REFFIELDS="id"/>
+        <KEY NAME="appellantuserid" TYPE="foreign" FIELDS="appellantuserid" REFTABLE="user" REFFIELDS="id"/>
+        <KEY NAME="revieweruserid" TYPE="foreign" FIELDS="revieweruserid" REFTABLE="user" REFFIELDS="id"/>
+        <KEY NAME="createdby" TYPE="foreign" FIELDS="createdby" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="reference" UNIQUE="true" FIELDS="reference"/>
+        <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
+        <INDEX NAME="appealtype" UNIQUE="false" FIELDS="appealtype"/>
+        <INDEX NAME="datelodged" UNIQUE="false" FIELDS="datelodged"/>
+        <INDEX NAME="outcome" UNIQUE="false" FIELDS="outcome"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Continuous Improvement Register - Polymorphic linkage -->
+    <TABLE NAME="local_rtocompliance_improvements" COMMENT="Continuous improvement actions register">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="reference" TYPE="char" LENGTH="30" NOTNULL="true"/>
+        <FIELD NAME="title" TYPE="char" LENGTH="255" NOTNULL="true"/>
+        <FIELD NAME="description" TYPE="text" NOTNULL="true"/>
+        <FIELD NAME="sourcetype" TYPE="char" LENGTH="50" NOTNULL="true" COMMENT="complaint/appeal/validation/audit/feedback/survey/incident"/>
+        <FIELD NAME="sourceid" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Polymorphic FK based on sourcetype"/>
+        <FIELD NAME="category" TYPE="char" LENGTH="50" NOTNULL="true" COMMENT="training/assessment/service/compliance/governance/other"/>
+        <FIELD NAME="priority" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="medium"/>
+        <FIELD NAME="status" TYPE="char" LENGTH="30" NOTNULL="true" DEFAULT="identified" COMMENT="identified/planned/inprogress/completed/verified/closed"/>
+        <FIELD NAME="dateidentified" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="targetdate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="completiondate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="responsibleuserid" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="actionplan" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="outcome" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="effectivenessverified" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="verificationdate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="verificationmethod" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="evidence" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="notes" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="createdby" TYPE="int" LENGTH="10" NOTNULL="true"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="responsibleuserid" TYPE="foreign" FIELDS="responsibleuserid" REFTABLE="user" REFFIELDS="id"/>
+        <KEY NAME="createdby" TYPE="foreign" FIELDS="createdby" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="reference" UNIQUE="true" FIELDS="reference"/>
+        <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
+        <INDEX NAME="sourcetype_sourceid" UNIQUE="false" FIELDS="sourcetype, sourceid"/>
+        <INDEX NAME="category" UNIQUE="false" FIELDS="category"/>
+        <INDEX NAME="targetdate" UNIQUE="false" FIELDS="targetdate"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Third-Party Arrangements - ASQA 30-day notification -->
+    <TABLE NAME="local_rtocompliance_thirdparty" COMMENT="Third-party arrangements register">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="organisationname" TYPE="char" LENGTH="255" NOTNULL="true"/>
+        <FIELD NAME="tradingname" TYPE="char" LENGTH="255" NOTNULL="false"/>
+        <FIELD NAME="abn" TYPE="char" LENGTH="14" NOTNULL="false"/>
+        <FIELD NAME="rtoid" TYPE="char" LENGTH="10" NOTNULL="false" COMMENT="If partner is an RTO"/>
+        <FIELD NAME="arrangementtype" TYPE="char" LENGTH="50" NOTNULL="true" COMMENT="delivery_partner/assessment_only/recruitment/marketing/facilities/other"/>
+        <FIELD NAME="description" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="contactname" TYPE="char" LENGTH="255" NOTNULL="false"/>
+        <FIELD NAME="contactemail" TYPE="char" LENGTH="255" NOTNULL="false"/>
+        <FIELD NAME="contactphone" TYPE="char" LENGTH="30" NOTNULL="false"/>
+        <FIELD NAME="agreementstartdate" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="agreementenddate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="qualificationscovered" TYPE="text" NOTNULL="false" COMMENT="JSON array of qualification codes"/>
+        <FIELD NAME="asqanotified" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="asqanotificationdate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="notificationdeadline" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="30 days from start"/>
+        <FIELD NAME="mandatoryclausesnrtlogo" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="NRT logo prohibition verified"/>
+        <FIELD NAME="mandatoryclausesaqf" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="AQF issuance prohibition verified"/>
+        <FIELD NAME="mandatoryclausestransparency" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="Student transparency verified"/>
+        <FIELD NAME="mandatoryclausesextra" TYPE="text" NOTNULL="false" COMMENT="JSON: extra mandatory clause confirmations (v4.0.45+)"/>
+        <FIELD NAME="monitoringfrequency" TYPE="char" LENGTH="30" NOTNULL="true" DEFAULT="quarterly" COMMENT="monthly/quarterly/annually"/>
+        <FIELD NAME="lastmonitoringdate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="nextmonitoringdate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="riskrating" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="medium" COMMENT="low/medium/high"/>
+        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="active" COMMENT="draft/active/suspended/terminated"/>
+        <FIELD NAME="staffcredentialsverified" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="agreementdocument" TYPE="char" LENGTH="255" NOTNULL="false"/>
+        <FIELD NAME="notes" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="createdby" TYPE="int" LENGTH="10" NOTNULL="true"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="createdby" TYPE="foreign" FIELDS="createdby" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
+        <INDEX NAME="arrangementtype" UNIQUE="false" FIELDS="arrangementtype"/>
+        <INDEX NAME="asqanotified" UNIQUE="false" FIELDS="asqanotified"/>
+        <INDEX NAME="notificationdeadline" UNIQUE="false" FIELDS="notificationdeadline"/>
+        <INDEX NAME="nextmonitoringdate" UNIQUE="false" FIELDS="nextmonitoringdate"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Governing Persons Register - Fit and Proper -->
+    <TABLE NAME="local_rtocompliance_govpersons" COMMENT="Governing persons fit and proper register">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="fullname" TYPE="char" LENGTH="255" NOTNULL="true"/>
+        <FIELD NAME="position" TYPE="char" LENGTH="100" NOTNULL="true" COMMENT="CEO/Director/Secretary/Board Member/etc"/>
+        <FIELD NAME="positiontype" TYPE="char" LENGTH="50" NOTNULL="true" COMMENT="executive/board/controller"/>
+        <FIELD NAME="email" TYPE="char" LENGTH="255" NOTNULL="false"/>
+        <FIELD NAME="phone" TYPE="char" LENGTH="30" NOTNULL="false"/>
+        <FIELD NAME="appointmentdate" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="cessationdate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="fitproperdeclared" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="fitproperdeclareddate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="suitabilityassessed" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="suitabilityassesseddate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="policecheckdate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="policecheckstatus" TYPE="char" LENGTH="20" NOTNULL="false" COMMENT="current/expired/pending"/>
+        <FIELD NAME="asqanotified" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="ASQA notified of appointment"/>
+        <FIELD NAME="asqanotificationdate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="active" COMMENT="active/resigned/terminated"/>
+        <FIELD NAME="evidence" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="notes" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="createdby" TYPE="int" LENGTH="10" NOTNULL="true"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="createdby" TYPE="foreign" FIELDS="createdby" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
+        <INDEX NAME="positiontype" UNIQUE="false" FIELDS="positiontype"/>
+        <INDEX NAME="fitproperdeclared" UNIQUE="false" FIELDS="fitproperdeclared"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Material Changes Register - 10 business day notification -->
+    <TABLE NAME="local_rtocompliance_materialchanges" COMMENT="Material changes notification register">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="reference" TYPE="char" LENGTH="30" NOTNULL="true"/>
+        <FIELD NAME="changetype" TYPE="char" LENGTH="50" NOTNULL="true" COMMENT="governance/ownership/location/scope/other"/>
+        <FIELD NAME="changedescription" TYPE="text" NOTNULL="true"/>
+        <FIELD NAME="effectivedate" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="notificationdeadline" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="10 business days from effective date"/>
+        <FIELD NAME="asqanotified" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="asqanotificationdate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="asqaacknowledged" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="asqareference" TYPE="char" LENGTH="50" NOTNULL="false"/>
+        <FIELD NAME="status" TYPE="char" LENGTH="30" NOTNULL="true" DEFAULT="pending" COMMENT="pending/notified/acknowledged/completed/overdue"/>
+        <FIELD NAME="impactassessment" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="mitigationactions" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="evidence" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="notes" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="createdby" TYPE="int" LENGTH="10" NOTNULL="true"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="createdby" TYPE="foreign" FIELDS="createdby" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="reference" UNIQUE="true" FIELDS="reference"/>
+        <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
+        <INDEX NAME="changetype" UNIQUE="false" FIELDS="changetype"/>
+        <INDEX NAME="notificationdeadline" UNIQUE="false" FIELDS="notificationdeadline"/>
+        <INDEX NAME="asqanotified" UNIQUE="false" FIELDS="asqanotified"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Annual Declaration of Compliance -->
+    <TABLE NAME="local_rtocompliance_adc" COMMENT="Annual Declaration of Compliance records">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="year" TYPE="int" LENGTH="4" NOTNULL="true"/>
+        <FIELD NAME="duedate" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="submissiondate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="submittedby" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="declarantname" TYPE="char" LENGTH="255" NOTNULL="false"/>
+        <FIELD NAME="declarantposition" TYPE="char" LENGTH="100" NOTNULL="false"/>
+        <FIELD NAME="declarationtext" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="evidencecount" TYPE="int" LENGTH="5" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="evidencecollected" TYPE="text" NOTNULL="false" COMMENT="JSON array of evidence items"/>
+        <FIELD NAME="status" TYPE="char" LENGTH="30" NOTNULL="true" DEFAULT="due" COMMENT="due/inprogress/submitted/confirmed"/>
+        <FIELD NAME="asqaconfirmationref" TYPE="char" LENGTH="50" NOTNULL="false"/>
+        <FIELD NAME="notes" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="createdby" TYPE="int" LENGTH="10" NOTNULL="true"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="submittedby" TYPE="foreign" FIELDS="submittedby" REFTABLE="user" REFFIELDS="id"/>
+        <KEY NAME="createdby" TYPE="foreign" FIELDS="createdby" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="year" UNIQUE="true" FIELDS="year"/>
+        <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
+        <INDEX NAME="duedate" UNIQUE="false" FIELDS="duedate"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Fee Receipts - $1500 Threshold Tracking -->
+    <TABLE NAME="local_rtocompliance_fees" COMMENT="Fee receipts for fee protection tracking">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="studentid" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="FK to local_rtocompliance_students"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="qualificationcode" TYPE="char" LENGTH="20" NOTNULL="false"/>
+        <FIELD NAME="feetype" TYPE="char" LENGTH="30" NOTNULL="true" COMMENT="tuition/materials/admin/deposit/other"/>
+        <FIELD NAME="description" TYPE="char" LENGTH="255" NOTNULL="false"/>
+        <FIELD NAME="amount" TYPE="number" LENGTH="10" DECIMALS="2" NOTNULL="true"/>
+        <FIELD NAME="paymentdate" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="paymentmethod" TYPE="char" LENGTH="30" NOTNULL="false" COMMENT="card/bank/cash/eftpos"/>
+        <FIELD NAME="receiptref" TYPE="char" LENGTH="50" NOTNULL="false"/>
+        <FIELD NAME="isprotected" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="Subject to fee protection"/>
+        <FIELD NAME="protectionmethod" TYPE="char" LENGTH="50" NOTNULL="false" COMMENT="bank_guarantee/protected_account/tuition_assurance"/>
+        <FIELD NAME="thresholdalert" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="Over $1500 threshold"/>
+        <FIELD NAME="runningtotal" TYPE="number" LENGTH="10" DECIMALS="2" NOTNULL="false" COMMENT="Running total prepaid"/>
+        <FIELD NAME="refunded" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="refunddate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="refundamount" TYPE="number" LENGTH="10" DECIMALS="2" NOTNULL="false"/>
+        <FIELD NAME="notes" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="createdby" TYPE="int" LENGTH="10" NOTNULL="true"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="studentid" TYPE="foreign" FIELDS="studentid" REFTABLE="local_rtocompliance_students" REFFIELDS="id"/>
+        <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
+        <KEY NAME="createdby" TYPE="foreign" FIELDS="createdby" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="paymentdate" UNIQUE="false" FIELDS="paymentdate"/>
+        <INDEX NAME="isprotected" UNIQUE="false" FIELDS="isprotected"/>
+        <INDEX NAME="thresholdalert" UNIQUE="false" FIELDS="thresholdalert"/>
+        <INDEX NAME="student_course" UNIQUE="false" FIELDS="studentid, courseid"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Insurance Register -->
+    <TABLE NAME="local_rtocompliance_insurance" COMMENT="Insurance policies register">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="insurancetype" TYPE="char" LENGTH="50" NOTNULL="true" COMMENT="public_liability/professional_indemnity/workers_comp/cyber/other"/>
+        <FIELD NAME="provider" TYPE="char" LENGTH="255" NOTNULL="true"/>
+        <FIELD NAME="policynumber" TYPE="char" LENGTH="100" NOTNULL="true"/>
+        <FIELD NAME="coverageamount" TYPE="number" LENGTH="15" DECIMALS="2" NOTNULL="false"/>
+        <FIELD NAME="premium" TYPE="number" LENGTH="10" DECIMALS="2" NOTNULL="false"/>
+        <FIELD NAME="excessamount" TYPE="number" LENGTH="10" DECIMALS="2" NOTNULL="false"/>
+        <FIELD NAME="coveragedetails" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="exclusions" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="deliverymodes" TYPE="text" NOTNULL="false" COMMENT="JSON array of covered delivery modes"/>
+        <FIELD NAME="locations" TYPE="text" NOTNULL="false" COMMENT="JSON array of covered locations"/>
+        <FIELD NAME="startdate" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="expirydate" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="renewalreminderdays" TYPE="int" LENGTH="5" NOTNULL="true" DEFAULT="30"/>
+        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="current" COMMENT="current/expiring/expired/cancelled"/>
+        <FIELD NAME="policydocument" TYPE="char" LENGTH="255" NOTNULL="false"/>
+        <FIELD NAME="certificatedocument" TYPE="char" LENGTH="255" NOTNULL="false"/>
+        <FIELD NAME="notes" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="createdby" TYPE="int" LENGTH="10" NOTNULL="true"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="createdby" TYPE="foreign" FIELDS="createdby" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="insurancetype" UNIQUE="false" FIELDS="insurancetype"/>
+        <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
+        <INDEX NAME="expirydate" UNIQUE="false" FIELDS="expirydate"/>
+        <INDEX NAME="policynumber" UNIQUE="false" FIELDS="policynumber"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Training Product Transitions -->
+    <TABLE NAME="local_rtocompliance_transitions" COMMENT="Training product transition tracking">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="oldproductcode" TYPE="char" LENGTH="20" NOTNULL="true"/>
+        <FIELD NAME="oldproductname" TYPE="char" LENGTH="255" NOTNULL="true"/>
+        <FIELD NAME="newproductcode" TYPE="char" LENGTH="20" NOTNULL="false" COMMENT="Null if deleted"/>
+        <FIELD NAME="newproductname" TYPE="char" LENGTH="255" NOTNULL="false"/>
+        <FIELD NAME="transitiontype" TYPE="char" LENGTH="20" NOTNULL="true" COMMENT="superseded/deleted"/>
+        <FIELD NAME="tganotificationdate" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Date TGA published transition"/>
+        <FIELD NAME="teachoutdeadline" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="studentsaffected" TYPE="int" LENGTH="5" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="studentscontacted" TYPE="int" LENGTH="5" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="transitionplan" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="mappingdocument" TYPE="char" LENGTH="255" NOTNULL="false"/>
+        <FIELD NAME="scopeupdated" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="enrolmentsclosed" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="linkedcourseid" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Optional Moodle course ID — self-enrolment is disabled/enabled on this course when enrolmentsclosed is toggled"/>
+        <FIELD NAME="status" TYPE="char" LENGTH="30" NOTNULL="true" DEFAULT="identified" COMMENT="identified/planning/inprogress/completed"/>
+        <FIELD NAME="completiondate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="notes" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="createdby" TYPE="int" LENGTH="10" NOTNULL="true"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="createdby" TYPE="foreign" FIELDS="createdby" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="oldproductcode" UNIQUE="false" FIELDS="oldproductcode"/>
+        <INDEX NAME="transitiontype" UNIQUE="false" FIELDS="transitiontype"/>
+        <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
+        <INDEX NAME="teachoutdeadline" UNIQUE="false" FIELDS="teachoutdeadline"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Validation Schedule and Events -->
+    <TABLE NAME="local_rtocompliance_validations" COMMENT="Validation schedule and event records">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="reference" TYPE="char" LENGTH="30" NOTNULL="true"/>
+        <FIELD NAME="productcode" TYPE="char" LENGTH="20" NOTNULL="true"/>
+        <FIELD NAME="productname" TYPE="char" LENGTH="255" NOTNULL="true"/>
+        <FIELD NAME="unitcodes" TYPE="text" NOTNULL="false" COMMENT="JSON array of specific units if not whole qual"/>
+        <FIELD NAME="validationtype" TYPE="char" LENGTH="30" NOTNULL="true" COMMENT="scheduled/adhoc/post_audit"/>
+        <FIELD NAME="risklevel" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="medium" COMMENT="low/medium/high"/>
+        <FIELD NAME="riskfactors" TYPE="text" NOTNULL="false" COMMENT="JSON array of risk factors"/>
+        <FIELD NAME="scheduleddate" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="actualdate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="leadvalidatorid" TYPE="char" LENGTH="50" NOTNULL="false" COMMENT="Composite key: numeric validator ID or trainer_N for a trainer record"/>
+        <FIELD NAME="leadvalidator" TYPE="char" LENGTH="255" NOTNULL="false" COMMENT="Resolved display name of the lead validator (populated by validation_edit.php on save)"/>
+        <FIELD NAME="panelmembers" TYPE="text" NOTNULL="false" COMMENT="Newline-separated list of resolved panel member names (populated by validation_edit.php on save)"/>
+        <FIELD NAME="validatorids" TYPE="text" NOTNULL="false" COMMENT="JSON array of validator IDs"/>
+        <FIELD NAME="methodologies" TYPE="text" NOTNULL="false" COMMENT="JSON array of validation methods used"/>
+        <FIELD NAME="samplesize" TYPE="int" LENGTH="5" NOTNULL="false"/>
+        <FIELD NAME="samplingmethod" TYPE="char" LENGTH="50" NOTNULL="false"/>
+        <FIELD NAME="findingscount" TYPE="int" LENGTH="5" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="findings" TYPE="text" NOTNULL="false" COMMENT="JSON array of findings"/>
+        <FIELD NAME="outcome" TYPE="char" LENGTH="30" NOTNULL="false" COMMENT="compliant/improvements_required/noncompliant"/>
+        <FIELD NAME="improvements" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="linkedimprovementids" TYPE="text" NOTNULL="false" COMMENT="JSON array of improvement IDs"/>
+        <FIELD NAME="reportdocument" TYPE="char" LENGTH="500" NOTNULL="false" COMMENT="URL to report document (Google Drive, SharePoint, OneDrive, etc.)"/>
+        <FIELD NAME="status" TYPE="char" LENGTH="30" NOTNULL="true" DEFAULT="scheduled" COMMENT="scheduled/inprogress/completed/cancelled"/>
+        <FIELD NAME="adclinked" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="Evidence linked to ADC"/>
+        <FIELD NAME="notes" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="createdby" TYPE="int" LENGTH="10" NOTNULL="true"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="createdby" TYPE="foreign" FIELDS="createdby" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="reference" UNIQUE="true" FIELDS="reference"/>
+        <INDEX NAME="productcode" UNIQUE="false" FIELDS="productcode"/>
+        <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
+        <INDEX NAME="scheduleddate" UNIQUE="false" FIELDS="scheduleddate"/>
+        <INDEX NAME="risklevel" UNIQUE="false" FIELDS="risklevel"/>
+        <INDEX NAME="outcome" UNIQUE="false" FIELDS="outcome"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Validators Register (3A/3B Credentials) -->
+    <TABLE NAME="local_rtocompliance_validators" COMMENT="Validators credentials register">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Moodle user ID if internal"/>
+        <FIELD NAME="fullname" TYPE="char" LENGTH="255" NOTNULL="true"/>
+        <FIELD NAME="email" TYPE="char" LENGTH="255" NOTNULL="false"/>
+        <FIELD NAME="phone" TYPE="char" LENGTH="30" NOTNULL="false"/>
+        <FIELD NAME="isinternal" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="1"/>
+        <FIELD NAME="organisation" TYPE="char" LENGTH="255" NOTNULL="false" COMMENT="External org if not internal"/>
+        <FIELD NAME="roletype" TYPE="char" LENGTH="10" NOTNULL="true" COMMENT="3A/3B"/>
+        <FIELD NAME="taecredential" TYPE="char" LENGTH="50" NOTNULL="false" COMMENT="TAE qualification for 3A"/>
+        <FIELD NAME="taedateachieved" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="vocationalqualifications" TYPE="text" NOTNULL="false" COMMENT="JSON array of qualifications"/>
+        <FIELD NAME="industryexperience" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="industryexperienceyears" TYPE="int" LENGTH="3" NOTNULL="false"/>
+        <FIELD NAME="currentindustryengagement" TYPE="text" NOTNULL="false" COMMENT="Description of current engagement"/>
+        <FIELD NAME="specialisations" TYPE="text" NOTNULL="false" COMMENT="JSON array of specialisation areas"/>
+        <FIELD NAME="validationsled" TYPE="int" LENGTH="5" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="validationsparticipated" TYPE="int" LENGTH="5" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="lastvalidationdate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="active" COMMENT="active/inactive/pending"/>
+        <FIELD NAME="evidencedocuments" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="notes" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="createdby" TYPE="int" LENGTH="10" NOTNULL="true"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
+        <KEY NAME="createdby" TYPE="foreign" FIELDS="createdby" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="roletype" UNIQUE="false" FIELDS="roletype"/>
+        <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
+        <INDEX NAME="isinternal" UNIQUE="false" FIELDS="isinternal"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- TAS Master Documents -->
+    <TABLE NAME="local_rtocompliance_tas" COMMENT="Training and Assessment Strategy master documents">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="qualificationcode" TYPE="char" LENGTH="20" NOTNULL="true"/>
+        <FIELD NAME="qualificationname" TYPE="char" LENGTH="255" NOTNULL="true"/>
+        <FIELD NAME="traininggovlink" TYPE="char" LENGTH="500" NOTNULL="false" COMMENT="training.gov.au URL"/>
+        <FIELD NAME="scopedetails" TYPE="text" NOTNULL="false" COMMENT="RTO scope details for Section 1"/>
+        <FIELD NAME="version" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="1.0"/>
+        <FIELD NAME="status" TYPE="char" LENGTH="30" NOTNULL="true" DEFAULT="draft" COMMENT="draft/review/approved/archived"/>
+        <FIELD NAME="effectivedate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="nextreviewdate" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Next scheduled review date"/>
+        <FIELD NAME="approvedby" TYPE="char" LENGTH="255" NOTNULL="false" COMMENT="Name of person who approved"/>
+        <FIELD NAME="approvaldate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="revisionnotes" TYPE="text" NOTNULL="false" COMMENT="Document revision notes"/>
+        <FIELD NAME="targetcohort" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="entryrequirements" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="llnrequirements" TYPE="text" NOTNULL="false" COMMENT="LLN requirements for Section 2"/>
+        <FIELD NAME="prerequisites" TYPE="text" NOTNULL="false" COMMENT="Prerequisites for Section 2"/>
+        <FIELD NAME="industryconsultation" TYPE="text" NOTNULL="false" COMMENT="Auto-generated consultation narrative for Section 3"/>
+        <FIELD NAME="jobroles" TYPE="text" NOTNULL="false" COMMENT="Job roles and outcomes for Section 3"/>
+        <FIELD NAME="deliverymode" TYPE="text" NOTNULL="false" COMMENT="Primary delivery mode"/>
+        <FIELD NAME="deliverylocations" TYPE="text" NOTNULL="false" COMMENT="JSON array of locations"/>
+        <FIELD NAME="deliverystartdate" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Planned delivery start date"/>
+        <FIELD NAME="nominalhours" TYPE="int" LENGTH="5" NOTNULL="false" COMMENT="Total nominal hours"/>
+        <FIELD NAME="durationweeks" TYPE="int" LENGTH="5" NOTNULL="false" COMMENT="Duration in weeks"/>
+        <FIELD NAME="hoursperweek" TYPE="int" LENGTH="3" NOTNULL="false" COMMENT="Hours per week per unit"/>
+        <FIELD NAME="volumeoflearning" TYPE="int" LENGTH="5" NOTNULL="false" COMMENT="Total volume of learning hours"/>
+        <FIELD NAME="deliveryschedule" TYPE="text" NOTNULL="false" COMMENT="Weekly delivery schedule"/>
+        <FIELD NAME="learningbreakdown" TYPE="text" NOTNULL="false" COMMENT="Volume of learning breakdown text"/>
+        <FIELD NAME="volumejustification" TYPE="text" NOTNULL="false" COMMENT="TAS volume of learning justification"/>
+        <FIELD NAME="assessmentmethods" TYPE="text" NOTNULL="false" COMMENT="Assessment methods for Section 5"/>
+        <FIELD NAME="assessmentmapping" TYPE="text" NOTNULL="false" COMMENT="Assessment mapping to units for Section 5"/>
+        <FIELD NAME="validationschedule" TYPE="text" NOTNULL="false" COMMENT="Assessment validation schedule for Section 5"/>
+        <FIELD NAME="trainerrequirements" TYPE="text" NOTNULL="false" COMMENT="Trainer/assessor requirements for Section 6"/>
+        <FIELD NAME="supervisionarrangements" TYPE="text" NOTNULL="false" COMMENT="Supervision arrangements for Section 6"/>
+        <FIELD NAME="learningresources" TYPE="text" NOTNULL="false" COMMENT="Learning resources and materials for Section 7"/>
+        <FIELD NAME="facilities" TYPE="text" NOTNULL="false" COMMENT="Facilities and equipment for Section 7"/>
+        <FIELD NAME="technology" TYPE="text" NOTNULL="false" COMMENT="Technology requirements for Section 7"/>
+        <FIELD NAME="thirdparty" TYPE="text" NOTNULL="false" COMMENT="Third-party arrangements for Section 8"/>
+        <FIELD NAME="learnersupport" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="accessibility" TYPE="text" NOTNULL="false" COMMENT="Accessibility and reasonable adjustments for Section 9"/>
+        <FIELD NAME="marketinginfo" TYPE="text" NOTNULL="false" COMMENT="Pre-enrolment information for Section 10"/>
+        <FIELD NAME="feesinformation" TYPE="text" NOTNULL="false" COMMENT="Fees and payment information for Section 10"/>
+        <FIELD NAME="hasworkplacement" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="Whether work placement is required"/>
+        <FIELD NAME="placementhours" TYPE="int" LENGTH="5" NOTNULL="false" COMMENT="Work placement hours"/>
+        <FIELD NAME="placementdetails" TYPE="text" NOTNULL="false" COMMENT="Work placement details and supervision"/>
+        <FIELD NAME="transitionplan" TYPE="text" NOTNULL="false" COMMENT="Transition/teach-out procedures for Section 12"/>
+        <FIELD NAME="riskmanagement" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="complaintsprocess" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="continuousimprovement" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="completeness" TYPE="int" LENGTH="3" NOTNULL="true" DEFAULT="0" COMMENT="0-100 completion percentage"/>
+        <FIELD NAME="generatedhtml" TYPE="text" NOTNULL="false" COMMENT="Generated HTML document"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="createdby" TYPE="int" LENGTH="10" NOTNULL="true"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="createdby" TYPE="foreign" FIELDS="createdby" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="qualificationcode" UNIQUE="false" FIELDS="qualificationcode"/>
+        <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
+        <INDEX NAME="qual_version" UNIQUE="true" FIELDS="qualificationcode, version"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- TAS Industry Consultations -->
+    <TABLE NAME="local_rtocompliance_tas_consult" COMMENT="TAS industry consultation records">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="tasid" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="consultationtype" TYPE="char" LENGTH="50" NOTNULL="true" COMMENT="meeting/email/informal/trainer/review/advisory/site_visit/survey/other"/>
+        <FIELD NAME="consultationdate" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="participantname" TYPE="char" LENGTH="255" NOTNULL="true"/>
+        <FIELD NAME="participantrole" TYPE="char" LENGTH="100" NOTNULL="false"/>
+        <FIELD NAME="participantorg" TYPE="char" LENGTH="255" NOTNULL="false"/>
+        <FIELD NAME="contactdetails" TYPE="char" LENGTH="255" NOTNULL="false" COMMENT="Email or phone of representative"/>
+        <FIELD NAME="topicsdiscussed" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="feedback" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="impacttraining" TYPE="text" NOTNULL="false" COMMENT="How feedback impacts training delivery"/>
+        <FIELD NAME="impactassessment" TYPE="text" NOTNULL="false" COMMENT="How feedback impacts assessment design"/>
+        <FIELD NAME="actionsagreed" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="nextmeetingdate" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Planned next consultation date"/>
+        <FIELD NAME="evidencedocument" TYPE="char" LENGTH="255" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="createdby" TYPE="int" LENGTH="10" NOTNULL="true"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="tasid" TYPE="foreign" FIELDS="tasid" REFTABLE="local_rtocompliance_tas" REFFIELDS="id"/>
+        <KEY NAME="createdby" TYPE="foreign" FIELDS="createdby" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="consultationdate" UNIQUE="false" FIELDS="consultationdate"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- TAS Delivery Schedule -->
+    <TABLE NAME="local_rtocompliance_tas_schedule" COMMENT="TAS delivery schedule entries">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="tasid" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="unitcode" TYPE="char" LENGTH="20" NOTNULL="true"/>
+        <FIELD NAME="unitname" TYPE="char" LENGTH="255" NOTNULL="true"/>
+        <FIELD NAME="sequenceorder" TYPE="int" LENGTH="5" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="deliverymode" TYPE="char" LENGTH="50" NOTNULL="true"/>
+        <FIELD NAME="scheduledweeks" TYPE="int" LENGTH="3" NOTNULL="false"/>
+        <FIELD NAME="nominalhours" TYPE="int" LENGTH="5" NOTNULL="false"/>
+        <FIELD NAME="supervisedtindhours" TYPE="int" LENGTH="5" NOTNULL="false"/>
+        <FIELD NAME="unsupervisedhours" TYPE="int" LENGTH="5" NOTNULL="false"/>
+        <FIELD NAME="workplacementhours" TYPE="int" LENGTH="5" NOTNULL="false"/>
+        <FIELD NAME="notes" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="tasid" TYPE="foreign" FIELDS="tasid" REFTABLE="local_rtocompliance_tas" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="unitcode" UNIQUE="false" FIELDS="unitcode"/>
+        <INDEX NAME="sequenceorder" UNIQUE="false" FIELDS="sequenceorder"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- TAS Assessment Mapping -->
+    <TABLE NAME="local_rtocompliance_tas_mapping" COMMENT="TAS assessment mapping matrix">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="tasid" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="unitcode" TYPE="char" LENGTH="20" NOTNULL="true"/>
+        <FIELD NAME="assessmentname" TYPE="char" LENGTH="255" NOTNULL="true"/>
+        <FIELD NAME="assessmenttype" TYPE="char" LENGTH="50" NOTNULL="true" COMMENT="knowledge/practical/project/observation/portfolio/other"/>
+        <FIELD NAME="elementsassessed" TYPE="text" NOTNULL="false" COMMENT="JSON array of element numbers"/>
+        <FIELD NAME="criteriamapped" TYPE="text" NOTNULL="false" COMMENT="JSON array of performance criteria"/>
+        <FIELD NAME="methodsused" TYPE="text" NOTNULL="false" COMMENT="JSON array of assessment methods"/>
+        <FIELD NAME="conditionsrequired" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="notes" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="tasid" TYPE="foreign" FIELDS="tasid" REFTABLE="local_rtocompliance_tas" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="unitcode" UNIQUE="false" FIELDS="unitcode"/>
+        <INDEX NAME="assessmenttype" UNIQUE="false" FIELDS="assessmenttype"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- TAS Trainer Mapping -->
+    <TABLE NAME="local_rtocompliance_tas_trainers" COMMENT="TAS trainer and assessor assignments">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="tasid" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="trainerid" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="FK to local_rtocompliance_trainers"/>
+        <FIELD NAME="role" TYPE="char" LENGTH="30" NOTNULL="true" COMMENT="trainer/assessor/both"/>
+        <FIELD NAME="unitscovered" TYPE="text" NOTNULL="false" COMMENT="JSON array of unit codes"/>
+        <FIELD NAME="credentialverified" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="credentialverifieddate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="notes" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="tasid" TYPE="foreign" FIELDS="tasid" REFTABLE="local_rtocompliance_tas" REFFIELDS="id"/>
+        <KEY NAME="trainerid" TYPE="foreign" FIELDS="trainerid" REFTABLE="local_rtocompliance_trainers" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="role" UNIQUE="false" FIELDS="role"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- TAS Resources -->
+    <TABLE NAME="local_rtocompliance_tas_resources" COMMENT="TAS learning resources and equipment">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="tasid" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="resourcetype" TYPE="char" LENGTH="50" NOTNULL="true" COMMENT="learning_material/equipment/facility/software/ppe/other"/>
+        <FIELD NAME="resourcename" TYPE="char" LENGTH="255" NOTNULL="true"/>
+        <FIELD NAME="description" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="unitscovered" TYPE="text" NOTNULL="false" COMMENT="JSON array of unit codes"/>
+        <FIELD NAME="quantity" TYPE="int" LENGTH="5" NOTNULL="false"/>
+        <FIELD NAME="location" TYPE="char" LENGTH="255" NOTNULL="false"/>
+        <FIELD NAME="available" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="1"/>
+        <FIELD NAME="maintenancedate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="notes" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="tasid" TYPE="foreign" FIELDS="tasid" REFTABLE="local_rtocompliance_tas" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="resourcetype" UNIQUE="false" FIELDS="resourcetype"/>
+        <INDEX NAME="available" UNIQUE="false" FIELDS="available"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- USI Verification Log -->
+    <TABLE NAME="local_rtocompliance_usilog" COMMENT="USI verification attempt log">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="studentid" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="FK to local_rtocompliance_students"/>
+        <FIELD NAME="usi" TYPE="char" LENGTH="15" NOTNULL="true" COMMENT="USI that was verified (10–12 chars; sized to 15 for vendor tolerance)"/>
+        <FIELD NAME="status" TYPE="char" LENGTH="30" NOTNULL="true" COMMENT="Verification status code"/>
+        <FIELD NAME="verified" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="1=verified, 0=not verified"/>
+        <FIELD NAME="message" TYPE="char" LENGTH="255" NOTNULL="false" COMMENT="Status message"/>
+        <FIELD NAME="details" TYPE="text" NOTNULL="false" COMMENT="JSON details from verification response"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="studentid" TYPE="foreign" FIELDS="studentid" REFTABLE="local_rtocompliance_students" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="usi" UNIQUE="false" FIELDS="usi"/>
+        <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
+        <INDEX NAME="verified" UNIQUE="false" FIELDS="verified"/>
+        <INDEX NAME="timecreated" UNIQUE="false" FIELDS="timecreated"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Materialized Dashboard Metrics (PERFORMANCE OPTIMIZATION) -->
+    <TABLE NAME="local_rtocompliance_metrics" COMMENT="Materialized dashboard metrics for performance">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="metrickey" TYPE="char" LENGTH="50" NOTNULL="true" COMMENT="Metric identifier"/>
+        <FIELD NAME="metricvalue" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" COMMENT="Metric value"/>
+        <FIELD NAME="timecomputed" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" COMMENT="When metric was computed"/>
+        <FIELD NAME="dirty" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="1=needs recompute"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="metrickey_unique" UNIQUE="true" FIELDS="metrickey"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Qualification Builder: Training Products (qualifications, skill sets, single units) -->
+    <TABLE NAME="local_rtocompliance_qualbuilder" COMMENT="Built training products - qualifications, skill sets, single units">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="producttype" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="qualification" COMMENT="qualification/skillset/singleunit"/>
+        <FIELD NAME="qualificationcode" TYPE="char" LENGTH="20" NOTNULL="true" COMMENT="TGA code e.g. BSB50420"/>
+        <FIELD NAME="qualificationname" TYPE="char" LENGTH="255" NOTNULL="true"/>
+        <FIELD NAME="streamname" TYPE="char" LENGTH="150" NOTNULL="false" COMMENT="Optional stream or variant name e.g. Import Pathway"/>
+        <FIELD NAME="aqflevel" TYPE="int" LENGTH="2" NOTNULL="false" COMMENT="AQF level 1-10"/>
+        <FIELD NAME="categoryid" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Moodle category for qualification"/>
+        <FIELD NAME="totalunits" TYPE="int" LENGTH="3" NOTNULL="true" DEFAULT="1"/>
+        <FIELD NAME="coreunitcount" TYPE="int" LENGTH="3" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="electivecount" TYPE="int" LENGTH="3" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="packagingrules" TYPE="text" NOTNULL="false" COMMENT="JSON packaging rules definition"/>
+        <FIELD NAME="electiverules" TYPE="text" NOTNULL="false" COMMENT="JSON elective selection rules"/>
+        <FIELD NAME="nominalhours" TYPE="int" LENGTH="5" NOTNULL="false"/>
+        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="draft" COMMENT="draft/active/superseded"/>
+        <FIELD NAME="supersededby" TYPE="char" LENGTH="20" NOTNULL="false"/>
+        <FIELD NAME="teachoutdate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="validationpassed" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="validationdate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="validationerrors" TYPE="text" NOTNULL="false" COMMENT="JSON validation errors"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="createdby" TYPE="int" LENGTH="10" NOTNULL="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="categoryid" TYPE="foreign" FIELDS="categoryid" REFTABLE="course_categories" REFFIELDS="id"/>
+        <KEY NAME="createdby" TYPE="foreign" FIELDS="createdby" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="qualificationcode" UNIQUE="false" FIELDS="qualificationcode"/>
+        <INDEX NAME="producttype" UNIQUE="false" FIELDS="producttype"/>
+        <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
+        <INDEX NAME="producttype_status" UNIQUE="false" FIELDS="producttype,status"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Qualification Builder: Units linked to training products -->
+    <TABLE NAME="local_rtocompliance_qualunits" COMMENT="Units of competency linked to training products">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="qualbuilderid" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="FK to qualbuilder"/>
+        <FIELD NAME="unitcode" TYPE="char" LENGTH="12" NOTNULL="true" COMMENT="TGA unit code"/>
+        <FIELD NAME="unitname" TYPE="char" LENGTH="150" NOTNULL="true"/>
+        <FIELD NAME="unittype" TYPE="char" LENGTH="10" NOTNULL="true" DEFAULT="elective" COMMENT="core/elective/imported"/>
+        <FIELD NAME="electivegroup" TYPE="char" LENGTH="5" NOTNULL="false" COMMENT="A/B/C for grouped electives"/>
+        <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Linked Moodle course"/>
+        <FIELD NAME="nominalhours" TYPE="int" LENGTH="5" NOTNULL="false"/>
+        <FIELD NAME="creditpoints" TYPE="int" LENGTH="5" NOTNULL="false" DEFAULT="0" COMMENT="Credit point value for points-based qualifications (MEM UEE etc)"/>
+        <FIELD NAME="sequenceorder" TYPE="int" LENGTH="5" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="prerequisiteunits" TYPE="text" NOTNULL="false" COMMENT="JSON prerequisite unit IDs"/>
+        <FIELD NAME="selected" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="1" COMMENT="1 if selected for this product"/>
+        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="active"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="qualbuilderid" TYPE="foreign" FIELDS="qualbuilderid" REFTABLE="local_rtocompliance_qualbuilder" REFFIELDS="id"/>
+        <KEY NAME="courseid" TYPE="foreign" FIELDS="courseid" REFTABLE="course" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="unitcode" UNIQUE="false" FIELDS="unitcode"/>
+        <INDEX NAME="unittype" UNIQUE="false" FIELDS="unittype"/>
+        <INDEX NAME="qualbuilderid_unittype" UNIQUE="false" FIELDS="qualbuilderid,unittype"/>
+        <INDEX NAME="qualbuilderid_courseid" UNIQUE="false" FIELDS="qualbuilderid,courseid"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Auto-Certificate Queue: Track automatic certificate issuance -->
+    <TABLE NAME="local_rtocompliance_autocerts" COMMENT="Auto-certificate issuance queue">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="studentid" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="FK to students table"/>
+        <FIELD NAME="qualbuilderid" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="FK to qualbuilder"/>
+        <FIELD NAME="certtypes" TYPE="char" LENGTH="50" NOTNULL="true" COMMENT="testamur,record or statement"/>
+        <FIELD NAME="completiondate" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="creditcost" TYPE="int" LENGTH="3" NOTNULL="true" DEFAULT="5" COMMENT="5 for SoA, 10 for qual"/>
+        <FIELD NAME="creditdeducted" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="certsissued" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="emailsent" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="certids" TYPE="text" NOTNULL="false" COMMENT="JSON array of issued cert IDs"/>
+        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="pending" COMMENT="pending/processing/complete/failed"/>
+        <FIELD NAME="errormessage" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timeprocessed" TYPE="int" LENGTH="10" NOTNULL="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="studentid" TYPE="foreign" FIELDS="studentid" REFTABLE="local_rtocompliance_students" REFFIELDS="id"/>
+        <KEY NAME="qualbuilderid" TYPE="foreign" FIELDS="qualbuilderid" REFTABLE="local_rtocompliance_qualbuilder" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
+        <INDEX NAME="studentid_qualbuilderid" UNIQUE="false" FIELDS="studentid,qualbuilderid"/>
+        <INDEX NAME="completiondate" UNIQUE="false" FIELDS="completiondate"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Trainer Industry Currency Activities: Multiple activities per trainer -->
+    <TABLE NAME="local_rtocompliance_trainer_currency" COMMENT="Trainer industry currency activities (multiple per trainer)">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="trainerid" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="FK to local_rtocompliance_trainers"/>
+        <FIELD NAME="activitytype" TYPE="char" LENGTH="50" NOTNULL="true" COMMENT="employment/consulting/projects/professional_membership/conferences/research/mentoring/cpd/work_experience/other"/>
+        <FIELD NAME="title" TYPE="char" LENGTH="255" NOTNULL="true" COMMENT="Activity title or role"/>
+        <FIELD NAME="organisation" TYPE="char" LENGTH="255" NOTNULL="false" COMMENT="Employer or organisation name"/>
+        <FIELD NAME="description" TYPE="text" NOTNULL="false" COMMENT="Detailed description of activities"/>
+        <FIELD NAME="startdate" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Activity start date"/>
+        <FIELD NAME="enddate" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Activity end date (null = ongoing)"/>
+        <FIELD NAME="ongoing" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="1 = still active/ongoing"/>
+        <FIELD NAME="hoursperweek" TYPE="int" LENGTH="3" NOTNULL="false" COMMENT="Approximate hours per week"/>
+        <FIELD NAME="evidencetype" TYPE="char" LENGTH="100" NOTNULL="false" COMMENT="Type of evidence held"/>
+        <FIELD NAME="evidencefileid" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Uploaded evidence file ID"/>
+        <FIELD NAME="evidencefilename" TYPE="char" LENGTH="255" NOTNULL="false"/>
+        <FIELD NAME="verifiedby" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="User who verified this activity"/>
+        <FIELD NAME="verifieddate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="notes" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="trainerid" TYPE="foreign" FIELDS="trainerid" REFTABLE="local_rtocompliance_trainers" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="activitytype" UNIQUE="false" FIELDS="activitytype"/>
+        <INDEX NAME="trainerid_type" UNIQUE="false" FIELDS="trainerid,activitytype"/>
+        <INDEX NAME="ongoing" UNIQUE="false" FIELDS="ongoing"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Trainer Vocational Competency Activities: Multiple activities per trainer -->
+    <TABLE NAME="local_rtocompliance_trainer_voccomp" COMMENT="Trainer vocational competency activities (multiple per trainer)">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="trainerid" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="FK to local_rtocompliance_trainers"/>
+        <FIELD NAME="activitytype" TYPE="char" LENGTH="50" NOTNULL="true" COMMENT="vocational_qualification/industry_employment/workplace_projects/vocational_cpd/industry_licences/professional_logbook/training_delivery/other"/>
+        <FIELD NAME="title" TYPE="char" LENGTH="255" NOTNULL="true" COMMENT="Activity title or context"/>
+        <FIELD NAME="qualification" TYPE="char" LENGTH="255" NOTNULL="false" COMMENT="Related qualification codes"/>
+        <FIELD NAME="organisation" TYPE="char" LENGTH="255" NOTNULL="false" COMMENT="Employer or organisation name"/>
+        <FIELD NAME="description" TYPE="text" NOTNULL="false" COMMENT="Description of vocational practice"/>
+        <FIELD NAME="startdate" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Activity start date"/>
+        <FIELD NAME="enddate" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Activity end date (null = ongoing)"/>
+        <FIELD NAME="ongoing" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="1 = still active/ongoing"/>
+        <FIELD NAME="totalhours" TYPE="int" LENGTH="6" NOTNULL="false" COMMENT="Total hours for this activity"/>
+        <FIELD NAME="evidencetype" TYPE="char" LENGTH="100" NOTNULL="false" COMMENT="Type of evidence held"/>
+        <FIELD NAME="evidencefileid" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Uploaded evidence file ID"/>
+        <FIELD NAME="evidencefilename" TYPE="char" LENGTH="255" NOTNULL="false"/>
+        <FIELD NAME="verifiedby" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="User who verified this activity"/>
+        <FIELD NAME="verifieddate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="notes" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="trainerid" TYPE="foreign" FIELDS="trainerid" REFTABLE="local_rtocompliance_trainers" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="activitytype" UNIQUE="false" FIELDS="activitytype"/>
+        <INDEX NAME="trainerid_type" UNIQUE="false" FIELDS="trainerid,activitytype"/>
+        <INDEX NAME="ongoing" UNIQUE="false" FIELDS="ongoing"/>
+        <INDEX NAME="qualification" UNIQUE="false" FIELDS="qualification"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- RPL and Credit Transfer Register - Standards 1.6 and 1.7 -->
+    <TABLE NAME="local_rtocompliance_rpl" COMMENT="RPL and Credit Transfer decisions register">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="studentid" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="FK to local_rtocompliance_students"/>
+        <FIELD NAME="studentname" TYPE="char" LENGTH="200" NOTNULL="false" COMMENT="Student display name"/>
+        <FIELD NAME="unitcode" TYPE="char" LENGTH="20" NOTNULL="false" COMMENT="Unit of competency code"/>
+        <FIELD NAME="unitname" TYPE="char" LENGTH="200" NOTNULL="false"/>
+        <FIELD NAME="qualcode" TYPE="char" LENGTH="20" NOTNULL="false" COMMENT="Qualification code"/>
+        <FIELD NAME="qualname" TYPE="char" LENGTH="200" NOTNULL="false"/>
+        <FIELD NAME="rpltype" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="rpl" COMMENT="rpl/credit_transfer"/>
+        <FIELD NAME="evidencedescription" TYPE="text" NOTNULL="false" COMMENT="Description of evidence provided"/>
+        <FIELD NAME="evidencefiles" TYPE="text" NOTNULL="false" COMMENT="List of evidence files or documents"/>
+        <FIELD NAME="assessoruserid" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Assessor/trainer Moodle user ID"/>
+        <FIELD NAME="assessorname" TYPE="char" LENGTH="200" NOTNULL="false"/>
+        <FIELD NAME="decision" TYPE="char" LENGTH="30" NOTNULL="true" DEFAULT="pending" COMMENT="pending/approved/partially_approved/not_approved"/>
+        <FIELD NAME="decisiondate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="decisionreason" TYPE="text" NOTNULL="false" COMMENT="Justification for decision"/>
+        <FIELD NAME="sourcequalcode" TYPE="char" LENGTH="20" NOTNULL="false" COMMENT="Credit transfer: source qualification code"/>
+        <FIELD NAME="sourcertoid" TYPE="char" LENGTH="10" NOTNULL="false" COMMENT="Credit transfer: source RTO identifier"/>
+        <FIELD NAME="usitranscriptverified" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="Credit transfer: USI transcript verified"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="studentid" UNIQUE="false" FIELDS="studentid"/>
+        <INDEX NAME="rpltype" UNIQUE="false" FIELDS="rpltype"/>
+        <INDEX NAME="decision" UNIQUE="false" FIELDS="decision"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Risk Management Register - Standard 4.3 -->
+    <TABLE NAME="local_rtocompliance_risks" COMMENT="Risk Management Register for Standard 4.3">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="risktitle" TYPE="char" LENGTH="255" NOTNULL="true"/>
+        <FIELD NAME="riskcategory" TYPE="char" LENGTH="30" NOTNULL="true" DEFAULT="operational" COMMENT="operational/financial/compliance/safety/reputational/under18"/>
+        <FIELD NAME="riskdescription" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="likelihood" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="3" COMMENT="1=Rare 2=Unlikely 3=Possible 4=Likely 5=Almost certain"/>
+        <FIELD NAME="impact" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="3" COMMENT="1=Insignificant 2=Minor 3=Moderate 4=Major 5=Catastrophic"/>
+        <FIELD NAME="riskowner" TYPE="char" LENGTH="200" NOTNULL="false"/>
+        <FIELD NAME="mitigationplan" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="reviewdate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="open" COMMENT="open/mitigated/closed"/>
+        <FIELD NAME="notes" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="riskcategory" UNIQUE="false" FIELDS="riskcategory"/>
+        <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Roles and Responsibilities Register - Standard 4.2 -->
+    <TABLE NAME="local_rtocompliance_roles" COMMENT="Roles and Responsibilities Register for Standard 4.2">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="rolename" TYPE="char" LENGTH="200" NOTNULL="true"/>
+        <FIELD NAME="roleowner" TYPE="char" LENGTH="200" NOTNULL="false" COMMENT="Person currently in this role"/>
+        <FIELD NAME="department" TYPE="char" LENGTH="100" NOTNULL="false"/>
+        <FIELD NAME="responsibilities" TYPE="text" NOTNULL="false" COMMENT="Key responsibilities and obligations"/>
+        <FIELD NAME="reportsto" TYPE="char" LENGTH="200" NOTNULL="false"/>
+        <FIELD NAME="regulatoryobligations" TYPE="text" NOTNULL="false" COMMENT="How this role stays informed of regulatory changes"/>
+        <FIELD NAME="reviewdate" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="notes" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+    </TABLE>
+
+    <!-- Meeting Minutes Register - Standards 4.1-4.2 governance evidence -->
+    <TABLE NAME="local_rtocompliance_minutes" COMMENT="Meeting Minutes evidence for Standards 4.1-4.2 governance">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="meetingtitle" TYPE="char" LENGTH="255" NOTNULL="true"/>
+        <FIELD NAME="meetingtype" TYPE="char" LENGTH="50" NOTNULL="true" DEFAULT="board" COMMENT="board/management/quality/staff/other"/>
+        <FIELD NAME="meetingdate" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="location" TYPE="char" LENGTH="200" NOTNULL="false"/>
+        <FIELD NAME="attendees" TYPE="text" NOTNULL="false" COMMENT="List of attendees"/>
+        <FIELD NAME="agendaitems" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="decisions" TYPE="text" NOTNULL="false" COMMENT="Decisions made at meeting"/>
+        <FIELD NAME="actionitems" TYPE="text" NOTNULL="false" COMMENT="Action items with responsible parties"/>
+        <FIELD NAME="complianceitems" TYPE="text" NOTNULL="false" COMMENT="Regulatory/compliance items discussed"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="meetingdate" UNIQUE="false" FIELDS="meetingdate"/>
+        <INDEX NAME="meetingtype" UNIQUE="false" FIELDS="meetingtype"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Student Suitability Checklists - dynamically generated from TAS entry requirements -->
+    <TABLE NAME="local_rtocompliance_suitability" COMMENT="Student pre-enrolment suitability review records (Standard 2 PI 2(a) &amp; 2(b))">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="tasid" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="FK to local_rtocompliance_tas"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="FK to user - the student"/>
+        <FIELD NAME="token" TYPE="char" LENGTH="64" NOTNULL="true" COMMENT="Unique token for public form link"/>
+        <FIELD NAME="status" TYPE="char" LENGTH="40" NOTNULL="true" DEFAULT="pending" COMMENT="pending/suitable/suitable_with_support/not_suitable/override_*"/>
+        <FIELD NAME="qualification" TYPE="char" LENGTH="32" NOTNULL="false" COMMENT="Student-declared highest qualification (none/school/cert1..bachelor)"/>
+        <FIELD NAME="experience" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="1 if student declared relevant industry experience"/>
+        <FIELD NAME="experience_years" TYPE="char" LENGTH="16" NOTNULL="false" COMMENT="0-1/1-3/3-5/5-10/10+"/>
+        <FIELD NAME="industry_type" TYPE="char" LENGTH="255" NOTNULL="false" COMMENT="Free-text industry/role"/>
+        <FIELD NAME="school_level" TYPE="char" LENGTH="16" NOTNULL="false" COMMENT="year9/year10/year11/year12/other"/>
+        <FIELD NAME="qualification_evidence" TYPE="text" NOTNULL="false" COMMENT="Student-described evidence for highest qualification (v4.4.39)"/>
+        <FIELD NAME="school_evidence" TYPE="text" NOTNULL="false" COMMENT="Student-described evidence for school level (v4.4.39)"/>
+        <FIELD NAME="lln_evidence" TYPE="text" NOTNULL="false" COMMENT="Student self-report: ACSF level and supporting evidence (v4.4.42)"/>
+        <FIELD NAME="digital_literacy" TYPE="char" LENGTH="50" NOTNULL="false" COMMENT="Student digital literacy dropdown selection (v4.4.42)"/>
+        <FIELD NAME="digital_literacy_evidence" TYPE="text" NOTNULL="false" COMMENT="Evidence for digital literacy level (v4.4.42)"/>
+        <FIELD NAME="prior_skills" TYPE="char" LENGTH="50" NOTNULL="false" COMMENT="Student prior skills/experience dropdown selection (v4.4.42)"/>
+        <FIELD NAME="prior_skills_evidence" TYPE="text" NOTNULL="false" COMMENT="Evidence for prior skills/experience (v4.4.42)"/>
+        <FIELD NAME="course_req_note" TYPE="text" NOTNULL="false" COMMENT="Student note on gaps in course entry requirements (v4.4.42)"/>
+        <FIELD NAME="support_needs" TYPE="text" NOTNULL="false" COMMENT="JSON array of support need keys selected by student (v4.4.42)"/>
+        <FIELD NAME="trainer_decision" TYPE="char" LENGTH="32" NOTNULL="false" COMMENT="Trainer suitability decision: suitable/suitable_with_support/not_suitable (v4.4.42)"/>
+        <FIELD NAME="trainer_advice" TYPE="text" NOTNULL="false" COMMENT="Trainer-written advice to student (auto-generated + editable) (v4.4.42)"/>
+        <FIELD NAME="trainer_justification" TYPE="text" NOTNULL="false" COMMENT="Trainer documented justification for decision (v4.4.42)"/>
+        <FIELD NAME="trainer_declaration" TYPE="int" LENGTH="1" NOTNULL="false" DEFAULT="0" COMMENT="1 when trainer has ticked the declaration (v4.4.42)"/>
+        <FIELD NAME="trainer_declared_at" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Unix timestamp when trainer ticked declaration (v4.4.42)"/>
+        <FIELD NAME="trainerid" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="User ID of the trainer who made the decision (v4.4.42)"/>
+        <FIELD NAME="digital_skills" TYPE="text" NOTNULL="false" COMMENT="JSON array of digital-skill keys self-rated as confident"/>
+        <FIELD NAME="disability_disclosure" TYPE="text" NOTNULL="false" COMMENT="Free-text reasonable-adjustment disclosure"/>
+        <FIELD NAME="req_prereq" TYPE="char" LENGTH="32" NOTNULL="false" DEFAULT="none" COMMENT="Required prerequisite qualification level"/>
+        <FIELD NAME="req_lln_level" TYPE="char" LENGTH="8" NOTNULL="false" DEFAULT="3" COMMENT="Required ACSF LLN level (1-5)"/>
+        <FIELD NAME="lln_actual_level" TYPE="char" LENGTH="8" NOTNULL="false" COMMENT="Student's previously assessed ACSF level (admin-supplied)"/>
+        <FIELD NAME="lln_source" TYPE="char" LENGTH="32" NOTNULL="false" COMMENT="Which LLN adapter supplied the level: manual|webhook|... (v4.2.50)"/>
+        <FIELD NAME="lln_assessed_at" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Unix ts when the LLN level was assessed (v4.2.50)"/>
+        <FIELD NAME="lln_assessor" TYPE="char" LENGTH="100" NOTNULL="false" COMMENT="Name of the system or person who assessed the LLN level (v4.2.50)"/>
+        <FIELD NAME="declaration_name" TYPE="char" LENGTH="200" NOTNULL="false" COMMENT="Full name typed by the student as their signature in Stage 4 (v4.2.51)"/>
+        <FIELD NAME="declaration_signed_at" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Unix ts when the student accepted the truth attestation (v4.2.51)"/>
+        <FIELD NAME="reasons" TYPE="text" NOTNULL="false" COMMENT="JSON array of reasons returned by the decision engine"/>
+        <FIELD NAME="support_required" TYPE="text" NOTNULL="false" COMMENT="JSON array of support / recommendation strings"/>
+        <FIELD NAME="advice" TYPE="text" NOTNULL="false" COMMENT="Auto-generated plain-language advice shown to the student"/>
+        <FIELD NAME="override_outcome" TYPE="char" LENGTH="32" NOTNULL="false" COMMENT="Outcome chosen by the trainer when override applied"/>
+        <FIELD NAME="overridenotes" TYPE="text" NOTNULL="false" COMMENT="Admin notes explaining why suitability was overridden"/>
+        <FIELD NAME="overriddenby" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Admin user ID who overrode the result"/>
+        <FIELD NAME="overriddentime" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="timesent" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="When email was sent to student"/>
+        <FIELD NAME="timecompleted" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="When student submitted the form"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="tasid" TYPE="foreign" FIELDS="tasid" REFTABLE="local_rtocompliance_tas" REFFIELDS="id"/>
+        <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="token" UNIQUE="true" FIELDS="token"/>
+        <INDEX NAME="userid_tasid" UNIQUE="false" FIELDS="userid, tasid"/>
+        <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Individual answers for each suitability question -->
+    <TABLE NAME="local_rtocompliance_suitability_answers" COMMENT="Individual Yes/No answers for each suitability checklist question">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="suitabilityid" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="FK to local_rtocompliance_suitability"/>
+        <FIELD NAME="question" TYPE="text" NOTNULL="true" COMMENT="The suitability requirement text"/>
+        <FIELD NAME="answer" TYPE="int" LENGTH="1" NOTNULL="false" COMMENT="1=Yes/meets requirement, 0=No/does not meet, 2=Unsure, null=not yet answered"/>
+        <FIELD NAME="evidence" TYPE="text" NOTNULL="false" COMMENT="Free-text explanation/evidence the student provides when answer is Unsure or No (v4.2.42)"/>
+        <FIELD NAME="displayorder" TYPE="int" LENGTH="5" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="suitabilityid" TYPE="foreign" FIELDS="suitabilityid" REFTABLE="local_rtocompliance_suitability" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="suitabilityid_order" UNIQUE="false" FIELDS="suitabilityid, displayorder"/>
+      </INDEXES>
+    </TABLE>
+
+
+    <!-- v3.8.50 — AVETMISS Data Import tables -->
+    <TABLE NAME="local_rtocompliance_avetmiss" COMMENT="AVETMISS NAT file import batch records">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="rtoid" TYPE="char" LENGTH="20" NOTNULL="false" COMMENT="RTO identifier from NAT00010 or NAT00120"/>
+        <FIELD NAME="rtoname" TYPE="char" LENGTH="255" NOTNULL="false" COMMENT="RTO name from NAT00010"/>
+        <FIELD NAME="collectionyear" TYPE="char" LENGTH="10" NOTNULL="false" COMMENT="Most common enrolment year detected from NAT00120 data"/>
+        <FIELD NAME="filesprocessed" TYPE="text" NOTNULL="false" COMMENT="JSON array of filenames included in this import"/>
+        <FIELD NAME="totalstudents" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="totalenrolments" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="totalcompletions" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="flaggedrecords" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="collectionyear" UNIQUE="false" FIELDS="collectionyear"/>
+        <INDEX NAME="timecreated" UNIQUE="false" FIELDS="timecreated"/>
+      </INDEXES>
+    </TABLE>
+
+    <TABLE NAME="local_rtocompliance_avetmiss_student" COMMENT="Students parsed from NAT00080/NAT00085 files">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="importid" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="FK to local_rtocompliance_avetmiss"/>
+        <FIELD NAME="clientid" TYPE="char" LENGTH="20" NOTNULL="true" COMMENT="AVETMISS client identifier (10 chars from NAT00080 position 1-10)"/>
+        <FIELD NAME="name" TYPE="char" LENGTH="100" NOTNULL="true" COMMENT="Full name from NAT00080 position 11-60"/>
+        <FIELD NAME="firstname" TYPE="char" LENGTH="60" NOTNULL="false" COMMENT="Given name from NAT00085"/>
+        <FIELD NAME="familyname" TYPE="char" LENGTH="60" NOTNULL="false" COMMENT="Family name from NAT00085"/>
+        <FIELD NAME="email" TYPE="char" LENGTH="100" NOTNULL="false" COMMENT="Email extracted from NAT00085"/>
+        <FIELD NAME="phone" TYPE="char" LENGTH="20" NOTNULL="false" COMMENT="Mobile/phone from NAT00085"/>
+        <FIELD NAME="dob" TYPE="char" LENGTH="10" NOTNULL="false" COMMENT="Date of birth DDMMYYYY from NAT00080"/>
+        <FIELD NAME="sex" TYPE="char" LENGTH="1" NOTNULL="false" COMMENT="M or F from NAT00080"/>
+        <FIELD NAME="usi" TYPE="char" LENGTH="15" NOTNULL="false" COMMENT="USI (10 chars) extracted from NAT00080"/>
+        <FIELD NAME="suburb" TYPE="char" LENGTH="60" NOTNULL="false"/>
+        <FIELD NAME="state" TYPE="char" LENGTH="5" NOTNULL="false" COMMENT="State code e.g. 02=VIC from NAT00085"/>
+        <FIELD NAME="hasdataissues" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="1 if missing USI, DOB, sex or contains @@ markers"/>
+        <FIELD NAME="dataissuefields" TYPE="text" NOTNULL="false" COMMENT="JSON array of issue field names"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="importid" TYPE="foreign" FIELDS="importid" REFTABLE="local_rtocompliance_avetmiss" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="importid_clientid" UNIQUE="false" FIELDS="importid, clientid"/>
+        <INDEX NAME="importid_issues" UNIQUE="false" FIELDS="importid, hasdataissues"/>
+      </INDEXES>
+    </TABLE>
+
+    <TABLE NAME="local_rtocompliance_avetmiss_enrolment" COMMENT="Enrolments parsed from NAT00120 files">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="importid" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="FK to local_rtocompliance_avetmiss"/>
+        <FIELD NAME="clientid" TYPE="char" LENGTH="20" NOTNULL="true" COMMENT="AVETMISS client identifier from NAT00120 position 21-30"/>
+        <FIELD NAME="unitcode" TYPE="char" LENGTH="20" NOTNULL="true" COMMENT="Unit of competency code from NAT00120 position 31-42"/>
+        <FIELD NAME="qualcode" TYPE="char" LENGTH="20" NOTNULL="true" COMMENT="Qualification code from NAT00120 position 43-52"/>
+        <FIELD NAME="startdate" TYPE="char" LENGTH="10" NOTNULL="false" COMMENT="Activity start date DDMMYYYY from NAT00120 position 53-60"/>
+        <FIELD NAME="enddate" TYPE="char" LENGTH="10" NOTNULL="false" COMMENT="Activity end date DDMMYYYY from NAT00120 position 61-68"/>
+        <FIELD NAME="outcome" TYPE="char" LENGTH="5" NOTNULL="false" COMMENT="Outcome code e.g. 20/30/40/51/52/60/70/81/90"/>
+        <FIELD NAME="fundingsource" TYPE="char" LENGTH="10" NOTNULL="false" COMMENT="2-digit national funding source code: 11=Commonwealth, 20=Fee-for-service domestic, 30=Fee-for-service intl, 31=NSW Smart&amp;Skilled"/>
+        <FIELD NAME="studyreason" TYPE="char" LENGTH="2" NOTNULL="false" COMMENT="Study reason identifier from NAT00120 pos 97-98: 01=get job, 02=develop business, 03=get different job, 04=further study, 05=extra skills, 06=voluntarily, 08=other, @@=not stated"/>
+        <FIELD NAME="supervisedhours" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Hours attended (pos 140-143) with fallback to scheduled hours (pos 154-157)"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="importid" TYPE="foreign" FIELDS="importid" REFTABLE="local_rtocompliance_avetmiss" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="importid_client" UNIQUE="false" FIELDS="importid, clientid"/>
+        <INDEX NAME="importid_unit" UNIQUE="false" FIELDS="importid, unitcode"/>
+        <INDEX NAME="importid_qual" UNIQUE="false" FIELDS="importid, qualcode"/>
+      </INDEXES>
+    </TABLE>
+
+    <TABLE NAME="local_rtocompliance_avetmiss_completion" COMMENT="Qualification completions parsed from NAT00130 files">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="importid" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="FK to local_rtocompliance_avetmiss"/>
+        <FIELD NAME="clientid" TYPE="char" LENGTH="20" NOTNULL="true" COMMENT="AVETMISS client identifier from NAT00130 position 21-30"/>
+        <FIELD NAME="qualcode" TYPE="char" LENGTH="20" NOTNULL="true" COMMENT="Qualification code from NAT00130 position 11-20"/>
+        <FIELD NAME="completiondate" TYPE="char" LENGTH="10" NOTNULL="false" COMMENT="Completion date DDMMYYYY from NAT00130 position 31-38"/>
+        <FIELD NAME="successfulcompletion" TYPE="char" LENGTH="1" NOTNULL="false" COMMENT="AVETMISS DE514 Successful Programme Completion Indicator — Y=full qualification completed, N=not completed (SoA/partial only). Null=unknown (pre-v5.2.32 import or flag absent from file)."/>
+        <FIELD NAME="certificatedate" TYPE="char" LENGTH="10" NOTNULL="false" COMMENT="Certificate issue date DDMMYYYY from NAT00130 position 40-47"/>
+        <FIELD NAME="parchmentnumber" TYPE="char" LENGTH="50" NOTNULL="false" COMMENT="Parchment/certificate number from NAT00130 position 48+"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="importid" TYPE="foreign" FIELDS="importid" REFTABLE="local_rtocompliance_avetmiss" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="importid_client" UNIQUE="false" FIELDS="importid, clientid"/>
+        <INDEX NAME="importid_qual" UNIQUE="false" FIELDS="importid, qualcode"/>
+      </INDEXES>
+    </TABLE>
+
+    <TABLE NAME="local_rtocompliance_declarations" COMMENT="Student Declaration records — tracks send + respond for pre-enrolment obligations acknowledgement">
+      <FIELDS>
+        <FIELD NAME="id"            TYPE="int"  LENGTH="10"  NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="userid"        TYPE="int"  LENGTH="10"  NOTNULL="true" DEFAULT="0"    COMMENT="Moodle user ID of the student"/>
+        <FIELD NAME="token"         TYPE="char" LENGTH="64"  NOTNULL="true"                COMMENT="Unique random token for the respond link"/>
+        <FIELD NAME="status"        TYPE="char" LENGTH="20"  NOTNULL="true" DEFAULT="sent" COMMENT="sent|completed"/>
+        <FIELD NAME="fullname"      TYPE="char" LENGTH="200" NOTNULL="false"               COMMENT="Name as entered by student on respond form"/>
+        <FIELD NAME="signature"     TYPE="char" LENGTH="200" NOTNULL="false"               COMMENT="Typed signature entered by student"/>
+        <FIELD NAME="agreed"        TYPE="int"  LENGTH="1"   NOTNULL="true" DEFAULT="0"    COMMENT="1=student agreed to all items"/>
+        <FIELD NAME="timecreated"   TYPE="int"  LENGTH="10"  NOTNULL="true" DEFAULT="0"    COMMENT="Unix timestamp when declaration was sent"/>
+        <FIELD NAME="timecompleted" TYPE="int"  LENGTH="10"  NOTNULL="false"               COMMENT="Unix timestamp when student completed the form"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="userid" UNIQUE="false" FIELDS="userid"/>
+        <INDEX NAME="token"  UNIQUE="true"  FIELDS="token"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- FIX-INSTALL-AI-SURVEY: Table was created in upgrade step 2025120801 but was missing
+         from install.xml, meaning fresh plugin installs lacked this table entirely.
+         Adding here ensures new installations have the table from the start. -->
+    <TABLE NAME="local_rtocompliance_ai_survey" COMMENT="AI-generated survey analysis records (learner and employer satisfaction)">
+      <FIELDS>
+        <FIELD NAME="id"                 TYPE="int"    LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="surveytype"         TYPE="char"   LENGTH="20" NOTNULL="true"                COMMENT="learner|employer"/>
+        <FIELD NAME="analysisperiod"     TYPE="char"   LENGTH="20" NOTNULL="true"                COMMENT="annual|quarterly|custom"/>
+        <FIELD NAME="periodstart"        TYPE="int"    LENGTH="10" NOTNULL="true"                COMMENT="Unix timestamp start of analysis period"/>
+        <FIELD NAME="periodend"          TYPE="int"    LENGTH="10" NOTNULL="true"                COMMENT="Unix timestamp end of analysis period"/>
+        <FIELD NAME="responsecount"      TYPE="int"    LENGTH="10" NOTNULL="true" DEFAULT="0"    COMMENT="Number of survey responses analysed"/>
+        <FIELD NAME="overallsentiment"   TYPE="char"   LENGTH="20" NOTNULL="false"               COMMENT="positive|neutral|negative"/>
+        <FIELD NAME="sentimentscore"     TYPE="number" LENGTH="5"  DECIMALS="2"   NOTNULL="false" COMMENT="Sentiment score -1.0 to 1.0"/>
+        <FIELD NAME="satisfactionindex"  TYPE="number" LENGTH="5"  DECIMALS="2"   NOTNULL="false" COMMENT="Satisfaction index 0-100"/>
+        <FIELD NAME="keythemes"          TYPE="text"   NOTNULL="false"                           COMMENT="JSON array of key themes"/>
+        <FIELD NAME="strengths"          TYPE="text"   NOTNULL="false"                           COMMENT="JSON array of identified strengths"/>
+        <FIELD NAME="improvements"       TYPE="text"   NOTNULL="false"                           COMMENT="JSON array of improvement areas"/>
+        <FIELD NAME="recommendations"    TYPE="text"   NOTNULL="false"                           COMMENT="JSON array of AI recommendations"/>
+        <FIELD NAME="wordcloud"          TYPE="text"   NOTNULL="false"                           COMMENT="JSON word frequency map"/>
+        <FIELD NAME="trendsummary"       TYPE="text"   NOTNULL="false"                           COMMENT="Plain text trend summary"/>
+        <FIELD NAME="fullanalysis"       TYPE="text"   NOTNULL="false"                           COMMENT="Full AI analysis report text"/>
+        <FIELD NAME="aimodel"            TYPE="char"   LENGTH="50" NOTNULL="false"               COMMENT="AI model used"/>
+        <FIELD NAME="creditscost"        TYPE="int"    LENGTH="5"  NOTNULL="true" DEFAULT="0"    COMMENT="Credits consumed"/>
+        <FIELD NAME="status"             TYPE="char"   LENGTH="20" NOTNULL="true" DEFAULT="pending" COMMENT="pending|completed|error"/>
+        <FIELD NAME="errormessage"       TYPE="text"   NOTNULL="false"                           COMMENT="Error details if status=error"/>
+        <FIELD NAME="requestedby"        TYPE="int"    LENGTH="10" NOTNULL="true"                COMMENT="Moodle user ID who triggered analysis"/>
+        <FIELD NAME="timecreated"        TYPE="int"    LENGTH="10" NOTNULL="true" DEFAULT="0"    COMMENT="Unix timestamp"/>
+        <FIELD NAME="timecompleted"      TYPE="int"    LENGTH="10" NOTNULL="false"               COMMENT="Unix timestamp when analysis finished"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary"      TYPE="primary" FIELDS="id"/>
+        <KEY NAME="requestedby"  TYPE="foreign" FIELDS="requestedby" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="surveytype_period" UNIQUE="false" FIELDS="surveytype, periodstart, periodend"/>
+        <INDEX NAME="status"            UNIQUE="false" FIELDS="status"/>
+      </INDEXES>
+    </TABLE>
+
+    <TABLE NAME="local_rtocompliance_certtmpl" COMMENT="Visual certificate templates per cert type with status workflow (draft|approved|archived) and one active per (certtype+audience)">
+      <FIELDS>
+        <FIELD NAME="id"             TYPE="int"  LENGTH="10"   NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="certtype"       TYPE="char" LENGTH="32"   NOTNULL="true"                        COMMENT="testamur|statement|record|completion"/>
+        <FIELD NAME="audience"       TYPE="char" LENGTH="32"   NOTNULL="true" DEFAULT="default"      COMMENT="v4.3.0: default|apprentice|traineeship|school|vetfee|funded_state|funded_commonwealth|international|private_fee — one active template per (certtype+audience)"/>
+        <FIELD NAME="audiencelabel"  TYPE="char" LENGTH="255"  NOTNULL="false"                       COMMENT="v4.3.0: optional admin-facing label override (e.g. 'Apprentices — VIC contract'). Falls back to the audience code's lang string."/>
+        <FIELD NAME="name"           TYPE="char" LENGTH="255"  NOTNULL="true"                        COMMENT="Admin-facing name e.g. 'Testamur 2026'"/>
+        <FIELD NAME="status"         TYPE="char" LENGTH="20"   NOTNULL="true" DEFAULT="draft"        COMMENT="draft|approved|archived"/>
+        <FIELD NAME="isactive"       TYPE="int"  LENGTH="1"    NOTNULL="true" DEFAULT="0"            COMMENT="1 = the active template for (certtype+audience). Only one row per (certtype+audience) may have isactive=1."/>
+        <FIELD NAME="designjson"     TYPE="text"               NOTNULL="false"                       COMMENT="JSON: page (size, orientation, bg colour, bg image fileid), fields[] (id, kind, dynamickey, x_mm, y_mm, w_mm, h_mm, font, size, colour, align, content, imageitemid), and v4.3.0 optional overrides{} (per-template payload overrides such as apprenticeship_statement)"/>
+        <FIELD NAME="bgitemid"       TYPE="int"  LENGTH="10"   NOTNULL="false"                       COMMENT="Moodle file API itemid for the background image upload (filearea cert_template_bg)"/>
+        <FIELD NAME="lastvalidation" TYPE="text"               NOTNULL="false"                       COMMENT="JSON snapshot of last validate_template_design() output (errors[], warnings[])"/>
+        <FIELD NAME="createdby"      TYPE="int"  LENGTH="10"   NOTNULL="true"                        COMMENT="user.id of creator"/>
+        <FIELD NAME="approvedby"     TYPE="int"  LENGTH="10"   NOTNULL="false"                       COMMENT="user.id who approved (status -> approved)"/>
+        <FIELD NAME="timecreated"    TYPE="int"  LENGTH="10"   NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified"   TYPE="int"  LENGTH="10"   NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timeapproved"   TYPE="int"  LENGTH="10"   NOTNULL="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary"     TYPE="primary" FIELDS="id"/>
+        <KEY NAME="createdby"   TYPE="foreign" FIELDS="createdby"  REFTABLE="user" REFFIELDS="id"/>
+        <KEY NAME="approvedby"  TYPE="foreign" FIELDS="approvedby" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="certtype_status" UNIQUE="false" FIELDS="certtype, status"/>
+        <INDEX NAME="certtype_active" UNIQUE="false" FIELDS="certtype, isactive"/>
+        <INDEX NAME="certtype_audience_active" UNIQUE="false" FIELDS="certtype, audience, isactive"/>
+      </INDEXES>
+    </TABLE>
+
+    <TABLE NAME="local_rtocompliance_soa_snapshot" COMMENT="Immutable compliance snapshot of units listed on a multi-unit SOA at time of issue. Survives Moodle course renames and deletions for ASQA audit integrity.">
+      <FIELDS>
+        <FIELD NAME="id"                   TYPE="int"  LENGTH="10"  NOTNULL="true"  SEQUENCE="true"/>
+        <FIELD NAME="certid"               TYPE="int"  LENGTH="10"  NOTNULL="true"  COMMENT="FK to local_rtocompliance_certs.id"/>
+        <FIELD NAME="userid"               TYPE="int"  LENGTH="10"  NOTNULL="true"  COMMENT="Student user.id"/>
+        <FIELD NAME="issuedby"             TYPE="int"  LENGTH="10"  NOTNULL="true"  COMMENT="Admin user.id who issued"/>
+        <FIELD NAME="unitcode"             TYPE="char" LENGTH="30"  NOTNULL="true"  COMMENT="National unit code at time of issue (immutable snapshot)"/>
+        <FIELD NAME="unittitle"            TYPE="char" LENGTH="255" NOTNULL="true"  COMMENT="Unit title at time of issue (immutable snapshot)"/>
+        <FIELD NAME="moodlecourseid"       TYPE="int"  LENGTH="10"  NOTNULL="false" COMMENT="Moodle course.id at issue time (may be deleted later)"/>
+        <FIELD NAME="qualcategoryid"       TYPE="int"  LENGTH="10"  NOTNULL="false" COMMENT="Moodle course_categories.id at issue time"/>
+        <FIELD NAME="qualcategoryname"     TYPE="char" LENGTH="255" NOTNULL="false" COMMENT="Qualification/category name snapshot"/>
+        <FIELD NAME="completiondate"       TYPE="int"  LENGTH="10"  NOTNULL="false" COMMENT="Unix timestamp of course completion"/>
+        <FIELD NAME="outcomeidentifier"    TYPE="char" LENGTH="2"   NOTNULL="true"  DEFAULT="20" COMMENT="AVETMISS outcome code at snapshot time"/>
+        <FIELD NAME="snapshottime"         TYPE="int"  LENGTH="10"  NOTNULL="true"  COMMENT="Unix timestamp when snapshot was taken"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="certid"  TYPE="foreign" FIELDS="certid"  REFTABLE="local_rtocompliance_certs" REFFIELDS="id"/>
+        <KEY NAME="userid"  TYPE="foreign" FIELDS="userid"  REFTABLE="user"                       REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="certid_userid"  UNIQUE="false" FIELDS="certid, userid"/>
+        <INDEX NAME="userid_snap"    UNIQUE="false" FIELDS="userid, snapshottime"/>
+      </INDEXES>
+    </TABLE>
+
+    <TABLE NAME="local_rtocompliance_student_docs" COMMENT="Student document repository — teacher-uploaded files (RPL decisions, USI letters, suitability evidence, enrolment agreements, third-party records) attached to a student's portfolio. Files stored via Moodle file API: component=local_rtocompliance, filearea=student_doc, itemid=record id.">
+      <FIELDS>
+        <FIELD NAME="id"           TYPE="int"  LENGTH="10"  NOTNULL="true"  SEQUENCE="true"/>
+        <FIELD NAME="userid"       TYPE="int"  LENGTH="10"  NOTNULL="true"                COMMENT="Student user.id"/>
+        <FIELD NAME="uploaderid"   TYPE="int"  LENGTH="10"  NOTNULL="true"                COMMENT="Admin/trainer who uploaded"/>
+        <FIELD NAME="doctype"      TYPE="char" LENGTH="50"  NOTNULL="true"  DEFAULT="other" COMMENT="rpl|usi_letter|suitability|credit_transfer|enrolment_agreement|third_party|nat_export|other"/>
+        <FIELD NAME="notes"        TYPE="text"              NOTNULL="false"               COMMENT="Optional description or context"/>
+        <FIELD NAME="filename"     TYPE="char" LENGTH="500" NOTNULL="true"                COMMENT="Original uploaded filename"/>
+        <FIELD NAME="filesize"     TYPE="int"  LENGTH="10"  NOTNULL="true"  DEFAULT="0"  COMMENT="File size in bytes"/>
+        <FIELD NAME="mimetype"     TYPE="char" LENGTH="100" NOTNULL="false"               COMMENT="MIME type of uploaded file"/>
+        <FIELD NAME="contextid"    TYPE="int"  LENGTH="10"  NOTNULL="true"                COMMENT="Moodle file API context ID (system context)"/>
+        <FIELD NAME="timecreated"  TYPE="int"  LENGTH="10"  NOTNULL="true"  DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int"  LENGTH="10"  NOTNULL="true"  DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary"    TYPE="primary" FIELDS="id"/>
+        <KEY NAME="userid"     TYPE="foreign" FIELDS="userid"     REFTABLE="user" REFFIELDS="id"/>
+        <KEY NAME="uploaderid" TYPE="foreign" FIELDS="uploaderid" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="userid_type" UNIQUE="false" FIELDS="userid, doctype"/>
+        <INDEX NAME="userid_time" UNIQUE="false" FIELDS="userid, timecreated"/>
+      </INDEXES>
+    </TABLE>
+
+    <TABLE NAME="local_rtocompliance_avetmiss_programme" COMMENT="Qualification/programme records parsed from NAT00030 files — used in Step 3 category matching and section classification">
+      <FIELDS>
+        <FIELD NAME="id"          TYPE="int"  LENGTH="10"  NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="importid"    TYPE="int"  LENGTH="10"  NOTNULL="true" COMMENT="FK to local_rtocompliance_avetmiss"/>
+        <FIELD NAME="qualcode"    TYPE="char" LENGTH="20"  NOTNULL="true"  COMMENT="Programme/qualification code from NAT00030 position 0-9"/>
+        <FIELD NAME="qualname"    TYPE="char" LENGTH="200" NOTNULL="false" COMMENT="Programme name from NAT00030 position 10-109"/>
+        <FIELD NAME="isvetprog"   TYPE="char" LENGTH="1"   NOTNULL="false" COMMENT="VET Programme Indicator: Y=VET qualification or skill set, N=non-AQF short course"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary"  TYPE="primary" FIELDS="id"/>
+        <KEY NAME="importid" TYPE="foreign" FIELDS="importid" REFTABLE="local_rtocompliance_avetmiss" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="importid_qual" UNIQUE="false" FIELDS="importid, qualcode"/>
+      </INDEXES>
+    </TABLE>
+
+    <TABLE NAME="local_rtocompliance_enrol_rollback" COMMENT="Audit log of Moodle enrolments and course completions created by each NAT import Confirm &amp; Enrol run — used to reverse the run in one click if needed.">
+      <FIELDS>
+        <FIELD NAME="id"           TYPE="int"  LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="importid"     TYPE="int"  LENGTH="10" NOTNULL="true" COMMENT="FK to local_rtocompliance_avetmiss"/>
+        <FIELD NAME="userid"       TYPE="int"  LENGTH="10" NOTNULL="true" COMMENT="Moodle user ID that was enrolled"/>
+        <FIELD NAME="courseid"     TYPE="int"  LENGTH="10" NOTNULL="true" COMMENT="Moodle course ID the user was enrolled into"/>
+        <FIELD NAME="enrolid"      TYPE="int"  LENGTH="10" NOTNULL="true" COMMENT="enrol.id of the manual enrolment instance used"/>
+        <FIELD NAME="user_created" TYPE="int"  LENGTH="1"  NOTNULL="true" DEFAULT="0" COMMENT="1 if this Moodle account was auto-created during the run"/>
+        <FIELD NAME="cc_id"        TYPE="int"  LENGTH="10" NOTNULL="true" DEFAULT="0" COMMENT="course_completions.id that was set (0 = none)"/>
+        <FIELD NAME="cc_inserted"  TYPE="int"  LENGTH="1"  NOTNULL="true" DEFAULT="0" COMMENT="1 = we INSERTed this completion (DELETE on rollback); 0 = we set timecompleted on existing row (NULL it on rollback)"/>
+        <FIELD NAME="timecreated"  TYPE="int"  LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary"  TYPE="primary" FIELDS="id"/>
+        <KEY NAME="importid" TYPE="foreign" FIELDS="importid" REFTABLE="local_rtocompliance_avetmiss" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="importid_user" UNIQUE="false" FIELDS="importid, userid"/>
+      </INDEXES>
+    </TABLE>
+
+
+    <TABLE NAME="local_rtocompliance_archive_index" COMMENT="Archive index: Moodle category to qualification family+year+sem mapping. Built once from mdl_course_categories. NAT imports do a plain lookup against this table — no guessing.">
+      <FIELDS>
+        <FIELD NAME="id"           TYPE="int"  LENGTH="10" NOTNULL="true"  SEQUENCE="true"/>
+        <FIELD NAME="categoryid"   TYPE="int"  LENGTH="10" NOTNULL="true"  COMMENT="mdl_course_categories.id"/>
+        <FIELD NAME="categoryname" TYPE="char" LENGTH="255" NOTNULL="true" COMMENT="Category name — display only"/>
+        <FIELD NAME="fullpath"     TYPE="text" NOTNULL="false"              COMMENT="Full ancestor path e.g. Top > Diploma of Customs Broking > Archive S1-2015"/>
+        <FIELD NAME="family"       TYPE="char" LENGTH="50"  NOTNULL="false" COMMENT="Qualification family (NULL = admin must assign before imports can proceed)"/>
+        <FIELD NAME="year"         TYPE="int"  LENGTH="4"  NOTNULL="true"  DEFAULT="0" COMMENT="4-digit year e.g. 2014"/>
+        <FIELD NAME="sem"          TYPE="char" LENGTH="2"  NOTNULL="true"   COMMENT="S1 / S2 / empty string"/>
+        <FIELD NAME="is_active"    TYPE="int"  LENGTH="1"  NOTNULL="true"  DEFAULT="1" COMMENT="1 = current import target; 0 = inactive duplicate awaiting admin resolution"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="categoryid"     UNIQUE="true"  FIELDS="categoryid"/>
+        <INDEX NAME="family_yr_sem"  UNIQUE="false" FIELDS="family, year, sem"/>
+      </INDEXES>
+    </TABLE>
+
+    <TABLE NAME="local_rtocompliance_archive_active_pick" COMMENT="Admin-chosen active archive category when a family+year+sem has duplicate candidates. Keyed on family+year+sem.">
+      <FIELDS>
+        <FIELD NAME="id"                TYPE="int"  LENGTH="10" NOTNULL="true"  SEQUENCE="true"/>
+        <FIELD NAME="family"            TYPE="char" LENGTH="50" NOTNULL="true" />
+        <FIELD NAME="year"              TYPE="int"  LENGTH="4"  NOTNULL="true"  DEFAULT="0"/>
+        <FIELD NAME="sem"               TYPE="char" LENGTH="2"  NOTNULL="true" />
+        <FIELD NAME="active_categoryid" TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0" COMMENT="Admin-selected categoryid as the import target for this family+year+sem"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="family_yr_sem" UNIQUE="true" FIELDS="family, year, sem"/>
+      </INDEXES>
+    </TABLE>
+
+    <TABLE NAME="local_rtocompliance_archive_meta" COMMENT="Key-value store for archive index metadata: last rebuild hash, timestamp, row counts.">
+      <FIELDS>
+        <FIELD NAME="id"      TYPE="int"  LENGTH="10"  NOTNULL="true"  SEQUENCE="true"/>
+        <FIELD NAME="metakey" TYPE="char" LENGTH="100" NOTNULL="true" />
+        <FIELD NAME="value"   TYPE="text" NOTNULL="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="metakey" UNIQUE="true" FIELDS="metakey"/>
+      </INDEXES>
+    </TABLE>
+
+
+    <TABLE NAME="local_rtocompliance_foe_pending" COMMENT="Pending Fix Over-Enrolments batch rows — filled on apply, drained by AJAX chunk processor. Auto-deleted when batch completes.">
+      <FIELDS>
+        <FIELD NAME="id"       TYPE="int"  LENGTH="10" NOTNULL="true"  SEQUENCE="true"/>
+        <FIELD NAME="batchid"  TYPE="char" LENGTH="36" NOTNULL="true"                  COMMENT="Hex token tying all rows of one apply run together"/>
+        <FIELD NAME="importid" TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"     COMMENT="FK to local_rtocompliance_avetmiss"/>
+        <FIELD NAME="userid"   TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"     COMMENT="Moodle user ID to unenrol"/>
+        <FIELD NAME="enrolid"  TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"     COMMENT="mdl_enrol.id of the manual enrolment instance"/>
+        <FIELD NAME="courseid" TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"     COMMENT="Moodle course ID"/>
+        <FIELD NAME="status"   TYPE="char" LENGTH="10" NOTNULL="true"  DEFAULT="pending" COMMENT="pending|done|error"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="batchid_status" UNIQUE="false" FIELDS="batchid, status"/>
+      </INDEXES>
+    </TABLE>
+
+    <TABLE NAME="local_rtocompliance_qualmap" COMMENT="Admin-defined explicit mapping from NAT qualification codes to Moodle category IDs used by the reconciler">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="qualcode" TYPE="char" LENGTH="20" NOTNULL="true" COMMENT="NAT qualification code e.g. TLI50822 — upper-cased on save"/>
+        <FIELD NAME="categoryid" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="Moodle course_categories.id for this qualification"/>
+        <FIELD NAME="catname" TYPE="char" LENGTH="255" NOTNULL="false" COMMENT="Category name at time of mapping (display only — not used for lookup)"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="confidence" TYPE="int" LENGTH="10" NOTNULL="false" DEFAULT="100" COMMENT="Mapping confidence 0-100; 100=certain (category_hierarchy or manual), lower values from unit_fingerprint"/>
+        <FIELD NAME="method" TYPE="char" LENGTH="50" NOTNULL="false" DEFAULT="manual" COMMENT="Discovery method: manual|category_hierarchy|unit_fingerprint|alias"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="qualcode_unique" TYPE="unique" FIELDS="qualcode"/>
+      </KEYS>
+    </TABLE>
+
+    <TABLE NAME="local_rtocompliance_nat_classification" COMMENT="Per-NAT-record classification output from the reconciler — MATCHED, ENROLMENT_GAP_REVIEW, UNLINKED_STUDENT_REVIEW, HISTORICAL_NO_COURSE, RECENT_NO_COURSE_REVIEW, UNCLASSIFIED">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="importid" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="FK to local_rtocompliance_avetmiss"/>
+        <FIELD NAME="clientid" TYPE="char" LENGTH="50" NOTNULL="true" COMMENT="AVETMISS client identifier (lower-cased)"/>
+        <FIELD NAME="unitcode" TYPE="char" LENGTH="20" NOTNULL="true" COMMENT="AVETMISS unit code as received"/>
+        <FIELD NAME="qualcode" TYPE="char" LENGTH="20" NOTNULL="false" COMMENT="AVETMISS qualification code"/>
+        <FIELD NAME="startdate" TYPE="char" LENGTH="10" NOTNULL="false" COMMENT="DDMMYYYY start date from NAT"/>
+        <FIELD NAME="study_year" TYPE="int" LENGTH="4" NOTNULL="false" COMMENT="RIGHT(startdate,4) as integer — year the unit was studied"/>
+        <FIELD NAME="match_path" TYPE="char" LENGTH="10" NOTNULL="false" COMMENT="How the clientid was resolved: ID, USERNAME, EMAIL, or NONE"/>
+        <FIELD NAME="category" TYPE="char" LENGTH="30" NOTNULL="false" COMMENT="MATCHED|ENROLMENT_GAP_REVIEW|UNLINKED_STUDENT_REVIEW|HISTORICAL_NO_COURSE|RECENT_NO_COURSE_REVIEW|UNCLASSIFIED"/>
+        <FIELD NAME="course_exists" TYPE="int" LENGTH="1" NOTNULL="false" DEFAULT="0" COMMENT="1=at least one non-CPD Moodle course teaches this unit"/>
+        <FIELD NAME="enrolled_match" TYPE="int" LENGTH="1" NOTNULL="false" DEFAULT="0" COMMENT="1=student has an enrolment in a course that covers this unit"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="importid" UNIQUE="false" FIELDS="importid"/>
+        <INDEX NAME="importid_category" UNIQUE="false" FIELDS="importid,category"/>
+      </INDEXES>
+    </TABLE>
+
+    <TABLE NAME="local_rtocompliance_qualdebug" COMMENT="Per-unit scoring diagnostics written by the NAT reconciler Step 6 ADD engine on every run. One row per student-unit pair. Readable in Adminer without SSH.">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="importid" TYPE="int" LENGTH="10" NOTNULL="false" DEFAULT="0" COMMENT="FK to local_rtocompliance_avetmiss — which import triggered this run"/>
+        <FIELD NAME="qc" TYPE="char" LENGTH="20" NOTNULL="false" DEFAULT="" COMMENT="Qualification code for this student"/>
+        <FIELD NAME="sqcatid" TYPE="int" LENGTH="10" NOTNULL="false" DEFAULT="0" COMMENT="qualMap-resolved Moodle category id for the qual"/>
+        <FIELD NAME="qualtype" TYPE="char" LENGTH="20" NOTNULL="false" DEFAULT="" COMMENT="Student qual-type abbreviation e.g. INT, DCB"/>
+        <FIELD NAME="uc" TYPE="char" LENGTH="20" NOTNULL="false" DEFAULT="" COMMENT="Unit code being scored"/>
+        <FIELD NAME="dk" TYPE="char" LENGTH="20" NOTNULL="false" DEFAULT="" COMMENT="Student NAT delivery key e.g. 2026-S1 or blank if no startdate"/>
+        <FIELD NAME="poolsize" TYPE="int" LENGTH="10" NOTNULL="false" DEFAULT="0" COMMENT="Number of candidate courses in pool — 0 means no course found"/>
+        <FIELD NAME="topcount" TYPE="int" LENGTH="10" NOTNULL="false" DEFAULT="0" COMMENT="How many candidates tied at the best score"/>
+        <FIELD NAME="best_score" TYPE="int" LENGTH="10" NOTNULL="false" DEFAULT="0" COMMENT="Winning score; -9999 means pool was empty"/>
+        <!-- FIX-BESTFLAGS-OVERFLOW (v5.9.276): char(255) overflows for large
+             qualifications with many scoring flags; changed to text. -->
+        <FIELD NAME="best_flags" TYPE="text" NOTNULL="false" COMMENT="Pipe-separated scoring flags on winner e.g. sem_match|qual_branch"/>
+        <FIELD NAME="course_dk" TYPE="char" LENGTH="20" NOTNULL="false" DEFAULT="" COMMENT="Delivery key of winning course — blank means no parseable delivery key"/>
+        <FIELD NAME="tstamp" TYPE="int" LENGTH="10" NOTNULL="false" DEFAULT="0" COMMENT="Unix timestamp of this insert"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="importid" UNIQUE="false" FIELDS="importid"/>
+      </INDEXES>
+    </TABLE>
+
+  </TABLES>
+</XMLDB>
