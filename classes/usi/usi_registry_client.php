@@ -37,7 +37,7 @@ class usi_registry_client {
     const ENDPOINT_PRODUCTION_SHA1 = 'https://softwareauthorisations.ato.gov.au/R3.0/S007v1.2/service.svc';
     const ENDPOINT_EVTE_SHA1 = 'https://softwareauthorisations.evte.ato.gov.au/R3.0/S007v1.2/service.svc';
     
-    const USI_REGISTRY_ENDPOINT = 'https://3pt.portal.usi.gov.au/Service/UsiService.svc';
+    const USI_REGISTRY_ENDPOINT = 'https://3pt.portal.usi.gov.au/service/v5/usiservice.svc';
     const USI_REGISTRY_EVTE = 'https://3pt.evte.usi.gov.au/Service/UsiService.svc';
     
     const TOKEN_LIFETIME_MINUTES = 30;
@@ -470,7 +470,7 @@ XML;
 <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"
             xmlns:a="http://www.w3.org/2005/08/addressing">
     <s:Header>
-        <a:Action s:mustUnderstand="1">http://usi.gov.au/2020/ws/VerifyUSI</a:Action>
+        <a:Action s:mustUnderstand="1">http://usi.gov.au/2022/ws/VerifyUSI</a:Action>
         <a:MessageID>{$messageid}</a:MessageID>
         <a:ReplyTo>
             <a:Address>http://www.w3.org/2005/08/addressing/anonymous</a:Address>
@@ -485,7 +485,7 @@ XML;
         </o:Security>
     </s:Header>
     <s:Body>
-        <VerifyUSI xmlns="http://usi.gov.au/2020/ws">
+        <VerifyUSI xmlns="http://usi.gov.au/2022/ws">
             <VerifyUSIRequest>
                 <OrgCode>{$this->organization_id}</OrgCode>
                 <USI>{$usi}</USI>
@@ -517,7 +517,7 @@ XML;
         
         $xpath = new \DOMXPath($doc);
         $xpath->registerNamespace('s', self::NS_SOAP12);
-        $xpath->registerNamespace('usi', 'http://usi.gov.au/2020/ws');
+        $xpath->registerNamespace('usi', 'http://usi.gov.au/2022/ws');
         
         $fault = $xpath->query('//s:Fault');
         if ($fault->length > 0) {
