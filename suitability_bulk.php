@@ -36,6 +36,8 @@ require_once(__DIR__ . '/lib.php');
 $action = optional_param('action', 'fill_gaps', PARAM_ALPHA);
 
 admin_externalpage_setup('local_rtocompliance_students');
+$context = context_system::instance();
+require_capability('moodle/site:config', $context);
 
 $PAGE->set_url(new moodle_url('/local/rtocompliance/suitability_bulk.php', ['action' => $action]));
 $PAGE->set_title(get_string('suitability_fill_gaps_title', 'local_rtocompliance'));

@@ -55,6 +55,8 @@ $PAGE->set_title('Complaint Student Acceptance Tests');
 $PAGE->set_heading('Complaint Student Acceptance Tests');
 
 admin_externalpage_setup('local_rtocompliance_regression_test');
+$context = context_system::instance();
+require_capability('moodle/site:config', $context);
 
 // ─── Helper functions — same algorithm as reconcile.php ──────────────────────
 

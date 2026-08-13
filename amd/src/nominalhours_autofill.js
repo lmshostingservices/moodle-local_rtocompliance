@@ -1,4 +1,4 @@
-define([], function() {
+define(['core/str'], function(Str) {
     'use strict';
 
     var debounceTimer = null;
@@ -9,6 +9,29 @@ define([], function() {
     // faster (blur) response already populated.
     var currentXhr = null;
     var apiUrl = '';
+
+    // Loaded lang strings (populated in init via core/str).
+    var S = {
+        lookupBtn:      'Lookup NCVER Hours',
+        lookupTitle:    'Automatically fetch nominal hours from NCVER for this code',
+        lookingUpBtn:   'Looking up...',
+        enterCodeFirst: 'Enter a code first (e.g. BSB50420 or BSBWHS411).',
+        sourceNcver:    'NCVER',
+        sourceRto:      'RTO Compliance',
+        lookupFailed:   'Lookup failed. Enter hours manually.',
+        lookupTimeout:  'Lookup timed out. Enter hours manually.',
+    };
+
+    var STRING_KEYS = [
+        {key: 'nominalhours_lookup_btn',      component: 'local_rtocompliance'},
+        {key: 'nominalhours_lookup_title',     component: 'local_rtocompliance'},
+        {key: 'nominalhours_looking_up_btn',   component: 'local_rtocompliance'},
+        {key: 'nominalhours_enter_code_first', component: 'local_rtocompliance'},
+        {key: 'nominalhours_source_ncver',     component: 'local_rtocompliance'},
+        {key: 'nominalhours_source_rto',       component: 'local_rtocompliance'},
+        {key: 'nominalhours_lookup_failed',    component: 'local_rtocompliance'},
+        {key: 'nominalhours_lookup_timeout',   component: 'local_rtocompliance'},
+    ];
 
     /**
      * Initialise the nominal-hours autofill on a form.
@@ -21,6 +44,23 @@ define([], function() {
     function init(codeFieldId, titleFieldId, hoursFieldId, apiurl) {
         apiUrl = apiurl || 'https://lms-labs.com';
 
+        Str.get_strings(STRING_KEYS).then(function(results) {
+            S.lookupBtn      = results[0];
+            S.lookupTitle    = results[1];
+            S.lookingUpBtn   = results[2];
+            S.enterCodeFirst = results[3];
+            S.sourceNcver    = results[4];
+            S.sourceRto      = results[5];
+            S.lookupFailed   = results[6];
+            S.lookupTimeout  = results[7];
+            setupForm(codeFieldId, titleFieldId, hoursFieldId);
+        }).catch(function() {
+            // Defaults already set above; set up form with fallback strings.
+            setupForm(codeFieldId, titleFieldId, hoursFieldId);
+        });
+    }
+
+    function setupForm(codeFieldId, titleFieldId, hoursFieldId) {
         var codeField  = document.getElementById(codeFieldId);
         var titleField = titleFieldId ? document.getElementById(titleFieldId) : null;
         var hoursField = document.getElementById(hoursFieldId);
@@ -66,8 +106,8 @@ define([], function() {
         var btn = document.createElement('button');
         btn.type = 'button';
         btn.id = 'btn-rtoc-lookup-nominalhours';
-        btn.textContent = 'Lookup NCVER Hours';
-        btn.title = 'Automatically fetch nominal hours from NCVER for this code';
+        btn.textContent = S.lookupBtn;
+        btn.title = S.lookupTitle;
         btn.style.cssText = [
             'margin-left:8px',
             'padding:3px 10px',
@@ -90,7 +130,7 @@ define([], function() {
         btn.addEventListener('click', function() {
             var code = codeField.value.trim();
             if (!code) {
-                showLookupStatus(hoursField, 'Enter a code first (e.g. BSB50420 or BSBWHS411).', 'info');
+                showLookupStatus(hoursField, S.enterCodeFirst, 'info');
                 setTimeout(function() { hideLookupStatus(); }, 4000);
                 return;
             }
@@ -106,12 +146,12 @@ define([], function() {
         var code = rawcode.toUpperCase().replace(/\s+/g, '');
         var url = apiUrl + '/api/moodle/course-info/nominal-hours/' + encodeURIComponent(code);
 
-        showLookupStatus(hoursField, 'Looking up ' + code + '...', 'info');
+        showLookupStatus(hoursField, S.lookingUpBtn.replace('...', '') + ' ' + code + '...', 'info');
 
         var btn = document.getElementById('btn-rtoc-lookup-nominalhours');
         if (btn) {
             btn.disabled = true;
-            btn.textContent = 'Looking up...';
+            btn.textContent = S.lookingUpBtn;
         }
 
         // Abort any in-flight request before starting a new one.
@@ -134,7 +174,7 @@ define([], function() {
 
             if (btn) {
                 btn.disabled = false;
-                btn.textContent = 'Lookup NCVER Hours';
+                btn.textContent = S.lookupBtn;
             }
 
             if (xhr.status === 200) {
@@ -147,9 +187,9 @@ define([], function() {
 
                     if (data.success && data.nominalHours) {
                         hoursField.value = data.nominalHours;
-                        var src = data.source === 'ncver'     ? 'NCVER'
-                               : data.source === 'database'   ? 'RTO Compliance'
-                               : 'NCVER';
+                        var src = data.source === 'ncver'    ? S.sourceNcver
+                               : data.source === 'database'  ? S.sourceRto
+                               : S.sourceNcver;
                         showLookupStatus(hoursField,
                             '\u2713 Found: ' + data.nominalHours + ' hours (' + src + ')', 'success');
                         setTimeout(function() { hideLookupStatus(); }, 5000);
@@ -163,7 +203,7 @@ define([], function() {
                     hideLookupStatus();
                 }
             } else {
-                showLookupStatus(hoursField, 'Lookup failed. Enter hours manually.', 'warning');
+                showLookupStatus(hoursField, S.lookupFailed, 'warning');
                 setTimeout(function() { hideLookupStatus(); }, 5000);
             }
         };
@@ -171,9 +211,9 @@ define([], function() {
         xhr.ontimeout = function() {
             if (btn) {
                 btn.disabled = false;
-                btn.textContent = 'Lookup NCVER Hours';
+                btn.textContent = S.lookupBtn;
             }
-            showLookupStatus(hoursField, 'Lookup timed out. Enter hours manually.', 'warning');
+            showLookupStatus(hoursField, S.lookupTimeout, 'warning');
             setTimeout(function() { hideLookupStatus(); }, 5000);
         };
 

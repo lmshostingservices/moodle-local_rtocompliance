@@ -40,6 +40,8 @@ require_once(__DIR__ . '/lib.php');
 $id = required_param('id', PARAM_INT);
 
 admin_externalpage_setup('local_rtocompliance_students');
+$context = context_system::instance();
+require_capability('moodle/site:config', $context);
 
 $PAGE->set_url(new moodle_url('/local/rtocompliance/suitability_view.php', ['id' => $id]));
 $PAGE->set_title(get_string('suitability_view_title', 'local_rtocompliance'));

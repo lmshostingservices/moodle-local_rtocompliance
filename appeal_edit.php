@@ -31,6 +31,7 @@ use local_rtocompliance\form\appeal_form;
 
 admin_externalpage_setup('local_rtocompliance_complaints');
 $context = context_system::instance();
+require_capability('moodle/site:config', $context);
 
 $id = optional_param('id', 0, PARAM_INT);
 $delete = optional_param('delete', 0, PARAM_INT);

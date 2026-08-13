@@ -31,6 +31,8 @@ $tab = optional_param('tab', 'register', PARAM_TEXT);
 $tab = in_array($tab, ['all', 'register', 'financial', 'conflict_of_interest', 'conflicts', 'under18'], true) ? $tab : 'all';
 
 admin_externalpage_setup('local_rtocompliance_risk');
+$context = context_system::instance();
+require_capability('moodle/site:config', $context);
 $PAGE->set_url('/local/rtocompliance/risk.php', ['tab' => $tab]);
 $PAGE->set_title('Risk Management Register');
 $PAGE->set_heading('Risk Management Register');

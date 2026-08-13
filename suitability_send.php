@@ -47,6 +47,8 @@ $userid   = required_param('userid', PARAM_INT);
 $resendid = optional_param('resendid', 0, PARAM_INT);
 
 admin_externalpage_setup('local_rtocompliance_students');
+$context = context_system::instance();
+require_capability('moodle/site:config', $context);
 
 $PAGE->set_url(new moodle_url('/local/rtocompliance/suitability_send.php', ['userid' => $userid]));
 $PAGE->set_title(get_string('suitability_send_title', 'local_rtocompliance'));

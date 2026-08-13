@@ -28,6 +28,8 @@ require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_validation');
+$context = context_system::instance();
+require_capability('moodle/site:config', $context);
 
 $tab = optional_param('tab', 'schedule', PARAM_ALPHA);
 

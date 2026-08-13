@@ -28,6 +28,8 @@ require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_marketing_info');
+$context = context_system::instance();
+require_capability('moodle/site:config', $context);
 $PAGE->set_url('/local/rtocompliance/marketing_cards.php');
 $PAGE->set_title('Standard 2.1 — Pre-Enrolment Information Cards');
 $PAGE->set_heading('Standard 2.1 — Pre-Enrolment Information Cards');

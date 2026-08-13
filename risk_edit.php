@@ -33,6 +33,8 @@ $allowed_categories = ['operational', 'financial', 'conflict_of_interest', 'unde
 $category = in_array($category, $allowed_categories, true) ? $category : 'operational';
 
 admin_externalpage_setup('local_rtocompliance_risk');
+$context = context_system::instance();
+require_capability('moodle/site:config', $context);
 $PAGE->set_url('/local/rtocompliance/risk_edit.php', ['id' => $id]);
 $PAGE->set_title($id ? 'Edit Risk' : 'Add Risk');
 $PAGE->set_heading($id ? 'Edit Risk' : 'Add Risk');

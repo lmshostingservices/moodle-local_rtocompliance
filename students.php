@@ -382,6 +382,326 @@ if ($action === 'upload_nat_dobs' && confirm_sesskey()) {
     );
 }
 
+// ── CSV cell sanitizer ────────────────────────────────────────────────────────
+// Prevents spreadsheet-formula injection (CSV injection / formula injection).
+// Excel, LibreOffice, and Google Sheets evaluate cells that start with =, +, -,
+// @, tab, or carriage-return as formulas.  Attackers who control profile fields
+// (name, suburb, etc.) can inject data-exfiltration formulas into exported CSVs.
+// Mitigation: prepend a tab character to any cell whose first non-whitespace
+// character is a formula trigger.  The tab is invisible in most spreadsheet
+// applications and forces the cell to be read as plain text.
+// Applied to ALL user-controlled fields in every CSV export from this page.
+function rtoc_csv_safe($value) {
+    $value = (string) $value;
+    // Strip only leading tabs/CR/LF before checking the trigger character,
+    // so =formula and \t=formula are both caught.
+    $first = ltrim($value, "\t\r\n");
+    if ($first !== '' && in_array($first[0], ['=', '+', '-', '@'], true)) {
+        return "\t" . $value;
+    }
+    // Also guard leading tab/CR/LF themselves (can be used to bypass naive checks).
+    if ($value !== '' && in_array($value[0], ["\t", "\r", "\n"], true)) {
+        return "\t" . $value;
+    }
+    return $value;
+}
+
+// ── EXPORT CSV: current filtered view ────────────────────────────────────────
+// ACTION: export_csv — streams the currently filtered/searched student list as a
+// downloadable CSV.  Mirrors the same WHERE logic as the main table query but runs
+// without pagination so all matching rows are included.  Must execute before any
+// output so it can send its own Content-Type/Content-Disposition headers.
+if ($action === 'export_csv' && confirm_sesskey()) {
+    require_capability('local/rtocompliance:manage', context_system::instance());
+
+    $siteadminlist_exp = '0';
+    if (!empty($CFG->siteadmins)) {
+        $ids = array_filter(array_map('intval', explode(',', $CFG->siteadmins)));
+        if (!empty($ids)) { $siteadminlist_exp = implode(',', $ids); }
+    }
+    $suspendedfilter_exp = ($filter === 'suspended') ? 1 : 0;
+
+    $expsql = "SELECT u.id, u.firstname, u.lastname, u.email, u.suspended,
+                      s.usi, s.usiverified, s.usiverifieddate, s.statecode,
+                      s.postcode, s.suburb, s.dateofbirth, s.profilecomplete
+                 FROM {user} u
+                 LEFT JOIN {local_rtocompliance_students} s ON s.userid = u.id
+                 LEFT JOIN (
+                     SELECT DISTINCT ra.userid
+                       FROM {role_assignments} ra
+                       JOIN {role} r ON r.id = ra.roleid
+                      WHERE r.shortname IN ('editingteacher','teacher','manager','coursecreator',
+                                            'trainer','assessor','trainerassessor')
+                         OR r.archetype IN ('editingteacher','teacher','manager')
+                 ) staff ON staff.userid = u.id
+                 LEFT JOIN (
+                     SELECT DISTINCT userid FROM {local_rtocompliance_trainers}
+                 ) rtoc_trainer ON rtoc_trainer.userid = u.id
+                WHERE u.deleted = 0 AND u.suspended = :suspendedfilter
+                  AND u.id NOT IN ($siteadminlist_exp)
+                  AND staff.userid IS NULL
+                  AND rtoc_trainer.userid IS NULL";
+    $expparams = ['suspendedfilter' => $suspendedfilter_exp];
+
+    if (!empty($search)) {
+        $fullNameFwd = $DB->sql_concat('u.firstname', "' '", 'u.lastname');
+        $fullNameRev = $DB->sql_concat('u.lastname',  "' '", 'u.firstname');
+        $srchsql  = $DB->sql_like('u.firstname', ':search1', false, false);
+        $srchsql .= ' OR ' . $DB->sql_like('u.lastname',  ':search2', false, false);
+        $srchsql .= ' OR ' . $DB->sql_like('u.email',     ':search3', false, false);
+        $srchsql .= ' OR ' . $DB->sql_like('s.usi',       ':search4', false, false);
+        $srchsql .= ' OR ' . $DB->sql_like($fullNameFwd,  ':search5', false, false);
+        $srchsql .= ' OR ' . $DB->sql_like($fullNameRev,  ':search6', false, false);
+        $expsql .= " AND ($srchsql)";
+        $expparams['search1'] = '%' . $search . '%';
+        $expparams['search2'] = '%' . $search . '%';
+        $expparams['search3'] = '%' . $search . '%';
+        $expparams['search4'] = '%' . $search . '%';
+        $expparams['search5'] = '%' . $search . '%';
+        $expparams['search6'] = '%' . $search . '%';
+    }
+
+    if ($filter === 'incomplete')    { $expsql .= " AND (s.profilecomplete = 0 OR s.profilecomplete IS NULL)"; }
+    elseif ($filter === 'nousi')     { $expsql .= " AND (s.usi IS NULL OR s.usi = '')"; }
+    elseif ($filter === 'usiverified')   { $expsql .= " AND s.usiverified = 1"; }
+    elseif ($filter === 'usiunverified') { $expsql .= " AND s.usi IS NOT NULL AND s.usi != '' AND s.usiverified IN (0, 3)"; }
+    elseif ($filter === 'usifailed')     { $expsql .= " AND s.usiverified = 2"; }
+    elseif ($filter === 'usimissingdob') { $expsql .= " AND s.usi IS NOT NULL AND s.usi != '' AND (s.dateofbirth IS NULL OR s.dateofbirth = 0)"; }
+
+    if (!empty($state)) {
+        $expsql .= " AND s.statecode = :state";
+        $expparams['state'] = $state;
+    }
+    $expsql .= " ORDER BY u.lastname ASC, u.firstname ASC";
+
+    $expstudents = $DB->get_records_sql($expsql, $expparams);
+
+    $vstatLabels = [0 => 'Not verified', 1 => 'Verified', 2 => 'Failed', 3 => 'Pending', 4 => 'Manual review'];
+    $filterLabel = $filter ?: 'all';
+
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="students_' . $filterLabel . '_' . date('Ymd_His') . '.csv"');
+    $out = fopen('php://output', 'w');
+    fputcsv($out, ['First name', 'Last name', 'Email', 'USI', 'USI Status', 'USI Verified Date',
+                   'State', 'Postcode', 'Suburb', 'Date of Birth', 'Profile Complete', 'Account Status']);
+    foreach ($expstudents as $row) {
+        $dob = '';
+        if (!empty($row->dateofbirth) && (int)$row->dateofbirth > 0) {
+            $dob = date('d/m/Y', (int)$row->dateofbirth);
+        }
+        $vdate = '';
+        if (!empty($row->usiverifieddate)) {
+            $vdate = date('d/m/Y', (int)$row->usiverifieddate);
+        }
+        // rtoc_csv_safe() applied to every user-controlled field to prevent
+        // spreadsheet-formula injection (CSV injection) when opened in Excel/Sheets.
+        fputcsv($out, [
+            rtoc_csv_safe($row->firstname),
+            rtoc_csv_safe($row->lastname),
+            rtoc_csv_safe($row->email),
+            rtoc_csv_safe($row->usi ?? ''),
+            rtoc_csv_safe($vstatLabels[(int)($row->usiverified ?? 0)] ?? 'Unknown'),
+            rtoc_csv_safe($vdate),
+            rtoc_csv_safe($row->statecode ?? ''),
+            rtoc_csv_safe($row->postcode  ?? ''),
+            rtoc_csv_safe($row->suburb    ?? ''),
+            rtoc_csv_safe($dob),
+            empty($row->profilecomplete) ? 'No' : 'Yes',
+            empty($row->suspended)       ? 'Active' : 'Suspended',
+        ]);
+    }
+    fclose($out);
+    exit;
+}
+
+// ── EXPORT CSV: students with USI but missing DOB ─────────────────────────────
+// ACTION: export_missing_dob_csv — exports all students who have a USI recorded
+// but are missing a date of birth (so USI verification cannot proceed for them).
+// Must run before any output so it can send Content-Type/Content-Disposition headers.
+if ($action === 'export_missing_dob_csv' && confirm_sesskey()) {
+    require_capability('local/rtocompliance:manage', context_system::instance());
+
+    $siteadminlist_exp = '0';
+    if (!empty($CFG->siteadmins)) {
+        $ids = array_filter(array_map('intval', explode(',', $CFG->siteadmins)));
+        if (!empty($ids)) { $siteadminlist_exp = implode(',', $ids); }
+    }
+
+    // Apply same staff/trainer exclusions as the main student table so this export
+    // never includes teacher, manager, or local_rtocompliance_trainers accounts.
+    $expstudents = $DB->get_records_sql(
+        "SELECT u.id, u.firstname, u.lastname, u.email,
+                s.usi, s.statecode, s.postcode, s.suburb
+           FROM {user} u
+           JOIN {local_rtocompliance_students} s ON s.userid = u.id
+           LEFT JOIN (
+               SELECT DISTINCT ra.userid
+                 FROM {role_assignments} ra
+                 JOIN {role} r ON r.id = ra.roleid
+                WHERE r.shortname IN ('editingteacher','teacher','manager','coursecreator',
+                                      'trainer','assessor','trainerassessor')
+                   OR r.archetype IN ('editingteacher','teacher','manager')
+           ) staff ON staff.userid = u.id
+           LEFT JOIN (
+               SELECT DISTINCT userid FROM {local_rtocompliance_trainers}
+           ) rtoc_trainer ON rtoc_trainer.userid = u.id
+          WHERE u.deleted = 0 AND u.suspended = 0
+            AND u.id NOT IN ($siteadminlist_exp)
+            AND staff.userid IS NULL
+            AND rtoc_trainer.userid IS NULL
+            AND s.usi IS NOT NULL AND s.usi != ''
+            AND (s.dateofbirth IS NULL OR s.dateofbirth = 0)
+          ORDER BY u.lastname ASC, u.firstname ASC"
+    );
+
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="students_missing_dob_' . date('Ymd_His') . '.csv"');
+    $out = fopen('php://output', 'w');
+    fputcsv($out, ['First name', 'Last name', 'Email', 'USI', 'State', 'Postcode', 'Suburb']);
+    foreach ($expstudents as $row) {
+        // rtoc_csv_safe() applied to every user-controlled field to prevent
+        // spreadsheet-formula injection (CSV injection) when opened in Excel/Sheets.
+        fputcsv($out, [
+            rtoc_csv_safe($row->firstname),
+            rtoc_csv_safe($row->lastname),
+            rtoc_csv_safe($row->email),
+            rtoc_csv_safe($row->usi       ?? ''),
+            rtoc_csv_safe($row->statecode ?? ''),
+            rtoc_csv_safe($row->postcode  ?? ''),
+            rtoc_csv_safe($row->suburb    ?? ''),
+        ]);
+    }
+    fclose($out);
+    exit;
+}
+
+// ── CONNECTION TEST: server-side proxy for /api/usi/status ───────────────────
+// Called via AJAX from the "Run connection test" button.  The platform credentials
+// (API URL, Site ID, API Key) stay entirely server-side — they are NEVER sent to
+// the browser.  The handler makes the cURL call to /api/usi/status using the
+// already-configured Moodle plugin settings and returns only safe status fields.
+// Requires moodle/site:config capability + valid sesskey to prevent unauthenticated
+// actors from triggering ATO API calls via the plugin machine credential.
+if ($action === 'connection_test' && confirm_sesskey()) {
+    require_capability('local/rtocompliance:manage', context_system::instance());
+
+    // Resolve credentials using the same Central Config-aware precedence as
+    // usi_platform_client: local_aiconfig takes priority when installed.
+    $ct_apiurl = rtrim(get_config('local_rtocompliance', 'apiurl') ?: 'https://lms-labs.com', '/');
+    $ct_aiconfiglib = $CFG->dirroot . '/local/aiconfig/lib.php';
+    if (file_exists($ct_aiconfiglib)) {
+        require_once($ct_aiconfiglib);
+    }
+    // Exact mirror of usi_platform_client credential resolution:
+    // Central Config is the ONLY source when installed — no plugin-local fallback.
+    $ct_siteid = function_exists('local_aiconfig_get_siteid')
+        ? (local_aiconfig_get_siteid('local_rtocompliance') ?: '')
+        : trim((string) get_config('local_rtocompliance', 'siteid'));
+    $ct_apikey = function_exists('local_aiconfig_get_apikey')
+        ? (local_aiconfig_get_apikey('local_rtocompliance') ?: '')
+        : trim((string) get_config('local_rtocompliance', 'apikey'));
+
+    if (!$ct_siteid || !$ct_apikey) {
+        header('Content-Type: application/json');
+        echo json_encode([
+            'ok'      => false,
+            'message' => 'USI API not configured — set API URL, Site ID, and API Key in USI Verification Settings.',
+        ]);
+        exit;
+    }
+
+    $curl = curl_init(rtrim($ct_apiurl, '/') . '/api/usi/status');
+    curl_setopt_array($curl, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER     => [
+            'X-Site-Id: ' . $ct_siteid,
+            'X-Api-Key: ' . $ct_apikey,
+        ],
+        CURLOPT_TIMEOUT        => 10,
+        CURLOPT_CONNECTTIMEOUT => 5,
+    ]);
+    $ct_resp    = curl_exec($curl);
+    $ct_code    = (int) curl_getinfo($curl, CURLINFO_HTTP_CODE);
+    $ct_curlerr = curl_error($curl);
+    curl_close($curl);
+
+    header('Content-Type: application/json');
+
+    if ($ct_resp === false || $ct_code === 0) {
+        echo json_encode([
+            'ok'      => false,
+            'message' => 'Could not reach the AI Grader platform — check your API URL setting and network connectivity.'
+                         . ($ct_curlerr ? ' (' . s($ct_curlerr) . ')' : ''),
+        ]);
+        exit;
+    }
+
+    $ct_data = json_decode($ct_resp, true);
+    if (!is_array($ct_data)) {
+        echo json_encode([
+            'ok'      => false,
+            'message' => 'Unexpected response from the platform (HTTP ' . $ct_code . '). Contact support.',
+        ]);
+        exit;
+    }
+
+    // Return only safe, read-only status fields.  The API credentials are never echoed.
+    echo json_encode([
+        'ok'               => !empty($ct_data['ok']) && $ct_code === 200,
+        'certReady'        => !empty($ct_data['certReady']),
+        'certUploaded'     => !empty($ct_data['certUploaded']),
+        'certDecryptError' => $ct_data['certDecryptError'] ?? null,
+        'testMode'         => $ct_data['testMode'] ?? null,
+        'source'           => $ct_data['source'] ?? null,
+        'orgId'            => $ct_data['orgId'] ?? null,
+        'certExpiry'       => $ct_data['certExpiry'] ?? null,
+        'certSubject'      => $ct_data['certSubject'] ?? null,
+        'daysToExpiry'     => $ct_data['daysToExpiry'] ?? null,
+        'expiryWarn'       => $ct_data['expiryWarn'] ?? false,
+        'expired'          => $ct_data['expired'] ?? false,
+        'message'          => $ct_data['message'] ?? '',
+        'httpStatus'       => $ct_code,
+    ]);
+    exit;
+}
+
+// ── REVERIFY ALL: re-queue failed + stuck USI students ────────────────────────
+// ACTION: reverify_all — resets all students whose USI verification failed (status=2)
+// or is stuck in pending (status=3) back to unverified (status=0) so the next
+// scheduled batch task re-attempts them.  Students already verified (status=1) are
+// deliberately excluded — this action never undoes a successful verification.
+if ($action === 'reverify_all' && confirm_sesskey()) {
+    require_capability('local/rtocompliance:manage', context_system::instance());
+
+    // Count before resetting so the confirmation message is accurate.
+    $resetcount = $DB->count_records_select(
+        'local_rtocompliance_students',
+        "usiverified IN (2, 3)
+           AND usi IS NOT NULL AND usi != ''
+           AND dateofbirth IS NOT NULL AND dateofbirth != 0"
+    );
+
+    if ($resetcount > 0) {
+        $DB->execute(
+            "UPDATE {local_rtocompliance_students}
+                SET usiverified = 0, timemodified = :now
+              WHERE usiverified IN (2, 3)
+                AND usi IS NOT NULL AND usi != ''
+                AND dateofbirth IS NOT NULL AND dateofbirth != 0",
+            ['now' => time()]
+        );
+    }
+
+    redirect(
+        new moodle_url('/local/rtocompliance/students.php', ['filter' => 'usiunverified']),
+        $resetcount > 0
+            ? $resetcount . ' student(s) queued for re-verification — they will be re-attempted on the next scheduled verification run.'
+            : 'No students with failed or pending USI status found — nothing to reset.',
+        null,
+        $resetcount > 0 ? \core\output\notification::NOTIFY_SUCCESS : \core\output\notification::NOTIFY_INFO
+    );
+}
+
 $PAGE->set_url(new moodle_url('/local/rtocompliance/students.php', [
     'filter'  => $filter,
     'state'   => $state,
@@ -399,16 +719,39 @@ $PAGE->requires->css('/local/rtocompliance/styles.css');
 
 $PAGE->add_body_class("path-local-rtocompliance");
 // ── USI Verification setup check ─────────────────────────────────────────────
-// Read same config keys used by usi_settings.php so we can detect if
-// the API connection (and cert upload) has been done.
-$_usi_apiurl = trim((string) get_config('local_rtocompliance', 'apiurl'));
-$_usi_siteid = trim((string) get_config('local_rtocompliance', 'siteid'));
-$_usi_apikey = trim((string) get_config('local_rtocompliance', 'apikey'));
+// Resolve credentials using the same Central Config-aware precedence as
+// usi_platform_client: local_aiconfig takes priority over local_rtocompliance
+// settings when installed, so this check reflects the same effective configuration
+// that actual USI verification calls will use.
+$_usi_apiurl = rtrim(get_config('local_rtocompliance', 'apiurl') ?: 'https://lms-labs.com', '/');
+
+$_usi_aiconfiglib = $CFG->dirroot . '/local/aiconfig/lib.php';
+if (file_exists($_usi_aiconfiglib)) {
+    require_once($_usi_aiconfiglib);
+}
+// Exact mirror of usi_platform_client credential resolution:
+// When local_aiconfig functions exist, Central Config is the ONLY source — an empty
+// Central Config value stays empty (no fallback to plugin-local settings).  This
+// prevents the toolbar from showing as "configured" on installations where aiconfig is
+// installed but credentials are not yet entered there.
+$_usi_siteid = function_exists('local_aiconfig_get_siteid')
+    ? (local_aiconfig_get_siteid('local_rtocompliance') ?: '')
+    : trim((string) get_config('local_rtocompliance', 'siteid'));
+$_usi_apikey = function_exists('local_aiconfig_get_apikey')
+    ? (local_aiconfig_get_apikey('local_rtocompliance') ?: '')
+    : trim((string) get_config('local_rtocompliance', 'apikey'));
+
 $_usi_api_configured = ($_usi_apiurl !== '' && $_usi_siteid !== '' && $_usi_apikey !== '');
 
-// Check for a stored cert status flag (set by usi_settings.php on successful upload).
-// Falls back to a lightweight /api/usi/status ping when API is connected.
-$_usi_cert_ok = false;
+// Check credential status via a lightweight /api/usi/status ping.
+// certReady  = cert is present, decryptable, and non-expired (good to verify).
+// certUploaded = cert file is present regardless of password/expiry validity.
+// certExpiry = ISO 8601 expiry date string (may be null for non-expiring certs).
+$_usi_cert_ready    = false; // cert is fully operational
+$_usi_cert_uploaded = false; // cert file exists but may have wrong password / be expired
+$_usi_cert_expiry   = null;  // ISO date string or null
+$_usi_days_to_expiry = null; // integer days remaining, or null if unknown
+$_usi_expired        = false; // true when the cert is past its expiry date
 if ($_usi_api_configured) {
     // Quick status ping — short timeout so it doesn't slow the page.
     $curl = curl_init(rtrim($_usi_apiurl, '/') . '/api/usi/status');
@@ -426,13 +769,17 @@ if ($_usi_api_configured) {
     curl_close($curl);
     if ($code === 200 && $resp) {
         $decoded = json_decode($resp, true);
-        // certUploaded = file is present; certReady = file is present, valid, and non-expired.
-        // The server has never returned 'hasCert' — use the actual keys from /api/usi/status.
-        if (is_array($decoded) && (!empty($decoded['certUploaded']) || !empty($decoded['certReady']))) {
-            $_usi_cert_ok = true;
+        if (is_array($decoded)) {
+            $_usi_cert_ready    = !empty($decoded['certReady']);
+            $_usi_cert_uploaded = !empty($decoded['certUploaded']);
+            $_usi_cert_expiry   = isset($decoded['certExpiry']) && $decoded['certExpiry'] ? $decoded['certExpiry'] : null;
+            $_usi_days_to_expiry = isset($decoded['daysToExpiry']) ? (int)$decoded['daysToExpiry'] : null;
+            $_usi_expired        = !empty($decoded['expired']);
         }
     }
 }
+// Legacy alias used by any remaining references below.
+$_usi_cert_ok = $_usi_cert_ready || $_usi_cert_uploaded;
 
 $_usi_settings_url = (new moodle_url('/local/rtocompliance/usi_settings.php'))->out(false);
 
@@ -491,8 +838,70 @@ document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") { rtocDismissUsiModal(); }
 });
 </script>';
-} else if (!$_usi_cert_ok) {
-    // API connected but no cert uploaded — show a softer inline banner.
+} else if ($_usi_cert_ready || ($_usi_cert_uploaded && $_usi_expired)) {
+    // Cert is uploaded — show green badge, or amber/red warning when expiry is near/past.
+    $expiryTs = $_usi_cert_expiry ? strtotime($_usi_cert_expiry) : 0;
+
+    if ($_usi_expired) {
+        // Red: cert has already expired — USI verifications will fail.
+        $daysAgo = $_usi_days_to_expiry !== null ? abs((int)$_usi_days_to_expiry) : '?';
+        echo '
+<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+  <svg style="flex-shrink:0;width:20px;height:20px" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+  <div style="flex:1;min-width:200px;">
+    <strong style="font-size:14px;color:#991b1b;">USI Credential Expired</strong>
+    <span style="font-size:13px;color:#7f1d1d;margin-left:8px;">The machine credential expired ' . s((string)$daysAgo) . ' day(s) ago — USI verifications are failing. Upload a renewed credential immediately.</span>
+  </div>
+  <a href="' . s($_usi_settings_url) . '" class="btn btn-danger btn-sm" style="white-space:nowrap;flex-shrink:0;">
+    <svg style="width:13px;height:13px;vertical-align:middle;margin-right:5px;margin-top:-2px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+    Renew Credential
+  </a>
+</div>';
+    } else if ($_usi_days_to_expiry !== null && $_usi_days_to_expiry <= 30) {
+        // Amber: expiry within 30 days — proactive warning.
+        $daysLeft = (int)$_usi_days_to_expiry;
+        $expiryLabel = ($expiryTs && $expiryTs > 0) ? ' (expires ' . date('d M Y', $expiryTs) . ')' : '';
+        echo '
+<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+  <svg style="flex-shrink:0;width:20px;height:20px" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+  <div style="flex:1;min-width:200px;">
+    <strong style="font-size:14px;color:#92400e;">USI Credential Expiring Soon</strong>
+    <span style="font-size:13px;color:#78350f;margin-left:8px;">Credential expires in <strong>' . s((string)$daysLeft) . ' day(s)</strong>' . s($expiryLabel) . ' — renew before it expires to avoid verification failures.</span>
+  </div>
+  <a href="' . s($_usi_settings_url) . '" class="btn btn-warning btn-sm" style="white-space:nowrap;flex-shrink:0;">
+    <svg style="width:13px;height:13px;vertical-align:middle;margin-right:5px;margin-top:-2px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+    Renew Now
+  </a>
+</div>';
+    } else {
+        // Green: cert is healthy — show compact confirmation badge.
+        $expiryHtml = '';
+        if ($expiryTs && $expiryTs > 0) {
+            $expiryHtml = ' <span style="font-size:12px;color:#166534;margin-left:6px;">Expires ' . date('d M Y', $expiryTs) . '</span>';
+        }
+        echo '
+<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+  <svg style="flex-shrink:0;width:18px;height:18px" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+  <span style="font-size:13px;font-weight:600;color:#15803d;">USI Credential Active</span>' . $expiryHtml . '
+  <a href="' . s($_usi_settings_url) . '" style="font-size:12px;color:#16a34a;margin-left:auto;text-decoration:underline;white-space:nowrap;">View settings</a>
+</div>';
+    }
+} else if ($_usi_cert_uploaded) {
+    // Cert file is present but certReady is false (e.g. wrong password or decryption error).
+    echo '
+<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+  <svg style="flex-shrink:0;width:20px;height:20px" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+  <div style="flex:1;min-width:200px;">
+    <strong style="font-size:14px;color:#92400e;">USI Machine Credential uploaded but not ready</strong>
+    <span style="font-size:13px;color:#78350f;margin-left:8px;">The certificate was uploaded but could not be decrypted — check the certificate password in USI Settings.</span>
+  </div>
+  <a href="' . s($_usi_settings_url) . '" class="btn btn-warning btn-sm" style="white-space:nowrap;flex-shrink:0;">
+    <svg style="width:13px;height:13px;vertical-align:middle;margin-right:5px;margin-top:-2px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+    Fix Certificate Password
+  </a>
+</div>';
+} else {
+    // API connected but no cert uploaded at all — show a softer inline banner.
     echo '
 <div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
   <svg style="flex-shrink:0;width:20px;height:20px" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
@@ -659,6 +1068,203 @@ $filterform .= '
 </div>';
 
 echo $filterform;
+
+// ── USI Action Toolbar ────────────────────────────────────────────────────────
+// Four action buttons recovered from the live IFCBAA site (code drift):
+//   1. "Run connection test"     — AJAX ping of /api/usi/status; shows real API response
+//   2. "Re-verify all students"  — resets failed/stuck USI back to unverified for next batch
+//   3. "Export this view (CSV)"  — exports the current filtered list as a CSV download
+//   4. "Export students without DOB" — exports students who have USI but no DOB recorded
+//
+// "Run connection test" intentionally reads the live /api/usi/status response rather than
+// returning a hardcoded pass/fail string.  The result is displayed inline without a page reload.
+if ($_usi_api_configured) {
+    $csvurl = (new moodle_url('/local/rtocompliance/students.php', [
+        'action'  => 'export_csv',
+        'sesskey' => sesskey(),
+        'filter'  => $filter,
+        'state'   => $state,
+        'search'  => $search,
+    ]))->out(false);
+
+    $missingdoburl = (new moodle_url('/local/rtocompliance/students.php', [
+        'action'  => 'export_missing_dob_csv',
+        'sesskey' => sesskey(),
+    ]))->out(false);
+
+    $reverifyurl = (new moodle_url('/local/rtocompliance/students.php', [
+        'action'  => 'reverify_all',
+        'sesskey' => sesskey(),
+    ]))->out(false);
+
+    // Build the same-origin connection test URL — credentials stay server-side.
+    // The AJAX call goes to students.php?action=connection_test which proxies
+    // /api/usi/status server-side and returns only safe status fields.
+    $jsConnTestUrl = json_encode((new moodle_url('/local/rtocompliance/students.php', [
+        'action'  => 'connection_test',
+        'sesskey' => sesskey(),
+    ]))->out(false));
+
+    // Students page URL without action — used by the re-verify POST form.
+    $jsStudentsUrl = json_encode((new moodle_url('/local/rtocompliance/students.php'))->out(false));
+
+    echo '
+<div class="rtoc-usi-action-bar" style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;
+     background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;margin-bottom:12px;">
+  <span style="font-size:13px;font-weight:600;color:#475569;white-space:nowrap;margin-right:4px;">USI Actions:</span>
+
+  <!-- 1. Run connection test (AJAX — server-side proxy; no credentials in browser) -->
+  <button id="rtoc-conn-test-btn" type="button" class="btn btn-sm btn-outline-primary"
+          style="white-space:nowrap;"
+          title="Ping the AI Grader platform and show the live USI credential status">
+    <svg style="width:13px;height:13px;vertical-align:middle;margin-right:4px;margin-top:-2px"
+         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+      <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+      <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+      <line x1="12" y1="20" x2="12.01" y2="20"/>
+    </svg>
+    Run connection test
+  </button>
+
+  <!-- 2. Re-verify all students (POST form — state-changing; not a plain GET link) -->
+  <form id="rtoc-reverify-form" method="post"
+        action="' . htmlspecialchars((new moodle_url('/local/rtocompliance/students.php'))->out(false), ENT_QUOTES) . '"
+        style="display:inline;margin:0">
+    <input type="hidden" name="action"  value="reverify_all">
+    <input type="hidden" name="sesskey" value="' . s(sesskey()) . '">
+    <button type="submit" class="btn btn-sm btn-outline-warning" style="white-space:nowrap;"
+            title="Reset all failed and stuck-pending USI verifications so the next scheduled batch re-attempts them"
+            onclick="return confirm(\'This will reset all failed and pending USI verifications so they are re-attempted on the next scheduled run. Students already verified will not be affected. Continue?\');">
+      <svg style="width:13px;height:13px;vertical-align:middle;margin-right:4px;margin-top:-2px"
+           viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
+        <path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+      </svg>
+      Re-verify all students
+    </button>
+  </form>
+
+  <!-- 3. Export this view (CSV) — respects current filter/state/search params -->
+  <a href="' . htmlspecialchars($csvurl, ENT_QUOTES) . '"
+     class="btn btn-sm btn-outline-secondary"
+     style="white-space:nowrap;"
+     title="Download the currently filtered student list as a CSV file">
+    <svg style="width:13px;height:13px;vertical-align:middle;margin-right:4px;margin-top:-2px"
+         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="7 10 12 15 17 10"/>
+      <line x1="12" y1="15" x2="12" y2="3"/>
+    </svg>
+    Export this view (CSV)
+  </a>
+
+  <!-- 4. Export students without DOB — always targets the missing-DOB cohort -->
+  <a href="' . htmlspecialchars($missingdoburl, ENT_QUOTES) . '"
+     class="btn btn-sm btn-outline-secondary"
+     style="white-space:nowrap;"
+     title="Download a CSV of all students who have a USI but are missing a date of birth">
+    <svg style="width:13px;height:13px;vertical-align:middle;margin-right:4px;margin-top:-2px"
+         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+      <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+      <line x1="3" y1="10" x2="21" y2="10"/>
+      <line x1="8" y1="14" x2="8.01" y2="14"/>
+    </svg>
+    Export students without DOB
+  </a>
+
+  <!-- Connection test result panel (hidden until test runs) -->
+  <div id="rtoc-conn-test-result" style="display:none;width:100%;margin-top:8px;
+       padding:10px 14px;border-radius:6px;font-size:13px;line-height:1.5;"></div>
+</div>
+
+<script>
+(function () {
+    var btn    = document.getElementById("rtoc-conn-test-btn");
+    var result = document.getElementById("rtoc-conn-test-result");
+    if (!btn || !result) { return; }
+
+    // Connection test endpoint is same-origin (students.php?action=connection_test).
+    // The platform API credentials are never sent to or stored in the browser.
+    var CONN_TEST_URL = ' . $jsConnTestUrl . ';
+
+    btn.addEventListener("click", function () {
+        btn.disabled = true;
+        btn.textContent = "Testing…";
+        result.style.display = "none";
+
+        fetch(CONN_TEST_URL, {
+            method: "GET",
+            headers: { "Accept": "application/json" },
+            credentials: "same-origin"
+        })
+        .then(function (r) {
+            return r.json().then(function (data) {
+                return { status: r.status, data: data };
+            });
+        })
+        .then(function (resp) {
+            var data    = resp.data;
+            var ok      = resp.status === 200 && (data.ok || data.certReady || data.certUploaded);
+            var bgColor = ok ? "#f0fdf4" : "#fef2f2";
+            var border  = ok ? "#86efac" : "#fca5a5";
+            var txtColor= ok ? "#15803d" : "#b91c1c";
+
+            var icon = ok
+                ? "<svg style=\"width:14px;height:14px;vertical-align:middle;margin-right:6px\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M22 11.08V12a10 10 0 1 1-5.93-9.14\"/><polyline points=\"22 4 12 14.01 9 11.01\"/></svg>"
+                : "<svg style=\"width:14px;height:14px;vertical-align:middle;margin-right:6px\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><line x1=\"15\" y1=\"9\" x2=\"9\" y2=\"15\"/><line x1=\"9\" y1=\"9\" x2=\"15\" y2=\"15\"/></svg>";
+
+            var lines = [];
+            if (data.message) { lines.push("<strong>" + rtocHtmlEsc(data.message) + "</strong>"); }
+            if (data.certExpiry) {
+                var expLine = "Credential expiry: " + rtocHtmlEsc(data.certExpiry.substring(0, 10));
+                if (data.daysToExpiry !== null && data.daysToExpiry !== undefined) {
+                    expLine += " (" + (data.daysToExpiry >= 0 ? data.daysToExpiry + " days remaining" : "EXPIRED " + Math.abs(data.daysToExpiry) + " days ago") + ")";
+                }
+                lines.push(expLine);
+            }
+            if (data.certSubject)  { lines.push("Subject: " + rtocHtmlEsc(data.certSubject)); }
+            if (data.orgId)        { lines.push("Org ID: "  + rtocHtmlEsc(String(data.orgId))); }
+            if (data.testMode !== undefined) { lines.push("Mode: " + (data.testMode ? "EVTE test environment" : "Production")); }
+            if (data.certDecryptError) { lines.push("<span style=\"color:#b91c1c\">Decrypt error: " + rtocHtmlEsc(data.certDecryptError) + "</span>"); }
+
+            result.style.background   = bgColor;
+            result.style.border       = "1px solid " + border;
+            result.style.color        = txtColor;
+            result.innerHTML          = icon + lines.join(" &nbsp;|&nbsp; ");
+            result.style.display      = "block";
+        })
+        .catch(function (err) {
+            result.style.background = "#fef2f2";
+            result.style.border     = "1px solid #fca5a5";
+            result.style.color      = "#b91c1c";
+            result.innerHTML        = "<svg style=\"width:14px;height:14px;vertical-align:middle;margin-right:6px\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><line x1=\"15\" y1=\"9\" x2=\"9\" y2=\"15\"/><line x1=\"9\" y1=\"9\" x2=\"15\" y2=\"15\"/></svg>"
+                + "<strong>Connection failed</strong> — could not reach the AI Grader platform. Check your API URL setting and network connectivity.";
+            result.style.display    = "block";
+        })
+        .finally(function () {
+            btn.disabled    = false;
+            btn.textContent = "";
+            var svg = "<svg style=\"width:13px;height:13px;vertical-align:middle;margin-right:4px;margin-top:-2px\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 12.55a11 11 0 0 1 14.08 0\"/><path d=\"M1.42 9a16 16 0 0 1 21.16 0\"/><path d=\"M8.53 16.11a6 6 0 0 1 6.95 0\"/><line x1=\"12\" y1=\"20\" x2=\"12.01\" y2=\"20\"/></svg>";
+            btn.innerHTML = svg + "Run connection test";
+        });
+    });
+
+    function rtocHtmlEsc(str) {
+        return String(str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
+    }
+})();
+</script>';
+}
 
 // DOB-FROM-NAT: Show a "Sync DOBs from NAT" button when any students are missing DOB.
 // This one-click backfill reads all previously uploaded NAT00080 data and writes

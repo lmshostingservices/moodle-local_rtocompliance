@@ -60,6 +60,8 @@ _sc_log('lib.php loaded');
 try { set_config('_sc_cp', json_encode(['t' => date('c'), 'pid' => getmypid(), 'step' => 'lib_loaded']), 'local_rtocompliance'); } catch (\Throwable $_e) {}
 
 admin_externalpage_setup('local_rtocompliance_supportinternal');
+$context = context_system::instance();
+require_capability('moodle/site:config', $context);
 _sc_log('admin_externalpage_setup done');
 try { set_config('_sc_cp', json_encode(['t' => date('c'), 'pid' => getmypid(), 'step' => 'setup_done']), 'local_rtocompliance'); } catch (\Throwable $_e) {}
 $PAGE->set_title(get_string('support_docs', 'local_rtocompliance'));

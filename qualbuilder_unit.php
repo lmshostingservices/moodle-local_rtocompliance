@@ -38,6 +38,8 @@ $confirm = optional_param('confirm', 0, PARAM_INT);
 
 admin_externalpage_setup('local_rtocompliance_qualbuilder');
 $context = context_system::instance();
+require_capability('moodle/site:config', $context);
+$context = context_system::instance();
 
 $product = $DB->get_record('local_rtocompliance_qualbuilder', ['id' => $qualbuilderid], '*', MUST_EXIST);
 

@@ -36,6 +36,8 @@ $id = required_param('id', PARAM_INT);
 
 admin_externalpage_setup('local_rtocompliance_qualbuilder');
 $context = context_system::instance();
+require_capability('moodle/site:config', $context);
+$context = context_system::instance();
 
 // Bug S fix: this page writes DB state (validationpassed/date/errors) on every page load.
 // Without sesskey validation an attacker could silently overwrite validation results

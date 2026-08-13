@@ -33,6 +33,8 @@ use local_rtocompliance\audit_logger;
 
 admin_externalpage_setup('local_rtocompliance_locations');
 $context = context_system::instance();
+require_capability('moodle/site:config', $context);
+$context = context_system::instance();
 
 $id = optional_param('id', 0, PARAM_INT);
 

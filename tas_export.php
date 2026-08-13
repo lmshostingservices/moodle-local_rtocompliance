@@ -28,6 +28,8 @@ require_once($CFG->libdir . '/adminlib.php');
 
 admin_externalpage_setup('local_rtocompliance_tas');
 $context = context_system::instance();
+require_capability('moodle/site:config', $context);
+$context = context_system::instance();
 
 $id = required_param('id', PARAM_INT);
 $format = optional_param('format', 'html', PARAM_ALPHA);

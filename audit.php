@@ -32,6 +32,7 @@ use local_rtocompliance\audit_logger;
 
 admin_externalpage_setup('local_rtocompliance_dashboard');
 $context = context_system::instance();
+require_capability('moodle/site:config', $context);
 
 $entitytype = optional_param('entitytype', '', PARAM_ALPHAEXT);
 $action = optional_param('action', '', PARAM_ALPHA);

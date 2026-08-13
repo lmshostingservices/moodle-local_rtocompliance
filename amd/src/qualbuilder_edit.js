@@ -2011,7 +2011,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
             $btn.prop('disabled', false).text('Save Qualification');
             if (resp.success) {
                 $btn.removeClass('btn-primary').addClass('btn-success').text('Saved \u2713');
-                setTimeout(function () {
+                setTimeout(function() {
                     $btn.removeClass('btn-success').addClass('btn-primary').text('Save Qualification');
                 }, 2000);
             }

@@ -35,6 +35,8 @@ $action = optional_param('action', '', PARAM_ALPHA);
 
 admin_externalpage_setup('local_rtocompliance_qualbuilder');
 $context = context_system::instance();
+require_capability('moodle/site:config', $context);
+$context = context_system::instance();
 
 $product = $DB->get_record('local_rtocompliance_qualbuilder', ['id' => $id], '*', MUST_EXIST);
 $units = $DB->get_records('local_rtocompliance_qualunits', ['qualbuilderid' => $id], 'unittype ASC, sequenceorder ASC');

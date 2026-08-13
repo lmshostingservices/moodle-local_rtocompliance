@@ -28,6 +28,8 @@ require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_practiceguides');
+$context = context_system::instance();
+require_capability('moodle/site:config', $context);
 
 $guideid = optional_param('guide', '', PARAM_ALPHANUMEXT);
 

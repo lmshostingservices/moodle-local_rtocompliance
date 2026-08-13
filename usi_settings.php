@@ -189,6 +189,95 @@ if ($message !== '') {
     echo '<div class="alert ' . $messageclass . '" style="margin-bottom:20px;">' . $message . '</div>';
 }
 
+// ── Compact credential status badge (mirrors Students page badge) ──────────────
+// Derive the same variables the Students page computes from its status ping,
+// using the $status array already fetched above.
+if ($apiconfigured && $status && !empty($status['ok'])) {
+    $_badge_cert_ready    = !empty($status['certReady']);
+    $_badge_cert_uploaded = !empty($status['certUploaded']);
+    $_badge_expired       = !empty($status['expired']);
+    $_badge_days_left     = isset($status['daysToExpiry']) ? (int)$status['daysToExpiry'] : null;
+    $_badge_expiry_str    = (!empty($status['certExpiry'])) ? $status['certExpiry'] : null;
+    $_badge_expiry_ts     = $_badge_expiry_str ? strtotime($_badge_expiry_str) : 0;
+    $_badge_warn          = !empty($status['expiryWarn']) && !$_badge_expired;
+    $_badge_upload_anchor = '#rtoc-cert-upload-form';
+
+    if ($_badge_expired) {
+        $daysAgo = $_badge_days_left !== null ? abs($_badge_days_left) : '?';
+        echo '
+<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+  <svg style="flex-shrink:0;width:20px;height:20px" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+  <div style="flex:1;min-width:200px;">
+    <strong style="font-size:14px;color:#991b1b;">USI Credential Expired</strong>
+    <span style="font-size:13px;color:#7f1d1d;margin-left:8px;">The machine credential expired ' . s((string)$daysAgo) . ' day(s) ago — USI verifications are failing. Upload a renewed credential below.</span>
+  </div>
+  <a href="' . s($_badge_upload_anchor) . '" class="btn btn-danger btn-sm" style="white-space:nowrap;flex-shrink:0;">
+    <svg style="width:13px;height:13px;vertical-align:middle;margin-right:5px;margin-top:-2px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    Upload Renewed Credential
+  </a>
+</div>';
+    } else if ($_badge_days_left !== null && $_badge_days_left <= 30 && $_badge_cert_ready) {
+        $expiryLabel = ($_badge_expiry_ts && $_badge_expiry_ts > 0) ? ' (expires ' . date('d M Y', $_badge_expiry_ts) . ')' : '';
+        echo '
+<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+  <svg style="flex-shrink:0;width:20px;height:20px" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+  <div style="flex:1;min-width:200px;">
+    <strong style="font-size:14px;color:#92400e;">USI Credential Expiring Soon</strong>
+    <span style="font-size:13px;color:#78350f;margin-left:8px;">Credential expires in <strong>' . s((string)$_badge_days_left) . ' day(s)</strong>' . s($expiryLabel) . ' — upload a renewed credential before it expires.</span>
+  </div>
+  <a href="' . s($_badge_upload_anchor) . '" class="btn btn-warning btn-sm" style="white-space:nowrap;flex-shrink:0;">
+    <svg style="width:13px;height:13px;vertical-align:middle;margin-right:5px;margin-top:-2px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    Upload Now
+  </a>
+</div>';
+    } else if ($_badge_cert_ready) {
+        $expiryHtml = '';
+        if ($_badge_expiry_ts && $_badge_expiry_ts > 0) {
+            $expiryHtml = ' <span style="font-size:12px;color:#166534;margin-left:6px;">Expires ' . date('d M Y', $_badge_expiry_ts) . '</span>';
+        }
+        echo '
+<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+  <svg style="flex-shrink:0;width:18px;height:18px" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+  <span style="font-size:13px;font-weight:600;color:#15803d;">USI Credential Active</span>' . $expiryHtml . '
+</div>';
+    } else if ($_badge_cert_uploaded) {
+        // Cert uploaded but not ready (e.g. wrong password / decryption failure).
+        echo '
+<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+  <svg style="flex-shrink:0;width:20px;height:20px" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+  <div style="flex:1;min-width:200px;">
+    <strong style="font-size:14px;color:#92400e;">USI Machine Credential uploaded but not ready</strong>
+    <span style="font-size:13px;color:#78350f;margin-left:8px;">The certificate was uploaded but could not be decrypted — check the certificate password in the upload form below.</span>
+  </div>
+  <a href="' . s($_badge_upload_anchor) . '" class="btn btn-warning btn-sm" style="white-space:nowrap;flex-shrink:0;">
+    Fix Certificate Password
+  </a>
+</div>';
+    } else {
+        // API connected and responding OK but no certificate has been uploaded yet.
+        echo '
+<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+  <svg style="flex-shrink:0;width:20px;height:20px" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+  <div style="flex:1;min-width:200px;">
+    <strong style="font-size:14px;color:#92400e;">USI Machine Credential not uploaded</strong>
+    <span style="font-size:13px;color:#78350f;margin-left:8px;">USI verification will fail until you upload your myID certificate using the form below.</span>
+  </div>
+  <a href="' . s($_badge_upload_anchor) . '" class="btn btn-warning btn-sm" style="white-space:nowrap;flex-shrink:0;">
+    <svg style="width:13px;height:13px;vertical-align:middle;margin-right:5px;margin-top:-2px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    Upload Credential
+  </a>
+</div>';
+    }
+} else if (!$apiconfigured) {
+    echo '
+<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+  <svg style="flex-shrink:0;width:20px;height:20px" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+  <span style="font-size:13px;color:#92400e;">' . get_string('usi_pertenant_err_noapi', 'local_rtocompliance') . '</span>
+</div>';
+}
+
+// ── Add id anchor so the compact badge buttons can scroll directly to the upload form ──
+// (The form echo below gains id="rtoc-cert-upload-form" further down the page.)
 
 // Current status panel
 echo '<div style="background:white;border:1px solid #e5e7eb;border-radius:8px;padding:20px;margin-bottom:20px;">';
@@ -293,7 +382,7 @@ echo '</div>'; // end API key sub-panel
 echo '</div>'; // end status panel
 
 // Upload form
-echo '<div style="background:white;border:1px solid #e5e7eb;border-radius:8px;padding:20px;margin-bottom:20px;">';
+echo '<div id="rtoc-cert-upload-form" style="background:white;border:1px solid #e5e7eb;border-radius:8px;padding:20px;margin-bottom:20px;">';
 echo '<h3 style="margin:0 0 12px 0;font-size:16px;">' . get_string('usi_pertenant_uploadtitle', 'local_rtocompliance') . '</h3>';
 echo '<p style="color:#6b7280;font-size:14px;margin:0 0 16px 0;">' . get_string('usi_pertenant_uploadintro', 'local_rtocompliance') . '</p>';
 

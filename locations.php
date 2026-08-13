@@ -31,6 +31,8 @@ require_once(__DIR__ . '/classes/audit_logger.php');
 use local_rtocompliance\audit_logger;
 
 admin_externalpage_setup('local_rtocompliance_locations');
+$context = context_system::instance();
+require_capability('moodle/site:config', $context);
 
 $action = optional_param('action', '', PARAM_ALPHA);
 $id     = optional_param('id', 0, PARAM_INT);

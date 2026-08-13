@@ -31,6 +31,8 @@ $id  = optional_param('id', 0, PARAM_INT);
 $tab = optional_param('tab', 'rpl', PARAM_ALPHA);
 
 admin_externalpage_setup('local_rtocompliance_rpl');
+$context = context_system::instance();
+require_capability('moodle/site:config', $context);
 $PAGE->set_url('/local/rtocompliance/rpl_edit.php', ['id' => $id, 'tab' => $tab]);
 $PAGE->set_title($id ? 'Edit RPL / Credit Transfer Record' : 'Add RPL / Credit Transfer Record');
 $PAGE->set_heading($id ? 'Edit Record' : 'Add Record');

@@ -30,6 +30,8 @@ require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_tas');
 $context = context_system::instance();
+require_capability('moodle/site:config', $context);
+$context = context_system::instance();
 
 $tasid = required_param('tasid', PARAM_INT);
 $editid = optional_param('editid', 0, PARAM_INT);

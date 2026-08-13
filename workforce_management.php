@@ -28,6 +28,8 @@ require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_workforce_management');
+$context = context_system::instance();
+require_capability('moodle/site:config', $context);
 $PAGE->set_url('/local/rtocompliance/workforce_management.php');
 $PAGE->set_title('VET Workforce Management');
 $PAGE->set_heading('VET Workforce Management');

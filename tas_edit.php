@@ -30,6 +30,8 @@ require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_tas');
 $context = context_system::instance();
+require_capability('moodle/site:config', $context);
+$context = context_system::instance();
 
 $id = optional_param('id', 0, PARAM_INT);
 $delete = optional_param('delete', 0, PARAM_INT);

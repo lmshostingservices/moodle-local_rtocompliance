@@ -31,6 +31,8 @@ use local_rtocompliance\form\governance_form;
 
 admin_externalpage_setup('local_rtocompliance_governancepage');
 $context = context_system::instance();
+require_capability('moodle/site:config', $context);
+$context = context_system::instance();
 
 $id = optional_param('id', 0, PARAM_INT);
 $delete = optional_param('delete', 0, PARAM_INT);

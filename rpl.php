@@ -30,6 +30,8 @@ require_once(__DIR__ . '/lib.php');
 $tab = optional_param('tab', 'rpl', PARAM_ALPHA);
 
 admin_externalpage_setup('local_rtocompliance_rpl');
+$context = context_system::instance();
+require_capability('moodle/site:config', $context);
 $PAGE->set_url('/local/rtocompliance/rpl.php', ['tab' => $tab]);
 $PAGE->set_title('RPL & Credit Transfer Register');
 $PAGE->set_heading('RPL & Credit Transfer Register');

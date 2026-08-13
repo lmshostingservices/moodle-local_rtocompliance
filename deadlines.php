@@ -30,6 +30,8 @@ require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_dashboard');
 $context = context_system::instance();
+require_capability('moodle/site:config', $context);
+$context = context_system::instance();
 
 $action = optional_param('action', '', PARAM_ALPHA);
 $id = optional_param('id', 0, PARAM_INT);
