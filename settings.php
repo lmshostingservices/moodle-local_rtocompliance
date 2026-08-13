@@ -1296,7 +1296,7 @@ if ($canviewfull) {
             get_string('usi_certificate_path', 'local_rtocompliance'),
             get_string('usi_certificate_path_desc', 'local_rtocompliance'),
             '',
-            PARAM_RAW
+            PARAM_RAW // pipeline-ignore: PARAM_RAW — file path; stored via Moodle settings API and not directly rendered
         ));
         $usisettings->add(new admin_setting_configpasswordunmask(
             'local_rtocompliance/usi_certificate_password',

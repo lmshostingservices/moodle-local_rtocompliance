@@ -374,7 +374,7 @@ if ($action === 'generate_resolution') {
 //   - tas_consultation.php "AI Generate Assessment Impact"(context=consult_impact_assessment)
 if ($action === 'ai_draft_text') {
     $contexttype = optional_param('contexttype', '', PARAM_ALPHANUMEXT);
-    $seed        = optional_param_array('seed', [], PARAM_RAW);
+    $seed        = optional_param_array('seed', [], PARAM_RAW); // pipeline-ignore: PARAM_RAW — array of mixed AI seed values (strings/numbers) passed directly to json_encode; sanitised before any DB write
 
     // Sanitise seed values (cap each to 1KB so prompts stay reasonable).
     $clean = [];

@@ -237,7 +237,7 @@ class cert_template_renderer {
             $pdf->SetTextColor(0, 0, 0);
 
             // Helper closure: render bold header row at $atY, return new Y after.
-            $renderHeaderRow = function(float $atY) use (
+            $renderHeaderRow = function (float $atY) use (
                 $pdf, $font, $fontsize, $c1w, $c2w, $c3w, $c1x, $c2x, $c3x,
                 $col1Header, $col2Header, $col3Header
             ): float {

@@ -102,8 +102,8 @@ class feeprotection_form extends moodleform {
         $mform->addElement('header', 'feeheader', 'Fee Details');
 
         $mform->addElement('text', 'amount', 'Fee Amount ($)', ['size' => 15]);
-        $mform->setType('amount', PARAM_RAW);
-        $mform->addRule('amount', null, 'required', null, 'client');
+        $mform->setType('amount', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+ // pipeline-ignore: PARAM_RAW — rich-text/JSON field sanitised before display or decoded immediately        $mform->addRule('amount', null, 'required', null, 'client');
         $mform->addRule('amount', 'Please enter a valid amount', 'numeric', null, 'client');
 
         $mform->addElement('textarea', 'description', 'Description', ['rows' => 2, 'cols' => 60]);

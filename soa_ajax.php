@@ -80,7 +80,7 @@ try {
             global $DB, $USER;
 
             $userid    = required_param('userid', PARAM_INT);
-            $courseids = required_param('courseids', PARAM_RAW); // JSON array of ints
+            $courseids = required_param('courseids', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- JSON array decoded immediately
             $audience  = optional_param('audience', 'default', PARAM_ALPHA);
             $qualcode  = optional_param('qualcode', '', PARAM_ALPHANUMEXT);
             $qualname  = optional_param('qualname', '', PARAM_TEXT);

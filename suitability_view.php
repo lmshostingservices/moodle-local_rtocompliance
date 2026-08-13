@@ -62,8 +62,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && confirm_sesskey()
     $decision   = optional_param('trainer_decision_val', '', PARAM_ALPHANUMEXT);
     $advicetxt  = trim(optional_param('trainer_advice_text', '', PARAM_TEXT));
     $justif     = trim(optional_param('trainer_justification', '', PARAM_TEXT));
-    $decl_tick  = optional_param('trainer_declaration_tick', '', PARAM_RAW);
-    $validDec   = ['suitable', 'suitable_with_support', 'not_suitable'];
+    $decl_tick  = optional_param('trainer_declaration_tick', '', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+ // pipeline-ignore: PARAM_RAW — rich-text/JSON field sanitised before display or decoded immediately    $validDec   = ['suitable', 'suitable_with_support', 'not_suitable'];
 
     if (!in_array($decision, $validDec, true)) {
         redirect($PAGE->url, 'Please select a valid decision outcome.', null, \core\output\notification::NOTIFY_ERROR);

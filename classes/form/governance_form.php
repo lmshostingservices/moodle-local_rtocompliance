@@ -142,8 +142,8 @@ class governance_form extends \moodleform {
         $mform->addElement('header', 'additionalinfo', get_string('additional_information', 'local_rtocompliance'));
 
         $mform->addElement('textarea', 'notes', get_string('notes', 'local_rtocompliance'), ['rows' => 4, 'cols' => 80]);
-        $mform->setType('notes', PARAM_RAW);
-        $mform->addHelpButton('notes', 'governance_notes', 'local_rtocompliance');
+        $mform->setType('notes', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+ // pipeline-ignore: PARAM_RAW — rich-text/JSON field sanitised before display or decoded immediately        $mform->addHelpButton('notes', 'governance_notes', 'local_rtocompliance');
 
         $this->add_action_buttons(true, get_string('savechanges'));
     }

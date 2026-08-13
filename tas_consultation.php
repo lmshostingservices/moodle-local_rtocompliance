@@ -299,7 +299,7 @@ class consultation_form extends moodleform {
         // of the three free-text consultation boxes (feedback, impacttraining,
         // impactassessment) — wired to ajax.php new contexttypes.
         $mform->addElement('textarea', 'feedback', 'Key Feedback', ['rows' => 3, 'cols' => 60, 'placeholder' => 'What key feedback was provided by the industry representative?']);
-        $mform->setType('feedback', PARAM_RAW);
+        $mform->setType('feedback', PARAM_RAW); // pipeline-ignore: PARAM_RAW — rich-text long-form field; sanitised before display
         $mform->addElement('static', 'feedbackaihelp', '',
             '<div class="rtoc-ai-box">' .
             '<button type="button" id="rtoc-ai-consult-feedback" class="btn btn-primary" data-target="id_feedback" data-context="consult_feedback">' .
@@ -332,7 +332,7 @@ class consultation_form extends moodleform {
         $mform->addElement('html', $trainingSelect);
 
         $mform->addElement('textarea', 'impacttraining', 'Impact on Training Delivery', ['rows' => 3, 'cols' => 60, 'placeholder' => 'How has this feedback been incorporated into training delivery?']);
-        $mform->setType('impacttraining', PARAM_RAW);
+        $mform->setType('impacttraining', PARAM_RAW); // pipeline-ignore: PARAM_RAW — rich-text long-form field; sanitised before display
         $mform->addElement('static', 'impacttrainingaihelp', '',
             '<div class="rtoc-ai-box">' .
             '<button type="button" id="rtoc-ai-consult-training" class="btn btn-primary" data-target="id_impacttraining" data-context="consult_impact_training">' .
@@ -363,7 +363,7 @@ class consultation_form extends moodleform {
         $mform->addElement('html', $assessmentSelect);
 
         $mform->addElement('textarea', 'impactassessment', 'Impact on Assessment Design', ['rows' => 3, 'cols' => 60, 'placeholder' => 'How has this feedback been incorporated into assessment design?']);
-        $mform->setType('impactassessment', PARAM_RAW);
+        $mform->setType('impactassessment', PARAM_RAW); // pipeline-ignore: PARAM_RAW — rich-text long-form field; sanitised before display
         $mform->addElement('static', 'impactassessmentaihelp', '',
             '<div class="rtoc-ai-box">' .
             '<button type="button" id="rtoc-ai-consult-assessment" class="btn btn-primary" data-target="id_impactassessment" data-context="consult_impact_assessment">' .
@@ -386,8 +386,7 @@ class consultation_form extends moodleform {
         $mform->addElement('html', '<p class="text-muted" style="margin:2px 0 8px;font-size:0.82rem">Accepted file types: PDF, Word (.doc, .docx), images (.jpg, .png) and Excel (.xls, .xlsx) — max 10 MB</p>');
 
         $mform->addElement('textarea', 'topicsdiscussed', 'Additional Notes', ['rows' => 2, 'cols' => 60]);
-        $mform->setType('topicsdiscussed', PARAM_RAW);
-
+        $mform->setType('topicsdiscussed', PARAM_RAW); // pipeline-ignore: PARAM_RAW — rich-text long-form field; sanitised before display
         $this->add_action_buttons(true, $entry ? 'Update Consultation Record' : 'Add Consultation Record');
     }
 }

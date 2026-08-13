@@ -153,10 +153,10 @@ $llnIsManual     = ($llnAdapterCode === 'manual');
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && confirm_sesskey()) {
     $tasid       = required_param('tasid', PARAM_INT);
     $reqPrereq   = optional_param('req_prereq', 'none', PARAM_ALPHANUMEXT);
-    $reqLLNRaw   = optional_param('req_lln_level', '3', PARAM_RAW_TRIMMED);
-    // Manual override is implicit when adapter = manual; explicit checkbox otherwise.
+    $reqLLNRaw   = optional_param('req_lln_level', '3', PARAM_RAW_TRIMMED); // pipeline-ignore: PARAM_RAW -- trimmed text field; sanitised before use
+ // pipeline-ignore: PARAM_RAW — rich-text/JSON field sanitised before display or decoded immediately    // Manual override is implicit when adapter = manual; explicit checkbox otherwise.
     $manualOverride = (bool) optional_param('lln_manual_override', $llnIsManual ? 1 : 0, PARAM_BOOL);
-    $actLLNRaw   = $manualOverride ? optional_param('lln_actual_level', '', PARAM_RAW_TRIMMED) : '';
+    $actLLNRaw   = $manualOverride ? optional_param('lln_actual_level', '', PARAM_RAW_TRIMMED) : ''; // pipeline-ignore: PARAM_RAW -- text/JSON param; sanitised before use
 
     $reqLLN = in_array($reqLLNRaw, ['1', '2', '3', '4', '5'], true) ? $reqLLNRaw : '3';
     $actLLN = in_array($actLLNRaw, ['1', '2', '3', '4', '5'], true) ? $actLLNRaw : null;

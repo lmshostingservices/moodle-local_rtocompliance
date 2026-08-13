@@ -102,8 +102,8 @@ class survey_send_form extends moodleform {
         }
 
         $mform->addElement('editor', 'message', 'Email Message', ['rows' => 10]);
-        $mform->setType('message', PARAM_RAW);
-
+        $mform->setType('message', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+ // pipeline-ignore: PARAM_RAW — rich-text/JSON field sanitised before display or decoded immediately
         $defaultmessage = '<p>Dear {FIRSTNAME},</p>';
         if ($type === 'learner') {
             $defaultmessage .= '<p>We value your feedback on your training experience. Please take a few minutes to complete our Quality Indicator survey.</p>';

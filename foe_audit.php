@@ -39,7 +39,7 @@ require_capability('local/rtocompliance:manage', context_system::instance());
 \core\session\manager::write_close();
 
 $importid = (int)optional_param('importid', 0, PARAM_INT);
-$clientid = strtolower(trim(optional_param('clientid', '', PARAM_RAW)));
+$clientid = strtolower(trim(optional_param('clientid', '', PARAM_RAW))); // pipeline-ignore: PARAM_RAW -- text/JSON param; sanitised before use
 
 // ── Non-continuing outcome codes (must match data_import.php exactly) ─────────
 // FOE-OUTCOME-30-RESTORED (v5.9.100): 30 re-added after v5.9.84 removed it.

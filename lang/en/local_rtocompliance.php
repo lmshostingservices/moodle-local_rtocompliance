@@ -3469,3 +3469,11 @@ $string['act_avetars_ref']               = 'ACT AVETARS Reference Number';
 $string['act_avetars_ref_desc']          = 'Your AVETARS reference number assigned by Skills Canberra (ACT Government). Required for ACT state AVETMISS reporting. Leave blank if your RTO does not hold an ACT funded training contract.';
 $string['act_funding_code_default']      = 'Default ACT Funding Source Code';
 $string['act_funding_code_default_desc'] = 'The ACT program code that applies to most of your funded enrolments.';
+
+// Cache definitions — required by the pipeline lang check
+$string['cachedef_dashboard_metrics']  = 'RTO Compliance dashboard metrics (site-wide aggregates)';
+$string['cachedef_student_counts']     = 'RTO Compliance student record counts per filter';
+$string['cachedef_trainer_status']     = 'RTO Compliance trainer credential status cache';
+$string['cachedef_course_settings']    = 'RTO Compliance course-level compliance settings';
+$string['cachedef_compliance_summary'] = 'RTO Compliance site-wide compliance summary data';
+$string['cachedef_avetmiss_codes']     = 'RTO Compliance AVETMISS reference code tables';

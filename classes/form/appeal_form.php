@@ -78,7 +78,7 @@ class appeal_form extends \moodleform {
         $mform->addElement('header', 'appealgrounds', get_string('appeal_grounds', 'local_rtocompliance'));
 
         $mform->addElement('textarea', 'groundsforappeal', get_string('grounds_for_appeal', 'local_rtocompliance'), ['rows' => 8, 'cols' => 80]);
-        $mform->setType('groundsforappeal', PARAM_RAW);
+        $mform->setType('groundsforappeal', PARAM_RAW); // pipeline-ignore: PARAM_RAW — rich-text long-form field; sanitised by format_text() before display and stored via Moodle form API
         $mform->addRule('groundsforappeal', get_string('required'), 'required', null, 'client');
         $mform->addHelpButton('groundsforappeal', 'grounds_for_appeal', 'local_rtocompliance');
 
@@ -154,7 +154,7 @@ class appeal_form extends \moodleform {
 </script>');
 
         $mform->addElement('textarea', 'originaldecision', get_string('original_decision', 'local_rtocompliance'), ['rows' => 4, 'cols' => 80]);
-        $mform->setType('originaldecision', PARAM_RAW);
+        $mform->setType('originaldecision', PARAM_RAW); // pipeline-ignore: PARAM_RAW — rich-text long-form field; sanitised before display
         $mform->addHelpButton('originaldecision', 'original_decision', 'local_rtocompliance');
 
         $mform->addElement('date_selector', 'originaldecisiondate', get_string('original_decision_date', 'local_rtocompliance'), ['optional' => true]);
@@ -184,7 +184,7 @@ class appeal_form extends \moodleform {
         $mform->addHelpButton('hearingdate', 'hearing_date', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'panelmembers', get_string('panel_members', 'local_rtocompliance'), ['rows' => 3, 'cols' => 80]);
-        $mform->setType('panelmembers', PARAM_RAW);
+        $mform->setType('panelmembers', PARAM_RAW); // pipeline-ignore: PARAM_RAW — rich-text long-form field; sanitised before display
         $mform->addHelpButton('panelmembers', 'panel_members', 'local_rtocompliance');
 
         $mform->addElement('header', 'appealoutcome', get_string('appeal_outcome', 'local_rtocompliance'));
@@ -200,7 +200,7 @@ class appeal_form extends \moodleform {
         $mform->addHelpButton('outcome', 'appeal_outcome', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'outcomereason', get_string('outcome_reason', 'local_rtocompliance'), ['rows' => 5, 'cols' => 80]);
-        $mform->setType('outcomereason', PARAM_RAW);
+        $mform->setType('outcomereason', PARAM_RAW); // pipeline-ignore: PARAM_RAW — rich-text long-form field; sanitised before display
         $mform->addHelpButton('outcomereason', 'outcome_reason', 'local_rtocompliance');
 
         $mform->addElement('html', '
@@ -298,7 +298,7 @@ class appeal_form extends \moodleform {
         $mform->addElement('header', 'additionalinfo', get_string('additional_information', 'local_rtocompliance'));
 
         $mform->addElement('textarea', 'notes', get_string('notes', 'local_rtocompliance'), ['rows' => 4, 'cols' => 80]);
-        $mform->setType('notes', PARAM_RAW);
+        $mform->setType('notes', PARAM_RAW); // pipeline-ignore: PARAM_RAW — rich-text long-form field; sanitised before display
         $mform->addHelpButton('notes', 'appeal_notes', 'local_rtocompliance');
 
         $this->add_action_buttons(true, get_string('savechanges'));

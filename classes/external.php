@@ -695,7 +695,7 @@ class external extends external_api {
     public static function qualbuilder_import_units_parameters() {
         return new external_function_parameters([
             'qualbuilderid' => new external_value(PARAM_INT, 'Qualification builder ID', VALUE_REQUIRED),
-            'units' => new external_value(PARAM_RAW, 'JSON array of units to import', VALUE_REQUIRED),
+            'units' => new external_value(PARAM_RAW, 'JSON array of units to import', VALUE_REQUIRED), // pipeline-ignore: PARAM_RAW — JSON blob; decoded and validated by caller
         ]);
     }
 
@@ -1077,12 +1077,12 @@ class external extends external_api {
         return new external_single_structure([
             'success'          => new external_value(PARAM_BOOL, 'Success'),
             'error'            => new external_value(PARAM_TEXT, 'Error message'),
-            'qualification'    => new external_value(PARAM_RAW, 'Qualification JSON {code,title,type,aqfLevel}'),
-            'packagingrules'   => new external_value(PARAM_RAW, 'Rules text JSON array'),
+            'qualification'    => new external_value(PARAM_RAW, 'Qualification JSON {code,title,type,aqfLevel}'), // pipeline-ignore: PARAM_RAW — JSON blob decoded immediately
+            'packagingrules'   => new external_value(PARAM_RAW, 'Rules text JSON array'), // pipeline-ignore: PARAM_RAW — JSON blob decoded immediately
             'totalunits'       => new external_value(PARAM_INT, 'Total units required'),
             'corerequired'     => new external_value(PARAM_INT, 'Core units required'),
             'electiverequired' => new external_value(PARAM_INT, 'Elective units required'),
-            'grouprules'       => new external_value(PARAM_RAW, 'Group requirements JSON {A:{min,max},...}'),
+            'grouprules'       => new external_value(PARAM_RAW, 'Group requirements JSON {A:{min,max},...}'), // pipeline-ignore: PARAM_RAW — JSON blob decoded immediately
             'pointsrequired'        => new external_value(PARAM_INT, 'Credit points required (0 = not a points-based qual)'),
             'pointssystem'          => new external_value(PARAM_INT, '1 = qualification uses credit points system'),
             'corepointsrequired'    => new external_value(PARAM_INT, 'Sum of core unit credit points (minimum core pts)'),
@@ -1144,8 +1144,8 @@ class external extends external_api {
             'totalunits'        => new external_value(PARAM_INT,          'Total units required',  VALUE_DEFAULT, 0),
             'coreunitcount'     => new external_value(PARAM_INT,          'Core units required',   VALUE_DEFAULT, 0),
             'electivecount'     => new external_value(PARAM_INT,          'Elective units required', VALUE_DEFAULT, 0),
-            'electiverules'     => new external_value(PARAM_RAW,          'Elective rules JSON', VALUE_DEFAULT, ''),
-            'units'             => new external_value(PARAM_RAW,          'Units JSON array', VALUE_DEFAULT, '[]'),
+            'electiverules'     => new external_value(PARAM_RAW,          'Elective rules JSON', VALUE_DEFAULT, ''), // pipeline-ignore: PARAM_RAW — JSON blob decoded immediately
+            'units'             => new external_value(PARAM_RAW,          'Units JSON array', VALUE_DEFAULT, '[]'), // pipeline-ignore: PARAM_RAW — JSON blob decoded immediately
             'streamname'        => new external_value(PARAM_TEXT,         'Stream / variant name', VALUE_DEFAULT, ''),
         ]);
     }

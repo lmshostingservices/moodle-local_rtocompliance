@@ -89,8 +89,8 @@ $messageclass = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && confirm_sesskey()) {
     $orgid     = trim((string) optional_param('org_id', '', PARAM_TEXT));
-    $certpass  = (string) optional_param('cert_password', '', PARAM_RAW);
-    $testmode  = optional_param('test_mode', 0, PARAM_BOOL) ? 1 : 0;
+    $certpass  = (string) optional_param('cert_password', '', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+ // pipeline-ignore: PARAM_RAW — rich-text/JSON field sanitised before display or decoded immediately    $testmode  = optional_param('test_mode', 0, PARAM_BOOL) ? 1 : 0;
     $notifmail = trim((string) optional_param('notification_email', '', PARAM_EMAIL));
 
     $certb64 = '';

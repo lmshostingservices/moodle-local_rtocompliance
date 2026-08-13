@@ -426,8 +426,9 @@ if ($_usi_api_configured) {
     curl_close($curl);
     if ($code === 200 && $resp) {
         $decoded = json_decode($resp, true);
-        // hasCert key set by AI Grader platform when a credential is on file.
-        if (is_array($decoded) && !empty($decoded['hasCert'])) {
+        // certUploaded = file is present; certReady = file is present, valid, and non-expired.
+        // The server has never returned 'hasCert' — use the actual keys from /api/usi/status.
+        if (is_array($decoded) && (!empty($decoded['certUploaded']) || !empty($decoded['certReady']))) {
             $_usi_cert_ok = true;
         }
     }

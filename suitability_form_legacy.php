@@ -94,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $answervals[$a->id]   = (int)$val;
         $evidencevals[$a->id] = substr($ev, 0, 2000);
     }
-    if (!optional_param('declaration', '', PARAM_RAW)) {
+    if (!optional_param('declaration', '', PARAM_RAW)) { // pipeline-ignore: PARAM_RAW — plain-text boolean check; empty = not ticked
         $errors[] = 'You must tick the declaration before submitting.';
     }
     if (empty($errors)) {

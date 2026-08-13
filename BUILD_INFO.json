@@ -1,9 +1,0 @@
-{
-  "component": "local_rtocompliance",
-  "version": "5.9.309",
-  "numeric_version": "2026072800",
-  "build_id": "405525c1a5576832",
-  "build_timestamp": "2026-08-11T00:00:00.000Z",
-  "folder": "local_rtocompliance",
-  "verification": "10digit-migration-5.9.309"
-}
