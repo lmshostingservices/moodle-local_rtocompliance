@@ -15,21 +15,20 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — thirdparty_edit.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
 use local_rtocompliance\form\thirdparty_form;
 
 admin_externalpage_setup('local_rtocompliance_thirdparty');
+require_login();
 $context = context_system::instance();
 
 $id = optional_param('id', 0, PARAM_INT);
@@ -153,6 +152,7 @@ if ($form->is_cancelled()) {
 $PAGE->add_body_class("path-local-rtocompliance");
 echo $OUTPUT->header();
 echo local_rtocompliance_render_nav_header($id ? 'Edit Arrangement' : 'New Arrangement', get_string('thirdparty', 'local_rtocompliance'), '/local/rtocompliance/thirdparty.php', 'thirdparty');
+echo local_rtocompliance_page_banner($id ? 'Edit Arrangement' : 'New Arrangement');
 echo $OUTPUT->heading($id ? 'Edit Third-Party Arrangement' : 'New Third-Party Arrangement');
 
 $form->display();

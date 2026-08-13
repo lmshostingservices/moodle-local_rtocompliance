@@ -15,13 +15,12 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — recovery_analyzer.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Enrolment Recovery Analyzer  (local_rtocompliance v5.9.118)
 //
@@ -56,11 +55,11 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_recovery_analyzer');
+require_login();
 $context = context_system::instance();
 require_capability('local/rtocompliance:manage', $context);
 \core\session\manager::write_close();
@@ -192,6 +191,7 @@ if ($action !== 'analyse') {
     );
 
     local_rtocompliance_render_nav_header($PAGE);
+    $PAGE->add_body_class('path-local-rtocompliance'); // v5.9.445: scoped CSS needs this on admin_externalpage pages.
     echo $OUTPUT->header();
     ?>
     <div class="rtoc-main-content">

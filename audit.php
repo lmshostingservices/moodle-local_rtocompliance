@@ -15,15 +15,13 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — audit.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 require_once(__DIR__ . '/classes/audit_logger.php');
@@ -31,6 +29,8 @@ require_once(__DIR__ . '/classes/audit_logger.php');
 use local_rtocompliance\audit_logger;
 
 admin_externalpage_setup('local_rtocompliance_dashboard');
+require_login();
+require_capability('local/rtocompliance:manage', context_system::instance());
 $context = context_system::instance();
 
 $entitytype = optional_param('entitytype', '', PARAM_ALPHAEXT);
@@ -140,7 +140,7 @@ echo html_writer::empty_tag('input', [
 ]);
 echo html_writer::end_div();
 
-echo html_writer::tag('button', 'Filter', ['type' => 'submit', 'class' => 'btn btn-primary']);
+echo html_writer::tag('button', 'Filter', ['type' => 'submit', 'class' => 'btn btn-primary', 'title' => 'Apply the selected filters to the audit log']);
 echo html_writer::link(
     new moodle_url('/local/rtocompliance/audit.php'),
     'Clear',
@@ -161,13 +161,13 @@ if ($logs) {
     echo html_writer::start_tag('table', ['class' => 'data-table']);
     echo html_writer::start_tag('thead');
     echo html_writer::start_tag('tr');
-    echo html_writer::tag('th', 'Time');
-    echo html_writer::tag('th', 'User');
-    echo html_writer::tag('th', 'Action');
-    echo html_writer::tag('th', 'Entity');
-    echo html_writer::tag('th', 'ID');
-    echo html_writer::tag('th', 'Description');
-    echo html_writer::tag('th', 'IP Address');
+    echo html_writer::tag('th', 'Time', ['title' => 'Date and time the action was recorded']);
+    echo html_writer::tag('th', 'User', ['title' => 'User who performed the action, or System for automated events']);
+    echo html_writer::tag('th', 'Action', ['title' => 'Operation that was carried out, such as create or update']);
+    echo html_writer::tag('th', 'Entity', ['title' => 'Type of record the action affected']);
+    echo html_writer::tag('th', 'ID', ['title' => 'Identifier of the affected record']);
+    echo html_writer::tag('th', 'Description', ['title' => 'Summary of what the action changed']);
+    echo html_writer::tag('th', 'IP Address', ['title' => 'Network address the action originated from']);
     echo html_writer::end_tag('tr');
     echo html_writer::end_tag('thead');
     echo html_writer::start_tag('tbody');
@@ -204,7 +204,7 @@ if ($logs) {
         echo html_writer::link(
             new moodle_url('/local/rtocompliance/audit.php', $prevparams),
             'Previous',
-            ['class' => 'btn btn-secondary']
+            ['class' => 'btn btn-secondary', 'title' => 'Go to the previous page of audit records']
         );
     }
     if ($hasmore) {
@@ -212,7 +212,7 @@ if ($logs) {
         echo html_writer::link(
             new moodle_url('/local/rtocompliance/audit.php', $nextparams),
             'Next',
-            ['class' => 'btn btn-secondary']
+            ['class' => 'btn btn-secondary', 'title' => 'Go to the next page of audit records']
         );
     }
     echo html_writer::end_div();

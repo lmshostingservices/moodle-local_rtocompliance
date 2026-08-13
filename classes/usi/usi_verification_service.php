@@ -14,6 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * RTO Compliance plugin — usi_verification_service.php.
+ *
+ * @package    local_rtocompliance
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 namespace local_rtocompliance\usi;
 
 defined('MOODLE_INTERNAL') || die();
@@ -25,12 +32,8 @@ require_once(__DIR__ . '/usi_platform_client.php');
  * 
  * Provides high-level USI verification functionality with caching,
  * batch processing, and integration with the RTO Compliance student records.
- * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
 class usi_verification_service {
-    
     const CACHE_TTL_VERIFIED = 86400 * 365;
     const CACHE_TTL_FAILED = 86400;
     const BATCH_SIZE = 25; // matches verify_usi_batch_task::BATCH_SIZE — keep in sync
@@ -258,7 +261,8 @@ class usi_verification_service {
         $verified = 0;
         $failed = 0;
         $rateLimited = 0;
-        
+        $authhalted = false;
+
         // Process each student with rate limiting enforcement
         foreach ($batch as $item) {
             // Check rate limit before each verification request.
@@ -276,7 +280,17 @@ class usi_verification_service {
                     $item['lastname'],
                     $item['dateofbirth']
                 );
-                
+
+                // STOP-ON-AUTH (v6.2.36): a site-level auth/config fault is not a per-student
+                // problem — retrying the rest of the batch with wrong credentials wastes calls
+                // and can get the platform key rate-limited/suspended. Abort the run and leave
+                // these students PENDING; the admin fixes the credential/config and re-runs.
+                $st = strtoupper(trim((string) ($result['status'] ?? '')));
+                if ($st === 'AUTH_ERROR' || $st === 'NOT_CONFIGURED') {
+                    $authhalted = true;
+                    break;
+                }
+
                 $this->update_student_verification_status($item['student_id'], $result);
                 $this->log_verification_attempt($item['student_id'], $item['usi'], $result);
                 
@@ -303,7 +317,11 @@ class usi_verification_service {
             'processed' => count($batch),
             'verified' => $verified,
             'failed' => $failed,
-            'message' => "Processed {$verified} verified, {$failed} failed of " . count($batch) . " students",
+            'authhalted' => $authhalted,
+            'message' => ($authhalted
+                ? 'USI verification stopped: the platform rejected the site credentials (authentication / not configured). Fix the API key or upload the credential on the USI settings page, then re-run. '
+                : '')
+                . "Processed {$verified} verified, {$failed} failed of " . count($batch) . " students",
         ];
     }
     
@@ -321,16 +339,31 @@ class usi_verification_service {
             $update->usiverified = self::STATUS_VERIFIED;
             $update->usiverifieddate = time();
         } else {
-            switch ($result['status']) {
+            // STATUS-MAP-HARDENING (v6.2.36): normalise the platform status string and map
+            // unrecoverable outcomes to a TERMINAL state so bad records don't re-queue every
+            // run forever. Only genuinely transient/infrastructure outcomes stay PENDING.
+            $status = strtoupper(trim((string) ($result['status'] ?? '')));
+            switch ($status) {
                 case 'PARTIAL_MATCH':
                 case 'NO_MATCH':
+                case 'NOT_VERIFIED':
+                    // A mismatch a human needs to resolve (name/DOB/USI correction).
                     $update->usiverified = self::STATUS_MANUAL_REVIEW;
                     break;
                 case 'NOT_FOUND':
                 case 'INACTIVE':
+                case 'DEACTIVATED':
+                case 'INVALID_INPUT':
+                case 'INVALID_FORMAT':
+                    // Terminal — retrying with the same data will never pass; the data must
+                    // change first. Marking FAILED stops the infinite-retry churn.
                     $update->usiverified = self::STATUS_FAILED;
                     break;
                 default:
+                    // Transient / infrastructure (NETWORK_ERROR, PLATFORM_ERROR, CERT_PENDING,
+                    // RATE_LIMITED, and site-level AUTH_ERROR / NOT_CONFIGURED). Leave PENDING to
+                    // retry; the batch loop separately ABORTS the run on site-level auth/config
+                    // faults rather than re-marking every student (see verify_pending_batch).
                     $update->usiverified = self::STATUS_PENDING;
             }
         }

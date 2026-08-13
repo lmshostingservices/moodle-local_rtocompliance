@@ -15,13 +15,12 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — provider.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 namespace local_rtocompliance\privacy;
 
 defined('MOODLE_INTERNAL') || die();
@@ -36,6 +35,7 @@ class provider implements
     \core_privacy\local\metadata\provider,
     \core_privacy\local\request\plugin\provider,
     \core_privacy\local\request\core_userlist_provider {
+
     public static function get_metadata(collection $collection): collection {
         // Bug 26: Declare ALL personal data fields stored in the students table.
         // The previous declaration was missing: firstname, lastname, sex, address
@@ -179,6 +179,10 @@ class provider implements
             'privacy:metadata:rpl'
         );
 
+        // RPL-FILE-ERASURE (v5.9.416): declare the file subsystem — RPL evidence and
+        // credit-transfer source certificates are stored as files against rpl records.
+        $collection->add_subsystem_link('core_files', [], 'privacy:metadata:core_files');
+
         return $collection;
     }
 
@@ -316,6 +320,20 @@ class provider implements
         // complaints + appeals via their direct userid columns.
         $student = $DB->get_record('local_rtocompliance_students', ['userid' => $user->id]);
         if ($student) {
+            // RPL-FILE-ERASURE (v5.9.416): the RPL/CT evidence and source-certificate
+            // files are stored in system-context fileareas keyed by the rpl record id.
+            // Deleting only the DB rows left the student's uploaded evidence files in
+            // storage on an erasure request — a privacy defect. Purge those files for
+            // every rpl record belonging to this student before deleting the rows.
+            $rplids = $DB->get_fieldset_select('local_rtocompliance_rpl', 'id', 'studentid = :sid', ['sid' => $student->id]);
+            if ($rplids) {
+                $fs = get_file_storage();
+                $sysctxid = \context_system::instance()->id;
+                foreach ($rplids as $rplid) {
+                    $fs->delete_area_files($sysctxid, 'local_rtocompliance', 'rpl_evidence', $rplid);
+                    $fs->delete_area_files($sysctxid, 'local_rtocompliance', 'ct_sourcecert', $rplid);
+                }
+            }
             $DB->delete_records('local_rtocompliance_enrolments', ['studentid' => $student->id]);
             $DB->delete_records('local_rtocompliance_rpl',        ['studentid' => $student->id]);
         }
@@ -351,6 +369,17 @@ class provider implements
         );
         if (!empty($studentids)) {
             list($stinsql, $stparams) = $DB->get_in_or_equal($studentids, SQL_PARAMS_NAMED, 'stid');
+            // RPL-FILE-ERASURE (v5.9.416): purge RPL/CT evidence + source-certificate
+            // files (system-context fileareas keyed by rpl id) before deleting the rows.
+            $rplids = $DB->get_fieldset_select('local_rtocompliance_rpl', 'id', "studentid $stinsql", $stparams);
+            if ($rplids) {
+                $fs = get_file_storage();
+                $sysctxid = \context_system::instance()->id;
+                foreach ($rplids as $rplid) {
+                    $fs->delete_area_files($sysctxid, 'local_rtocompliance', 'rpl_evidence', $rplid);
+                    $fs->delete_area_files($sysctxid, 'local_rtocompliance', 'ct_sourcecert', $rplid);
+                }
+            }
             $DB->delete_records_select('local_rtocompliance_enrolments', "studentid $stinsql", $stparams);
             $DB->delete_records_select('local_rtocompliance_rpl',        "studentid $stinsql", $stparams);
         }

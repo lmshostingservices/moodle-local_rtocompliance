@@ -15,19 +15,18 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — governance.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_governancepage');
+require_login();
 
 $tab = optional_param('tab', 'persons', PARAM_ALPHAEXT);
 
@@ -60,10 +59,17 @@ $addBtnUrls = [
     'roles'    => new moodle_url('/local/rtocompliance/governance_roles_edit.php'),
     'minutes'  => new moodle_url('/local/rtocompliance/governance_minutes_edit.php'),
 ];
+$addBtnTitles = [
+    'persons'  => 'Add a new governing person to the register',
+    'changes'  => 'Record a material change to notify ASQA',
+    'adc'      => 'Start a new Annual Declaration of Compliance submission',
+    'roles'    => 'Add a new role to the register',
+    'minutes'  => 'Add minutes for a governance meeting',
+];
 echo html_writer::link(
     $addBtnUrls[$tab] ?? $addBtnUrls['persons'],
     $addBtnLabels[$tab] ?? 'Add Record',
-    ['class' => 'btn btn-primary']
+    ['class' => 'btn btn-primary', 'title' => $addBtnTitles[$tab] ?? 'Add a new record to the register']
 );
 echo html_writer::end_div();
 
@@ -115,12 +121,12 @@ if ($tab == 'persons') {
         echo html_writer::start_tag('table', ['class' => 'data-table']);
         echo html_writer::start_tag('thead');
         echo html_writer::start_tag('tr');
-        echo html_writer::tag('th', 'Name');
-        echo html_writer::tag('th', 'Position');
-        echo html_writer::tag('th', 'Fit & Proper');
-        echo html_writer::tag('th', 'Suitability Assessment');
-        echo html_writer::tag('th', 'Appointment Date');
-        echo html_writer::tag('th', 'Actions');
+        echo html_writer::tag('th', 'Name', ['title' => 'Full name of the governing person']);
+        echo html_writer::tag('th', 'Position', ['title' => 'Role or position held by this person']);
+        echo html_writer::tag('th', 'Fit & Proper', ['title' => 'Whether a fit and proper person declaration has been completed']);
+        echo html_writer::tag('th', 'Suitability Assessment', ['title' => 'Whether a suitability assessment has been completed']);
+        echo html_writer::tag('th', 'Appointment Date', ['title' => 'Date this person was appointed']);
+        echo html_writer::tag('th', 'Actions', ['title' => 'Actions available for this record']);
         echo html_writer::end_tag('tr');
         echo html_writer::end_tag('thead');
         echo html_writer::start_tag('tbody');
@@ -132,14 +138,14 @@ if ($tab == 'persons') {
             echo html_writer::start_tag('tr');
             echo html_writer::tag('td', html_writer::tag('strong', format_string($person->fullname)));
             echo html_writer::tag('td', format_string($person->position ?: ucfirst(str_replace('_', ' ', $person->positiontype))));
-            echo html_writer::tag('td', html_writer::tag('span', $person->fitproperdeclared ? 'Completed' : 'Required', ['class' => 'badge ' . $fitproperclass]));
-            echo html_writer::tag('td', html_writer::tag('span', $person->suitabilityassessed ? 'Completed' : 'Pending', ['class' => 'badge ' . $suitabilityclass]));
+            echo html_writer::tag('td', html_writer::tag('span', $person->fitproperdeclared ? 'Completed' : 'Required', ['class' => 'badge ' . $fitproperclass, 'title' => $person->fitproperdeclared ? 'The fit and proper person declaration has been completed. This confirms the person is suitable to help run the RTO.' : 'A fit and proper person declaration still needs to be completed for this person.']));
+            echo html_writer::tag('td', html_writer::tag('span', $person->suitabilityassessed ? 'Completed' : 'Pending', ['class' => 'badge ' . $suitabilityclass, 'title' => $person->suitabilityassessed ? 'A check of this person&rsquo;s background and suitability for the role has been completed.' : 'The suitability check for this person has not been done yet.']));
             echo html_writer::tag('td', userdate($person->appointmentdate, '%d %b %Y'));
             echo html_writer::tag('td',
                 html_writer::link(
                     new moodle_url('/local/rtocompliance/governance_edit.php', ['id' => $person->id]),
                     'Edit',
-                    ['class' => 'btn btn-sm btn-secondary']
+                    ['class' => 'btn btn-sm btn-secondary', 'title' => 'Edit this governing person']
                 )
             );
             echo html_writer::end_tag('tr');
@@ -155,7 +161,7 @@ if ($tab == 'persons') {
         echo html_writer::link(
             new moodle_url('/local/rtocompliance/governance_edit.php'),
             'Add Governing Person',
-            ['class' => 'btn btn-primary']
+            ['class' => 'btn btn-primary', 'title' => 'Add a new governing person to the register']
         );
         echo html_writer::end_div();
     }
@@ -174,12 +180,12 @@ if ($tab == 'persons') {
         echo html_writer::start_tag('table', ['class' => 'data-table']);
         echo html_writer::start_tag('thead');
         echo html_writer::start_tag('tr');
-        echo html_writer::tag('th', 'Change Type');
-        echo html_writer::tag('th', 'Effective Date');
-        echo html_writer::tag('th', 'Notification Deadline');
-        echo html_writer::tag('th', 'Notified');
-        echo html_writer::tag('th', 'Status');
-        echo html_writer::tag('th', 'Actions');
+        echo html_writer::tag('th', 'Change Type', ['title' => 'Nature of the material change']);
+        echo html_writer::tag('th', 'Effective Date', ['title' => 'Date the change takes effect']);
+        echo html_writer::tag('th', 'Notification Deadline', ['title' => 'Date by which ASQA must be notified (10 business days)']);
+        echo html_writer::tag('th', 'Notified', ['title' => 'Date ASQA was notified of the change']);
+        echo html_writer::tag('th', 'Status', ['title' => 'Current notification status for this change']);
+        echo html_writer::tag('th', 'Actions', ['title' => 'Actions available for this record']);
         echo html_writer::end_tag('tr');
         echo html_writer::end_tag('thead');
         echo html_writer::start_tag('tbody');
@@ -190,17 +196,22 @@ if ($tab == 'persons') {
             if ($change->status == 'overdue') $statusclass = 'badge-danger';
             if ($change->status == 'pending') $statusclass = 'badge-warning';
 
+            $statustitle = 'Current stage of telling the national training regulator (ASQA) about this change.';
+            if ($change->status == 'completed') $statustitle = 'Completed: the regulator (ASQA) has been notified within the deadline.';
+            if ($change->status == 'overdue') $statustitle = 'Overdue: the deadline to notify the regulator (ASQA) has passed.';
+            if ($change->status == 'pending') $statustitle = 'Pending: the regulator (ASQA) still needs to be notified about this change.';
+
             echo html_writer::start_tag('tr');
             echo html_writer::tag('td', format_string($change->changetype));
             echo html_writer::tag('td', userdate($change->effectivedate, '%d %b %Y'));
             echo html_writer::tag('td', userdate($change->notificationdeadline, '%d %b %Y'));
             echo html_writer::tag('td', $change->asqanotificationdate ? userdate($change->asqanotificationdate, '%d %b %Y') : '-');
-            echo html_writer::tag('td', html_writer::tag('span', ucfirst($change->status), ['class' => 'badge ' . $statusclass]));
+            echo html_writer::tag('td', html_writer::tag('span', ucfirst($change->status), ['class' => 'badge ' . $statusclass, 'title' => $statustitle]));
             echo html_writer::tag('td',
                 html_writer::link(
                     new moodle_url('/local/rtocompliance/governance_edit.php', ['id' => $change->id, 'type' => 'changes']),
                     'Edit',
-                    ['class' => 'btn btn-sm btn-secondary']
+                    ['class' => 'btn btn-sm btn-secondary', 'title' => 'Edit this material change']
                 )
             );
             echo html_writer::end_tag('tr');
@@ -216,7 +227,7 @@ if ($tab == 'persons') {
         echo html_writer::link(
             new moodle_url('/local/rtocompliance/governance_edit.php', ['type' => 'changes']),
             'Record Material Change',
-            ['class' => 'btn btn-primary']
+            ['class' => 'btn btn-primary', 'title' => 'Record a material change to notify ASQA']
         );
         echo html_writer::end_div();
     }
@@ -235,12 +246,12 @@ if ($tab == 'persons') {
         echo html_writer::start_tag('table', ['class' => 'data-table']);
         echo html_writer::start_tag('thead');
         echo html_writer::start_tag('tr');
-        echo html_writer::tag('th', 'Role');
-        echo html_writer::tag('th', 'Current Holder');
-        echo html_writer::tag('th', 'Department');
-        echo html_writer::tag('th', 'Reports To');
-        echo html_writer::tag('th', 'Review Date');
-        echo html_writer::tag('th', 'Actions');
+        echo html_writer::tag('th', 'Role', ['title' => 'Name of the role']);
+        echo html_writer::tag('th', 'Current Holder', ['title' => 'Person currently holding this role']);
+        echo html_writer::tag('th', 'Department', ['title' => 'Department this role sits within']);
+        echo html_writer::tag('th', 'Reports To', ['title' => 'Role or person this role reports to']);
+        echo html_writer::tag('th', 'Review Date', ['title' => 'Date this role description is next due for review']);
+        echo html_writer::tag('th', 'Actions', ['title' => 'Actions available for this record']);
         echo html_writer::end_tag('tr');
         echo html_writer::end_tag('thead');
         echo html_writer::start_tag('tbody');
@@ -255,7 +266,7 @@ if ($tab == 'persons') {
             echo html_writer::tag('td',
                 $role->reviewdate
                     ? ($overdue
-                        ? html_writer::tag('span', userdate($role->reviewdate, '%d %b %Y') . ' OVERDUE', ['class' => 'badge badge-danger'])
+                        ? html_writer::tag('span', userdate($role->reviewdate, '%d %b %Y') . ' OVERDUE', ['class' => 'badge badge-danger', 'title' => 'Overdue: this role description was due for review before today and should be updated.'])
                         : userdate($role->reviewdate, '%d %b %Y'))
                     : '-'
             );
@@ -263,7 +274,7 @@ if ($tab == 'persons') {
                 html_writer::link(
                     new moodle_url('/local/rtocompliance/governance_roles_edit.php', ['id' => $role->id]),
                     'Edit',
-                    ['class' => 'btn btn-sm btn-secondary']
+                    ['class' => 'btn btn-sm btn-secondary', 'title' => 'Edit this role']
                 )
             );
             echo html_writer::end_tag('tr');
@@ -279,7 +290,7 @@ if ($tab == 'persons') {
         echo html_writer::link(
             new moodle_url('/local/rtocompliance/governance_roles_edit.php'),
             'Add First Role',
-            ['class' => 'btn btn-primary']
+            ['class' => 'btn btn-primary', 'title' => 'Add the first role to the register']
         );
         echo html_writer::end_div();
     }
@@ -299,13 +310,13 @@ if ($tab == 'persons') {
         echo html_writer::start_tag('table', ['class' => 'data-table']);
         echo html_writer::start_tag('thead');
         echo html_writer::start_tag('tr');
-        echo html_writer::tag('th', 'Meeting');
-        echo html_writer::tag('th', 'Type');
-        echo html_writer::tag('th', 'Date');
-        echo html_writer::tag('th', 'Location');
-        echo html_writer::tag('th', 'Attendees');
-        echo html_writer::tag('th', 'Compliance Items');
-        echo html_writer::tag('th', 'Actions');
+        echo html_writer::tag('th', 'Meeting', ['title' => 'Title of the meeting']);
+        echo html_writer::tag('th', 'Type', ['title' => 'Type of meeting (board, management, quality or staff)']);
+        echo html_writer::tag('th', 'Date', ['title' => 'Date the meeting was held']);
+        echo html_writer::tag('th', 'Location', ['title' => 'Where the meeting was held']);
+        echo html_writer::tag('th', 'Attendees', ['title' => 'People who attended the meeting']);
+        echo html_writer::tag('th', 'Compliance Items', ['title' => 'Whether compliance matters were recorded in the minutes']);
+        echo html_writer::tag('th', 'Actions', ['title' => 'Actions available for this record']);
         echo html_writer::end_tag('tr');
         echo html_writer::end_tag('thead');
         echo html_writer::start_tag('tbody');
@@ -324,13 +335,13 @@ if ($tab == 'persons') {
             echo html_writer::tag('td', $min->location ? format_string($min->location) : '-');
             echo html_writer::tag('td', $min->attendees ? html_writer::tag('small', format_string(substr($min->attendees, 0, 60))) : '-');
             echo html_writer::tag('td', $min->complianceitems
-                ? html_writer::tag('span', 'Yes', ['class' => 'badge badge-success'])
-                : html_writer::tag('span', 'Not recorded', ['class' => 'badge badge-warning']));
+                ? html_writer::tag('span', 'Yes', ['class' => 'badge badge-success', 'title' => 'Yes: compliance matters were discussed and written into these minutes &ndash; strong evidence of active oversight.'])
+                : html_writer::tag('span', 'Not recorded', ['class' => 'badge badge-warning', 'title' => 'No compliance matters were recorded in these minutes.']));
             echo html_writer::tag('td',
                 html_writer::link(
                     new moodle_url('/local/rtocompliance/governance_minutes_edit.php', ['id' => $min->id]),
                     'View / Edit',
-                    ['class' => 'btn btn-sm btn-secondary']
+                    ['class' => 'btn btn-sm btn-secondary', 'title' => 'View or edit these meeting minutes']
                 )
             );
             echo html_writer::end_tag('tr');
@@ -346,7 +357,7 @@ if ($tab == 'persons') {
         echo html_writer::link(
             new moodle_url('/local/rtocompliance/governance_minutes_edit.php'),
             'Add First Meeting Minutes',
-            ['class' => 'btn btn-primary']
+            ['class' => 'btn btn-primary', 'title' => 'Add the first meeting minutes to the register']
         );
         echo html_writer::end_div();
     }
@@ -361,12 +372,12 @@ if ($tab == 'persons') {
         echo html_writer::start_tag('table', ['class' => 'data-table']);
         echo html_writer::start_tag('thead');
         echo html_writer::start_tag('tr');
-        echo html_writer::tag('th', 'Year');
-        echo html_writer::tag('th', 'Submitted By');
-        echo html_writer::tag('th', 'Date Submitted');
-        echo html_writer::tag('th', 'Evidence Attached');
-        echo html_writer::tag('th', 'Status');
-        echo html_writer::tag('th', 'Actions');
+        echo html_writer::tag('th', 'Year', ['title' => 'Year the declaration relates to']);
+        echo html_writer::tag('th', 'Submitted By', ['title' => 'Person who submitted the declaration']);
+        echo html_writer::tag('th', 'Date Submitted', ['title' => 'Date the declaration was submitted']);
+        echo html_writer::tag('th', 'Evidence Attached', ['title' => 'Number of supporting evidence documents attached']);
+        echo html_writer::tag('th', 'Status', ['title' => 'Current status of the declaration']);
+        echo html_writer::tag('th', 'Actions', ['title' => 'Actions available for this record']);
         echo html_writer::end_tag('tr');
         echo html_writer::end_tag('thead');
         echo html_writer::start_tag('tbody');
@@ -375,17 +386,21 @@ if ($tab == 'persons') {
             $statusclass = 'badge-success';
             if ($decl->status == 'draft') $statusclass = 'badge-warning';
 
+            $statustitle = $decl->status == 'draft'
+                ? 'Draft: this declaration has been started but not yet submitted.'
+                : 'Submitted: this declaration has been completed and submitted.';
+
             echo html_writer::start_tag('tr');
             echo html_writer::tag('td', html_writer::tag('strong', $decl->year));
             echo html_writer::tag('td', format_string($decl->submittedby));
-            echo html_writer::tag('td', $decl->datesubmitted ? userdate($decl->datesubmitted, '%d %b %Y') : '-');
+            echo html_writer::tag('td', $decl->submissiondate ? userdate($decl->submissiondate, '%d %b %Y') : '-'); // v5.9.368: column is submissiondate, not datesubmitted
             echo html_writer::tag('td', $decl->evidencecount . ' documents');
-            echo html_writer::tag('td', html_writer::tag('span', ucfirst($decl->status), ['class' => 'badge ' . $statusclass]));
+            echo html_writer::tag('td', html_writer::tag('span', ucfirst($decl->status), ['class' => 'badge ' . $statusclass, 'title' => $statustitle]));
             echo html_writer::tag('td',
                 html_writer::link(
                     new moodle_url('/local/rtocompliance/governance_edit.php', ['id' => $decl->id, 'type' => 'adc']),
                     'View',
-                    ['class' => 'btn btn-sm btn-secondary']
+                    ['class' => 'btn btn-sm btn-secondary', 'title' => 'View this declaration']
                 )
             );
             echo html_writer::end_tag('tr');
@@ -401,7 +416,7 @@ if ($tab == 'persons') {
         echo html_writer::link(
             new moodle_url('/local/rtocompliance/governance_edit.php', ['type' => 'adc']),
             'Start ADC Submission',
-            ['class' => 'btn btn-primary']
+            ['class' => 'btn btn-primary', 'title' => 'Start a new Annual Declaration of Compliance submission']
         );
         echo html_writer::end_div();
     }

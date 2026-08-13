@@ -15,13 +15,12 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — insurance_form.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 namespace local_rtocompliance\form;
 
 defined('MOODLE_INTERNAL') || die();
@@ -75,12 +74,12 @@ class insurance_form extends \moodleform {
         $mform->addHelpButton('excessamount', 'excessamount', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'coveragedetails', get_string('coverage_details', 'local_rtocompliance'), ['rows' => 4, 'cols' => 80]);
-        $mform->setType('coveragedetails', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
- // pipeline-ignore: PARAM_RAW — rich-text/JSON field sanitised before display or decoded immediately        $mform->addHelpButton('coveragedetails', 'coveragedetails', 'local_rtocompliance');
+        $mform->setType('coveragedetails', PARAM_RAW);
+        $mform->addHelpButton('coveragedetails', 'coveragedetails', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'exclusions', get_string('exclusions', 'local_rtocompliance'), ['rows' => 3, 'cols' => 80]);
-        $mform->setType('exclusions', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
- // pipeline-ignore: PARAM_RAW — rich-text/JSON field sanitised before display or decoded immediately        $mform->addHelpButton('exclusions', 'exclusions', 'local_rtocompliance');
+        $mform->setType('exclusions', PARAM_RAW);
+        $mform->addHelpButton('exclusions', 'exclusions', 'local_rtocompliance');
 
         $mform->addElement('header', 'coveragemapping', 'Coverage Mapping');
         $mform->addHelpButton('coveragemapping', 'coveragemapping_header', 'local_rtocompliance');
@@ -92,18 +91,18 @@ class insurance_form extends \moodleform {
             ['rows' => 3, 'cols' => 80, 'placeholder' => 'BSB50420 - Diploma of Leadership and Management
 CHC50121 - Diploma of Early Childhood Education and Care
 SIS40221 - Certificate IV in Fitness']);
-        $mform->setType('qualificationscovered', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
- // pipeline-ignore: PARAM_RAW — rich-text/JSON field sanitised before display or decoded immediately
+        $mform->setType('qualificationscovered', PARAM_RAW);
+
         $mform->addElement('textarea', 'deliverymodes', get_string('delivery_modes', 'local_rtocompliance'), 
             ['rows' => 2, 'cols' => 80, 'placeholder' => 'Classroom, Online, Workplace, Blended']);
-        $mform->setType('deliverymodes', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
- // pipeline-ignore: PARAM_RAW — rich-text/JSON field sanitised before display or decoded immediately        $mform->addHelpButton('deliverymodes', 'deliverymodes', 'local_rtocompliance');
+        $mform->setType('deliverymodes', PARAM_RAW);
+        $mform->addHelpButton('deliverymodes', 'deliverymodes', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'locations', get_string('locations', 'local_rtocompliance'), 
             ['rows' => 2, 'cols' => 80, 'placeholder' => 'Head Office - 123 Main St, Sydney NSW 2000
 Training Centre - 456 Training Rd, Melbourne VIC 3000']);
-        $mform->setType('locations', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
- // pipeline-ignore: PARAM_RAW — rich-text/JSON field sanitised before display or decoded immediately        $mform->addHelpButton('locations', 'insurance_locations', 'local_rtocompliance');
+        $mform->setType('locations', PARAM_RAW);
+        $mform->addHelpButton('locations', 'insurance_locations', 'local_rtocompliance');
 
         $mform->addElement('header', 'policydates', 'Policy Period');
         $mform->addHelpButton('policydates', 'policydates_header', 'local_rtocompliance');
@@ -133,8 +132,8 @@ Training Centre - 456 Training Rd, Melbourne VIC 3000']);
         $mform->addElement('header', 'additionalinfo', get_string('additional_information', 'local_rtocompliance'));
 
         $mform->addElement('textarea', 'notes', get_string('notes', 'local_rtocompliance'), ['rows' => 4, 'cols' => 80]);
-        $mform->setType('notes', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
- // pipeline-ignore: PARAM_RAW — rich-text/JSON field sanitised before display or decoded immediately        $mform->addHelpButton('notes', 'insurance_notes', 'local_rtocompliance');
+        $mform->setType('notes', PARAM_RAW);
+        $mform->addHelpButton('notes', 'insurance_notes', 'local_rtocompliance');
 
         $this->add_action_buttons(true, get_string('savechanges'));
     }

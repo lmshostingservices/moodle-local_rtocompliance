@@ -15,53 +15,22 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — support.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
-// DIAG-v5.9.50: Step-by-step breadcrumb logging. Each marker writes to a file in
-// /tmp AND to the PHP error log AND to Moodle DB config (fallback).
-// Check /tmp/rtoc_sc_*.txt or PHP error log, or run in Moodle DB:
-//   SELECT value FROM mdl_config WHERE plugin='local_rtocompliance' AND name='_sc_cp';
-// Remove this block once the root cause of the HTTP 500 is identified.
-$_sc_log = sys_get_temp_dir() . '/rtoc_sc_' . date('Ymd_His') . '_' . getmypid() . '.txt';
-if (!function_exists('_sc_log')) {
-    function _sc_log(string $step): void {
-        global $_sc_log;
-        $line = date('[H:i:s] ') . $step . "\n";
-        @file_put_contents($_sc_log, $line, FILE_APPEND);
-        error_log('[RTOC-SC] ' . $step);
-    }
-}
-register_shutdown_function(function () {
-    $err = error_get_last();
-    if ($err) {
-        _sc_log('SHUTDOWN fatal type=' . $err['type'] . ' msg=' . $err['message'] . ' in ' . $err['file'] . ':' . $err['line']);
-    } else {
-        _sc_log('SHUTDOWN normal');
-    }
-});
-_sc_log('START pid=' . getmypid() . ' method=' . ($_SERVER['REQUEST_METHOD'] ?? '?') . ' uri=' . ($_SERVER['REQUEST_URI'] ?? '?'));
-
+// SUPPORT-DIAG-REMOVED (v5.9.415): the v5.9.50 step-by-step breadcrumb block that
+// wrote a /tmp file, spammed error_log, registered a shutdown handler and wrote the
+// Moodle config table four times on EVERY Help-page load has been removed — the past
+// HTTP 500 it was chasing is long resolved and the diagnostics were pure overhead.
 require_once(__DIR__ . '/../../config.php');
-require_login();
-_sc_log('config.php loaded');
-try { set_config('_sc_cp', json_encode(['t' => date('c'), 'pid' => getmypid(), 'step' => 'config_loaded']), 'local_rtocompliance'); } catch (\Throwable $_e) {}
-
 require_once($CFG->libdir . '/adminlib.php');
-_sc_log('adminlib.php loaded');
-try { set_config('_sc_cp', json_encode(['t' => date('c'), 'pid' => getmypid(), 'step' => 'adminlib_loaded']), 'local_rtocompliance'); } catch (\Throwable $_e) {}
-
 require_once(__DIR__ . '/lib.php');
-_sc_log('lib.php loaded');
-try { set_config('_sc_cp', json_encode(['t' => date('c'), 'pid' => getmypid(), 'step' => 'lib_loaded']), 'local_rtocompliance'); } catch (\Throwable $_e) {}
 
 admin_externalpage_setup('local_rtocompliance_supportinternal');
-_sc_log('admin_externalpage_setup done');
-try { set_config('_sc_cp', json_encode(['t' => date('c'), 'pid' => getmypid(), 'step' => 'setup_done']), 'local_rtocompliance'); } catch (\Throwable $_e) {}
+require_login();
 $PAGE->set_title(get_string('support_docs', 'local_rtocompliance'));
 $PAGE->set_heading(get_string('pluginname', 'local_rtocompliance'));
 
@@ -115,6 +84,19 @@ function support_icon($name, $class = '') {
 $PAGE->add_body_class("path-local-rtocompliance");
 echo $OUTPUT->header();
 echo local_rtocompliance_render_nav_header(get_string('support_internal', 'local_rtocompliance'));
+
+// Prominent link to the quick-answer FAQ.
+$faqurl = (new moodle_url('/local/rtocompliance/faq.php'))->out();
+echo '<a href="' . $faqurl . '" style="display:flex;align-items:center;gap:14px;text-decoration:none;'
+    . 'background:linear-gradient(135deg,#eef2ff,#faf5ff);border:1px solid #e0e7ff;border-radius:12px;'
+    . 'padding:16px 20px;margin-bottom:20px;">'
+    . '<span style="flex:0 0 auto;width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#4f46e5,#7c3aed);'
+    . 'color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 14px -4px rgba(79,70,229,.5);">'
+    . '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 10h8M8 14h5"/><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>'
+    . '<span style="flex:1;"><span style="display:block;font-size:16px;font-weight:800;color:#3730a3;">Looking for a quick answer? Read the FAQ</span>'
+    . '<span style="display:block;font-size:13.5px;color:#475569;margin-top:2px;">100 plain-English questions across 20 topics — how to link courses, import NAT files, issue an SoA, and more.</span></span>'
+    . '<span style="flex:0 0 auto;color:#6366f1;font-weight:700;font-size:14px;">Open FAQ &rarr;</span>'
+    . '</a>';
 
 $rtoname = get_config('local_rtocompliance', 'rtoname') ?: 'Your RTO';
 
@@ -175,7 +157,7 @@ $getStartedSteps = [
         'number' => '3',
         'icon' => 'user-plus',
         'title' => 'Add Your Students',
-        'description' => 'Create student records with USI and AVETMISS data. Students are automatically linked when they enrol in your Moodle courses.',
+        'description' => 'Create student records with USI and AVETMISS data, or let them populate from a NAT import. Click any student\'s name to open their full profile — AVETMISS summary, completeness check, unit results and issued certificates. The plugin only reads your Moodle enrolments; it never creates accounts or enrols anyone.',
         'link' => new moodle_url('/local/rtocompliance/students.php'),
         'link_text' => 'Open Student Records',
         'color' => 'blue',
@@ -193,7 +175,7 @@ $getStartedSteps = [
         'number' => '5',
         'icon' => 'target',
         'title' => 'Track Student Results',
-        'description' => 'View competency outcomes (C/NYC/RPL) for each qualification. This is your central hub for tracking who is ready for certification.',
+        'description' => 'The Master Roster shows every student across every qualification in one table, with search and filters. Use "Sync results from Moodle completions" to pull in course completions, then drill into any qualification for the unit-by-unit grid.',
         'link' => new moodle_url('/local/rtocompliance/qualbuilder_results.php'),
         'link_text' => 'Open Student Results',
         'color' => 'emerald',
@@ -237,9 +219,9 @@ echo html_writer::end_div();
 
 echo html_writer::start_div('get-started-tip');
 echo support_icon('lightbulb', 'tip-icon');
-echo html_writer::tag('p', 
-    '<strong>Pro Tip:</strong> Start with steps 1-3 to get your basic setup running. ' .
-    'You can add trainers and configure advanced features as you go. The dashboard will guide you on what needs attention.',
+echo html_writer::tag('p',
+    '<strong>Pro Tip:</strong> New here? Open <a href="' . (new moodle_url('/local/rtocompliance/how_it_works.php'))->out() . '"><strong>How It Works</strong></a> (top of the left menu) for a plain-English overview of the whole system first. ' .
+    'Then start with steps 1-3 to get your basic setup running — you can add trainers and configure advanced features as you go.',
     ['class' => 'tip-text']
 );
 echo html_writer::end_div();
@@ -250,153 +232,64 @@ echo html_writer::end_div();
 echo html_writer::start_div('whats-new-panel');
 echo html_writer::start_div('whats-new-header');
 echo support_icon('star', 'whats-new-icon');
-echo html_writer::tag('h2', "What's New — v5.9.307", ['class' => 'whats-new-title']);
+echo html_writer::tag('h2', "What's New — v5.9.425", ['class' => 'whats-new-title']);
 echo html_writer::end_div();
 echo html_writer::tag('p',
-    'v5.9.307 adds an inline NAT00080 file upload to the Students page DOB-sync bar. '
-    . 'Previously the "Upload NAT00080" button sent you to the Data Import wizard — now you can pick your NAT00080 .txt file directly on the Students page and click "Upload &amp; Sync DOBs" to apply dates of birth in one step. '
-    . 'The parser reads the fixed-width AVETMISS 8.0 format (client ID at positions 0–9, DOB at positions 73–80). For tab-delimited or variant-format files the full Data Import wizard is still available.',
-    'v5.9.306 fixes two bugs found during a full VET data collection audit (every AVETMISS field traced from enrolment through form through NAT export). ' .
-    'SENTINEL FIX: the admin profile validator checked labourforcestatus and highestschoollevel against single-@ but both fields use double-@@ as their not-stated value. ' .
-    'A student with default values (@@) passed admin validation and was marked profile-complete, then immediately flipped back to incomplete the moment they opened their own profile. ' .
-    'DEPENDENT FIELD FIX: Moodle hideIf is JS-only — hidden fields still POST their cached values. ' .
-    'schooltype was being emitted in NAT00120 for non-school-based students (wrong AVETMISS data); contact details were included in NAT00085 for students who withdrew consent.',
-    'v5.9.305 fixes three deferred bugs from the E2E audit requiring schema or policy decisions. ' .
-    '(C1) The USI client validator accepted the forbidden characters 0, 1, I, and O due to a case-insensitive regex flag — aligned with the authoritative avetmiss_codes validator. ' .
-    '(C2) Certificates had no USI column — re-rendering a historical cert after a USI correction silently showed the new USI, breaking forensic audit trails required under ASQA practice. ' .
-    'A usi column is now added to the certs table and snapshotted at issuance time; existing rows backfilled. ' .
-    '(H3) The cert template fallback to legacy TCPDF was completely silent on production — admins issued non-compliant certs with no warning. ' .
-    'Fallbacks now log to the plugin audit table and set a dashboard config flag that shows an amber warning banner.',
+    'The latest releases (v5.9.420–425) sharpen the compliance depth and make the whole system easier to learn. '
+    . 'Highlights: every page now opens with a consistent <strong>What&nbsp;/&nbsp;Why&nbsp;/&nbsp;How</strong> orientation card; '
+    . '<strong>nominal hours</strong> are wired end-to-end (a real qualification total in the Qualification Builder and the TAS volume of learning, '
+    . 'sourced from the plugin&rsquo;s own authoritative reference table because training.gov.au does not publish them); '
+    . '<strong>RPL &amp; Credit Transfer</strong> now capture the assessor&rsquo;s identity with a live TAE-currency check, whether the student was told the outcome, '
+    . 'superseded&rarr;current unit mapping, and an evidence-to-criteria matrix; a per-student <strong>pre-enrolment readiness</strong> panel and a Compliance Health metric '
+    . 'surface the four pre-enrolment gates; and a declutter pass removed duplicated on-page noise. '
+    . 'These build on the v5.9.399 integrity foundation — the plugin still creates and deletes <strong>nothing</strong> in Moodle core; it only reads it. '
+    . 'The full list is below.',
     ['class' => 'whats-new-intro']
 );
 echo html_writer::start_tag('ul', ['class' => 'whats-new-list']);
 $whatsNew = [
-    '<strong>View Results — selected units consistency fix (v5.9.295)</strong> — ' .
-    'The "Units in Product" stat and per-student progress grid were built from all <code>qualunits</code> rows, ' .
-    'including unselected/deselected units. Core Units and Elective Units stats already filtered ' .
-    '<code>selected=1</code>, making the four numbers inconsistent and inflating the progress % denominator. ' .
-    'Fixed: <code>selected=1</code> added to the <code>$units</code> query so all four metrics share the same unit set.',
-    '<strong>View Results — variant-course student matching fix (v5.9.295)</strong> — ' .
-    'The student table only found students whose enrolment <code>programcode</code> matched the qualification, ' .
-    'or who were enrolled in a primary <code>qualunits.courseid</code>. Students who enrolled via a variant ' .
-    'delivery course (stored in <code>qualunit_courses</code>) and had no programcode set were silently ' .
-    'excluded. Fixed: UNION with <code>qualunit_courses</code> (is_archive=0) added to the courseid fallback ' .
-    'subquery, matching the same pattern applied across process_enrolment_task.php and lib.php in v5.9.293.',
-    '<strong>View Results — Total Enrolled / Completed / In Progress stat alignment fix (v5.9.295)</strong> — ' .
-    'The three summary stat cards used programcode-only matching — narrower than the student table query — ' .
-    'so "Total Enrolled" could show fewer students than the table row count and "In Progress" ' .
-    '(= Total − Completed) could go negative. All three stat queries now use the same ' .
-    'programcode-OR-courseid(primary+variant) approach as the student table.',
-    '<strong>View Results — completed units filter consistency fix (v5.9.295)</strong> — ' .
-    'The "all units finalised" subquery inside the Completed stat did not filter <code>selected=1</code>, ' .
-    'so deselected units could prevent a student from being counted as complete even though every ' .
-    'active unit had a final outcome. Fixed: <code>selected=1</code> added to match the display unit set.',
-    '<strong>QB list page total unit count fix (v5.9.294)</strong> — ' .
-    'The UNITS column and the linked X/Y counter on the Qualification Builder list page now use the ' .
-    'TGA-sourced total from the qualification\'s packaging rules (e.g. 12 for TLI50119: 10 core + 2 elective) ' .
-    'instead of only the units saved so far in the database. Previously a record with 10 core units saved ' .
-    'and 2 elective units not yet selected showed "10" / "6/10" — the list now shows "12" / "6/12", ' .
-    'matching the edit page\'s Live Compliance Status panel exactly. Falls back to the DB count for ' .
-    'records that predate TGA loading (totalunits = 0).',
-    '<strong>Generate by Course variant cert-type fix (v5.9.294)</strong> — ' .
-    'When an admin opened the "Generate by Course" page for a <em>variant</em> course (one stored in ' .
-    '<code>qualunit_courses</code> rather than as the primary <code>qualunits.courseid</code>), the ' .
-    'qualbuilder lookup returned null and the system fell back to a generic SoA from course settings ' .
-    'instead of the correct Testamur + Record of Results. Fixed: if the primary lookup finds nothing, ' .
-    'a second query checks <code>qualunit_courses</code> to locate the owning qualbuilder and resolve ' .
-    'the cert type correctly.',
-    '<strong>Enrolment creation UNION fix (v5.9.293)</strong> — ' .
-    'When a student enrolled in a Moodle course, the plugin created AVETMISS enrolment records for any ' .
-    'Qualification Builder units that listed that course as their <em>primary</em> delivery course. ' .
-    'If the same course was also a <em>variant</em> for a unit in a different QB record (e.g. a shared ' .
-    'unit course across two qualification streams), no enrolment record was created for that second QB. ' .
-    'Fixed: both the primary and variant tables are always queried and merged, deduped by unit ID.',
-    '<strong>Autocert UNION fix (v5.9.293)</strong> — ' .
-    'The same OR/fallback pattern in <code>queue_autocert_if_all_units_complete()</code> meant that ' .
-    'when a course is primary in QB-A and a variant in QB-B, completing that course only triggered the ' .
-    'qualification-completion check for QB-A. QB-B\'s auto-certificate was never queued. ' .
-    'Fixed: both qualbuilderid sets are always merged before the per-unit competency check.',
-    '<strong>Testamur vs SoA determination fix (v5.9.293)</strong> — ' .
-    'CRITICAL: <code>check_full_qual_completion()</code> determined whether a student received a full ' .
-    'Testamur + Record of Results (all units complete) or a partial Statement of Attainment. ' .
-    'It checked only the <em>primary</em> course in <code>course_completions</code> for each unit — ' .
-    'a student who completed via a variant course always returned false, resulting in an incorrect SoA. ' .
-    'Fixed: per-unit check now accepts ANY delivery course (primary or variant) as satisfying the unit.',
-    '<strong>Partial SoA unit list fix (v5.9.293)</strong> — ' .
-    '<code>get_completed_units_for_qual()</code> builds the unit list for partial SoA certs. ' .
-    'Previously it only looked at primary-course completions, so units completed via variant courses ' .
-    'were omitted from the SoA. Fixed: variant courseids included in the per-unit completion check.',
-    '<strong>Cert issue date fix for variant completers (v5.9.293)</strong> — ' .
-    'The Generate Certificates page looked up the earliest completion timestamp from ' .
-    '<code>course_completion_crit_compl</code> and <code>course_completions</code> using only primary ' .
-    'courseids. A student who completed via a variant course got no timestamp from either table, ' .
-    'causing the cert to use the current time as the issue date instead of when they actually finished. ' .
-    'Fixed: all delivery courseids (primary + variants) included in the timestamp lookup.',
-    '<strong>SQL mixed-params crash fix (v5.9.292)</strong> — ' .
-    'Opening any saved Qualification Builder record threw "Mixed types of sql query parameters". ' .
-    'The page-load query that fetches variant course chips used positional ? placeholders from ' .
-    '<code>get_in_or_equal()</code> then mixed in a named <code>:is_archive_val</code> parameter — ' .
-    'Moodle\'s DB layer rejects this combination. Fixed by passing <code>SQL_PARAMS_NAMED</code> to ' .
-    '<code>get_in_or_equal()</code> so all parameters use named placeholders.',
-    '<strong>Plugin version display fix (v5.9.292)</strong> — ' .
-    'Moodle\'s plugin overview page showed 5.9.267 on every install regardless of the actual installed version. ' .
-    'A <code>$plugin->release = \'5.9.267\'</code> line in version.php was missing the <code>_prev</code> suffix — ' .
-    'in PHP the last assignment wins, so it overwrote the correct 5.9.29x value. ' .
-    'The portal\'s <code>head -1</code> grep happened to pick the first (correct) line, masking this bug. Fixed.',
-    '<strong>Packaging rules paste box (v5.9.291)</strong> — ' .
-    'Some TGA qualifications (particularly TLI-series) return <code>packagingInformation: null</code> from the ' .
-    'TGA REST API. Previously the system silently saved the number of currently-selected units as the required ' .
-    'total — so a record with 10 units showed "10 required" even though the real rule was 12 (10 core + 2 elective). ' .
-    'The compliance dashboard now shows an amber prompt when this happens. Paste the full Packaging Rules section ' .
-    'from training.gov.au; the text is parsed client-side to extract total/core/elective counts; the three ' .
-    'compliance cards appear immediately and the values are stored when you click Save Qualification.',
-    '<strong>Variant badge readability fix (v5.9.291)</strong> — ' .
-    'The primary linked-course badge (e.g. <em>✓ TLIX0037 26S1</em>) changed from a washed-out green-on-green-tint ' .
-    'to white background with a crisp green border and bold green text — much easier to read at a glance.',
-    '<strong>Compact + add-variant button (v5.9.291)</strong> — ' .
-    'The wide dashed "+ add variant…" select box has been replaced by a small circle + button (18 px). ' .
-    'Clicking it reveals the course dropdown inline; clicking away or selecting a course hides it again. ' .
-    'The button disappears entirely when all available semester courses are already linked.',
-    '<strong>Variant system info banner (v5.9.291)</strong> — ' .
-    'A dismissible amber-blue info panel appears above the unit list once a semester is selected and at least ' .
-    'one unit is linked. It explains in plain English what the primary course badge means, what variant chips ' .
-    'do, and gives a real-world example (three trainer-stream courses all being watched, all students getting certs).',
-    '<strong>Teacher-cohort variant courses per unit (v5.9.290)</strong> — ' .
-    'Each unit row in the Qualification Builder now shows all Moodle courses in the selected semester ' .
-    'that share the same TGA unit code as small chips alongside the primary linked course badge — ' .
-    'for example <em>[✓ TLIX0037 26S1–EL]&nbsp;&nbsp;[26S1–CD ×]&nbsp;&nbsp;[26S1–ND ×]&nbsp;&nbsp;[+]</em>. ' .
-    'Chips are auto-detected when a semester is selected. Remove any you do not want. ' .
-    'Add extras with the + button. Saved to the <code>qualunit_courses</code> junction table.',
-    '<strong>Reconciler watches all variant courses (v5.9.290)</strong> — ' .
-    'The enrolment reconciler previously only queried <code>qualunit_courses</code> for archive ' .
-    '(prior-semester) courses. That restriction is removed — the reconciler now fires for both ' .
-    'teacher-cohort variants (<code>is_archive = 0</code>) and archive courses (<code>is_archive = 1</code>). ' .
-    'Students in any variant course get their AVETMISS NAT00120 enrolment record created automatically.',
-    '<strong>Autocert fires across all variant courses (v5.9.290)</strong> — ' .
-    'Qualification-completion detection now checks variant courses for unit completions in addition to ' .
-    'the primary linked course. This means the system issues a Testamur automatically when a student ' .
-    'achieves Competent on every unit — regardless of which teacher-variant course they were enrolled in.',
-    '<strong>Stream / Variant Name field on qualification (v5.9.285)</strong> — ' .
-    'Each qualification record now has an optional <em>Stream / Variant Name</em> field. ' .
-    'Use it to label delivery streams (e.g. "EL Stream", "CD Cohort", "Evening Intake 26S1") ' .
-    'so multiple QB records for the same qualification code are clearly distinguishable in the list view. ' .
-    'The stream label appears as a small badge on the qualification card.',
-    '<strong>All-semester course dropdown on unit rows (v5.9.285)</strong> — ' .
-    'The primary course dropdown on each unit row previously only showed courses from the selected semester. ' .
-    'It now includes courses from all active semesters so you can link a unit to an archive course or ' .
-    'a cross-semester delivery without switching semesters first.',
-    '<strong>State Funding tab in Plugin Settings (v5.9.49)</strong> — ' .
-    '"State Funding" now appears as a dedicated tab inside Plugin Settings alongside RTO Details, ' .
-    'Platform API, Certificates, USI Settings, ASQA 2025, and Maintenance. ' .
-    'The left-hand sidebar "State Funding" link and the Support Centre guide button both land here directly.',
-    '<strong>Full state/territory regulator list (v5.9.48)</strong> — ' .
-    'The State/Territory Regulator dropdown now covers all 8 states and territories: ' .
-    'ASQA (national), VRQA (VIC), TAC (WA), DESBT/QLD, Skills NSW, SA Skills, DTWD/WA, TASC/TAS, ' .
-    'Skills Tasmania, Skills Canberra/ACT, and NT DITT.',
-    '<strong>State Funding admin settings page (v5.9.43)</strong> — ' .
-    'Configure your RTO\'s state-specific funding parameters for QLD (DTET), NSW (Smart &amp; Skilled), ' .
-    'VIC (Skills First), SA, WA, TAS, NT, and ACT. Once saved, contract codes and funding source ' .
-    'codes pre-fill automatically on every new enrolment.',
+    '<strong>Guided help on every page (v5.9.425)</strong> — '
+    . 'Every page now opens with a consistent, tabbed &ldquo;What it is / Why it matters / How to use it&rdquo; card directly under the breadcrumb, so a first-time user always gets the same clear orientation: what the page does, the compliance it supports, and the steps to use it.',
+    '<strong>RPL evidence rigour (v5.9.424)</strong> — '
+    . 'RPL &amp; Credit Transfer records now capture the superseded/prior unit a student holds and its TGA equivalence (Equivalent / Not equivalent) to the current unit — with an advisory that a not-equivalent mapping needs gap assessment — plus an evidence-to-criteria matrix mapping each item of evidence to the unit requirement it satisfies with an assessor judgement (rules of evidence, Standard 1.2).',
+    '<strong>Pre-enrolment readiness (v5.9.423)</strong> — '
+    . 'Each student profile shows a four-gate readiness card (suitability assessed, student declaration signed, USI verified, information provided), and Compliance Health flags students who have results but no completed suitability review. It reuses your existing suitability and USI data and never touches Moodle enrolments.',
+    '<strong>RPL assessor identity &amp; procedural fairness (v5.9.422)</strong> — '
+    . 'RPL/CT decisions are now tied to a registered assessor chosen from your trainer workforce, with a live green/amber check on their TAE currency (Standard 1.5), and record whether the outcome was communicated to the student, when and how (Standard 1.6). The register gained a &ldquo;Student Notified&rdquo; column.',
+    '<strong>Nominal hours wired end-to-end (v5.9.421)</strong> — '
+    . 'The Qualification Builder now rolls a real qualification nominal-hours total up from the plugin&rsquo;s own authoritative reference table (training.gov.au does not publish nominal hours), flags units still missing a value, and the TAS &ldquo;Total Nominal Hours&rdquo; and volume-of-learning pre-fill from that total.',
+    '<strong>Page declutter (v5.9.420)</strong> — '
+    . 'Removed duplicated, no-compliance-purpose noise: Student Results trimmed to the four meaningful summary tiles, the triple &ldquo;no Moodle accounts created&rdquo; assurance on Data Import collapsed to one, and the Marketing &ldquo;Related pages&rdquo; card removed.',
+    '<strong>Compliance Health (v5.9.399)</strong> — '
+    . 'A live &ldquo;are we audit-ready right now?&rdquo; command centre — first item in the left menu. It shows an overall audit-readiness score plus Quality-Area cards for overdue validations, working-towards trainer deadlines, stale trainer currency, students with results but an unverified USI (certificates you can\'t yet issue), incomplete AVETMISS profiles, survey response rate, and open complaints/appeals — each with a one-click fix link.',
+    '<strong>AVETMISS Validation (v5.9.399)</strong> — '
+    . 'A pre-submission checker (Data &amp; Reporting) that validates every student and enrolment against NCVER edit rules <em>before</em> you export NAT files, so your quarterly submission isn\'t rejected. It splits findings into Errors (will fail) and Warnings, gives a &ldquo;Ready to submit&rdquo; verdict, and exports the full list to CSV.',
+    '<strong>ASQA Compliance Mapping (v5.9.399)</strong> — '
+    . 'Maps every 2025 Standard for RTOs (QA1–QA4) to the plugin feature that supports it, with an honest Covered / Partial / Gap status. Doubles as Standard 4.3/4.4 self-assurance evidence.',
+    '<strong>World-class student profile (v5.9.399)</strong> — '
+    . 'Student Records now has clickable names. Each profile opens with a read-only AVETMISS summary (all codes shown as human-readable labels), a completeness indicator that lists missing fields, the student\'s unit results, and their issued certificates with one-click download.',
+    '<strong>Student certificate access (v5.9.399)</strong> — '
+    . 'Students get a persistent &ldquo;My Certificates&rdquo; link in their navigation and a companion &ldquo;My Certificates&rdquo; dashboard block (installed separately), plus the profile-page link. The portal (mycerts.php) lets them download their own certificate PDFs.',
+    '<strong>Automated weekly compliance alerts (v5.9.399)</strong> — '
+    . 'A scheduled task emails administrators a digest when validations, working-towards deadlines, USI-blocked certificates, 30-day certificate breaches, or incomplete profiles need attention. It sends only when action is actually needed.',
+    '<strong>No writes to Moodle core (v5.9.399)</strong> — '
+    . 'Following a full ASQA practice-guide audit, the plugin now creates and deletes nothing in Moodle core — no enrolments, no course completions, no user accounts. It only reads them. NAT imports flow into the results register and student profiles without touching Moodle enrolments.',
+    '<strong>Certificate integrity safeguards (v5.9.399)</strong> — '
+    . 'Certificates now require a USI that is <em>verified</em> with the Registry (not merely present) before issuing, and issuance is blocked if mandatory RTO details (legal name, provider code, signatory) aren\'t configured. Each certificate snapshots the RTO identity and USI as-issued, so a later settings change can\'t rewrite an old certificate; reissues are faithful copies; and a render-time backstop enforces AQF rules (NRT logo never on a Record of Results, USI never on a Testamur/SoA).',
+    '<strong>Validation, workforce &amp; QI hardening (v5.9.399)</strong> — '
+    . 'Assessment validation now records validator independence and a five-year cycle with overdue tracking; &ldquo;working towards&rdquo; trainers have an enforced 2-year TAE deadline; the Quality Indicator surveys are now the official AQTF Learner/Employer Questionnaires with a proper QI Annual Summary; per-student support/wellbeing records are stored server-side; and complaints, appeals and improvements are audit-logged.',
+    '<strong>Full NAT demographic + address propagation (v5.9.399)</strong> — '
+    . 'After a NAT import, the student\'s AVETMISS demographics AND full street address now flow into their existing profile automatically. The manual &ldquo;Backfill Student Records&rdquo; step carries the full profile too.',
+    '<strong>How It Works page (v5.9.378)</strong> — '
+    . 'A new plain-English overview page, first item in the left menu, explaining the whole system for newcomers.',
+    '<strong>Master Student Roster (v5.9.373)</strong> — '
+    . 'Student Results now opens on a cross-qualification roster: every student in one table with search, qualification/category/status/USI filters, summary pivots, CSV export, and a drill-down to each qualification\'s unit-by-unit grid.',
+    '<strong>Sync results from Moodle completions (v5.9.374)</strong> — '
+    . 'A button on Student Results reads Moodle course completions across every delivery course (any category, including archived and semester-copy courses) and records the competent outcomes in the results register. A "Download unmapped completions" CSV lists any courses it could not match to a unit. Writes only to the plugin register — never creates Moodle accounts, enrolments or completions.',
+    '<strong>Multi-unit courses &amp; old-code equivalents (v5.9.377)</strong> — '
+    . 'A course that teaches more than one unit (e.g. a title listing two unit codes) now credits every unit it delivers. A new setting maps retired unit codes to their current equivalent so completions in older-coded courses still count.',
+    '<strong>Data Import simplified (v5.9.372)</strong> — '
+    . 'The import is now data-only: it populates student profiles and writes unit outcomes to the results register, and sends unmatched students to a review CSV. The old auto-enrol wizard and the Backfill / Fix-Over-Enrolments / Rollback tools have been removed — import never creates Moodle accounts or enrolments.',
 ];
 foreach ($whatsNew as $item) {
     echo html_writer::tag('li', $item);
@@ -405,6 +298,47 @@ echo html_writer::end_tag('ul');
 echo html_writer::end_div();
 
 $supportModules = [
+
+    // ── COMPLIANCE HEALTH ──────────────────────────────────────────────────
+    [
+        'anchor'      => 'compliancehealth',
+        'icon'        => 'shield',
+        'color'       => 'rose',
+        'title'       => 'Compliance Health',
+        'subtitle'    => 'Are we audit-ready right now?',
+        'description' => "The first item in the left menu and your live audit-readiness command centre. It shows an overall readiness score plus a card for each Quality Area, surfacing overdue validations, working-towards trainer deadlines, stale trainer currency, students who have results but an unverified USI (certificates you can't yet issue), incomplete AVETMISS profiles, your survey response rate, and open complaints/appeals. Every item has a one-click fix link so you can act immediately.",
+        'clause_ref'  => 'Standards QA4.3–QA4.4',
+        'clause_text' => 'RTOs must self-assure against the Standards and use monitoring information to identify and address non-compliance before it affects learners',
+        'url'         => new moodle_url('/local/rtocompliance/compliance_health.php'),
+        'link_text'   => 'Open Compliance Health',
+        'how_to'      => [
+            'Open Compliance Health — it is the first item at the top of the left menu',
+            'Read the audit-readiness score at the top for an at-a-glance verdict',
+            'Work down the Quality-Area cards — each lists exactly what is overdue or blocking',
+            'Click any item\'s fix link to jump straight to the record that needs attention',
+            'Re-open the page after resolving items to watch the score climb',
+        ],
+    ],
+
+    // ── ASQA COMPLIANCE MAPPING ────────────────────────────────────────────
+    [
+        'anchor'      => 'asqamap',
+        'icon'        => 'check-circle',
+        'color'       => 'teal',
+        'title'       => 'ASQA Compliance Mapping',
+        'subtitle'    => 'Every 2025 Standard mapped to a feature',
+        'description' => "Maps every 2025 Standard for RTOs (QA1–QA4) to the plugin feature that supports it, with an honest Covered / Partial / Gap status for each. It shows at a glance where you are protected and where you still need to do work outside the system — and doubles as Standard 4.3/4.4 self-assurance evidence you can show an auditor.",
+        'clause_ref'  => 'Standards QA1–QA4 (self-assurance 4.3/4.4)',
+        'clause_text' => 'RTOs must be able to demonstrate how they meet each Standard and maintain evidence of ongoing self-assurance',
+        'url'         => new moodle_url('/local/rtocompliance/asqa_standards_map.php'),
+        'link_text'   => 'Open ASQA Compliance Mapping',
+        'how_to'      => [
+            'Open ASQA Compliance Mapping from the top group of the left menu',
+            'Scan the QA1–QA4 rows to see which plugin feature covers each Standard',
+            'Note any row marked Partial or Gap — these are the areas to address manually',
+            'Use the page as self-assurance evidence in your next ASQA engagement',
+        ],
+    ],
 
     // ── DASHBOARD ──────────────────────────────────────────────────────────
     [
@@ -436,6 +370,7 @@ $supportModules = [
             'Navigate to TAS Generator in the left sidebar',
             'Click "Create New TAS"',
             'Select the qualification — units are auto-populated from training.gov.au',
+            'Total Nominal Hours and Volume of Learning pre-fill from the qualification\'s authoritative nominal-hours total (you can refine against AQF expectations)',
             'Complete each of the 9 sections (the progress bar shows completion)',
             'Use the AI Generate buttons to draft industry consultation feedback and impact statements',
             'Click "Preview" to review the full document before export',
@@ -468,17 +403,18 @@ $supportModules = [
         'color'       => 'teal',
         'title'       => 'RPL & Credit Transfer',
         'subtitle'    => 'Recognition of prior learning register',
-        'description' => "Record and track Recognition of Prior Learning (RPL) applications and Credit Transfer (CT) grants. Maintains the evidence trail ASQA requires to demonstrate fair, consistent, and flexible RPL processes.",
-        'clause_ref'  => 'Standard QA1.5',
-        'clause_text' => 'RTOs must have fair, flexible, and consistent processes for recognising the current skills and knowledge of applicants, including RPL',
+        'description' => "Record and track Recognition of Prior Learning (RPL) applications and Credit Transfer (CT) grants with a full evidence trail. Capture the assessor (from your trainer workforce, with a live TAE-currency check), upload RPL evidence and the source certificate for CT, map each item of evidence to the unit criteria it satisfies, record the superseded→current unit mapping and its TGA equivalence, and note that the outcome was communicated to the student. An approved decision posts the competent outcome (RPL 51 / CT 60) straight into Student Results, certificates and AVETMISS.",
+        'clause_ref'  => 'Standard 1.5–1.7',
+        'clause_text' => 'RTOs must have fair, flexible, valid and consistent processes for recognising the current skills and knowledge of applicants, including RPL and credit transfer, delivered by competent assessors.',
         'url'         => new moodle_url('/local/rtocompliance/rpl.php'),
         'link_text'   => 'Open RPL & Credit Transfer',
         'how_to'      => [
             'Open RPL & Credit Transfer from the QA1 sidebar group',
-            'Use the RPL tab to record an RPL application — select the student, qualification, and units being assessed',
-            'Document the evidence portfolio and assessor decision for each unit',
-            'Use the Credit Transfer tab to record formal CT from a recognised equivalent qualification',
-            'All RPL and CT records are retained as evidence of your Standard 1.5 compliance',
+            'Record an application — select the student, qualification and unit; choose the assessor from your registered trainers (the form checks their TAE currency)',
+            'Attach the evidence files and complete the evidence-to-criteria matrix (each evidence item → the unit requirement it meets + judgement)',
+            'For a superseded unit, enter the prior code and its TGA equivalence; a "not equivalent" mapping needs gap assessment',
+            'For Credit Transfer, upload the issuing RTO source certificate and verify the USI transcript; record the decision and tick "outcome communicated"',
+            'Approved RPL/CT posts the competent outcome into Student Results and flows to certificates and NAT',
         ],
     ],
     [
@@ -540,15 +476,16 @@ $supportModules = [
         'link_text'   => 'Open Qualification Builder',
         'how_to'      => [
             'Navigate to Qualification Builder from the Data &amp; Reports sidebar group and click "Add Qualification"',
-            'Enter the qualification code (e.g. TLI50321) and click "Fetch from training.gov.au" — core units are added automatically and electives are presented for selection',
+            'Enter the qualification code (e.g. ABC12345) and click "Fetch from training.gov.au" — core units are added automatically and electives are presented for selection',
             'Select your semester from the dropdown — the unit-course mapping panel then shows all Moodle courses in that semester',
             'Click "Map All Courses" to auto-link each unit to its matching Moodle course based on the unit code in the course name',
             'Review the auto-detected teacher-cohort variant chips on each unit row (e.g. [✓ EL] [CD ×] [ND ×]) — remove any streams that should not be tracked',
             'Use the [+ add variant…] dropdown on any unit to add a course that was not auto-detected',
-            'Set nominal hours for each unit if they differ from TGA defaults — these flow into your AVETMISS NAT00120 export',
+            'Nominal hours resolve automatically from the plugin\'s authoritative reference table (training.gov.au does not publish them) and roll up to a qualification total; the compliance card flags any unit still missing a value. They flow into your AVETMISS NAT00120 export and the TAS volume of learning',
             'Optionally fill in the Stream / Variant Name field to distinguish this QB record from others with the same qualification code',
             'Click "Validate Packaging" to confirm the unit mix meets training package rules (core count, elective count, prerequisites)',
             'Click "Save" — the reconciler is now watching all linked and variant courses; AVETMISS records and certificates are created automatically',
+            'After creating or importing products, click "Build Course Map from Links" at the top of the Qualification Builder to populate the Course Map from the courses already linked to each unit — this is what turns the Course Map column from "None"/partial into "All" so completion detection and automatic certificate/SoA issuance can find completers. It only adds missing mappings, changes nothing else, and is safe to run repeatedly',
         ],
     ],
     [
@@ -557,22 +494,21 @@ $supportModules = [
         'color'       => 'emerald',
         'title'       => 'Student Results',
         'subtitle'    => 'Unit-by-unit competency tracking &amp; autocert',
-        'description' => "View all students enrolled in each qualification with unit-by-unit competency outcomes (C / NYC / RPL / CT). " .
-                         "Track completion percentages, identify students ready for certification, and export results for AVETMISS reporting. " .
-                         "When all units are Competent (C, RPL, or CT), the system automatically queues a Testamur for the student — " .
-                         "no manual trigger required. The 30-day issuance clock starts from the date the final unit is completed.",
+        'description' => "The main table your RTO looks at. It opens on the Master Roster — every student across every qualification in one place, with search (name, email, USI, client ID) and filters by qualification, category, status and USI health, plus summary pivots and a full-field CSV export. " .
+                         "Click any student to open their qualification's unit-by-unit grid (C / NYC / RPL / CT). Results come from both live Moodle completions and imported history. " .
+                         "Use \"Sync results from Moodle completions\" to pull in completions across every delivery course (any category, including archived/semester-copy courses), and \"Download unmapped completions\" to see any courses that could not be matched to a unit. " .
+                         "When all of a qualification's units are Competent (C, RPL, or CT), the system automatically queues a Testamur — no manual trigger required. The 30-day issuance clock starts from the final unit completion date.",
         'clause_ref'  => 'Compliance Requirements Clause 9(2)',
         'clause_text' => 'RTOs must issue AQF qualifications and statements of attainment only to learners who have been assessed as meeting all requirements',
         'url'         => new moodle_url('/local/rtocompliance/qualbuilder_results.php'),
         'link_text'   => 'Open Student Results',
         'how_to'      => [
-            'Access via the "View Results" button on any qualification in Qualification Builder, or navigate directly from the sidebar',
-            'Select a qualification to view all enrolled students with their unit-by-unit outcomes',
-            'Outcomes: C = Competent (AVETMISS 20), NYC = Not Yet Competent (AVETMISS 30), RPL = Prior Learning granted (AVETMISS 51/52), CT = Credit Transfer (AVETMISS 60)',
-            'Students with 100% completion are highlighted in green — if autocert is enabled they receive their Testamur automatically',
-            'To issue manually: click the "Issue Certificate" button, select the certificate type and audience variant, then confirm',
-            'The issued certificate is saved to the 30-year register and the student can receive it by email or download link',
-            'Export to CSV for external reporting, AVETMISS preparation, or state funding audit evidence',
+            'Open Student Results from the sidebar — you land on the Master Roster showing every student across all qualifications',
+            'Search by name, email, USI or client ID, and filter by qualification, category, status or USI health; sort and export the whole roster to CSV',
+            'Click "Sync results from Moodle completions" to record competent outcomes from Moodle course completions (safe to run repeatedly; writes only to the plugin register)',
+            'Click "Download unmapped completions" to get a CSV of courses the sync could not match to a unit — link or rename those, then sync again',
+            'Click a student\'s "Units" (or open a qualification) to see the unit-by-unit grid: C = Competent (20), NYC = Not Yet Competent (30), RPL = Prior Learning (51/52), CT = Credit Transfer (60)',
+            'Students with all units complete can be issued a Testamur automatically (if autocert is on) or manually via the "Issue Certificate" button',
         ],
     ],
 
@@ -602,19 +538,19 @@ $supportModules = [
         'color'       => 'blue',
         'title'       => 'Student Records',
         'subtitle'    => 'AVETMISS student profiles',
-        'description' => "Manage student enrolment records with complete AVETMISS data fields. Track USI verification status, personal details, disabilities and support needs, and enrolment history for all nationally recognised training.",
+        'description' => "Manage student records with complete AVETMISS data fields. Track USI verification status, personal details, disabilities and support needs, and enrolment history for all nationally recognised training. Student names in the list are now clickable: each opens a world-class profile with a read-only AVETMISS summary (codes shown as plain-English labels), a completeness indicator that lists any missing fields, the student's unit results, and their issued certificates with one-click download. The plugin only reads Moodle enrolments — it never creates accounts or enrols anyone.",
         'clause_ref'  => 'Compliance Standard 7',
         'clause_text' => 'RTOs must accurately collect and report training activity data in accordance with the AVETMISS standard for all nationally recognised training',
         'url'         => new moodle_url('/local/rtocompliance/students.php'),
         'link_text'   => 'Open Student Records',
         'how_to'      => [
-            'Navigate to Student Records from the QA2 sidebar group',
-            'Click "Add Student" to create a new record',
-            'Enter personal details and USI',
-            'Complete all AVETMISS fields (employment status, prior education, disability, indigenous status, country of birth, language at home)',
-            'Link to course enrolments',
-            'The system auto-prompts for missing AVETMISS data when students enrol in NRT courses',
-            'Use the USI Verification button to confirm USI against the national registry',
+            'Navigate to Student Records from the Students &amp; Support sidebar group',
+            'Click "Add Student" to create a new record, or let profiles populate from a NAT import',
+            'Enter personal details and USI, then complete all AVETMISS fields (employment status, prior education, disability, indigenous status, country of birth, language at home)',
+            'Click a student\'s name to open their full profile — AVETMISS summary, completeness check, unit results, issued certificates, and a pre-enrolment readiness panel',
+            'Read the pre-enrolment readiness card: suitability assessed, student declaration signed, USI verified, information provided — each shown as met / warning / not met',
+            'Use the completeness indicator to see exactly which mandatory fields are still missing',
+            'Use the USI Verification button to confirm the USI against the national registry (a verified USI is required before certificates can be issued)',
         ],
     ],
     [
@@ -663,20 +599,20 @@ $supportModules = [
         'color'       => 'green',
         'title'       => 'Certificates',
         'subtitle'    => 'AQF-compliant issuance register',
-        'description' => "Issue all four AQF certificate types: Testamur (full qualification), Statement of Attainment (partial completion), Record of Results, and Certificate of Completion (non-accredited training). Certificates are rendered using your custom visual template, include USI Clause 12 compliance, and are stored in the 30-year register with QR code verification.",
+        'description' => "Issue all four AQF certificate types: Testamur (full qualification), Statement of Attainment (partial completion), Record of Results, and Certificate of Completion (non-accredited training). Issuance is now gated for integrity: the student's USI must be VERIFIED with the Registry (not merely present), and mandatory RTO details (legal name, provider code, signatory) must be configured, or issuance is blocked. Each certificate snapshots the RTO identity and USI as-issued, so a later settings change can't rewrite an old certificate, and reissues are faithful copies. A render-time backstop enforces the AQF rules (NRT logo never on a Record of Results, USI never on a Testamur/SoA). Certificates are stored in the 30-year register with QR code verification, and students can download their own via the My Certificates portal.",
         'clause_ref'  => 'Compliance Requirements Clause 9(2)',
         'clause_text' => 'RTOs must issue AQF qualifications and statements of attainment that meet all AQF requirements within 30 calendar days of a student completing all requirements',
         'url'         => new moodle_url('/local/rtocompliance/certificates.php'),
         'link_text'   => 'Open Certificates',
         'how_to'      => [
-            'Navigate to Certificates in the QA2 sidebar group',
+            'Navigate to Issued Certificates in the Certificates sidebar group',
             'View the list of issued certificates — the dashboard flags any certificates overdue for issue (30+ days since completion)',
             'To issue a new certificate, go to Student Results and click "Issue Certificate" for a completed student',
             'Select the certificate type (Testamur / Statement of Attainment / Record of Results / Certificate of Completion)',
             'Select the certificate audience (general, apprentice, VET-FEE, etc.) to apply the correct template design',
-            'Click "Generate" — the PDF is created using your active custom template',
-            'Download, email to the student, or reissue from the certificate register',
-            'USI Clause 12 alert appears if the student\'s USI has not been verified — this is a warning, not a block',
+            'Click "Generate" — the PDF is created using your active custom template and the RTO identity + USI are snapshotted onto it',
+            'Download, email to the student, or reissue from the certificate register (reissues are exact copies of the original)',
+            'Issuance is blocked if the student\'s USI is not verified or mandatory RTO details are missing — resolve these first (Compliance Health lists the blocked students)',
         ],
     ],
     [
@@ -719,6 +655,25 @@ $supportModules = [
             'Optionally enter a sample student name',
             'Click "Generate Test PDF" — the PDF opens in a new tab',
             'Use this to check layout, logos, wording, and mandatory fields before approving for live use',
+        ],
+    ],
+    [
+        'anchor'      => 'natvalidate',
+        'icon'        => 'check-circle',
+        'color'       => 'emerald',
+        'title'       => 'AVETMISS Validation',
+        'subtitle'    => 'Pre-submission NAT checker',
+        'description' => "Run this before you export your NAT files. It validates every student and enrolment against the NCVER edit rules that the collection system applies — so your quarterly submission isn't rejected after you upload it. Findings are split into Errors (which will fail the submission) and Warnings, you get a clear \"Ready to submit\" verdict, and the full list exports to CSV so you can work through it.",
+        'clause_ref'  => 'Compliance Standard 7 / AVETMISS 8.0',
+        'clause_text' => 'RTOs must submit training activity data that conforms to the AVETMISS standard and NCVER validation rules',
+        'url'         => new moodle_url('/local/rtocompliance/nat_validate.php'),
+        'link_text'   => 'Open AVETMISS Validation',
+        'how_to'      => [
+            'Open AVETMISS Validation from the Data &amp; Reporting sidebar group',
+            'Run the check — every student and enrolment is tested against the NCVER edit rules',
+            'Fix the Errors first (these will fail your submission); then review the Warnings',
+            'Export the findings to CSV if you want to work through them offline',
+            'When you reach the "Ready to submit" verdict, go to AVETMISS Export and generate your NAT files',
         ],
     ],
     [
@@ -767,18 +722,17 @@ $supportModules = [
         'color'       => 'sky',
         'title'       => 'Data Import',
         'subtitle'    => 'Bulk import from NAT files or CSV',
-        'description' => "Import student enrolment data in bulk from AVETMISS NAT files or CSV. Useful when migrating from another SMS, importing historical records, or bulk-loading enrolments from an external system. Before importing, make sure Qual Builder is set up — it defines your qualifications, units, and which Moodle courses deliver each unit. Without it, students cannot be matched to courses or issued certificates.",
+        'description' => "Import student profile and outcome data in bulk from AVETMISS NAT files or CSV, e.g. when migrating from another student management system or bringing in historical records. Import is data-only: it populates student profiles and writes unit outcomes to the results register. It does NOT create Moodle accounts, enrol students, or issue certificates. Students who can't be matched to an existing profile go to a review CSV. Set up Qual Builder first — it defines your qualifications, units, and which Moodle courses deliver each unit.",
         'clause_ref'  => 'Compliance Standard 7',
         'clause_text' => 'RTOs must maintain accurate and complete student records in accordance with AVETMISS data requirements',
         'url'         => new moodle_url('/local/rtocompliance/data_import.php'),
         'link_text'   => 'Open Data Import',
         'how_to'      => [
-            '<strong>Before you start — Set up Qual Builder:</strong> Go to <em>Qual Builder</em> in the sidebar. Add every qualification your RTO delivers (use "Fetch from TGA" to auto-fill units). For each unit, link it to the Moodle course that delivers it. You only need to do this once — come back and update it when you add new qualifications.',
-            '<strong>Step 1 — Upload NAT Files:</strong> On the Data Import page, choose your NAT file set (NAT00060, NAT00080, NAT00120, etc.) and upload. This loads all student data into the RTO Compliance database. Nothing appears in Student Records yet and no Moodle accounts are created.',
-            '<strong>Step 2 — Confirm &amp; Import:</strong> Review the groups of students by qualification and semester shown on the next page. Confirm each group to save their data to the database. Still no Moodle accounts or enrolments at this stage.',
-            '<strong>Step 3a — In-progress students (Auto-Enrol):</strong> For students who are still actively working towards their certificate and need Moodle access — use the Auto-Enrol step. <strong>Only students with at least one unit still in progress</strong> (AVETMISS outcome code <code>70</code> — Continuing Enrolment) are processed. Students whose <em>all</em> units have terminal outcomes (20 Competent, 30 Not Yet Achieved, 40 Withdrawn, 51/52/53 RPL, 60/61 Credit Transfer, etc.) are automatically skipped — they don\'t need Moodle course access. For each in-progress student, it creates their Moodle login, creates their Student Record, and enrols them in courses. <strong>Unit-accurate enrolment (v5.9.57, on by default):</strong> each student is only enrolled into the specific Moodle courses whose <em>Course ID number</em> matches a unit code in their NAT00120 file — so a student studying three units only gets access to those three courses, not every course in the category. Courses with no ID number configured are enrolled unconditionally. Turn the toggle off on the form to revert to the legacy behaviour (enrol into all visible courses in the category).',
-            '<strong>Step 3b — Completed &amp; historical students (Backfill Qual Builder):</strong> For students with terminal outcomes — completed, withdrawn, RPL, credit transfer — who don\'t need Moodle access but do need a certificate, use <em>Backfill Qual Builder</em> (shortcut button on the Data Import page). This creates a Student Record and qualification history for every eligible student in the NAT database who doesn\'t have one yet, without creating Moodle accounts or course enrolments.',
-            '<strong>Check your work:</strong> Use <em>Verify NAT Data</em> to cross-check every student against the AVETMISS database, Moodle accounts, and Student Records. It shows you at a glance who is complete, who is missing a record, and who needs attention.',
+            '<strong>Before you start — Set up Qual Builder:</strong> Go to <em>Qualification Builder</em> in the sidebar. Add every qualification your RTO delivers (use "Fetch from TGA" to auto-fill units), and for each unit link the Moodle course that delivers it. You only need to do this once — update it when you add new qualifications.',
+            '<strong>Step 1 — Upload NAT files:</strong> On the Data Import page, choose your NAT file set (NAT00080, NAT00120, etc.) and upload. This loads the student data into the RTO Compliance database. No Moodle accounts are created.',
+            '<strong>Step 2 — Confirm &amp; import:</strong> Review the groups of students by qualification and semester, then confirm each group. This populates the matching student profiles and writes their unit outcomes into the results register — the same register Student Results reads from.',
+            '<strong>Step 3 — Review unmatched students:</strong> Any students in the file that can\'t be matched to an existing profile are listed for you to download as a review CSV and reconcile manually. Import never creates Moodle logins or enrolments — the auto-enrol wizard and the old Backfill / Fix-Over-Enrolments / Rollback tools have been removed.',
+            '<strong>Check your work:</strong> Use <em>Verify NAT Data</em> to cross-check students against the AVETMISS database and their Student Records, and open <em>Student Results</em> to see the imported outcomes in the roster. To pull in current Moodle completions as well, use "Sync results from Moodle completions" on Student Results.',
         ],
     ],
     [
@@ -1036,416 +990,8 @@ foreach ($supportModules as $module) {
 
 echo html_writer::end_div();
 
-$faq_categories = [
-
-    // ── GETTING STARTED ────────────────────────────────────────────────────
-    [
-        'category' => 'Getting Started',
-        'icon'     => 'layout-dashboard',
-        'faqs'     => [
-            [
-                'question' => 'What should I do first after installing the plugin?',
-                'answer'   => 'Start with four quick setup steps: (1) Go to Site Administration &rarr; AI RTO Compliance &rarr; Settings and enter your RTO name, RTO number, and AVETMISS reporting identifier. (2) Open Qualification Builder and add your qualifications — fetch their units from training.gov.au. (3) Add your trainers in the Trainer Register and record their TAE qualifications. (4) Add your students in Student Records. Once those four are complete, your compliance dashboard will start showing real data.',
-            ],
-            [
-                'question' => 'What do the coloured tiles on the compliance dashboard mean?',
-                'answer'   => 'Each tile represents one area of the Standards for RTOs 2015. Red tiles require urgent attention — something is overdue or non-compliant. Amber tiles are approaching a deadline. Green tiles are compliant. Grey tiles have no records yet (which is itself a compliance risk if that area is part of your scope). Click any tile to jump straight to that module.',
-            ],
-            [
-                'question' => 'Does the plugin work with any version of Moodle?',
-                'answer'   => 'The plugin is developed and tested against Moodle 4.1 LTS and later. It will install on Moodle 3.11 but some hook-based features (such as the automatic header/footer injections) require Moodle 4.3+. If you are on an older Moodle, those features degrade gracefully — they simply do not appear rather than causing errors.',
-            ],
-            [
-                'question' => 'Where do I enter my RTO number and ABN?',
-                'answer'   => 'Go to Site Administration &rarr; Plugins &rarr; Local plugins &rarr; AI RTO Compliance &rarr; Settings. The General section at the top has fields for your RTO name, RTO number (your ASQA registration number), ABN, AVETMISS reporting identifier, and contact details. These values are used on certificates, in NAT file headers, and throughout the plugin.',
-            ],
-            [
-                'question' => 'Can more than one administrator use the plugin at the same time?',
-                'answer'   => 'Yes — the plugin is fully multi-user. Any Moodle user with the site administrator role or the custom <code>local/rtocompliance:manage</code> capability can access and edit records simultaneously. All changes are written to the Audit Log with the user\'s name and timestamp, so you always know who changed what.',
-            ],
-            [
-                'question' => 'I just installed the plugin and the dashboard shows no data — is something wrong?',
-                'answer'   => 'No — this is normal for a fresh install. The dashboard tiles only show counts from records you have created. Start by adding at least one qualification in Qualification Builder, one trainer in the Trainer Register, and one student in Student Records. After that, the relevant dashboard tiles will update within a few minutes (some counts are cached by Moodle for up to 10 minutes).',
-            ],
-        ],
-    ],
-
-    // ── QA1 – TRAINING & ASSESSMENT ────────────────────────────────────────
-    [
-        'category' => 'QA1 – Training & Assessment',
-        'icon'     => 'clipboard-list',
-        'faqs'     => [
-            [
-                'question' => 'How many sections does a TAS need to cover?',
-                'answer'   => 'The TAS Generator has 9 sections, which cover everything ASQA expects to see in a Training and Assessment Strategy: qualification details, target cohort, industry consultation evidence, volume of learning, delivery modes, resources and facilities, trainer credentials mapped to units, assessment design, reasonable adjustments, LLN considerations, third-party delivery, transition arrangements, and continuous improvement. All 9 sections must be completed before the system allows you to export.',
-            ],
-            [
-                'question' => 'How often do I need to validate my assessments?',
-                'answer'   => 'Standard QA1.5 requires assessment tools and practices to be validated within a 5-year cycle, with high-risk products prioritised for more frequent review. The Validation Schedule uses a risk-based approach — products flagged as high risk are recommended for annual validation. The compliance dashboard shows any overdue validations so nothing slips past the 5-year mark.',
-            ],
-            [
-                'question' => 'What is the difference between RPL and Credit Transfer?',
-                'answer'   => 'Recognition of Prior Learning (RPL) involves an assessor evaluating a student\'s existing skills and knowledge against unit competency requirements — it requires an assessment process and a documented evidence portfolio. Credit Transfer (CT) is simpler: it recognises a completed unit from another RTO or institution where the unit code is identical or equivalent, with no reassessment required. Both are recorded in the RPL & Credit Transfer register and appear as AVETMISS outcome codes 51/52 (RPL) and 60 (CT).',
-            ],
-            [
-                'question' => 'Do I need to register every site where I deliver training?',
-                'answer'   => 'Yes — Standard QA1.8 requires you to ensure all training and assessment environments are safe and appropriate. ASQA will ask for evidence of this during an audit. Use the Delivery Locations register to record every physical campus, workplace delivery site, and online environment used for training. Include the WHS compliance status and last inspection date for each location.',
-            ],
-            [
-                'question' => 'What happens when a qualification on my scope gets superseded?',
-                'answer'   => 'When training.gov.au marks a qualification as superseded or deleted, you have a teach-out period (typically 12 months) during which existing students can complete, but you cannot enrol new students. Open Training Product Transitions and create a Transition Plan for the affected qualification. You can set the teach-out end date and optionally link the Moodle course to automatically close self-enrolment on that date. All current students need a documented transition strategy recorded in the plan.',
-            ],
-            [
-                'question' => 'The training.gov.au fetch is not returning any units — what do I check?',
-                'answer'   => 'First, check that the qualification code is correct (e.g. TLI50321 — no spaces, correct version suffix). Second, check your server can reach <code>training.gov.au</code> on port 443 — some hosting providers block outbound SOAP calls. Third, try purging Moodle caches (Site Administration &rarr; Development &rarr; Purge all caches) and retrying. If the problem persists, the training.gov.au SOAP API may be experiencing downtime — check their status page and try again later.',
-            ],
-            [
-                'question' => 'What do the competency outcome codes C, NYC, RPL, and CT mean?',
-                'answer'   => 'C = Competent (AVETMISS 20) — the student has demonstrated competency in the unit. NYC = Not Yet Competent (AVETMISS 30) — the student has not yet met the standard. RPL = Recognition of Prior Learning granted (AVETMISS 51). CT = Credit Transfer (AVETMISS 60). A student needs C, RPL, or CT on every unit in a qualification before a Testamur can be issued. In Student Results, units showing these codes are shaded accordingly so you can see at a glance who is ready for certification.',
-            ],
-            [
-                'question' => 'Can I run packaging rules validation before issuing a certificate?',
-                'answer'   => 'Yes — in Qualification Builder, click the "Validate Packaging" button on any qualification. The packagingrules validator checks that the unit selection meets the minimum core count, minimum and maximum elective counts, and any prerequisite rules specified in the training package. A green pass means the combination is valid for certification; a red fail shows exactly which rule was not met.',
-            ],
-            [
-                'question' => 'What are teacher-cohort variant courses and why do I need them?',
-                'answer'   => 'Many RTOs run the same unit across multiple Moodle courses at the same time — for example TLIX0037 delivered separately by three different trainers (a CD stream, an EL stream, and an ND stream). Without variant course support, only students in the single "primary" linked course get their AVETMISS enrolment record created and their certificate issued automatically. Students in the other streams were invisible to the system. Variant courses solve this: on each unit row in the Qualification Builder you will see small chips for every Moodle course in the semester that shares that unit code — e.g. <strong>[✓ EL] [CD ×] [ND ×] [+ add variant…]</strong>. All chipped courses are watched by the reconciler, so students in any stream get their records and certs automatically.',
-            ],
-            [
-                'question' => 'How do variant course chips work in the Qualification Builder?',
-                'answer'   => 'When you select a semester in the Qualification Builder, clicking "Map All Courses" (or changing the semester) auto-detects all Moodle courses whose short name contains the unit code. The primary course gets the green ✓ badge; all others appear as grey chips. Click the × on a chip to remove a course you do not want watched (e.g. an old test course). Use the [+ add variant…] dropdown to manually add a course that was not auto-detected. If you promote a variant to the primary course (by changing the primary dropdown), that course is automatically removed from the chips. Changes only take effect when you click "Save".',
-            ],
-            [
-                'question' => 'How does automatic certificate issuance (autocert) work?',
-                'answer'   => 'Every time a Moodle course completion event fires, the enrolment reconciler checks whether the student now has Competent outcomes (C, RPL, or CT) on every unit in the qualification — across the primary linked course and all variant courses. If all units are complete, the system automatically generates and saves a Testamur to the certificate register, sets the student\'s programme outcome to Complete, and records the AVETMISS result code. No manual action is required. The 30-day issuance clock in Compliance Requirements Clause 9(2) begins from the date the final course completion fires.',
-            ],
-            [
-                'question' => 'Can I have two Qualification Builder records for the same qualification code?',
-                'answer'   => 'Yes — this is intentional and supported. Use the optional <em>Stream / Variant Name</em> field on the qualification record to distinguish them (e.g. "Evening Intake 26S1", "CD Stream"). The stream label appears as a small badge in the QB list view so staff can tell them apart at a glance. Each record has its own unit–course mappings and variant chips, allowing completely different delivery configurations under the same TGA qualification code.',
-            ],
-        ],
-    ],
-
-    // ── QA2 – STUDENT SUPPORT ──────────────────────────────────────────────
-    [
-        'category' => 'QA2 – Student Support & Enrolment',
-        'icon'     => 'users',
-        'faqs'     => [
-            [
-                'question' => 'What does Standard 2.1 require me to show prospective students?',
-                'answer'   => 'Standard QA2.1 requires you to provide accurate, accessible, and up-to-date information about your training products, services, fees, refund policy, complaints process, and the certificate each course leads to — before a student enrols. The Marketing Information register helps you document that your website, brochures, and social media content have been reviewed for accuracy. Keep a record of what was reviewed, who approved it, and when — ASQA will ask for this.',
-            ],
-            [
-                'question' => 'How do I add a new student?',
-                'answer'   => 'Navigate to Student Records in the QA2 sidebar group and click "Add Student". Enter the student\'s full legal name, date of birth, contact details, and USI. For nationally recognised training, complete all AVETMISS fields — the system highlights the mandatory fields in red and will not allow the record to be saved with missing mandatory data. Once saved, the student appears in Student Results for any qualification linked to their course enrolment.',
-            ],
-            [
-                'question' => 'What AVETMISS fields are mandatory for every student?',
-                'answer'   => 'For nationally recognised training (NRT), NCVER requires 11 fields as mandatory: given name, family name, date of birth, gender, residential address (suburb, state, postcode), country of birth, indigenous status, language spoken at home, highest school level completed, labour force status, and disability/impairment indicator. The student profile completeness checker flags any of these that are missing so you can follow up before your AVETMISS submission deadline.',
-            ],
-            [
-                'question' => 'What is a USI and do all students need one?',
-                'answer'   => 'A Unique Student Identifier (USI) is a reference number that creates an online record of an individual\'s nationally recognised VET training. Every student enrolled in NRT must provide a USI before a certificate can be issued (Clause 12 of the USI Act). International students and some other exempt groups may be exempt. Use the USI Verification button on a student\'s profile to confirm their USI against the national registry in real time.',
-            ],
-            [
-                'question' => 'What is the Student Suitability Check for?',
-                'answer'   => 'Standard QA2.2 requires RTOs to assess whether a prospective student has the LLN (Language, Literacy and Numeracy) skills and meets the entry requirements for the qualification before they enrol. The Student Suitability Check is a 4-stage digital form sent by email to the student. It collects evidence of entry requirements (Stage 1), shows the LLN assessment result (Stage 2), displays the system\'s suitability decision with plain-language advice (Stage 3), and captures the student\'s signed declaration (Stage 4). This creates an auditable record that your admissions process is fair and transparent.',
-            ],
-            [
-                'question' => 'What is the Student Support System page for — is it per student?',
-                'answer'   => 'No — the Student Support page is the organisation-level configuration. Here you set which support services your RTO offers (e.g. language support, counselling, financial assistance, flexible scheduling), which types of reasonable adjustments are available, and your diversity and wellbeing policies. These settings become the options that trainers choose from when they complete a per-student support plan via the Trainer Input page. Think of it as the master menu — trainers select from it for each student.',
-            ],
-            [
-                'question' => 'How do I issue a certificate?',
-                'answer'   => 'Navigate to Student Results and find a student who shows 100% completion across all required units. Click the "Issue Certificate" button. Select the certificate type (Testamur for a full qualification, Statement of Attainment for partial, Record of Results, or Certificate of Completion for non-accredited). Select the audience variant if applicable (e.g. apprentice, VET-FEE, international). The PDF is generated using your active custom template and saved to the 30-year certificate register automatically. You can then download it or email it directly to the student.',
-            ],
-            [
-                'question' => 'What is the 30-day rule for issuing certificates?',
-                'answer'   => 'Compliance Requirements Clause 9(2) requires RTOs to issue AQF qualifications and statements of attainment within 30 calendar days of the student meeting all requirements for the certification. The Certificates module tracks the gap between the date of completion and the date of issue. Any certificate that took more than 30 days to issue is flagged as "Issued Late" on the dashboard — this is an ASQA compliance breach if it occurs regularly.',
-            ],
-            [
-                'question' => 'What are the four certificate types and when do I use each one?',
-                'answer'   => '<strong>Testamur</strong> — issued when a student completes all required units in a nationally recognised qualification. This is the actual qualification certificate. <strong>Statement of Attainment (SOA)</strong> — issued when a student completes one or more nationally recognised units but not a full qualification. <strong>Record of Results (ROR)</strong> — a supplementary document listing all units attempted and their outcomes; often issued alongside a Testamur. <strong>Certificate of Completion</strong> — for non-accredited (non-NRT) training where no AQF qualification is awarded.',
-            ],
-            [
-                'question' => 'What mandatory elements must appear on an AQF certificate?',
-                'answer'   => 'Per the AQF Certification Documentation specification and the ASQA Sample Forms fact sheet, a Testamur must include: the RTO\'s registered legal name and RTO number; the AQF certification logo; the NRT logo; the student\'s full legal name; the qualification code and full title exactly as it appears on training.gov.au; the words "This qualification is recognised within the Australian Qualifications Framework"; the issue date; and the authorised signatory\'s name and title. The Certificate Templates validator will flag any missing mandatory element before allowing a template to be approved.',
-            ],
-            [
-                'question' => 'Can I have a different certificate design for each certificate type?',
-                'answer'   => 'Yes — the Certificate Templates module supports separate active templates for each of the four certificate types (Testamur, SOA, Record of Results, Certificate of Completion) and up to nine audience variants (general, apprentice, VET-FEE, international, traineeship, school-based, recognition, workplace, fee-for-service). Each combination can have its own approved template. If no custom template is active for a particular type/audience combination, the system falls back to the built-in ASQA-compliant default.',
-            ],
-            [
-                'question' => 'How do I preview what my certificate will look like before issuing real ones?',
-                'answer'   => 'Use the Test Certificate Generator (QA2 sidebar group &rarr; Test Certificate). Select the certificate type, choose the audience variant, and click "Generate Test PDF". The test uses the exact same rendering pipeline as a live certificate — your active custom template, your uploaded logos, and real field positions — but uses a synthetic student name and does not save anything. Use this every time you update your template design to confirm it looks correct before it goes to real students.',
-            ],
-            [
-                'question' => 'What NAT files do I need to generate for NCVER?',
-                'answer'   => 'For a standard AVETMISS collection you need 10 NAT files: NAT00010 (training organisation), NAT00020 (training organisation delivery locations), NAT00030 (qualification/course), NAT00060 (subject/unit), NAT00080 (client), NAT00085 (disability), NAT00090 (prior educational achievement), NAT00100 (enrolment), NAT00120 (subject enrolment), and NAT00130 (outcome). The NAT Export module generates all 10 as a ZIP file ready for submission to your State Training Authority or NCVER directly.',
-            ],
-            [
-                'question' => 'Can I import student data from my previous student management system?',
-                'answer'   => 'Yes — use Data Import. It accepts two formats: a NAT file set (if your old system can export AVETMISS-compliant NAT files) or the plugin\'s own CSV import template. The importer validates every row before writing to the database — it checks for duplicate USIs, invalid AVETMISS codes, missing mandatory fields, and date format errors. A preview screen shows exactly how many records will be created, updated, or skipped before you confirm the import.',
-            ],
-            [
-                'question' => 'How do I send a Quality Indicator survey to students?',
-                'answer'   => 'Open Quality Indicator Surveys from the QA2 sidebar group and click "Send Survey". Select either Learner Engagement or Employer Satisfaction as the survey type, then choose the recipients (individual students, all students in a course, or all completions within a date range). Students receive an email with a unique link to their survey — no Moodle login is required to respond. Results appear in the Reports tab as they come in. Export to CSV for your annual NCVER QI submission.',
-            ],
-            [
-                'question' => 'How do I record a formal complaint?',
-                'answer'   => 'Open Complaints & Appeals and click "Add Complaint" on the Complaints tab. Complete the complaint form — you can mark it as anonymous if the complainant has requested confidentiality. Select a category (academic, administrative, fees, discrimination, etc.), assign an investigator, and set a resolution target date. ASQA expects complaints to be acknowledged within 5 business days and resolved within 60 days. Document all investigation notes and the final outcome in the system. If the issue is systemic, use the Improvement tab to create a linked improvement action.',
-            ],
-            [
-                'question' => 'What is the difference between a complaint and an appeal?',
-                'answer'   => 'A complaint is about any aspect of your RTO\'s services, products, staff, or facilities — it can come from a student, employer, or member of the public. An appeal is specifically a formal challenge to an assessment decision — a student who believes they were assessed unfairly. Both are managed through the Complaints & Appeals module but on separate tabs, and both feed into your continuous improvement register. ASQA requires written policies covering both, separate processes, and records of all matters received and resolved.',
-            ],
-        ],
-    ],
-
-    // ── QA3 – VET WORKFORCE ────────────────────────────────────────────────
-    [
-        'category' => 'QA3 – VET Workforce',
-        'icon'     => 'user-check',
-        'faqs'     => [
-            [
-                'question' => 'What TAE qualifications must trainers hold?',
-                'answer'   => 'Under Standard QA3.2, trainers who design and deliver training must hold at minimum a TAE40116 (or TAE40122) Certificate IV in Training and Assessment, or a higher-level qualification in adult education. Trainers who only assess (roles 2A–2C) must hold both a relevant Skill Set from the TAE Training Package and the TAESS00001 or TAESS00011 assessor skill set, or a TAE40116/40122 qualification. There is no exemption — every trainer and assessor in your register must meet these requirements, or be currently working towards them under supervision.',
-            ],
-            [
-                'question' => 'What are the trainer role classifications (1A through 3B)?',
-                'answer'   => 'The plugin uses ASQA\'s role matrix: <strong>1A</strong> — holds TAE Cert IV + vocational competency + industry currency (can train and assess). <strong>1B</strong> — holds higher adult education qual + vocational competency + currency (can train and assess). <strong>1C</strong> — holds TAE Cert IV but vocational competency is current practice only (must be supervised by 1A/1B for assessment). <strong>1D</strong> — significant industry experience, no TAE yet (can train under supervision, cannot assess). <strong>1E</strong> — working towards TAE (must be supervised for all delivery). <strong>2A/2B/2C</strong> — assessors with varying levels of TAE completion (cannot deliver training, only assess). <strong>3A/3B</strong> — validators (review assessment tools and practices, typically 1A or 1B holders with additional validation experience).',
-            ],
-            [
-                'question' => 'What is vocational competency and how do I record it?',
-                'answer'   => 'Vocational competency means the trainer has relevant skills and knowledge in the vocation they are training — they are not just qualified to train, they also know their subject matter. ASQA accepts several types of evidence: a formal qualification in the relevant field, demonstrated industry experience (usually 3+ years), participation in professional development activities, or a combination. In the Trainer Register, click on a trainer and use the Vocational Competency section to select the evidence types they hold and record the details. These records must be kept current.',
-            ],
-            [
-                'question' => 'What is industry currency and how often does it need updating?',
-                'answer'   => 'Industry currency means the trainer has maintained up-to-date knowledge of current industry practices — they are not teaching outdated methods. ASQA expects trainers to have engaged with their industry within the last 12–24 months, usually through workplace visits, professional memberships, short courses, or attending industry events. Use the Industry Currency tab on a trainer\'s profile to record each currency activity with its date. The dashboard flags trainers whose last recorded currency activity is more than 12 months old.',
-            ],
-            [
-                'question' => 'How often should trainer credentials be reviewed?',
-                'answer'   => 'Best practice under Standard QA3.2 is an annual credential review for every trainer and assessor. During each review, confirm that their TAE qualification is still current (some units have expiry requirements), that vocational competency evidence is documented and recent, and that industry currency activities have been recorded within the last 12 months. Set the "Next Review Date" on each trainer\'s profile — overdue reviews are flagged in red on the compliance dashboard and in the Trainers & Assessors module.',
-            ],
-            [
-                'question' => 'What is the Supervision Log for?',
-                'answer'   => 'When a trainer is in roles 1C, 1D, 1E, 2B, or 2C — meaning they are still working towards a full TAE qualification or have limited assessment rights — the RTO must supervise their delivery and/or assessment and document that supervision. The Supervision Log records each session: who supervised whom, the date, how long the session ran, what activities were covered, and the supervisor\'s sign-off. These records are the evidence ASQA needs to confirm you are not leaving unqualified trainers to assess students unsupervised.',
-            ],
-            [
-                'question' => 'What does ASQA look for in Standard QA3.2 during an audit?',
-                'answer'   => 'ASQA auditors will check: (1) that every trainer and assessor in your Trainer Register holds the required TAE qualification for their role classification; (2) that vocational competency evidence exists for each trainer, mapped to the qualifications they deliver; (3) that industry currency activities are documented and current; (4) that any trainer working under supervision has a Supervision Log; and (5) that your VET Workforce Management register shows you have sufficient staffing to meet your scope. The VET Workforce Management page in this plugin is designed to generate the evidence for item 5.',
-            ],
-        ],
-    ],
-
-    // ── QA4 – GOVERNANCE ───────────────────────────────────────────────────
-    [
-        'category' => 'QA4 – Governance & Quality',
-        'icon'     => 'building',
-        'faqs'     => [
-            [
-                'question' => 'What is the Annual Declaration of Compliance?',
-                'answer'   => 'The Annual Declaration of Compliance (ADC) is a statutory declaration that the CEO or equivalent of your RTO must submit to ASQA every year — typically due by 30 June. It declares that your RTO has complied with the Standards for RTOs 2015 throughout the preceding year. Use the Governance module to record the ADC lodgement date and ASQA reference number each year. ASQA will check this record during any audit.',
-            ],
-            [
-                'question' => 'Who counts as a "governing person" and do I need to register them all?',
-                'answer'   => 'A governing person is any individual with significant influence over your RTO\'s operations — directors, trustees, partners, and senior managers (CEO, CFO, RTO Manager). Standard QA4.1 requires all governing persons to be "fit and proper" (no relevant convictions, not a disqualified person under the NVETR Act). Use the Governing Persons register in the Governance module to record each person\'s name, role, appointment date, and fit-and-proper declaration status.',
-            ],
-            [
-                'question' => 'What is a material change and when must I notify ASQA?',
-                'answer'   => 'A material change is any significant change to your RTO\'s structure, operations, or compliance that ASQA needs to know about — for example: a change in ownership or controlling entity, a change in CEO or RTO Manager, adding or removing a principal delivery location, a significant change in scope, or a legal/financial issue affecting your ability to operate. The NVETR Act requires notification to ASQA within 90 days (for most changes) or immediately for urgent matters. Record all material changes in the Governance module\'s Material Changes tab so you have evidence of timely notification.',
-            ],
-            [
-                'question' => 'How do I record and rate a risk?',
-                'answer'   => 'Open Risk Management and click "Add Risk". Give the risk a clear title (e.g. "Key trainer leaving with no succession plan"), select the category (strategic, operational, financial, or compliance), and write a brief description. Rate the likelihood (1–5 scale) and the consequence (1–5 scale) — the system multiplies these to calculate an overall risk rating. Write a treatment plan describing what you will do to reduce the risk, assign a risk owner, and set a review date. High-rated risks (rating of 15+) are flagged in red on the compliance dashboard.',
-            ],
-            [
-                'question' => 'What continuous improvement evidence does ASQA expect?',
-                'answer'   => 'Standard QA4.4 requires your RTO to have a systematic continuous improvement system. ASQA auditors look for: (1) Quality Indicator data collected from learners and employers and submitted to NCVER; (2) improvement actions that were triggered by complaints, appeals, survey feedback, or self-assurance activities; (3) evidence that those actions were actually implemented and their effectiveness reviewed; and (4) the cycle repeating each year. The Complaints & Improvement module, the QI Surveys module, and the ASQA Practice Guides self-assurance tool together provide this evidence trail.',
-            ],
-        ],
-    ],
-
-    // ── COMPLIANCE STANDARDS ───────────────────────────────────────────────
-    [
-        'category' => 'Compliance Standards',
-        'icon'     => 'shield',
-        'faqs'     => [
-            [
-                'question' => 'What counts as a third-party arrangement?',
-                'answer'   => 'Any agreement where another organisation delivers training or assessment on your RTO\'s behalf — or manages your students — counts as a third-party arrangement under Compliance Requirements, Division 3 Clause 17. This includes subcontractors who deliver in workplaces, auspiced arrangements, licensed trainer networks, and online content providers. Every such arrangement must be covered by a written agreement, and your RTO must monitor the quality of the delivery. The Third-Party Arrangements register is where you record these agreements and document your quality oversight activities.',
-            ],
-            [
-                'question' => 'What is the $1,500 prepaid fee rule?',
-                'answer'   => 'Compliance Requirements, Division 3 Clause 18 of the Standards for RTOs 2025 prohibits RTOs from collecting more than $1,500 in prepaid fees from any individual student before the commencement of the training they have paid for. This protects students from losing large sums if the RTO closes. You can collect the full course fee in advance — but only up to $1,500 before training starts, with the remainder collected progressively as training proceeds. The Fee Protection module tracks prepaid balances so you never accidentally breach the $1,500 threshold.',
-            ],
-            [
-                'question' => 'Can I collect more than $1,500 if I have a fee protection mechanism in place?',
-                'answer'   => 'Yes — there is an exemption if you hold an approved fee protection mechanism. This typically means having an approved trust account, bank guarantee, or professional indemnity arrangement specifically for student fee protection. If your RTO is approved for a fee protection mechanism, record this in the Fee Protection module settings. The module will then allow you to record prepaid fees above $1,500 as protected rather than flagging them as a compliance breach.',
-            ],
-            [
-                'question' => 'What insurance must an RTO hold?',
-                'answer'   => 'Compliance Standard 8 requires RTOs to hold insurance adequate to their operations. At minimum this means: <strong>Public Liability</strong> insurance (typically at least $20 million cover) to protect against claims from students, visitors, and the public; <strong>Professional Indemnity</strong> insurance to protect against claims arising from your training and assessment services. Depending on your structure, you may also need Workers Compensation and Building/Contents insurance. The Insurance Register tracks all policies, coverage amounts, and expiry dates, and alerts you 60 days before any policy expires.',
-            ],
-        ],
-    ],
-
-    // ── AVETMISS & REPORTING ───────────────────────────────────────────────
-    [
-        'category' => 'AVETMISS & Reporting',
-        'icon'     => 'database',
-        'faqs'     => [
-            [
-                'question' => 'When do I need to submit AVETMISS data to NCVER?',
-                'answer'   => 'Submission deadlines depend on your funding type. For government-funded training, most State Training Authorities require quarterly or monthly data submissions. For fee-for-service (non-funded) activity, NCVER\'s Total VET Activity (TVA) collection is typically due by 28 February each year, covering the previous calendar year. Check with your State Training Authority for your specific deadline — it varies by state. Start your AVETMISS export in this plugin at least 2 weeks before your deadline so you have time to resolve any validation errors.',
-            ],
-            [
-                'question' => 'What AVETMISS outcome codes does the plugin use?',
-                'answer'   => 'The plugin uses only the NCVER-approved codes from AVETMISS VET Provider Collection Specifications Release 8.0: <strong>20</strong> — Competent (C); <strong>30</strong> — Not Yet Competent (NYC); <strong>40</strong> — Withdrawn; <strong>51</strong> — RPL Granted; <strong>52</strong> — RPL Not Granted; <strong>60</strong> — Credit Transfer; <strong>70</strong> — Continuing Enrolment. Non-standard codes (65, 53, 54, 66, 90) that appeared in older versions have been removed.',
-            ],
-            [
-                'question' => 'My NAT export has validation errors — what do I do?',
-                'answer'   => 'The most common causes are: (1) students with missing AVETMISS fields — check the Student Records completeness indicator and fill in any gaps; (2) enrolments still coded as "70 Continuing" from a previous year — these should be updated to their final outcome (20/30/40/51/52/60) before export; (3) an invalid qualification code — confirm the code still exists on training.gov.au as an active qualification; (4) a USI that failed verification — the student may have provided an incorrect USI. After fixing issues, purge Moodle caches and re-run the export.',
-            ],
-            [
-                'question' => 'What is the difference between the government-funded and fee-for-service collections?',
-                'answer'   => 'The government-funded collection includes all training subsidised by your State Training Authority — it must include client-level data (NAT00080, NAT00085, NAT00090) for every enrolled student. The fee-for-service (Total VET Activity) collection covers all other NRT training your RTO delivers. Some fields that are optional in fee-for-service (like disability information) are mandatory in government-funded. The NAT Export module lets you select which collection type you are generating, and adjusts the validation rules accordingly.',
-            ],
-            [
-                'question' => 'Can I resubmit AVETMISS data after I have already submitted?',
-                'answer'   => 'Yes — you can regenerate the NAT files at any time and submit a revised collection. Most collection portals (including NCVER\'s direct submission portal and State Training Authority portals) support replacement submissions. Simply generate a new set of NAT files, fix the errors, and submit the corrected files. Keep a copy of both the original and corrected submission in your records.',
-            ],
-        ],
-    ],
-
-    // ── CERTIFICATES & TEMPLATES ───────────────────────────────────────────
-    [
-        'category' => 'Certificates & Templates',
-        'icon'     => 'award',
-        'faqs'     => [
-            [
-                'question' => 'How long must certificate records be kept?',
-                'answer'   => 'AQF certification documentation (certificates and statements of attainment) must be retained for 30 years from the date of issue. Student enrolment records and training activity data must be retained for a minimum of 7 years. The Certificates register in this plugin is designed to be your permanent 30-year record. If your RTO ceases to operate, you are required to transfer your certificate records to NCVER\'s National VET Data collection.',
-            ],
-            [
-                'question' => 'What is USI Clause 12 and why does it appear as a warning on certificates?',
-                'answer'   => 'Clause 12 of the Student Identifiers Act 2014 states that an RTO must not issue a VET qualification or statement of attainment to a student unless their USI has been verified. The warning appears when a student\'s USI has not been verified against the national registry before the certificate is generated. It is a warning, not a hard block — the system still generates the certificate, but the warning is logged. You should verify the USI as soon as possible and reissue or annotate the certificate record. Knowingly issuing a certificate without a verified USI is a statutory breach.',
-            ],
-            [
-                'question' => 'How do I fix the NRT logo on my certificates?',
-                'answer'   => 'The plugin includes the official ASQA-issued NRT mark (red/green chevron triangle with Fritz Quadrata-style lettering) as the default NRT logo. If your certificates are showing a blank or incorrect NRT mark, it may be because a custom template is active that references an old or missing logo file. Open Certificate Templates, edit the active template, and use the Branding panel to re-upload or re-select the NRT logo. Use the Test Certificate Generator to confirm it renders correctly before reissuing.',
-            ],
-            [
-                'question' => 'My certificate PDF is blank or not rendering — what do I check?',
-                'answer'   => 'Try the following in order: (1) Open Test Certificate Generator and test with the same certificate type and audience — if the test is also blank, the issue is with the template, not the student data. (2) Check that the active template for that type/audience has all required fields mapped. (3) Check that the template\'s logo image files still exist (go to Certificate Templates and re-upload if missing). (4) If the test certificate renders correctly but the live one does not, check that the student record has a full legal name and completion date. (5) If using the legacy renderer fallback, check your server\'s TCPDF installation. Contact support if none of these resolve the issue.',
-            ],
-            [
-                'question' => 'Can I email a certificate directly to a student from the plugin?',
-                'answer'   => 'Yes — in the Certificates register, find the certificate record and click the "Email" button (envelope icon). The system generates a fresh PDF and attaches it to an email sent to the student\'s Moodle email address. The email uses a standard template that includes your RTO name and a link to the public QR code verification page. You can also download the PDF and email it manually from your own email client if you prefer.',
-            ],
-        ],
-    ],
-
-    // ── SECURITY & DATA ────────────────────────────────────────────────────
-    [
-        'category' => 'Security & Data Protection',
-        'icon'     => 'lock',
-        'faqs'     => [
-            [
-                'question' => 'Can an attacker delete my compliance records by sending me a crafted link?',
-                'answer'   => 'No. All destructive admin actions — deleting qualifications, enrolments, units, and running any write operations — are protected with Moodle\'s session key (require_sesskey()). Even if someone sends you a URL designed to trigger a deletion, clicking it will not modify any data because the request does not carry a valid session key. This protection covers the CSRF (Cross-Site Request Forgery) vulnerability class across all admin pages in the plugin.',
-            ],
-            [
-                'question' => 'Is student PII protected on the public certificate verification page?',
-                'answer'   => 'Yes. The public QR code verification page shows only the student\'s first name and last initial — for example "Jane S." — not the full surname. The certificate number, qualification title, issue date, and RTO details are shown in full so employers can confirm authenticity. The student\'s full name, date of birth, USI, and address are never exposed on the public verification page.',
-            ],
-            [
-                'question' => 'What is the difference between the Compliance Log and the Audit Log?',
-                'answer'   => 'The Compliance Log records user-facing compliance actions — issuing a certificate, creating a student record, submitting a complaint, adding a trainer, etc. The Audit Log records security-significant administrative events — login events, bulk operations, setting changes, and data deletions. Both logs include a timestamp and the name of the Moodle user who performed the action. During an ASQA audit, both logs serve as evidence of your compliance management activities. Both logs are pruned on separate retention schedules configured in plugin settings.',
-            ],
-            [
-                'question' => 'How long are audit logs retained?',
-                'answer'   => 'By default, the Compliance Log is retained for 7 years and the Audit Log is retained for 7 years. These schedules can be changed in plugin settings (Site Administration &rarr; AI RTO Compliance &rarr; Settings &rarr; Data Retention). For compliance purposes, we recommend keeping both logs for at least 7 years — ASQA can conduct audits up to 5 years retrospectively, and some state funding agreements require 7 years.',
-            ],
-            [
-                'question' => 'Where is compliance data stored — is it sent to any external service?',
-                'answer'   => 'All compliance data (student records, certificates, trainer credentials, complaints, etc.) is stored exclusively in your Moodle site\'s database. The only outbound connections the plugin makes are: (1) training.gov.au SOAP API for qualification lookups (read-only, no student data sent); (2) the USI registry for USI verification (student\'s name and USI are sent — this is a legal requirement); (3) the AI generation features if configured (sends only the text you choose to generate against — no student PII). No compliance data is stored or sent to any Replit or third-party cloud service.',
-            ],
-        ],
-    ],
-
-    // ── STATE FUNDING ──────────────────────────────────────────────────────
-    [
-        'category' => 'State Funding',
-        'icon'     => 'target',
-        'faqs'     => [
-            [
-                'question' => 'Do I need to set up state funding if I only deliver fee-for-service training?',
-                'answer'   => 'No. The state funding fields (school type, concession status, purchasing contracts) are completely optional. They only appear on student profile and enrolment forms when you have entered data in the State Funding settings page. If your RTO only delivers private fee-for-service (non-government-funded) training, leave the State Funding page blank and your forms and AVETMISS export will be unchanged.',
-            ],
-            [
-                'question' => 'Where do I enter our QLD DTET purchasing contract codes?',
-                'answer'   => 'Go to <strong>Site Administration &rarr; AI RTO Compliance &rarr; State Funding</strong> and scroll to the Queensland section. Enter your QLD RTO ID (issued by DTET — different from your national ASQA RTO code) and up to three purchasing contract codes in the format QS###### (e.g. QS102922). Once saved, these codes appear as a dropdown on enrolment forms for QLD state-funded students so staff can select the correct contract rather than typing it manually. The selected code exports to NAT00120 field 17.',
-            ],
-            [
-                'question' => 'What are the QLD school sector codes and when do I use them?',
-                'answer'   => 'School sector codes are required for school-based apprenticeship and VETiS enrolments in Queensland. The valid codes are: <strong>B01</strong> (State/government school), <strong>S01</strong> (Catholic school), <strong>QL1</strong> (QLD general), <strong>QC1</strong> (QLD Catholic sector), <strong>UC1</strong> (UCLES school), <strong>B11</strong> (Other non-government school), <strong>B02</strong> (Other government school), <strong>VE1</strong> (VET in Schools / VETiS), <strong>QNS</strong> (Not school-based). These appear on the enrolment form for QLD-funded students when the student is also flagged as "At School".',
-            ],
-            [
-                'question' => 'What does the "School type" field on the student profile do?',
-                'answer'   => 'The School type field (GOV / CAT / IND / OTH) identifies the sector of the secondary school the student currently attends. It only appears on the student profile form when the student is flagged as <em>At School</em>. It is a mandatory field for school-based apprenticeship and VETiS enrolments in both QLD (DTET) and VIC (Skills First) state funding submissions and maps to NAT00080 field 14. Leave it blank for students who are not currently at school.',
-            ],
-            [
-                'question' => 'What do the concession status codes F, C, and E mean?',
-                'answer'   => 'These codes appear on the enrolment form for state-funded students and map to NAT00120 field 15 (Concession type identifier). <strong>F &mdash; Full fee exempt:</strong> the student pays no tuition fee under a state exemption category (e.g. welfare recipient, Indigenous student under an exemption program). <strong>C &mdash; Concession card holder:</strong> the student holds a valid Health Care Card or Pensioner Concession Card and is entitled to a reduced tuition fee. <strong>E &mdash; Eligible individual:</strong> the student meets the eligibility criteria for the funded program (e.g. Smart &amp; Skilled priority cohort, Skills First target group) but does not hold a concession card. Leave blank for full-fee students.',
-            ],
-            [
-                'question' => 'How do the NSW Smart & Skilled funding source codes (22–26) work?',
-                'answer'   => 'NSW uses numeric codes for the state funding source field in NAT00120. The codes supported in the plugin are: <strong>22</strong> (Smart &amp; Skilled Standard), <strong>23</strong> (Smart &amp; Skilled Fee-Free), <strong>24</strong> (Smart &amp; Skilled Higher Skills), <strong>25</strong> (NSW other state funding), <strong>26</strong> (NSW Foundation Skills). Select the appropriate code in the NSW section of the State Funding settings page as the default for NSW-funded enrolments. Individual enrolments can override the default.',
-            ],
-            [
-                'question' => 'What are the VIC Skills First funding source codes?',
-                'answer'   => 'Victoria\'s Skills First program uses alphanumeric codes: <strong>VSKI</strong> (Skills First General), <strong>VHLS</strong> (Higher Level Skills), <strong>VLLN</strong> (Language, Literacy and Numeracy), <strong>VFFS</strong> (Fee-Free TAFE), <strong>VAPP</strong> (Apprenticeships and Traineeships), <strong>VVIS</strong> (VETiS — Victorian schools). Configure your VIC default funding source code in the VIC section of the State Funding settings page. Data is submitted to the Victorian Department of Jobs, Skills, Industry and Regions (DJSIR) via SVTS.',
-            ],
-            [
-                'question' => 'My RTO delivers in two or more states — how do I manage different funding systems?',
-                'answer'   => 'The State Funding settings page has a separate, independent section for each state and territory. Configure each state you deliver in separately — QLD RTO ID and contracts go in the QLD section, NSW codes in the NSW section, and so on. On each enrolment form, the staff member selects the funding source state code first. The form then shows only the contracts and codes applicable to that state. If a student has a QLD-funded enrolment and a separate NSW-funded enrolment, each enrolment can carry its own state-specific data.',
-            ],
-            [
-                'question' => 'How does state funding data flow into my AVETMISS NAT export?',
-                'answer'   => 'All state funding fields are stored on the student and enrolment records and are included automatically when you generate NAT files. There is no extra export step. School type exports to NAT00080 field 14. Concession status exports to NAT00120 field 15. Purchasing contract code exports to NAT00120 field 17. Funding source state code exports to NAT00120 field 18. Run the pre-export validation check in the NAT Export module to confirm all required state funding fields are populated before submitting to your State Training Authority.',
-            ],
-        ],
-    ],
-
-    // ── TROUBLESHOOTING ────────────────────────────────────────────────────
-    [
-        'category' => 'Troubleshooting',
-        'icon'     => 'tool',
-        'faqs'     => [
-            [
-                'question' => 'A trainer shows as "Credential Expired" on the dashboard — what do I do?',
-                'answer'   => 'Open the Trainer Register and click on the trainer. The Credentials tab will show which credential has expired (TAE qualification, vocational competency review, or industry currency). Update the record with the renewed credential details and a new expiry date. If the trainer has not yet renewed, document the situation in the trainer\'s notes section and set a follow-up date. The dashboard tile will update to amber (upcoming expiry) or green (compliant) within the next cache refresh cycle (up to 10 minutes).',
-            ],
-            [
-                'question' => 'The USI verification is returning an error — what does it mean?',
-                'answer'   => 'The most common USI verification errors are: <strong>"USI not found"</strong> — the USI the student provided does not exist in the national registry, or it does not match their legal name. Ask the student to log in to usi.gov.au and confirm their USI and the name on their account. <strong>"Name mismatch"</strong> — the name in your student record does not exactly match the name registered against that USI (including middle names and hyphens). <strong>"Service unavailable"</strong> — the USI registry is temporarily down; try again later. Check your RTO\'s USI certificate and settings in Site Administration &rarr; AI RTO Compliance &rarr; USI Settings if errors persist.',
-            ],
-            [
-                'question' => 'The compliance dashboard is showing stale numbers — how do I refresh it?',
-                'answer'   => 'Some dashboard counts are cached by Moodle for up to 10 minutes to reduce database load. For an immediate refresh: go to Site Administration &rarr; Development &rarr; Purge all caches and click "Purge all caches". Then reload the dashboard. If counts are still wrong after a cache purge, check that the relevant scheduled task (Site Administration &rarr; Server &rarr; Scheduled tasks &rarr; Refresh compliance metrics) has run recently.',
-            ],
-            [
-                'question' => 'The sidebar navigation is not showing some modules — how do I fix it?',
-                'answer'   => 'The left-hand sidebar in the plugin is rendered by the lib.php navigation hook, which only runs when the user has the <code>local/rtocompliance:manage</code> capability. If you are logged in as a site administrator and still see missing items, try: (1) purging Moodle caches; (2) checking you are accessing the plugin from a URL under <code>/local/rtocompliance/</code> (the nav hook only activates on plugin pages); (3) confirming the plugin is installed correctly in Site Administration &rarr; Plugins &rarr; Local plugins.',
-            ],
-            [
-                'question' => 'I upgraded the plugin and some tables seem to be missing — what happened?',
-                'answer'   => 'This usually means the Moodle upgrade process did not run the plugin\'s upgrade.php script. Go to Site Administration &rarr; Notifications — if Moodle sees a version mismatch it will prompt you to run the upgrade. Click "Upgrade Moodle database now" and follow the prompts. If the notifications page shows everything is up to date but tables are still missing, contact support with the version number you upgraded from and the error message from the Moodle upgrade log.',
-            ],
-        ],
-    ],
-];
+require_once(__DIR__ . '/support_content.php');
+$faq_categories = local_rtocompliance_support_faq_data();
 
 echo html_writer::tag('h2', 'Frequently Asked Questions', ['class' => 'section-title faq-title']);
 

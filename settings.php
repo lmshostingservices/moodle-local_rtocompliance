@@ -15,13 +15,12 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — settings.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 defined('MOODLE_INTERNAL') || die();
 
 global $CFG;
@@ -114,6 +113,55 @@ if ($canviewfull) {
     // CSS will create visual grouping with a beautiful grid layout
     // ========================================================================
 
+    // How it works — plain-language overview, first item so newcomers read it first.
+    $ADMIN->add('local_rtocompliance_category', new admin_externalpage(
+        'local_rtocompliance_howitworks',
+        get_string('howitworks', 'local_rtocompliance'),
+        new moodle_url('/local/rtocompliance/how_it_works.php'),
+        'local/rtocompliance:manage'
+    ));
+
+    // FAQ — 100 plain-English questions across 20 topics.
+    $ADMIN->add('local_rtocompliance_category', new admin_externalpage(
+        'local_rtocompliance_faq',
+        get_string('faq_title', 'local_rtocompliance'),
+        new moodle_url('/local/rtocompliance/faq.php'),
+        'local/rtocompliance:manage'
+    ));
+
+    // Compliance Map — the full feature directory by ASQA 2025 Quality Area.
+    $ADMIN->add('local_rtocompliance_category', new admin_externalpage(
+        'local_rtocompliance_compliancemap',
+        get_string('compliancemap', 'local_rtocompliance'),
+        new moodle_url('/local/rtocompliance/compliance_map.php'),
+        'local/rtocompliance:manage'
+    ));
+
+    // ASQA Compliance Mapping — each 2025 Standard mapped to a feature, with an
+    // honest Covered/Partial/Gap status (Standard 4.3/4.4 self-assurance).
+    $ADMIN->add('local_rtocompliance_category', new admin_externalpage(
+        'local_rtocompliance_asqamap',
+        get_string('asqamap', 'local_rtocompliance'),
+        new moodle_url('/local/rtocompliance/asqa_standards_map.php'),
+        'local/rtocompliance:manage'
+    ));
+
+    // Compliance Health — live audit-readiness command centre.
+    $ADMIN->add('local_rtocompliance_category', new admin_externalpage(
+        'local_rtocompliance_compliancehealth',
+        get_string('compliancehealth', 'local_rtocompliance'),
+        new moodle_url('/local/rtocompliance/compliance_health.php'),
+        'local/rtocompliance:manage'
+    ));
+
+    // AVETMISS Validation — pre-submission NCVER edit-rule check.
+    $ADMIN->add('local_rtocompliance_category', new admin_externalpage(
+        'local_rtocompliance_natvalidate',
+        get_string('natvalidate', 'local_rtocompliance'),
+        new moodle_url('/local/rtocompliance/nat_validate.php'),
+        'local/rtocompliance:manage'
+    ));
+
     // Quick Access
     $ADMIN->add('local_rtocompliance_category', new admin_externalpage(
         'local_rtocompliance_dashboard',
@@ -126,6 +174,14 @@ if ($canviewfull) {
         'local_rtocompliance_qualbuilder',
         get_string('qualificationbuilder', 'local_rtocompliance'),
         new moodle_url('/local/rtocompliance/qualbuilder.php'),
+        'local/rtocompliance:manage'
+    ));
+
+    // NOMINAL-HOURS (v5.9.418): import page for the authoritative nominal-hours dataset.
+    $ADMIN->add('local_rtocompliance_category', new admin_externalpage(
+        'local_rtocompliance_nominalhours_import',
+        'Import Nominal Hours',
+        new moodle_url('/local/rtocompliance/nominalhours_import.php'),
         'local/rtocompliance:manage'
     ));
 
@@ -178,6 +234,15 @@ if ($canviewfull) {
         'local/rtocompliance:issuecerts'
     ));
 
+    // QUAL-CERT-HUB (v5.9.339) — unified hub: all qualification completion
+    // status and certificate issuance from one page.
+    $ADMIN->add('local_rtocompliance_category', new admin_externalpage(
+        'local_rtocompliance_qual_cert_hub',
+        'Qualification Certificate Hub',
+        new moodle_url('/local/rtocompliance/qual_cert_hub.php'),
+        'local/rtocompliance:issuecerts'
+    ));
+
     // CERT-TEMPLATE-BUILDER (v4.2.40) — visual template builder.
     $ADMIN->add('local_rtocompliance_category', new admin_externalpage(
         'local_rtocompliance_cert_templates',
@@ -192,6 +257,32 @@ if ($canviewfull) {
         get_string('cert_test_pagetitle', 'local_rtocompliance'),
         new moodle_url('/local/rtocompliance/cert_test.php'),
         'local/rtocompliance:managecerttemplates'
+    ));
+
+    // TASK-46 (v5.9.346) — skipped qualification codes report.
+    // Registered so admin_externalpage_setup() resolves correctly when an admin
+    // is redirected here after running Sync Qualification Codes.
+    $ADMIN->add('local_rtocompliance_category', new admin_externalpage(
+        'local_rtocompliance_skipped_programcodes',
+        'Skipped Qualification Codes Report',
+        new moodle_url('/local/rtocompliance/skipped_programcodes.php'),
+        'moodle/site:config'
+    ));
+
+    // TASK-81 (v5.9.359): Bulk-repair enrolment rows with missing programcode.
+    $ADMIN->add('local_rtocompliance_category', new admin_externalpage(
+        'local_rtocompliance_repair_programcodes',
+        get_string('repair_programcodes_title', 'local_rtocompliance'),
+        new moodle_url('/local/rtocompliance/repair_programcodes.php'),
+        'moodle/site:config'
+    ));
+
+    // COURSE-MAP-TABLE (v5.9.335) — admin-managed Moodle course → qual/unit mapping.
+    $ADMIN->add('local_rtocompliance_category', new admin_externalpage(
+        'local_rtocompliance_course_map',
+        'Moodle Course Map',
+        new moodle_url('/local/rtocompliance/course_map.php'),
+        'moodle/site:config'
     ));
 
     // Trainer Compliance
@@ -366,14 +457,6 @@ if ($canviewfull) {
         'local/rtocompliance:manage'
     ));
 
-    // Testing Engine (QA)
-    $ADMIN->add('local_rtocompliance_category', new admin_externalpage(
-        'local_rtocompliance_testing',
-        get_string('testing', 'local_rtocompliance'),
-        new moodle_url('/local/rtocompliance/testing.php'),
-        'local/rtocompliance:manage'
-    ));
-
     // Help & Support
     $ADMIN->add('local_rtocompliance_category', new admin_externalpage(
         'local_rtocompliance_supportinternal',
@@ -386,14 +469,6 @@ if ($canviewfull) {
         'local_rtocompliance_practiceguides',
         get_string('practice_guides', 'local_rtocompliance'),
         new moodle_url('/local/rtocompliance/practice_guides.php'),
-        'local/rtocompliance:manage'
-    ));
-
-    // Test Data Generator
-    $ADMIN->add('local_rtocompliance_category', new admin_externalpage(
-        'local_rtocompliance_testdata',
-        get_string('testdata', 'local_rtocompliance'),
-        new moodle_url('/local/rtocompliance/test_data.php'),
         'local/rtocompliance:manage'
     ));
 
@@ -434,6 +509,52 @@ if ($canviewfull) {
     $ADMIN->add('local_rtocompliance_category', $settings);
 
     if ($ADMIN->fulltree && isset($settings)) {
+        // SUPERSEDED-UNIT MAP (v5.9.377): translate retired unit codes to their
+        // current equivalent so completions in older-coded courses credit the
+        // current unit. One mapping per line, e.g.  ABC12345 => ABC12345
+        $settings->add(new admin_setting_heading(
+            'local_rtocompliance/supersededheading',
+            get_string('supersededunitmap', 'local_rtocompliance'),
+            get_string('supersededunitmap_desc', 'local_rtocompliance')
+        ));
+        $settings->add(new admin_setting_configtextarea(
+            'local_rtocompliance/supersededunitmap',
+            get_string('supersededunitmap', 'local_rtocompliance'),
+            get_string('supersededunitmap_help', 'local_rtocompliance'),
+            '',
+            PARAM_RAW,
+            '70',
+            '12'
+        ));
+
+        // ── ARCHIVE FAMILY MAPS (v5.9.457) — per-RTO configuration, ship empty ──
+        // Groups a provider's own archived/superseded qualification codes into
+        // "families" so the NAT importer can match old semester copies. No codes are
+        // hardcoded in the product; each RTO enters its own here (or leaves blank).
+        $settings->add(new admin_setting_heading(
+            'local_rtocompliance/archivefamilyheading',
+            get_string('archivefamilyheading', 'local_rtocompliance'),
+            get_string('archivefamilyheading_desc', 'local_rtocompliance')
+        ));
+        $settings->add(new admin_setting_configtextarea(
+            'local_rtocompliance/archivefamilymap',
+            get_string('archivefamilymap', 'local_rtocompliance'),
+            get_string('archivefamilymap_help', 'local_rtocompliance'),
+            '',
+            PARAM_RAW,
+            '70',
+            '8'
+        ));
+        $settings->add(new admin_setting_configtextarea(
+            'local_rtocompliance/archivefamilykeywords',
+            get_string('archivefamilykeywords', 'local_rtocompliance'),
+            get_string('archivefamilykeywords_help', 'local_rtocompliance'),
+            '',
+            PARAM_RAW,
+            '70',
+            '8'
+        ));
+
         $settings->add(new admin_setting_heading(
             'local_rtocompliance/rtodetails',
             get_string('rtodetails', 'local_rtocompliance'),
@@ -473,6 +594,24 @@ if ($canviewfull) {
             ['maxfiles' => 1, 'accepted_types' => ['.png', '.jpg', '.jpeg', '.svg']]
         ));
 
+        // RTO-IDENTITY-IN-LOGO (v6.2.27): many RTOs' logo artwork already prints the RTO
+        // legal/trading name and RTO code (TOID). When ticked, the certificate validator
+        // stops requiring separate "RTO name" and "RTO code" text fields on templates.
+        $settings->add(new admin_setting_configcheckbox(
+            'local_rtocompliance/logo_includes_rto_identity',
+            get_string('logo_includes_rto_identity', 'local_rtocompliance'),
+            get_string('logo_includes_rto_identity_desc', 'local_rtocompliance'),
+            0
+        ));
+
+        // Cert-type option array reused by all 'applies to' multicheckbox settings.
+        $cert_type_options = [
+            'testamur'   => get_string('certtype_testamur',   'local_rtocompliance'),
+            'statement'  => get_string('certtype_statement',  'local_rtocompliance'),
+            'record'     => get_string('certtype_record',     'local_rtocompliance'),
+            'completion' => get_string('certtype_completion', 'local_rtocompliance'),
+        ];
+
         // v4.4.0 NRT-LOGO-COMPLIANCE — Compliance asset upload slots.
         // The renderer prefers admin-uploaded artwork over the bundled
         // pix/ fallbacks. NRT and AQF have ASQA-supplied bundled defaults
@@ -511,6 +650,37 @@ if ($canviewfull) {
             ['maxfiles' => 1, 'accepted_types' => ['.png', '.jpg', '.jpeg']]
         ));
 
+        $settings->add(new admin_setting_configmulticheckbox(
+            'local_rtocompliance/org_seal_cert_types',
+            get_string('org_seal_cert_types', 'local_rtocompliance'),
+            get_string('org_seal_cert_types_desc', 'local_rtocompliance'),
+            ['testamur' => 1, 'statement' => 1],  // default: testamur + SoA
+            $cert_type_options
+        ));
+
+        // CERT-ORIENTATION-FILTER (v6.2.6): let the RTO choose which page orientation(s)
+        // they use. The Certificate Templates page then only lists templates in the ticked
+        // orientation(s) and shows the preview in that orientation, decluttering the page for
+        // RTOs that only ever issue e.g. portrait. Both ticked (default) = show everything.
+        // CERT-HEADER-THEME-COLOUR (v6.2.8): default the certificate table header bar to the
+        // site's Moodle theme primary colour so certs match the site brand automatically. When
+        // ON (default), the custom colour below is ignored and the live theme colour is used.
+        $settings->add(new admin_setting_configcheckbox(
+            'local_rtocompliance/certheader_use_theme',
+            get_string('certheader_use_theme', 'local_rtocompliance'),
+            get_string('certheader_use_theme_desc', 'local_rtocompliance'),
+            1
+        ));
+
+        $settings->add(new admin_setting_configmulticheckbox(
+            'local_rtocompliance/cert_allowed_orientations',
+            get_string('cert_allowed_orientations', 'local_rtocompliance'),
+            get_string('cert_allowed_orientations_desc', 'local_rtocompliance'),
+            ['L' => 1, 'P' => 1],  // default: both orientations shown
+            ['L' => get_string('cert_template_page_orientation_l', 'local_rtocompliance'),
+             'P' => get_string('cert_template_page_orientation_p', 'local_rtocompliance')]
+        ));
+
         $settings->add(new admin_setting_configstoredfile(
             'local_rtocompliance/compliance_logo_1',
             get_string('compliance_logo_1', 'local_rtocompliance'),
@@ -528,6 +698,102 @@ if ($canviewfull) {
             0,
             ['maxfiles' => 1, 'accepted_types' => ['.png', '.jpg', '.jpeg']]
         ));
+
+        // ──────────────────────────────────────────────────────────────────────
+        // v5.9.320 CERT-ASSETS — Certificate Elements
+        //
+        // Four branding assets are managed here.  For each, an "Apply to"
+        // multi-checkbox lets the admin tick which certificate types should
+        // include that asset.  Leaving every box unticked means the asset
+        // applies to all four types (backwards-compatible default).
+        //
+        // Cert types: Testamur | Statement of Attainment | Record of Results
+        //             | Certificate of Completion
+        //
+        // The renderer checks these settings at render time and withholds the
+        // asset for cert types that are not ticked.
+        // ──────────────────────────────────────────────────────────────────────
+        $settings->add(new admin_setting_heading(
+            'local_rtocompliance/cert_elements_heading',
+            get_string('cert_elements_heading', 'local_rtocompliance'),
+            get_string('cert_elements_heading_desc', 'local_rtocompliance')
+        ));
+
+        // ── CEO / Authorised Signatory Signature ─────────────────────────────
+        $settings->add(new admin_setting_configstoredfile(
+            'local_rtocompliance/ceo_signature_file',
+            get_string('ceo_signature_file', 'local_rtocompliance'),
+            get_string('ceo_signature_file_desc', 'local_rtocompliance'),
+            'ceo_signature_file',
+            0,
+            ['maxfiles' => 1, 'accepted_types' => ['.png', '.jpg', '.jpeg']]
+        ));
+
+        $settings->add(new admin_setting_configmulticheckbox(
+            'local_rtocompliance/ceo_signature_cert_types',
+            get_string('cert_asset_applies_to', 'local_rtocompliance'),
+            get_string('cert_asset_applies_to_desc', 'local_rtocompliance'),
+            [],     // default: empty = all cert types
+            $cert_type_options
+        ));
+
+        // ── Secondary RTO Logo ────────────────────────────────────────────────
+        $settings->add(new admin_setting_configstoredfile(
+            'local_rtocompliance/secondary_logo',
+            get_string('secondary_logo', 'local_rtocompliance'),
+            get_string('secondary_logo_desc', 'local_rtocompliance'),
+            'secondary_logo',
+            0,
+            ['maxfiles' => 1, 'accepted_types' => ['.png', '.jpg', '.jpeg', '.svg']]
+        ));
+
+        $settings->add(new admin_setting_configmulticheckbox(
+            'local_rtocompliance/secondary_logo_cert_types',
+            get_string('cert_asset_applies_to', 'local_rtocompliance'),
+            get_string('cert_asset_applies_to_desc', 'local_rtocompliance'),
+            [],     // default: empty = all cert types
+            $cert_type_options
+        ));
+
+        // ── Certificate Background Image ─────────────────────────────────────
+        $settings->add(new admin_setting_configstoredfile(
+            'local_rtocompliance/cert_background_file',
+            get_string('cert_background_file', 'local_rtocompliance'),
+            get_string('cert_background_file_desc', 'local_rtocompliance'),
+            'cert_background_file',
+            0,
+            ['maxfiles' => 1, 'accepted_types' => ['.png', '.jpg', '.jpeg']]
+        ));
+
+        $settings->add(new admin_setting_configmulticheckbox(
+            'local_rtocompliance/cert_background_cert_types',
+            get_string('cert_asset_applies_to', 'local_rtocompliance'),
+            get_string('cert_asset_applies_to_desc', 'local_rtocompliance'),
+            ['testamur' => 1],     // default: testamur only (most common use case)
+            $cert_type_options
+        ));
+
+        // ── Units Table Header Colour (v5.9.447) ─────────────────────────────
+        // Style A units table on the Statement of Attainment and Record of
+        // Results certificates draws a shaded header bar (Unit Code / Unit Title
+        // / Completion Date) with white bold labels.  The fill colour defaults to
+        // the Moodle site's primary brand colour so the certificate matches the
+        // site theme out of the box, and can be overridden here.
+        $rtoc_default_headercolour = get_config('theme_' . $CFG->theme, 'brandcolor');
+        if (empty($rtoc_default_headercolour)) {
+            $rtoc_default_headercolour = get_config('theme_boost', 'brandcolor');
+        }
+        if (empty($rtoc_default_headercolour) || $rtoc_default_headercolour[0] !== '#') {
+            $rtoc_default_headercolour = '#0f6cbf'; // Moodle Boost default primary.
+        }
+        $settings->add(new admin_setting_configcolourpicker(
+            'local_rtocompliance/certheadercolour',
+            get_string('certheadercolour', 'local_rtocompliance'),
+            get_string('certheadercolour_desc', 'local_rtocompliance'),
+            $rtoc_default_headercolour
+        ));
+
+        // ────────────────────────────────────────────────────────────────────
 
         $regulators = local_rtocompliance_get_state_regulators();
         $settings->add(new admin_setting_configselect(
@@ -547,7 +813,43 @@ if ($canviewfull) {
         $settings->add(new admin_setting_configtext(
             'local_rtocompliance/address',
             get_string('address', 'local_rtocompliance'),
+            get_string('address_nat_desc', 'local_rtocompliance'),
             '',
+            PARAM_TEXT
+        ));
+
+        // FIX-NAT00010-ADDRESS-FIELDS (v5.9.319): suburb, state, postcode, contactname
+        // are required for NAT00010 (Training Organisation) AVETMISS export.
+        // These config keys were read by nat_generator.php but had no settings.php
+        // definitions — they always returned empty, producing blank NAT00010 address fields.
+        $settings->add(new admin_setting_configtext(
+            'local_rtocompliance/suburb',
+            get_string('suburb', 'local_rtocompliance'),
+            get_string('suburb_nat_desc', 'local_rtocompliance'),
+            '',
+            PARAM_TEXT
+        ));
+
+        $settings->add(new admin_setting_configtext(
+            'local_rtocompliance/state',
+            get_string('state', 'local_rtocompliance'),
+            get_string('state_nat_desc', 'local_rtocompliance'),
+            '',
+            PARAM_TEXT
+        ));
+
+        $settings->add(new admin_setting_configtext(
+            'local_rtocompliance/postcode',
+            get_string('postcode', 'local_rtocompliance'),
+            get_string('postcode_nat_desc', 'local_rtocompliance'),
+            '',
+            PARAM_ALPHANUMEXT
+        ));
+
+        $settings->add(new admin_setting_configtext(
+            'local_rtocompliance/contactname',
+            get_string('contactname', 'local_rtocompliance'),
+            get_string('contactname_nat_desc', 'local_rtocompliance'),
             '',
             PARAM_TEXT
         ));
@@ -726,13 +1028,42 @@ if ($canviewfull) {
         $apisettings->add(new admin_setting_heading(
             'local_rtocompliance/webhook_heading',
             'Remote Configuration',
-            'Leave this blank. If AI Grader support provides you with a key, enter it below — this allows our team to configure your site remotely.'
+            'Leave this blank. If LMS-Labs.com support provides you with a key, enter it below — this allows our team to configure your site remotely.'
         ));
         $apisettings->add(new admin_setting_configpasswordunmask(
             'local_rtocompliance/webhookapikey',
             get_string('webhookapikey', 'local_rtocompliance'),
             get_string('webhookapikey_desc', 'local_rtocompliance'),
             ''
+        ));
+
+        // ── AI ASSISTANT (v5.9.456) ──────────────────────────────────────────────
+        $apisettings->add(new admin_setting_heading(
+            'local_rtocompliance/assistant_heading',
+            get_string('assistant_heading', 'local_rtocompliance'),
+            get_string('assistant_heading_desc', 'local_rtocompliance')
+        ));
+        $apisettings->add(new admin_setting_configcheckbox(
+            'local_rtocompliance/assistant_enabled',
+            get_string('assistant_enabled', 'local_rtocompliance'),
+            get_string('assistant_enabled_desc', 'local_rtocompliance'),
+            1
+        ));
+        // Optional: a direct Anthropic key for self-hosted installs that do NOT bill
+        // through the lms-labs.com platform. Leave blank to use the platform (recommended;
+        // 1 credit per question). When set, questions call Anthropic directly on your key.
+        $apisettings->add(new admin_setting_configpasswordunmask(
+            'local_rtocompliance/assistant_claude_key',
+            get_string('assistant_claude_key', 'local_rtocompliance'),
+            get_string('assistant_claude_key_desc', 'local_rtocompliance'),
+            ''
+        ));
+        $apisettings->add(new admin_setting_configtext(
+            'local_rtocompliance/assistant_model',
+            get_string('assistant_model', 'local_rtocompliance'),
+            get_string('assistant_model_desc', 'local_rtocompliance'),
+            'claude-sonnet-4-20250514',
+            PARAM_TEXT
         ));
     }
 
@@ -750,9 +1081,26 @@ if ($canviewfull) {
             'local_rtocompliance/certprefix',
             get_string('certprefix', 'local_rtocompliance'),
             get_string('certprefix_desc', 'local_rtocompliance'),
-            'CERT',
+            'RTO',
             PARAM_ALPHANUMEXT
         ));
+
+        // v5.9.361: per-type starting number — lets an RTO begin a stream at, e.g.,
+        // 1000. Applied once (sequences are continuous), so set before the first issue.
+        foreach ([
+            'testamur'   => 'certstartnum_testamur_label',
+            'statement'  => 'certstartnum_statement_label',
+            'record'     => 'certstartnum_record_label',
+            'completion' => 'certstartnum_completion_label',
+        ] as $_ct => $_lbl) {
+            $certsettings->add(new admin_setting_configtext(
+                'local_rtocompliance/certstartnum_' . $_ct,
+                get_string($_lbl, 'local_rtocompliance'),
+                get_string('certstartnum_desc', 'local_rtocompliance'),
+                '1',
+                PARAM_INT
+            ));
+        }
 
         $certsettings->add(new admin_setting_configcheckbox(
             'local_rtocompliance/enableqr',
@@ -1000,6 +1348,19 @@ if ($canviewfull) {
             get_string('defaultstate_desc', 'local_rtocompliance'),
             'NSW',
             $states
+        ));
+
+        // NOMINAL-HOURS (v5.9.418): the jurisdiction whose nominal-hours values the
+        // Qualification Builder / enrolments resolve first (falls back to the NCVER
+        // national baseline 'NAT'). Literal strings so no lang entries are required.
+        $reportsettings->add(new admin_setting_configselect(
+            'local_rtocompliance/defaultreportingstate',
+            'Nominal hours — reporting jurisdiction',
+            'The state/territory whose nominal-hours values are used first when resolving a unit\'s nominal hours. '
+                . 'Falls back to the NCVER nationally-agreed value (NAT) when the state has no value on file.',
+            'NAT',
+            ['NAT' => 'NAT — NCVER nationally agreed', 'VIC' => 'VIC', 'QLD' => 'QLD', 'NSW' => 'NSW',
+                'SA' => 'SA', 'WA' => 'WA', 'TAS' => 'TAS', 'NT' => 'NT', 'ACT' => 'ACT']
         ));
 
         $reportyears = [];
@@ -1258,12 +1619,14 @@ if ($canviewfull) {
             '<div style="display:flex;align-items:flex-start;gap:12px;">' .
             '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>' .
             '<div style="flex:1;">' .
-            '<div style="font-weight:600;color:#92400e;margin-bottom:4px;">Legacy page — most customers should NOT use this</div>' .
+            '<div style="font-weight:600;color:#92400e;margin-bottom:4px;">Legacy page — you do not need this</div>' .
             '<div style="color:#78350f;font-size:13px;line-height:1.5;">' .
-            'These fields point to a Machine Credential file stored on this Moodle server (single-tenant installs). ' .
-            'If you are an lms-labs.com SaaS customer, <strong>do not enter anything here</strong> — instead, ' .
-            '<a href="' . $uploadurl . '" style="color:#1d4ed8;text-decoration:underline;font-weight:600;">upload your .pfx file via the Upload Machine Credential page →</a> ' .
-            'so the credential is stored centrally on the platform under your account.' .
+            'Your myID Machine Credential and password are managed in the <strong>lms-labs.com admin panel</strong> and ' .
+            'are never stored on this Moodle server. USI verification is performed by the platform on your behalf. ' .
+            'You can view the live verification status on the ' .
+            '<a href="' . $uploadurl . '" style="color:#1d4ed8;text-decoration:underline;font-weight:600;">USI Verification Status page →</a>. ' .
+            'The only settings below that still apply are the non-secret organisation ID and test-mode flag (normally ' .
+            'pushed automatically from the platform).' .
             '</div></div></div></div>';
         $usisettings->add(new admin_setting_heading('local_rtocompliance/usi_legacy_redirect', '', $redirectbanner));
 
@@ -1291,24 +1654,20 @@ if ($canviewfull) {
             get_string('usi_test_mode_desc', 'local_rtocompliance'),
             0
         ));
-        $usisettings->add(new admin_setting_configtext(
-            'local_rtocompliance/usi_certificate_path',
-            get_string('usi_certificate_path', 'local_rtocompliance'),
-            get_string('usi_certificate_path_desc', 'local_rtocompliance'),
-            '',
-            PARAM_RAW // pipeline-ignore: PARAM_RAW — file path; stored via Moodle settings API and not directly rendered
-        ));
-        $usisettings->add(new admin_setting_configpasswordunmask(
-            'local_rtocompliance/usi_certificate_password',
-            get_string('usi_certificate_password', 'local_rtocompliance'),
-            get_string('usi_certificate_password_desc', 'local_rtocompliance'),
-            ''
-        ));
-        // Info note about automated config push
-        $pushinfo = '<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:12px 16px;margin-top:8px;font-size:13px;color:#0c4a6e;">' .
-            '<strong>Tip:</strong> AI Grader support can fill in your USI credentials for you. If they have done so, you can skip this section.' .
+        // CREDENTIAL-BROKER-ONLY (v5.9.452): the machine credential keystore (.p12/.pfx)
+        // and its passphrase are NO LONGER entered or stored in Moodle. They live only in
+        // the lms-labs.com admin panel, which verifies USIs on this site's behalf. The old
+        // 'usi_certificate_path' and 'usi_certificate_password' fields have been removed so
+        // the sensitive keystore can never be stored on the Moodle server. Only the
+        // non-secret organisation ID and test-mode flag remain here (and even those are
+        // normally pushed automatically from the platform).
+        $credinfo = '<div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:6px;padding:12px 16px;margin-top:8px;font-size:13px;color:#065f46;">' .
+            '<strong>Credentials are managed in lms-labs.com.</strong> Your myGovID machine credential ' .
+            '(.p12/.pfx) and its password are uploaded in the <strong>lms-labs.com admin panel</strong> and never ' .
+            'stored on this Moodle server. USI verification is performed by the platform on your behalf, so there ' .
+            'is nothing to enter here beyond the organisation ID and test-mode flag above.' .
             '</div>';
-        $usisettings->add(new admin_setting_heading('local_rtocompliance/usi_push_info', '', $pushinfo));
+        $usisettings->add(new admin_setting_heading('local_rtocompliance/usi_push_info', '', $credinfo));
     }
 
     $surveysettings = new admin_settingpage('local_rtocompliance_autosurvey', get_string('autosurveysettings', 'local_rtocompliance'));

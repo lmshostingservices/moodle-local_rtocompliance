@@ -21,7 +21,7 @@
  * legacy local_rtocompliance_before_footer() callback in lib.php.
  *
  * @package    local_rtocompliance
- * @copyright  2025 Essay Grader AI
+ * @copyright  2025 LMS Labs
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -50,13 +50,87 @@ class before_footer_html_generation {
      * @param \core\hook\output\before_footer_html_generation $hook The hook object.
      */
     public static function callback(\core\hook\output\before_footer_html_generation $hook): void {
-        global $PAGE, $CFG, $DB;
+        global $PAGE, $CFG, $DB, $USER;
 
         if (empty($PAGE->url)) {
             return;
         }
 
         $path = $PAGE->url->get_path();
+
+        // ── MISSING AVETMISS DATA PROMPT (v5.9.440) — site-wide student nudge ──────────
+        // A logged-in student whose AVETMISS profile is incomplete gets a modal prompting
+        // them to complete it (and telling them where to download their certificates). It
+        // reads only the student's OWN row (one indexed lookup by userid), never shows for
+        // admins/guests or on the profile page itself, and appears once per browser session
+        // (the external js/avetmiss_prompt.js reveals it and remembers "Remind me later").
+        // The primary button is a plain link, so a student can always reach their profile.
+        if (isloggedin() && !isguestuser() && !is_siteadmin()
+                && strpos($path, '/local/rtocompliance/my_profile.php') === false) {
+            $student = $DB->get_record('local_rtocompliance_students', ['userid' => (int)$USER->id]);
+            if ($student) {
+                $labels = [
+                    'usi' => 'USI (Unique Student Identifier)', 'dateofbirth' => 'Date of birth',
+                    'sex' => 'Sex', 'postcode' => 'Postcode', 'statecode' => 'State', 'suburb' => 'Suburb',
+                    'indigenousstatus' => 'Indigenous status', 'countryofbirth' => 'Country of birth',
+                    'languageathome' => 'Language spoken at home', 'labourforcestatus' => 'Labour force status',
+                    'highestschoollevel' => 'Highest school level completed',
+                ];
+                $missing = [];
+                foreach ($labels as $f => $lbl) {
+                    if ($f === 'dateofbirth') {
+                        if (empty($student->dateofbirth)) {
+                            $missing[] = $lbl;
+                        }
+                        continue;
+                    }
+                    $v = trim((string)($student->$f ?? ''));
+                    if ($v === '' || $v === '@' || $v === '@@') {
+                        $missing[] = $lbl;
+                    }
+                }
+                if (!empty($missing)) {
+                    $profileurl = (new \moodle_url('/local/rtocompliance/my_profile.php'))->out(false);
+                    $jsurl      = (new \moodle_url('/local/rtocompliance/js/avetmiss_prompt.js'))->out();
+                    $items = '';
+                    foreach (array_slice($missing, 0, 8) as $mlbl) {
+                        $items .= '<li>' . s($mlbl) . '</li>';
+                    }
+                    if (count($missing) > 8) {
+                        $items .= '<li>&hellip;and ' . (count($missing) - 8) . ' more</li>';
+                    }
+                    $hook->add_html(
+'<style>
+.rtoc-avm-backdrop{position:fixed;inset:0;z-index:100050;background:rgba(15,23,42,.55);display:none;align-items:center;justify-content:center;padding:20px;}
+.rtoc-avm-card{background:#fff;max-width:520px;width:100%;border-radius:16px;box-shadow:0 24px 60px -12px rgba(15,23,42,.45);padding:26px 28px;font-family:inherit;box-sizing:border-box;}
+.rtoc-avm-head{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+.rtoc-avm-icon{flex:0 0 auto;width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;font-weight:800;font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;}
+.rtoc-avm-card h2{margin:0;font-size:20px;color:#0f172a;font-weight:750;}
+.rtoc-avm-lead{margin:0 0 14px;color:#334155;font-size:14.5px;line-height:1.6;}
+.rtoc-avm-sub{margin:0 0 6px;font-weight:700;color:#0f172a;font-size:13.5px;}
+.rtoc-avm-list{margin:0 0 16px;padding-left:20px;color:#475569;font-size:13.5px;line-height:1.7;}
+.rtoc-avm-tip{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:11px 14px;color:#1e40af;font-size:13px;line-height:1.55;margin-bottom:18px;}
+.rtoc-avm-actions{display:flex;gap:10px;flex-wrap:wrap;}
+.rtoc-avm-btn-primary{flex:1 1 auto;text-align:center;background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;text-decoration:none;font-weight:700;font-size:14.5px;padding:12px 18px;border-radius:10px;}
+.rtoc-avm-btn-secondary{background:#f1f5f9;border:1px solid #e2e8f0;color:#475569;font-weight:600;font-size:13.5px;padding:12px 16px;border-radius:10px;cursor:pointer;}
+</style>
+<div id="rtoc-avetmiss-modal" class="rtoc-avm-backdrop" role="dialog" aria-modal="true" aria-labelledby="rtoc-avm-title">
+  <div class="rtoc-avm-card">
+    <div class="rtoc-avm-head"><div class="rtoc-avm-icon">!</div><h2 id="rtoc-avm-title">Complete your student details</h2></div>
+    <p class="rtoc-avm-lead">Before you continue, please complete your required student information. Your training provider needs this to report your training correctly and to issue your certificates.</p>
+    <p class="rtoc-avm-sub">Still needed (' . count($missing) . '):</p>
+    <ul class="rtoc-avm-list">' . $items . '</ul>
+    <div class="rtoc-avm-tip">&#128196; <strong>Your certificates:</strong> once your details are complete, you can download your certificates any time from your profile menu &mdash; click your initials in the top-right corner and open your certificates.</div>
+    <div class="rtoc-avm-actions">
+      <a class="rtoc-avm-btn-primary" href="' . s($profileurl) . '">Complete my details now</a>
+      <button type="button" class="rtoc-avm-btn-secondary" id="rtoc-avm-later">Remind me later</button>
+    </div>
+  </div>
+</div>
+<script src="' . s($jsurl) . '"></script>');
+                }
+            }
+        }
 
         // ── ENROLLED USERS PAGE: inject "Fix Placeholder Student Names" banner ──
         // FIX-ENROL-BANNER (v4.9.188): The standard Moodle Enrolled Users /
@@ -154,5 +228,6 @@ class before_footer_html_generation {
         // on pages that already received tables.js via render_nav_header().
         $tables_url = (new \moodle_url('/local/rtocompliance/js/tables.js'))->out();
         $hook->add_html('<script src="' . s($tables_url) . '"></script>');
+
     }
 }

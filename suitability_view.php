@@ -15,13 +15,12 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — suitability_view.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 // Admin view: review a completed suitability submission and (optionally)
 // override the system-generated outcome.
 //
@@ -33,13 +32,13 @@
 // 16-question table is shown.
 
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
 $id = required_param('id', PARAM_INT);
 
 admin_externalpage_setup('local_rtocompliance_students');
+require_login();
 
 $PAGE->set_url(new moodle_url('/local/rtocompliance/suitability_view.php', ['id' => $id]));
 $PAGE->set_title(get_string('suitability_view_title', 'local_rtocompliance'));
@@ -62,8 +61,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && confirm_sesskey()
     $decision   = optional_param('trainer_decision_val', '', PARAM_ALPHANUMEXT);
     $advicetxt  = trim(optional_param('trainer_advice_text', '', PARAM_TEXT));
     $justif     = trim(optional_param('trainer_justification', '', PARAM_TEXT));
-    $decl_tick  = optional_param('trainer_declaration_tick', '', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
- // pipeline-ignore: PARAM_RAW — rich-text/JSON field sanitised before display or decoded immediately    $validDec   = ['suitable', 'suitable_with_support', 'not_suitable'];
+    $decl_tick  = optional_param('trainer_declaration_tick', '', PARAM_RAW);
+    $validDec   = ['suitable', 'suitable_with_support', 'not_suitable'];
 
     if (!in_array($decision, $validDec, true)) {
         redirect($PAGE->url, 'Please select a valid decision outcome.', null, \core\output\notification::NOTIFY_ERROR);
@@ -150,6 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && confirm_sesskey()) {
 
 echo $OUTPUT->header();
 echo local_rtocompliance_render_nav_header(get_string('students', 'local_rtocompliance'), null, null, 'students');
+echo local_rtocompliance_page_banner(get_string('students', 'local_rtocompliance'));
 echo $OUTPUT->heading(get_string('suitability_view_title', 'local_rtocompliance'), 2);
 
 // ── Summary header ──
@@ -182,7 +182,7 @@ if ($suit->status !== 'pending') {
         html_writer::link(
             new moodle_url('/local/rtocompliance/suitability_pdf.php', ['id' => $suit->id]),
             'Download PDF Report',
-            ['class' => 'btn btn-outline-primary mb-3', 'target' => '_blank', 'data-testid' => 'link-suit-pdf-' . $suit->id]
+            ['class' => 'btn btn-outline-primary mb-3', 'target' => '_blank', 'title' => 'Open a printable PDF of this eligibility check and trainer decision', 'data-testid' => 'link-suit-pdf-' . $suit->id]
         )
     );
 }

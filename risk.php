@@ -15,15 +15,13 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — risk.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
@@ -31,6 +29,7 @@ $tab = optional_param('tab', 'register', PARAM_TEXT);
 $tab = in_array($tab, ['all', 'register', 'financial', 'conflict_of_interest', 'conflicts', 'under18'], true) ? $tab : 'all';
 
 admin_externalpage_setup('local_rtocompliance_risk');
+require_login();
 $PAGE->set_url('/local/rtocompliance/risk.php', ['tab' => $tab]);
 $PAGE->set_title('Risk Management Register');
 $PAGE->set_heading('Risk Management Register');
@@ -58,11 +57,11 @@ if ($tab === 'financial') {
     $addriskurl   = new moodle_url('/local/rtocompliance/risk_edit.php', ['category' => 'under18']);
     $addrisklabel = 'Add Under-18 Risk';
 }
-echo html_writer::link($addriskurl, $addrisklabel, ['class' => 'btn btn-primary']);
+echo html_writer::link($addriskurl, $addrisklabel, ['class' => 'btn btn-primary', 'title' => 'Add a new risk to the register']);
 echo html_writer::end_div();
 
 echo html_writer::start_div('info-card');
-echo html_writer::tag('h4', 'Standard 4.3 — Risk Management');
+echo html_writer::tag('h4', 'Standard 4.2 — Risk Management');
 echo html_writer::tag('p', 'Governing persons must identify, manage, and regularly review risks to students, staff, and the organisation. This includes financial oversight, conflicts of interest, and (where applicable) under-18 learner safety. The risk register is key evidence for ASQA audits.');
 echo html_writer::end_div();
 
@@ -91,16 +90,16 @@ if ($dbman->table_exists('local_rtocompliance_risks')) {
 
 echo html_writer::start_div('stats-cards');
 $summaryStats = [
-    ['label' => 'Total Risks',           'value' => $totalrisks,    'color' => 'blue',   'icon' => local_rtocompliance_stat_icon('shield')],
-    ['label' => 'Open Risks',            'value' => $openrisks,     'color' => $openrisks > 0 ? 'amber' : 'green', 'icon' => local_rtocompliance_stat_icon('alert')],
-    ['label' => 'Critical Risks (score ≥ 16)', 'value' => $criticalrisks, 'color' => $criticalrisks > 0 ? 'rose' : 'green',  'icon' => local_rtocompliance_stat_icon('alert')],
-    ['label' => 'High Risks (score 9–15)',    'value' => $highrisks,     'color' => $highrisks > 0 ? 'amber' : 'green', 'icon' => local_rtocompliance_stat_icon('alert')],
-    ['label' => 'Financial Risks',       'value' => $financialrisks,'color' => 'purple', 'icon' => local_rtocompliance_stat_icon('dollar')],
-    ['label' => 'Conflicts of Interest', 'value' => $conflicts,     'color' => 'amber',  'icon' => local_rtocompliance_stat_icon('alert')],
-    ['label' => 'Under-18 Safety',       'value' => $under18risks,  'color' => 'blue',   'icon' => local_rtocompliance_stat_icon('shield')],
+    ['label' => 'Total Risks',           'value' => $totalrisks,    'color' => 'blue',   'icon' => local_rtocompliance_stat_icon('shield'), 'tip' => 'Every risk recorded in the register, whether still open or already closed.'],
+    ['label' => 'Open Risks',            'value' => $openrisks,     'color' => $openrisks > 0 ? 'amber' : 'green', 'icon' => local_rtocompliance_stat_icon('alert'), 'tip' => 'Risks that are still active and being managed.'],
+    ['label' => 'Critical Risks (score ≥ 16)', 'value' => $criticalrisks, 'color' => $criticalrisks > 0 ? 'rose' : 'green',  'icon' => local_rtocompliance_stat_icon('alert'), 'tip' => 'Open risks with the most serious rating. The score is how likely it is multiplied by how bad it would be (16 or more).'],
+    ['label' => 'High Risks (score 9–15)',    'value' => $highrisks,     'color' => $highrisks > 0 ? 'amber' : 'green', 'icon' => local_rtocompliance_stat_icon('alert'), 'tip' => 'Open risks rated high. The score (likelihood times impact) is between 9 and 15.'],
+    ['label' => 'Financial Risks',       'value' => $financialrisks,'color' => 'purple', 'icon' => local_rtocompliance_stat_icon('dollar'), 'tip' => 'Risks about money, such as cash flow, fees or financial viability.'],
+    ['label' => 'Conflicts of Interest', 'value' => $conflicts,     'color' => 'amber',  'icon' => local_rtocompliance_stat_icon('alert'), 'tip' => 'Situations where a personal interest could get in the way of a fair, honest decision.'],
+    ['label' => 'Under-18 Safety',       'value' => $under18risks,  'color' => 'blue',   'icon' => local_rtocompliance_stat_icon('shield'), 'tip' => 'Risks to the safety and wellbeing of learners under 18 years old.'],
 ];
 foreach ($summaryStats as $s) {
-    echo html_writer::start_div('stat-card stat-' . $s['color']);
+    echo html_writer::start_div('stat-card stat-' . $s['color'], ['title' => $s['tip']]);
     echo '<div class="stat-icon-wrap">' . $s['icon'] . '</div>';
     echo html_writer::start_div('stat-info');
     echo html_writer::tag('span', $s['value'], ['class' => 'stat-number']);
@@ -171,7 +170,7 @@ function rtoc_risk_level_class($likelihood, $impact) {
 
 if ($tab === 'financial' && empty($risks)) {
     echo html_writer::start_div('info-card warning');
-    echo html_writer::tag('h4', 'Financial Oversight Requirements (Standard 4.3)');
+    echo html_writer::tag('h4', 'Financial Oversight Requirements (Standard 4.2)');
     echo html_writer::start_tag('ul');
     echo html_writer::tag('li', 'Governing persons must oversee the financial position, performance, and cash flow of the RTO.');
     echo html_writer::tag('li', 'Financial review should be a standing agenda item at governance meetings.');
@@ -181,14 +180,14 @@ if ($tab === 'financial' && empty($risks)) {
     echo html_writer::link(
         new moodle_url('/local/rtocompliance/risk_edit.php', ['category' => 'financial']),
         'Add Financial Risk',
-        ['class' => 'btn btn-primary', 'style' => 'margin-top: 12px;']
+        ['class' => 'btn btn-primary', 'style' => 'margin-top: 12px;', 'title' => 'Add a financial risk to the register']
     );
     echo html_writer::end_div();
 }
 
 if ($tab === 'conflicts' && empty($risks)) {
     echo html_writer::start_div('info-card warning');
-    echo html_writer::tag('h4', 'Conflict of Interest Requirements (Standard 4.3)');
+    echo html_writer::tag('h4', 'Conflict of Interest Requirements (Standard 4.2)');
     echo html_writer::start_tag('ul');
     echo html_writer::tag('li', 'The RTO must have a system for identifying and managing real or apparent conflicts of interest for governing persons and staff.');
     echo html_writer::tag('li', 'Disclosures should be recorded in a register and the conflicted person excluded from related decisions.');
@@ -197,7 +196,7 @@ if ($tab === 'conflicts' && empty($risks)) {
     echo html_writer::link(
         new moodle_url('/local/rtocompliance/risk_edit.php', ['category' => 'conflict_of_interest']),
         'Record Conflict of Interest',
-        ['class' => 'btn btn-primary', 'style' => 'margin-top: 12px;']
+        ['class' => 'btn btn-primary', 'style' => 'margin-top: 12px;', 'title' => 'Record a conflict of interest disclosure']
     );
     echo html_writer::end_div();
 }
@@ -217,12 +216,12 @@ if ($tab === 'under18') {
 
 if ($tab === 'under18' && empty($risks)) {
     echo html_writer::start_div('info-card');
-    echo html_writer::tag('h4', 'Under-18 Safety & Wellbeing (Standard 4.3 — where applicable)');
+    echo html_writer::tag('h4', 'Under-18 Safety & Wellbeing (Standard 4.2 — where applicable)');
     echo html_writer::tag('p', 'Where training involves learners under 18, governing persons must manage risks to their safety and wellbeing. This includes child safety policies, supervision arrangements, and mandatory reporting obligations.');
     echo html_writer::link(
         new moodle_url('/local/rtocompliance/risk_edit.php', ['category' => 'under18']),
         'Add Under-18 Safety Risk',
-        ['class' => 'btn btn-primary', 'style' => 'margin-top: 12px;']
+        ['class' => 'btn btn-primary', 'style' => 'margin-top: 12px;', 'title' => 'Add an under-18 learner safety risk']
     );
     echo html_writer::end_div();
 }
@@ -231,15 +230,15 @@ if ($risks) {
     echo html_writer::start_tag('table', ['class' => 'data-table']);
     echo html_writer::start_tag('thead');
     echo html_writer::start_tag('tr');
-    echo html_writer::tag('th', 'Risk');
-    echo html_writer::tag('th', 'Category');
-    echo html_writer::tag('th', 'Likelihood');
-    echo html_writer::tag('th', 'Impact');
-    echo html_writer::tag('th', 'Risk Level');
-    echo html_writer::tag('th', 'Owner');
-    echo html_writer::tag('th', 'Review Date');
-    echo html_writer::tag('th', 'Status');
-    echo html_writer::tag('th', 'Actions');
+    echo html_writer::tag('th', 'Risk', ['title' => 'Title and short description of the risk']);
+    echo html_writer::tag('th', 'Category', ['title' => 'Category the risk belongs to']);
+    echo html_writer::tag('th', 'Likelihood', ['title' => 'How likely the risk is to occur']);
+    echo html_writer::tag('th', 'Impact', ['title' => 'Severity of the impact if the risk occurs']);
+    echo html_writer::tag('th', 'Risk Level', ['title' => 'Overall rating from likelihood multiplied by impact']);
+    echo html_writer::tag('th', 'Owner', ['title' => 'Person responsible for managing this risk']);
+    echo html_writer::tag('th', 'Review Date', ['title' => 'Date this risk is next due for review']);
+    echo html_writer::tag('th', 'Status', ['title' => 'Current status of the risk']);
+    echo html_writer::tag('th', 'Actions', ['title' => 'Actions available for this record']);
     echo html_writer::end_tag('tr');
     echo html_writer::end_tag('thead');
     echo html_writer::start_tag('tbody');
@@ -247,10 +246,23 @@ if ($risks) {
     foreach ($risks as $risk) {
         [$levelClass, $levelLabel] = rtoc_risk_level_class($risk->likelihood, $risk->impact);
 
+        $levelTitles = [
+            'Critical' => 'Critical: the most serious rating (score 16 or more). Needs action now.',
+            'High'     => 'High: a serious risk (score 9 to 15). Needs a plan and close attention.',
+            'Medium'   => 'Medium: a moderate risk (score 4 to 8). Keep an eye on it.',
+            'Low'      => 'Low: a minor risk (score 1 to 3).',
+        ];
+        $levelTitle = $levelTitles[$levelLabel] ?? 'Overall risk rating: how likely it is multiplied by how bad it would be.';
+
         $statusClass = 'badge-info';
         if ($risk->status === 'mitigated') $statusClass = 'badge-success';
         if ($risk->status === 'open')      $statusClass = 'badge-warning';
         if ($risk->status === 'closed')    $statusClass = 'badge-secondary';
+
+        $statusTitle = 'Current status of this risk.';
+        if ($risk->status === 'mitigated') $statusTitle = 'Mitigated: action has been taken to reduce this risk to an acceptable level.';
+        if ($risk->status === 'open')      $statusTitle = 'Open: this risk is active and still needs managing.';
+        if ($risk->status === 'closed')    $statusTitle = 'Closed: this risk no longer applies and needs no more action.';
 
         $overdueReview = $risk->reviewdate && $risk->reviewdate < time() && $risk->status === 'open';
 
@@ -262,21 +274,21 @@ if ($risks) {
         echo html_writer::tag('td', $categoryLabels[$risk->riskcategory] ?? ucfirst($risk->riskcategory));
         echo html_writer::tag('td', $likelihoodLabels[$risk->likelihood] ?? $risk->likelihood);
         echo html_writer::tag('td', $impactLabels[$risk->impact] ?? $risk->impact);
-        echo html_writer::tag('td', html_writer::tag('span', $levelLabel, ['class' => 'badge ' . $levelClass]));
+        echo html_writer::tag('td', html_writer::tag('span', $levelLabel, ['class' => 'badge ' . $levelClass, 'title' => $levelTitle]));
         echo html_writer::tag('td', $risk->riskowner ? s($risk->riskowner) : html_writer::tag('span', 'Unassigned', ['class' => 'text-muted']));
         echo html_writer::tag('td',
             $risk->reviewdate
                 ? ($overdueReview
-                    ? html_writer::tag('span', userdate($risk->reviewdate, '%d %b %Y') . ' OVERDUE', ['class' => 'badge badge-danger'])
+                    ? html_writer::tag('span', userdate($risk->reviewdate, '%d %b %Y') . ' OVERDUE', ['class' => 'badge badge-danger', 'title' => 'Overdue: this risk was due to be reviewed before today and still needs checking.'])
                     : userdate($risk->reviewdate, '%d %b %Y'))
                 : '-'
         );
-        echo html_writer::tag('td', html_writer::tag('span', ucfirst($risk->status), ['class' => 'badge ' . $statusClass]));
+        echo html_writer::tag('td', html_writer::tag('span', ucfirst($risk->status), ['class' => 'badge ' . $statusClass, 'title' => $statusTitle]));
         echo html_writer::tag('td',
             html_writer::link(
                 new moodle_url('/local/rtocompliance/risk_edit.php', ['id' => $risk->id]),
                 'Edit',
-                ['class' => 'btn btn-sm btn-secondary']
+                ['class' => 'btn btn-sm btn-secondary', 'title' => 'Edit this risk']
             )
         );
         echo html_writer::end_tag('tr');
@@ -288,17 +300,17 @@ if ($risks) {
     echo html_writer::start_div('empty-state');
     echo $OUTPUT->pix_icon('i/warning', '', 'moodle', ['class' => 'empty-state-icon']);
     echo html_writer::tag('h3', 'No Risks Recorded');
-    echo html_writer::tag('p', 'All RTOs must identify and document risks under Standard 4.3. Start by recording your key operational, financial, and compliance risks. ASQA expects to see a maintained risk register as evidence of active governance.');
+    echo html_writer::tag('p', 'All RTOs must identify and document risks under Standard 4.2. Start by recording your key operational, financial, and compliance risks. ASQA expects to see a maintained risk register as evidence of active governance.');
     echo html_writer::link(
         new moodle_url('/local/rtocompliance/risk_edit.php'),
         'Add First Risk',
-        ['class' => 'btn btn-primary']
+        ['class' => 'btn btn-primary', 'title' => 'Add your first risk to the register']
     );
     echo html_writer::end_div();
 }
 
 echo html_writer::start_div('info-card info-accent-purple');
-echo html_writer::tag('h4', 'Standard 4.3 — Risk Management Compliance Checklist');
+echo html_writer::tag('h4', 'Standard 4.2 — Risk Management Compliance Checklist');
 $checklist = [
     'Risk identification and management reviewed by governing persons',
     'Financial position, performance, and cash flow monitored',

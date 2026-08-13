@@ -115,8 +115,10 @@
         overlay.appendChild(body);
         document.body.appendChild(overlay);
 
-        // lock body scroll
+        // lock body scroll (v6.2.37: also lock the root element so the page behind the
+        // overlay does not keep its own vertical scrollbar → no more double scrollbar).
         document.body.classList.add('rtoc-fs-open');
+        document.documentElement.classList.add('rtoc-fs-open');
 
         // focus close button for a11y
         closeBtn.focus();
@@ -124,6 +126,7 @@
         function close() {
             document.removeEventListener('keydown', onKey);
             document.body.classList.remove('rtoc-fs-open');
+            document.documentElement.classList.remove('rtoc-fs-open');
             if (overlay.parentNode) { overlay.parentNode.removeChild(overlay); }
         }
 

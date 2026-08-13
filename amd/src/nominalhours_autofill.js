@@ -1,4 +1,4 @@
-define([], function() {
+define([], function () {
     'use strict';
 
     var debounceTimer = null;
@@ -19,7 +19,10 @@ define([], function() {
      * @param {string} apiurl       Base URL of the essaygraderai API.
      */
     function init(codeFieldId, titleFieldId, hoursFieldId, apiurl) {
-        apiUrl = apiurl || 'https://lms-labs.com';
+        // NOMINAL-HOURS-INTERNAL (v5.9.418): apiurl is now the plugin's OWN internal
+        // lookup endpoint (nominalhours_lookup.php), not lms-labs.com — the lookup
+        // resolves the authoritative local reference table (NCVER + state overrides).
+        apiUrl = apiurl || (window.M && M.cfg ? M.cfg.wwwroot + '/local/rtocompliance/nominalhours_lookup.php' : '');
 
         var codeField  = document.getElementById(codeFieldId);
         var titleField = titleFieldId ? document.getElementById(titleFieldId) : null;
@@ -31,7 +34,7 @@ define([], function() {
 
         injectLookupButton(codeField, titleField, hoursField);
 
-        codeField.addEventListener('blur', function() {
+        codeField.addEventListener('blur', function () {
             var code = codeField.value.trim();
             if (code.length >= 4) {
                 // Cancel any pending debounce — blur fires the lookup immediately,
@@ -44,13 +47,13 @@ define([], function() {
             }
         });
 
-        codeField.addEventListener('input', function() {
+        codeField.addEventListener('input', function () {
             var code = codeField.value.trim();
             if (debounceTimer) {
                 clearTimeout(debounceTimer);
             }
             if (code.length >= 4) {
-                debounceTimer = setTimeout(function() {
+                debounceTimer = setTimeout(function () {
                     lookupNominalHours(code, titleField, hoursField);
                 }, 800);
             }
@@ -80,18 +83,18 @@ define([], function() {
             'vertical-align:middle',
         ].join(';');
 
-        btn.addEventListener('mouseenter', function() {
+        btn.addEventListener('mouseenter', function () {
             btn.style.background = '#1557b0';
         });
-        btn.addEventListener('mouseleave', function() {
+        btn.addEventListener('mouseleave', function () {
             btn.style.background = '#1a73e8';
         });
 
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function () {
             var code = codeField.value.trim();
             if (!code) {
                 showLookupStatus(hoursField, 'Enter a code first (e.g. BSB50420 or BSBWHS411).', 'info');
-                setTimeout(function() { hideLookupStatus(); }, 4000);
+                setTimeout(function () { hideLookupStatus(); }, 4000);
                 return;
             }
             lookupNominalHours(code, titleField, hoursField);
@@ -104,7 +107,8 @@ define([], function() {
 
     function lookupNominalHours(rawcode, titleField, hoursField) {
         var code = rawcode.toUpperCase().replace(/\s+/g, '');
-        var url = apiUrl + '/api/moodle/course-info/nominal-hours/' + encodeURIComponent(code);
+        // NOMINAL-HOURS-INTERNAL (v5.9.418): query the internal endpoint by ?code=.
+        var url = apiUrl + (apiUrl.indexOf('?') >= 0 ? '&' : '?') + 'code=' + encodeURIComponent(code);
 
         showLookupStatus(hoursField, 'Looking up ' + code + '...', 'info');
 
@@ -125,7 +129,7 @@ define([], function() {
         xhr.open('GET', url, true);
         xhr.timeout = 15000;
 
-        xhr.onreadystatechange = function() {
+        xhr.onreadystatechange = function () {
             // Ignore callbacks from a superseded request.
             if (xhr !== currentXhr) { return; }
             if (xhr.readyState !== 4) {
@@ -152,29 +156,29 @@ define([], function() {
                                : 'NCVER';
                         showLookupStatus(hoursField,
                             '\u2713 Found: ' + data.nominalHours + ' hours (' + src + ')', 'success');
-                        setTimeout(function() { hideLookupStatus(); }, 5000);
+                        setTimeout(function () { hideLookupStatus(); }, 5000);
                     } else {
                         var titleMsg = data.unitTitle ? ' (' + data.unitTitle + ')' : '';
                         showLookupStatus(hoursField,
                             'No NCVER hours found for ' + code + titleMsg + '. Enter manually.', 'warning');
-                        setTimeout(function() { hideLookupStatus(); }, 6000);
+                        setTimeout(function () { hideLookupStatus(); }, 6000);
                     }
                 } catch (e) {
                     hideLookupStatus();
                 }
             } else {
                 showLookupStatus(hoursField, 'Lookup failed. Enter hours manually.', 'warning');
-                setTimeout(function() { hideLookupStatus(); }, 5000);
+                setTimeout(function () { hideLookupStatus(); }, 5000);
             }
         };
 
-        xhr.ontimeout = function() {
+        xhr.ontimeout = function () {
             if (btn) {
                 btn.disabled = false;
                 btn.textContent = 'Lookup NCVER Hours';
             }
             showLookupStatus(hoursField, 'Lookup timed out. Enter hours manually.', 'warning');
-            setTimeout(function() { hideLookupStatus(); }, 5000);
+            setTimeout(function () { hideLookupStatus(); }, 5000);
         };
 
         xhr.send();

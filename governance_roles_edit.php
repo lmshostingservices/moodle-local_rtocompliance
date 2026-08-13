@@ -15,21 +15,20 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — governance_roles_edit.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
 $id = optional_param('id', 0, PARAM_INT);
 
 admin_externalpage_setup('local_rtocompliance_governancepage');
+require_login();
 $PAGE->set_url('/local/rtocompliance/governance_roles_edit.php', ['id' => $id]);
 $PAGE->set_title($id ? 'Edit Role' : 'Add Role');
 $PAGE->set_heading($id ? 'Edit Role' : 'Add Role');

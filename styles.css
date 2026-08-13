@@ -139,6 +139,38 @@
 }
 
 /* ============================================================
+   DESIGN-SYSTEM COMPONENTS (v6.2.40, Phase 0) — the single source of truth for cards and
+   info/help boxes, built from the tokens above. These are INERT until pages adopt the
+   classes; existing pages (which hand-roll ~2,080 inline styles) are migrated incrementally,
+   one navigation section per release, so there is no visual regression from adding them.
+   ============================================================ */
+[class*="path-local-rtocompliance"] .rtoc-card {
+    background: #fff;
+    border: 1px solid var(--rtoc-gray-200);
+    border-radius: var(--rtoc-radius-card);
+    box-shadow: var(--rtoc-shadow-sm);
+    padding: var(--rtoc-space-lg);
+}
+[class*="path-local-rtocompliance"] .rtoc-info {
+    border: 1px solid var(--rtoc-gray-200);
+    border-left: 4px solid var(--rtoc-gray-400);
+    border-radius: var(--rtoc-radius-md);
+    padding: var(--rtoc-space-md) var(--rtoc-space-lg);
+    background: var(--rtoc-gray-50);
+    color: var(--rtoc-gray-700);
+    font-size: var(--rtoc-text-sm);
+    line-height: 1.5;
+}
+[class*="path-local-rtocompliance"] .rtoc-info--blue  { background: #eff6ff; border-color: #bfdbfe; border-left-color: var(--rtoc-blue); }
+[class*="path-local-rtocompliance"] .rtoc-info--green { background: #f0fdf4; border-color: #bbf7d0; border-left-color: var(--rtoc-green); }
+[class*="path-local-rtocompliance"] .rtoc-info--amber { background: #fffbeb; border-color: #fde68a; border-left-color: var(--rtoc-amber); }
+[class*="path-local-rtocompliance"] .rtoc-info--red   { background: #fef2f2; border-color: #fecaca; border-left-color: var(--rtoc-rose); }
+[class*="path-local-rtocompliance"] .rtoc-info h1,
+[class*="path-local-rtocompliance"] .rtoc-info h2,
+[class*="path-local-rtocompliance"] .rtoc-info h3,
+[class*="path-local-rtocompliance"] .rtoc-info strong { color: var(--rtoc-gray-900); }
+
+/* ============================================================
    2. NAVIGATION HEADER BAR - Clean light breadcrumb header
    ============================================================ */
 
@@ -472,6 +504,44 @@
     height: 1rem;
     margin-right: var(--rtoc-space-sm);
     cursor: pointer;
+}
+
+/* FIX-EDITMODE-TOGGLE (v6.2.23): the generic 1rem checkbox sizing above squashes
+   Bootstrap/core toggle SWITCHES (notably the navbar "Edit mode" switch) into a bare
+   circle, because a .form-switch needs a ~2em-wide pill. Restore native switch
+   dimensions for real switches only (identified by .form-switch or role="switch");
+   the plugin's own form checkboxes are regular checkboxes and stay unaffected. The
+   pill track, border-radius and knob background-image all come from core/theme CSS,
+   which we never overrode — only the width was being clobbered. */
+[class*="path-local-rtocompliance"] .form-switch input[type="checkbox"],
+[class*="path-local-rtocompliance"] input[type="checkbox"][role="switch"] {
+    width: 2em;
+    height: 1em;
+    margin-right: 0;
+}
+
+/* FULLSCREEN-PREVIEW (v6.2.25): expand the certificate live preview to fill the whole
+   viewport so the entire issued PDF is readable at once (paired with the single-page,
+   no-sidebar PDF view mode). Toggled by the "Full screen" button; Esc exits. */
+.rtoc-tmpl-livepreview.rtoc-fullscreen {
+    position: fixed;
+    inset: 0;
+    z-index: 10800;
+    margin: 0;
+    padding: 12px 16px 16px;
+    background: #1f2733;
+    overflow: auto;
+}
+.rtoc-tmpl-livepreview.rtoc-fullscreen .rtoc-tmpl-preview-frame {
+    height: calc(100vh - 56px) !important;
+    /* v6.2.88: keep the A4 aspect at full height (var carries width/height ratio from the wrap). */
+    width: calc((100vh - 56px) * var(--pv-ratio, 0.7071)) !important;
+    min-height: 0 !important;
+    margin: 0 auto !important;
+}
+.rtoc-tmpl-livepreview.rtoc-fullscreen strong,
+.rtoc-tmpl-livepreview.rtoc-fullscreen .text-muted {
+    color: #e6edf5 !important;
 }
 
 /* DATE SELECTORS - SCOPED */
@@ -829,13 +899,56 @@
     }
 }
 
-/* ── Inline wrapper from PHP (max-width inline style) — absorb into system ── */
+/* ── Inline wrapper from PHP (max-width inline style) — absorb into system ──
+   Neutralise fixed pixel page-content width caps so the content fills the
+   available width (and expands when the left sidebar is collapsed) instead of
+   leaving empty space on the right. Covers both "max-width:Npx" and
+   "max-width: Npx" (with/without the space) since both forms appear in the PHP.
+   Large caps (>=1000px) are ALWAYS full-page content wrappers, so they are all
+   absorbed; small readable-column caps (<=900px) that were already absorbed
+   stay listed. */
 [class*="path-local-rtocompliance"] [style*="max-width:700px"],
 [class*="path-local-rtocompliance"] [style*="max-width: 700px"],
-[class*="path-local-rtocompliance"] [style*="max-width: 780px"],
+[class*="path-local-rtocompliance"] [style*="max-width:720px"],
 [class*="path-local-rtocompliance"] [style*="max-width: 720px"],
+[class*="path-local-rtocompliance"] [style*="max-width:780px"],
+[class*="path-local-rtocompliance"] [style*="max-width: 780px"],
+[class*="path-local-rtocompliance"] [style*="max-width:800px"],
 [class*="path-local-rtocompliance"] [style*="max-width: 800px"],
-[class*="path-local-rtocompliance"] [style*="max-width: 900px"] {
+[class*="path-local-rtocompliance"] [style*="max-width:900px"],
+[class*="path-local-rtocompliance"] [style*="max-width: 900px"],
+[class*="path-local-rtocompliance"] [style*="max-width:1000px"],
+[class*="path-local-rtocompliance"] [style*="max-width: 1000px"],
+[class*="path-local-rtocompliance"] [style*="max-width:1040px"],
+[class*="path-local-rtocompliance"] [style*="max-width: 1040px"],
+[class*="path-local-rtocompliance"] [style*="max-width:1050px"],
+[class*="path-local-rtocompliance"] [style*="max-width: 1050px"],
+[class*="path-local-rtocompliance"] [style*="max-width:1100px"],
+[class*="path-local-rtocompliance"] [style*="max-width: 1100px"],
+[class*="path-local-rtocompliance"] [style*="max-width:1150px"],
+[class*="path-local-rtocompliance"] [style*="max-width: 1150px"],
+[class*="path-local-rtocompliance"] [style*="max-width:1180px"],
+[class*="path-local-rtocompliance"] [style*="max-width: 1180px"],
+[class*="path-local-rtocompliance"] [style*="max-width:1200px"],
+[class*="path-local-rtocompliance"] [style*="max-width: 1200px"],
+[class*="path-local-rtocompliance"] [style*="max-width:1220px"],
+[class*="path-local-rtocompliance"] [style*="max-width: 1220px"],
+[class*="path-local-rtocompliance"] [style*="max-width:1250px"],
+[class*="path-local-rtocompliance"] [style*="max-width: 1250px"],
+[class*="path-local-rtocompliance"] [style*="max-width:1280px"],
+[class*="path-local-rtocompliance"] [style*="max-width: 1280px"],
+[class*="path-local-rtocompliance"] [style*="max-width:1300px"],
+[class*="path-local-rtocompliance"] [style*="max-width: 1300px"],
+[class*="path-local-rtocompliance"] [style*="max-width:1320px"],
+[class*="path-local-rtocompliance"] [style*="max-width: 1320px"],
+[class*="path-local-rtocompliance"] [style*="max-width:1350px"],
+[class*="path-local-rtocompliance"] [style*="max-width: 1350px"],
+[class*="path-local-rtocompliance"] [style*="max-width:1400px"],
+[class*="path-local-rtocompliance"] [style*="max-width: 1400px"],
+[class*="path-local-rtocompliance"] [style*="max-width:1440px"],
+[class*="path-local-rtocompliance"] [style*="max-width: 1440px"],
+[class*="path-local-rtocompliance"] [style*="max-width:1500px"],
+[class*="path-local-rtocompliance"] [style*="max-width: 1500px"] {
     max-width: none !important;
     padding: 0 !important;
     margin: 0 !important;
@@ -1070,8 +1183,28 @@
     color: var(--rtoc-gray-700) !important;
     cursor: pointer;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    white-space: nowrap;
+    /* BUTTON-TEXT-PADDING (v5.9.403): allow long labels to WRAP inside the button
+       instead of running to the edges. Previously white-space:nowrap + a fixed
+       single-line height meant a long label in a narrow full-width button (e.g. the
+       "Sync results from Moodle completions" side-panel button) clipped against the
+       edges. Wrapping + height:auto keeps the horizontal/vertical padding honoured. */
+    white-space: normal;
+    height: auto;
     min-height: 2.75rem;
+    text-align: center;
+    word-break: normal;
+    overflow-wrap: anywhere;
+}
+
+/* Small buttons still need comfortable padding — Bootstrap's .btn-sm alone is too
+   tight for the long-label full-width buttons used in the plugin's side panels. */
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-sm,
+[class*="path-local-rtocompliance"] .rtoc-main-content button[type="submit"].btn-sm,
+[class*="path-local-rtocompliance"] .rtoc-main-content input[type="submit"].btn-sm {
+    padding: 0.5rem 1rem;
+    min-height: 2.25rem;
+    font-size: 0.9rem !important;
+    line-height: 1.4;
 }
 
 /* HEADER RESET — undo the generic .btn override for Moodle nav/header elements
@@ -1091,10 +1224,16 @@
     min-height: unset !important;
     color: inherit !important;
     white-space: normal;
-    display: inline-block !important;
     box-shadow: none !important;
-    align-items: unset !important;
-    justify-content: unset !important;
+    /* AVATAR-ALIGN FIX: keep the theme's flex vertical-centring on the user-menu /
+       edit-mode / nav toggles. The previous "display:inline-block; align-items:unset"
+       stripped the flex centring, so the round user-initials avatar fell to the text
+       baseline and appeared to "jump up" — but only inside RTO Compliance, where this
+       stylesheet loads. inline-flex + align-items:center restores the theme layout. */
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    vertical-align: middle !important;
     gap: unset !important;
 }
 
@@ -1307,6 +1446,176 @@
 }
 
 /* ============================================================
+   BUTTON CONTRAST AUDIT (v5.9.450)
+   Every Bootstrap button variant used anywhere in the plugin
+   gets an explicit, readable hover so no button ever renders
+   light text on a light background. This covers the variants the
+   earlier rules missed — warning / info / light / dark and their
+   outline forms — and is scoped to the whole plugin (not just
+   .rtoc-main-content) so table action buttons (Edit / Preview /
+   Make default), header buttons and card buttons are all fixed.
+   The reported case was .btn-outline-warning: Bootstrap's default
+   hover is white text on light amber. These rules override it.
+   ============================================================ */
+
+/* --- WARNING (solid): dark text on amber in every state --- */
+[class*="path-local-rtocompliance"] .btn-warning,
+[class*="path-local-rtocompliance"] a.btn-warning:link,
+[class*="path-local-rtocompliance"] a.btn-warning:visited {
+    background-color: #f59e0b !important;
+    border-color: #d97706 !important;
+    color: #1f2937 !important;
+}
+[class*="path-local-rtocompliance"] .btn-warning:hover,
+[class*="path-local-rtocompliance"] .btn-warning:focus,
+[class*="path-local-rtocompliance"] a.btn-warning:hover {
+    background-color: #d97706 !important;
+    border-color: #b45309 !important;
+    color: #1f2937 !important;
+    text-decoration: none !important;
+}
+
+/* --- OUTLINE-WARNING: the reported light-on-light offender --- */
+[class*="path-local-rtocompliance"] .btn-outline-warning,
+[class*="path-local-rtocompliance"] a.btn-outline-warning:link,
+[class*="path-local-rtocompliance"] a.btn-outline-warning:visited {
+    background-color: #fff !important;
+    border: 1px solid #d97706 !important;
+    color: #b45309 !important;
+}
+[class*="path-local-rtocompliance"] .btn-outline-warning:hover,
+[class*="path-local-rtocompliance"] .btn-outline-warning:focus,
+[class*="path-local-rtocompliance"] a.btn-outline-warning:hover {
+    background-color: #b45309 !important;   /* dark amber */
+    border-color: #b45309 !important;
+    color: #fff !important;                 /* white on dark amber — good contrast */
+    text-decoration: none !important;
+}
+
+/* --- DANGER (solid) --- */
+[class*="path-local-rtocompliance"] .btn-danger,
+[class*="path-local-rtocompliance"] a.btn-danger:link,
+[class*="path-local-rtocompliance"] a.btn-danger:visited {
+    background-color: #dc2626 !important;
+    border-color: #b91c1c !important;
+    color: #fff !important;
+}
+[class*="path-local-rtocompliance"] .btn-danger:hover,
+[class*="path-local-rtocompliance"] .btn-danger:focus,
+[class*="path-local-rtocompliance"] a.btn-danger:hover {
+    background-color: #b91c1c !important;
+    border-color: #991b1b !important;
+    color: #fff !important;
+    text-decoration: none !important;
+}
+
+/* --- INFO (solid) --- */
+[class*="path-local-rtocompliance"] .btn-info,
+[class*="path-local-rtocompliance"] a.btn-info:link,
+[class*="path-local-rtocompliance"] a.btn-info:visited {
+    background-color: #0891b2 !important;
+    border-color: #0e7490 !important;
+    color: #fff !important;
+}
+[class*="path-local-rtocompliance"] .btn-info:hover,
+[class*="path-local-rtocompliance"] .btn-info:focus,
+[class*="path-local-rtocompliance"] a.btn-info:hover {
+    background-color: #0e7490 !important;
+    border-color: #155e75 !important;
+    color: #fff !important;
+    text-decoration: none !important;
+}
+
+/* --- OUTLINE-INFO --- */
+[class*="path-local-rtocompliance"] .btn-outline-info,
+[class*="path-local-rtocompliance"] a.btn-outline-info:link,
+[class*="path-local-rtocompliance"] a.btn-outline-info:visited {
+    background-color: #fff !important;
+    border: 1px solid #0891b2 !important;
+    color: #0e7490 !important;
+}
+[class*="path-local-rtocompliance"] .btn-outline-info:hover,
+[class*="path-local-rtocompliance"] .btn-outline-info:focus,
+[class*="path-local-rtocompliance"] a.btn-outline-info:hover {
+    background-color: #0e7490 !important;
+    border-color: #0e7490 !important;
+    color: #fff !important;
+    text-decoration: none !important;
+}
+
+/* --- OUTLINE-SUCCESS --- */
+[class*="path-local-rtocompliance"] .btn-outline-success,
+[class*="path-local-rtocompliance"] a.btn-outline-success:link,
+[class*="path-local-rtocompliance"] a.btn-outline-success:visited {
+    background-color: #fff !important;
+    border: 1px solid #16a34a !important;
+    color: #15803d !important;
+}
+[class*="path-local-rtocompliance"] .btn-outline-success:hover,
+[class*="path-local-rtocompliance"] .btn-outline-success:focus,
+[class*="path-local-rtocompliance"] a.btn-outline-success:hover {
+    background-color: #15803d !important;
+    border-color: #166534 !important;
+    color: #fff !important;
+    text-decoration: none !important;
+}
+
+/* --- LIGHT: always dark text --- */
+[class*="path-local-rtocompliance"] .btn-light,
+[class*="path-local-rtocompliance"] a.btn-light:link,
+[class*="path-local-rtocompliance"] a.btn-light:visited {
+    background-color: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #0f172a !important;
+}
+[class*="path-local-rtocompliance"] .btn-light:hover,
+[class*="path-local-rtocompliance"] .btn-light:focus,
+[class*="path-local-rtocompliance"] a.btn-light:hover {
+    background-color: #e2e8f0 !important;
+    border-color: #94a3b8 !important;
+    color: #0f172a !important;
+    text-decoration: none !important;
+}
+
+/* --- DARK --- */
+[class*="path-local-rtocompliance"] .btn-dark,
+[class*="path-local-rtocompliance"] a.btn-dark:link,
+[class*="path-local-rtocompliance"] a.btn-dark:visited {
+    background-color: #1f2937 !important;
+    border-color: #111827 !important;
+    color: #fff !important;
+}
+[class*="path-local-rtocompliance"] .btn-dark:hover,
+[class*="path-local-rtocompliance"] .btn-dark:focus,
+[class*="path-local-rtocompliance"] a.btn-dark:hover {
+    background-color: #111827 !important;
+    border-color: #000 !important;
+    color: #fff !important;
+    text-decoration: none !important;
+}
+
+/* Guarantee outline-primary / outline-secondary stay readable on hover
+   even OUTSIDE .rtoc-main-content (e.g. table action buttons like Edit /
+   Preview), mirroring the established in-content look so there is no
+   visual regression and no light-on-light anywhere. */
+[class*="path-local-rtocompliance"] .btn-outline-primary:hover,
+[class*="path-local-rtocompliance"] .btn-outline-primary:focus,
+[class*="path-local-rtocompliance"] a.btn-outline-primary:hover {
+    background: linear-gradient(135deg, var(--rtoc-primary), #0b5fa5) !important;
+    border-color: #0b5fa5 !important;
+    color: #fff !important;
+    text-decoration: none !important;
+}
+[class*="path-local-rtocompliance"] .btn-outline-secondary:hover,
+[class*="path-local-rtocompliance"] .btn-outline-secondary:focus,
+[class*="path-local-rtocompliance"] a.btn-outline-secondary:hover {
+    background-color: #f1f5f9 !important;
+    border-color: #64748b !important;
+    color: #0f172a !important;
+    text-decoration: none !important;
+}
+
+/* ============================================================
    5. BADGES & STATUS - SCOPED
    ============================================================ */
 
@@ -1353,6 +1662,11 @@
 [class*="path-local-rtocompliance"] .badge-purple {
     background-color: #ede9fe;
     color: #5b21b6;
+}
+/* v5.9.368: rpl.php RPL-type badge referenced .badge-blue, which was undefined (rendered colourless). */
+[class*="path-local-rtocompliance"] .badge-blue {
+    background-color: #dbeafe;
+    color: #1e40af;
 }
 
 /* Trainer Status Badges */
@@ -3660,21 +3974,23 @@
     margin-bottom: var(--rtoc-space-lg);
 }
 
-/* SCROLL FIX: earlier rules set width:100% on .generaltable and .trainers-table.
-   That forces tables to always exactly fill their container, so min-width never
-   kicks in and the wrapper never scrolls. Override width to auto so each table
-   expands to its natural content width (or min-width, whichever is larger).
-   The !important is necessary because Moodle core CSS also sets width:100%
-   on .generaltable with the same specificity. */
+/* FULL-WIDTH-TABLES (v6.2.34): tables now FILL their container and let cell content
+   wrap, instead of being forced to a 1000px minimum. The old max(1000px,100%) floor made
+   even narrow tables (e.g. the USI list) overflow their column area and show an
+   unnecessary horizontal scrollbar with wasted space either side. Best practice: fill the
+   width, wrap long text; only genuinely wide tables (many columns) opt into a scroll floor
+   via .rtoc-table--wide. The !important still beats Moodle core's width:100%. */
 [class*="path-local-rtocompliance"] .rtoc-table-wrapper table {
     margin: 0;
-    width: auto !important;
-    /* max() ensures the table fills the container on wide screens (no orphaned
-       white space) while still overflowing and triggering scroll on narrow ones. */
-    min-width: max(1000px, 100%);
+    width: 100% !important;
+    min-width: 0;
+}
+/* Opt-in floor for tables that genuinely need horizontal room (many columns). */
+[class*="path-local-rtocompliance"] .rtoc-table-wrapper table.rtoc-table--wide {
+    min-width: 900px;
 }
 
-/* Trainers table has 15 columns — needs wider floor to enable scroll */
+/* Trainers table has 15 columns — keep a wide floor so it scrolls rather than crushes. */
 [class*="path-local-rtocompliance"] .rtoc-table-wrapper .trainers-table {
     min-width: max(1600px, 100%);
 }
@@ -7197,18 +7513,65 @@
    Three-column grid: palette / canvas / properties + validator.
    Canvas = A4 at 3 px/mm; fields are absolutely positioned children.
    ────────────────────────────────────────────────────────────────────── */
+/* v6.2.78 TOP ACTION BAR — Save draft + one-click Save & Approve + Preview, sticky at top. */
+.rtoc-tmpl-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    padding: 8px 14px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+.rtoc-tmpl-topbar-title {
+    font-weight: 700;
+    color: #1e293b;
+    font-size: 0.95rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+.rtoc-tmpl-topbar-actions {
+    display: flex;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+[data-bs-theme="dark"] .rtoc-tmpl-topbar,
+.dark .rtoc-tmpl-topbar { background: #2b2b2b; border-color: #444; }
+[data-bs-theme="dark"] .rtoc-tmpl-topbar-title,
+.dark .rtoc-tmpl-topbar-title { color: #e5e7eb; }
+
 .rtoc-tmpl-grid {
     display: grid;
-    grid-template-columns: 340px 1fr 320px;
-    gap: 20px;
+    /* SINGLE PAGE + PROPERTIES RIGHT (v6.2.91): one A4 page in the centre, the field palette on the
+       left (260px) and the field properties docked as the right-hand column (330px). The canvas is
+       the single WYSIWYG page (the separate live preview was removed). The ASQA validator + action
+       buttons sit below the properties in the right column. */
+    grid-template-columns: 260px 1fr 330px;
+    gap: 18px;
     align-items: start;
+    /* SLIDE-OVER PROPERTIES (v6.2.63): smooth slide when the settings pane shows/hides. */
+    transition: grid-template-columns 0.2s ease;
 }
+/* WIDE-CANVAS (v6.2.31) + slide-over: collapse the right column so the page gets the full width. */
+.rtoc-tmpl-grid.rtoc-inspector-collapsed { grid-template-columns: 260px 1fr 0; }
+.rtoc-tmpl-grid.rtoc-inspector-collapsed .rtoc-tmpl-right { display: none; }
 .rtoc-tmpl-left {
+    /* v6.2.79: LEFT column scrolls INDEPENDENTLY (its own scrollbar); the middle canvas +
+       right preview/properties flow with the page and scroll together. */
     position: sticky;
     top: 16px;
     max-height: calc(100vh - 32px);
     overflow-y: auto;
     overflow-x: hidden;
+    overscroll-behavior: contain;
     background: #fff;
     border: 1px solid #dee2e6;
     border-radius: 5px;
@@ -7222,10 +7585,6 @@
     display: flex;
     flex-direction: column;
     gap: 0;
-    position: sticky;
-    top: 16px;
-    max-height: calc(100vh - 32px);
-    overflow-y: hidden;
 }
 .rtoc-tmpl-section {
     background: #fff;
@@ -7249,14 +7608,160 @@
 }
 
 /* ─── RIGHT PANEL LAYOUT ─────────────────────────────────────────────────── */
+/* PROPS-PANEL-ROOM (v6.2.14): the ASQA validator / Recommendations box had no height
+   limit, so on a long recommendation it hogged the right column and squeezed the field
+   Properties into a tiny scrolling box — forcing constant up/down scrolling to reach
+   Alignment, Z-order, etc. Cap the validator to a modest height (it scrolls on its own),
+   so the Properties section gets the large majority of the column height and its controls
+   fit without scrolling. */
 .rtoc-validator-top {
     flex-shrink: 0;
 }
 .rtoc-props-section {
     flex: 1 1 auto;
-    overflow-y: auto;
-    min-height: 0;
+    min-height: 320px;
 }
+/* v6.2.88 PROPERTIES TOP BAR (docked, default): the field settings sit in a full-width horizontal
+   bar above the two A4 pages (word-processor style). The property groups — Position & Size,
+   Typography, Appearance — lay out left-to-right; the header carries the title and the Float
+   button that pops the whole bar out into the draggable panel below. */
+.rtoc-props-bar {
+    background: #ffffff;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+}
+[data-bs-theme="dark"] .rtoc-props-bar,
+.dark .rtoc-props-bar { background: #2b2b2b; border-color: #444; }
+/* Kill the old right-column min-height:320px so the bar is compact (it was creating a huge empty
+   box), and lay the header as a clean flex row: title on the left, Float button on the right. */
+.rtoc-props-bar .rtoc-props-section {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    min-height: 0;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    position: relative;
+}
+.rtoc-props-bar .rtoc-props-section > .rtoc-section-h {
+    margin: 0;
+    order: 0;
+    padding-right: 140px; /* room for the Float button in the top-right corner */
+}
+.rtoc-props-bar .rtoc-props-floatbtn {
+    position: absolute;
+    top: 0;
+    right: 0;
+    color: #1d4ed8;
+    border-color: #bfdbfe;
+    background: #fff;
+}
+.rtoc-props-bar .rtoc-props-floatbtn:hover,
+.rtoc-props-bar .rtoc-props-floatbtn:focus { color: #1e3a8a; background: #eff6ff; }
+.rtoc-props-bar .rtoc-tmpl-props-empty { order: 1; }
+/* Groups across the bar, left-to-right. */
+.rtoc-props-bar #rtoc-tmpl-props {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 4px 26px;
+    clear: both;
+    order: 2;
+    width: 100%;
+}
+.rtoc-props-bar #rtoc-tmpl-props > .rtoc-props-group {
+    flex: 0 1 auto;
+    min-width: 190px;
+    max-width: 260px;
+    margin: 0;
+    border: 0;
+    padding: 0;
+    background: transparent;
+}
+.rtoc-props-bar .rtoc-props-group-summary { margin-bottom: 4px; }
+.rtoc-props-bar .form-group.form-row { margin-bottom: 4px; }
+.rtoc-props-bar #p-delete { margin-top: 4px; }
+
+/* v6.2.85 STAGE 3: "Float properties" — pop the whole properties bar out into a draggable,
+   TinyMCE-style card (position remembered), and dock it back. Toggled by the Float button, which
+   adds .rtoc-props-floating to the bar. */
+.rtoc-props-bar.rtoc-props-floating .rtoc-props-section {
+    position: fixed;
+    /* v6.2.88: default the floating panel to the LEFT (over the field palette) so it never covers
+       the two A4 pages on the right; the author can drag it anywhere and the position is saved. It
+       is tall enough to show ALL properties (Position & Size, Typography, Appearance) at once. */
+    top: 84px;
+    left: 16px;
+    right: auto;
+    bottom: auto;
+    width: 340px;
+    max-width: calc(100vw - 36px);
+    max-height: calc(100vh - 104px);
+    overflow-y: auto;
+    z-index: 1050;
+    margin: 0;
+    background: #fff;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    box-shadow: 0 10px 34px rgba(15, 23, 42, 0.22);
+}
+[data-bs-theme="dark"] .rtoc-props-bar.rtoc-props-floating .rtoc-props-section,
+.dark .rtoc-props-bar.rtoc-props-floating .rtoc-props-section {
+    background: #2b2b2b;
+    border-color: #555;
+}
+/* The header doubles as the drag handle while floating. */
+.rtoc-props-bar.rtoc-props-floating .rtoc-props-section .rtoc-section-h {
+    position: sticky;
+    top: 0;
+    margin: -12px -14px 8px;
+    padding: 10px 14px;
+    background: linear-gradient(180deg, #eff6ff, #f8fafc);
+    border-bottom: 1px solid #dbeafe;
+    border-radius: 10px 10px 0 0;
+    cursor: move;
+    color: #1e3a8a;
+    z-index: 1;
+}
+.rtoc-props-bar.rtoc-props-floating .rtoc-props-section .rtoc-section-h::before {
+    content: "\2630  ";
+    opacity: 0.55;
+}
+/* Keep the three-column grid (left palette / canvas / live-preview) — floating only lifts the
+   PROPERTIES out of flow into the fixed card above; the right column stays the preview column. */
+@media (max-width: 900px) {
+    /* On narrow screens the floating card would cover the canvas — pin it to the bottom as a
+       sheet the author can still drag. */
+    .rtoc-props-bar.rtoc-props-floating .rtoc-props-section {
+        top: auto;
+        bottom: 12px;
+        right: 12px;
+        left: 12px;
+        width: auto;
+        max-height: 46vh;
+    }
+}
+/* When floated, the bar wrapper collapses (its content is fixed) and the groups stack vertically
+   inside the narrow card instead of laying out across a bar. */
+.rtoc-props-bar.rtoc-props-floating {
+    padding: 0;
+    border: 0;
+    margin: 0;
+    min-height: 0;
+    background: transparent;
+}
+.rtoc-props-bar.rtoc-props-floating #rtoc-tmpl-props { display: block; }
+.rtoc-props-bar.rtoc-props-floating #rtoc-tmpl-props > .rtoc-props-group {
+    min-width: 0;
+    max-width: none;
+}
+.rtoc-props-bar.rtoc-props-floating .rtoc-props-section > .rtoc-section-h { display: block; }
+.rtoc-props-bar.rtoc-props-floating .rtoc-props-floatbtn { float: none; }
 .rtoc-tmpl-actions {
     flex-shrink: 0;
     display: flex;
@@ -7624,23 +8129,26 @@
     flex: 1 1 auto;
     overflow: hidden;
 }
+/* v5.9.442: this is a "required for this cert type" hint, NOT an error. It was a red
+   filled circle with a "!", which read exactly like an error badge. Restyled to a clear
+   amber "Required" pill so it stops looking like something is wrong. */
 .rtoc-chip-req {
     flex-shrink: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 13px;
-    height: 13px;
-    background: #dc3545;
-    color: #fff;
-    border-radius: 50%;
-    font-size: 0.55rem;
-    font-weight: 900;
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+    border-radius: 999px;
+    font-size: 0.6rem;
+    font-weight: 700;
     line-height: 1;
-    padding: 0;
-    margin-left: 3px;
+    padding: 2px 8px;
+    margin-left: 4px;
     text-transform: none;
-    letter-spacing: 0;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
     cursor: help;
 }
 .rtoc-palette-grid--custom .rtoc-palette-chip--custom {
@@ -7780,8 +8288,9 @@
     padding: 24px;
     border-radius: 4px;
     width: 100%;
-    overflow: auto;
-    max-height: calc(100vh - 80px);
+    /* v6.2.76: horizontal scroll only for a wide canvas; vertical grows with the page. */
+    overflow-x: auto;
+    max-height: none;
 }
 .rtoc-tmpl-canvas {
     position: relative;
@@ -7801,6 +8310,32 @@
 .rtoc-tmpl-canvas-caption {
     text-align: center;
 }
+/* v6.2.88 TWO-EQUAL-PDFS: the live preview mirrors the edit canvas — same grey backing, same A4
+   pixel size (via the --pv-w / --pv-h vars the PHP sets per orientation), centred, so the canvas
+   on the left and the preview on the right read as two identical pages. Both columns start at the
+   grid top (align-items:start) and their toolbars are single-row, so the two pages top-align. */
+.rtoc-tmpl-preview-wrap {
+    background: #6c757d;
+    padding: 24px;
+    border-radius: 4px;
+    width: 100%;
+    overflow-x: auto;
+    box-sizing: border-box;
+}
+.rtoc-tmpl-preview-frame {
+    display: block;
+    margin: 0 auto;
+    width: calc(var(--pv-w, 630) * 1px);
+    height: calc(var(--pv-h, 891) * 1px);
+    background: #ffffff;
+    border: 0;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+/* Keep the canvas toolbar and the preview header to a single row so the two pages top-align. */
+.rtoc-tmpl-toolbar { flex-wrap: nowrap; overflow-x: auto; }
+.rtoc-tmpl-livepreview { margin-top: 0 !important; }
+.rtoc-tmpl-livepreview > .d-flex { flex-wrap: nowrap; white-space: nowrap; }
+.rtoc-tmpl-livepreview > .d-flex .btn { white-space: nowrap; }
 /* Drag-over highlight when a palette chip is dragged over the canvas. */
 .rtoc-tmpl-canvas-dragover {
     outline: 2px dashed #0d6efd !important;
@@ -7828,26 +8363,33 @@
     border-color: rgba(13, 110, 253, 0.6);
 }
 .rtoc-tmpl-field-selected {
-    border: 1.5px solid #0d6efd !important;
-    background: rgba(13, 110, 253, 0.06);
+    border: 1.5px solid #5b5bd6 !important;
+    background: rgba(91, 91, 214, 0.08);
 }
-.rtoc-tmpl-field-handle {
+/* RESIZE-HANDLES-8 (v6.2.30): eight square handles (4 corners + 4 edge midpoints),
+   shown only when the element is selected. */
+.rtoc-tmpl-handle {
     position: absolute;
-    right: -5px;
-    bottom: -5px;
-    width: 12px;
-    height: 12px;
-    background: #0d6efd;
-    border: 2px solid #fff;
-    border-radius: 50%;
-    cursor: nwse-resize;
-    z-index: 2;
-    /* Hidden until selected. */
+    width: 10px;
+    height: 10px;
+    background: #fff;
+    border: 1.5px solid #5b5bd6;
+    border-radius: 2px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.18);
+    z-index: 3;
     visibility: hidden;
 }
-.rtoc-tmpl-field-selected .rtoc-tmpl-field-handle {
+.rtoc-tmpl-field-selected .rtoc-tmpl-handle {
     visibility: visible;
 }
+.rtoc-tmpl-handle-nw { left: -5px;  top: -5px;    cursor: nwse-resize; }
+.rtoc-tmpl-handle-ne { right: -5px; top: -5px;    cursor: nesw-resize; }
+.rtoc-tmpl-handle-se { right: -5px; bottom: -5px; cursor: nwse-resize; }
+.rtoc-tmpl-handle-sw { left: -5px;  bottom: -5px; cursor: nesw-resize; }
+.rtoc-tmpl-handle-n  { left: 50%;   top: -5px;    transform: translateX(-50%); cursor: ns-resize; }
+.rtoc-tmpl-handle-s  { left: 50%;   bottom: -5px; transform: translateX(-50%); cursor: ns-resize; }
+.rtoc-tmpl-handle-w  { left: -5px;  top: 50%;     transform: translateY(-50%); cursor: ew-resize; }
+.rtoc-tmpl-handle-e  { right: -5px; top: 50%;     transform: translateY(-50%); cursor: ew-resize; }
 .rtoc-tmpl-field-inner {
     width: 100%;
     height: 100%;
@@ -7904,6 +8446,49 @@
 @media (max-width: 1100px) {
     .rtoc-tmpl-grid { grid-template-columns: 1fr; }
     .rtoc-tmpl-left, .rtoc-tmpl-right { position: static; max-height: none; }
+}
+
+/* Modern, quiet scrollbars for every editor scroll pane (thin, themed, out of the way). */
+.rtoc-tmpl-left,
+.rtoc-props-section,
+.rtoc-validator-top,
+.rtoc-tmpl-centre,
+.rtoc-tmpl-canvas-wrap {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(100, 116, 139, 0.5) transparent;
+}
+.rtoc-tmpl-left::-webkit-scrollbar,
+.rtoc-props-section::-webkit-scrollbar,
+.rtoc-validator-top::-webkit-scrollbar,
+.rtoc-tmpl-centre::-webkit-scrollbar,
+.rtoc-tmpl-canvas-wrap::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+.rtoc-tmpl-left::-webkit-scrollbar-thumb,
+.rtoc-props-section::-webkit-scrollbar-thumb,
+.rtoc-validator-top::-webkit-scrollbar-thumb,
+.rtoc-tmpl-centre::-webkit-scrollbar-thumb,
+.rtoc-tmpl-canvas-wrap::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.45);
+    border-radius: 8px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+.rtoc-tmpl-left::-webkit-scrollbar-thumb:hover,
+.rtoc-props-section::-webkit-scrollbar-thumb:hover,
+.rtoc-validator-top::-webkit-scrollbar-thumb:hover,
+.rtoc-tmpl-centre::-webkit-scrollbar-thumb:hover,
+.rtoc-tmpl-canvas-wrap::-webkit-scrollbar-thumb:hover {
+    background: rgba(71, 85, 105, 0.7);
+    background-clip: padding-box;
+}
+.rtoc-tmpl-left::-webkit-scrollbar-track,
+.rtoc-props-section::-webkit-scrollbar-track,
+.rtoc-validator-top::-webkit-scrollbar-track,
+.rtoc-tmpl-centre::-webkit-scrollbar-track,
+.rtoc-tmpl-canvas-wrap::-webkit-scrollbar-track {
+    background: transparent;
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
@@ -8252,8 +8837,24 @@ ul.rtoc-suit-intro-list li { margin: 2px 0; }
 }
 
 /* Body scroll lock when overlay is open */
-body.rtoc-fs-open {
+body.rtoc-fs-open,
+html.rtoc-fs-open {
+    /* DOUBLE-SCROLLBAR-FIX (v6.2.37): lock BOTH the body and the root element so the page
+       behind the full-screen overlay does not show its own vertical scrollbar alongside the
+       overlay's own — that produced the "two vertical scrollbars" reported in full screen. */
     overflow: hidden !important;
+}
+
+/* USI-CELL-STACK (v6.2.37): stack the USI code, status badge and Verify button vertically so
+   they no longer sit side-by-side and force the USI column unnecessarily wide. */
+.rtoc-usi-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+}
+.rtoc-usi-cell .rtoc-usi-verify-btn {
+    margin: 0;
 }
 
 /* Full-screen overlay backdrop */
@@ -8554,11 +9155,13 @@ body.rtoc-fs-open {
     align-items: center;
     gap: 12px;
     flex-wrap: wrap;
-    padding: 10px 16px;
+    padding: 12px 18px;
     margin-bottom: 16px;
     background: #fffbeb;
     border: 1px solid #fcd34d;
     border-radius: 6px;
+    font-size: 15px;
+    line-height: 1.6;
     font-size: 13px;
     color: #92400e;
 }
@@ -8571,4 +9174,972 @@ body.rtoc-fs-open {
 [class*="path-local-rtocompliance"] .rtoc-dob-sync-btn {
     flex-shrink: 0;
     white-space: nowrap;
+    color: #fff !important; /* BUTTON-CONTRAST-FIX: Moodle/Bootstrap .btn rules can override inline color on coloured buttons; force white text for all filled sync/action banners. */
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RTO COMPLIANCE — UNIFIED STYLING ENGINE  (v5.9.341)
+   ---------------------------------------------------------------------------
+   This block is appended LAST so it is the single authoritative layer for the
+   design system. It intentionally re-declares the design tokens and the core
+   data-table component so that behaviour is defined in ONE place instead of the
+   3 duplicated :root blocks and 2 competing .rtoc-table-wrapper blocks that had
+   accumulated earlier in this file.
+
+   Everything is scoped under [class*="path-local-rtocompliance"] so it can only
+   affect plugin pages and can never leak into Moodle's own chrome.
+
+   Goals addressed:
+     1. One modern, lighter, consistent colour system (tokens below).
+     2. Premium SaaS data-tables with a definitive fix for last-column overlap
+        (content-sized table inside an overflow-x scroll container).
+     3. Cross-Bootstrap-4/5 shims so badges + spacing utilities render identically
+        on Moodle 4.4 (Bootstrap 4) and Moodle 5.x (Bootstrap 5).
+     4. A 4-tier responsive system (phone / tablet / laptop / desktop).
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. Canonical design tokens ─────────────────────────────────────────────
+   Declared last → these win over the earlier duplicate token blocks. Modernised
+   primary (brighter blue, matched to the new sidebar accent) plus a small set of
+   surface/border/text tokens the table + component rules below consume. */
+[class*="path-local-rtocompliance"] {
+    --rtoc-primary:        #2563eb;   /* modern blue-600 (was #0f6cbf) */
+    --rtoc-primary-hover:  #1d4ed8;   /* blue-700 */
+    --rtoc-primary-light:  #eff6ff;   /* blue-50 tints */
+    --rtoc-primary-border: #bfdbfe;   /* blue-200 */
+
+    /* Neutral surfaces + text (single source of truth for tables/cards) */
+    --rtoc-surface:        #ffffff;
+    --rtoc-surface-2:      #f8fafc;   /* zebra / subtle fills */
+    --rtoc-surface-3:      #f1f5f9;   /* hover / headers */
+    --rtoc-border:         #e5e9f0;   /* hairlines */
+    --rtoc-border-strong:  #cbd5e1;
+    --rtoc-ink:            #0f172a;    /* slate-900 primary text */
+    --rtoc-ink-2:          #334155;    /* slate-700 body text */
+    --rtoc-ink-muted:      #64748b;    /* slate-500 secondary text */
+
+    /* Premium elevation used by the table + card components */
+    --rtoc-elev-card:  0 1px 2px rgba(15,23,42,0.04), 0 1px 3px rgba(15,23,42,0.06);
+    --rtoc-elev-hover: 0 4px 12px rgba(15,23,42,0.08);
+}
+
+/* ── 2. Premium data-table engine ───────────────────────────────────────────
+   The data tables are the core of the plugin, so they get the most attention.
+
+   ROOT CAUSE of the reported "last column overlaps in an ugly way": the base
+   table rule pinned `width:100%; min-width:100%` with `white-space:nowrap`
+   headers and no `table-layout`, so on a constrained/flex parent the auto grid
+   could not grow past the container and the final column's content spilled over
+   its neighbour.
+
+   FIX: put every table in a horizontal-scroll container and size the table to
+   `width:max-content; min-width:100%`. The table now takes exactly the width its
+   content needs (so columns can never overlap) while still stretching to fill the
+   card when the content is narrow. The wrapper scrolls instead of the page. */
+
+[class*="path-local-rtocompliance"] .rtoc-table-wrapper,
+[class*="path-local-rtocompliance"] .rtoc-table-wrap,
+[class*="path-local-rtocompliance"] .rtoc-table-scroll {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    background: var(--rtoc-surface);
+    border: 1px solid var(--rtoc-border);
+    border-radius: var(--rtoc-radius-card, 12px);
+    box-shadow: var(--rtoc-elev-card);
+    margin-bottom: var(--rtoc-space-lg, 1.5rem);
+}
+
+/* Thin, modern scrollbar on the table wrapper */
+[class*="path-local-rtocompliance"] .rtoc-table-wrapper::-webkit-scrollbar,
+[class*="path-local-rtocompliance"] .rtoc-table-wrap::-webkit-scrollbar,
+[class*="path-local-rtocompliance"] .rtoc-table-scroll::-webkit-scrollbar { height: 10px; }
+[class*="path-local-rtocompliance"] .rtoc-table-wrapper::-webkit-scrollbar-thumb,
+[class*="path-local-rtocompliance"] .rtoc-table-wrap::-webkit-scrollbar-thumb,
+[class*="path-local-rtocompliance"] .rtoc-table-scroll::-webkit-scrollbar-thumb {
+    background: var(--rtoc-border-strong);
+    border-radius: 99px;
+    border: 3px solid var(--rtoc-surface);
+}
+
+/* The table itself — content-sized, no overlap, corners follow the wrapper */
+[class*="path-local-rtocompliance"] .rtoc-table-wrapper > table,
+[class*="path-local-rtocompliance"] .rtoc-table-wrap > table,
+[class*="path-local-rtocompliance"] .rtoc-table-scroll > table,
+[class*="path-local-rtocompliance"] .rtoc-table-wrapper > .no-overflow > table,
+[class*="path-local-rtocompliance"] .rtoc-table-wrap > .no-overflow > table {
+    width: max-content;
+    min-width: 100%;
+    margin: 0 !important;
+    border: 0;
+    border-radius: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: transparent;
+}
+
+/* Unified header + cell rhythm (premium, quiet, legible) */
+[class*="path-local-rtocompliance"] .rtoc-table-wrapper th,
+[class*="path-local-rtocompliance"] .rtoc-table-wrap th,
+[class*="path-local-rtocompliance"] .rtoc-table-scroll th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--rtoc-surface-3) !important;
+    color: var(--rtoc-ink-muted) !important;
+    font-family: var(--rtoc-font-sans);
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    text-align: left;
+    white-space: nowrap;
+    padding: 0.7rem 1rem !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--rtoc-border) !important;
+}
+
+[class*="path-local-rtocompliance"] .rtoc-table-wrapper td,
+[class*="path-local-rtocompliance"] .rtoc-table-wrap td,
+[class*="path-local-rtocompliance"] .rtoc-table-scroll td {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    color: var(--rtoc-ink-2);
+    vertical-align: middle;
+    white-space: nowrap;
+    border: 0;
+    border-bottom: 1px solid var(--rtoc-border);
+}
+
+/* Zebra + row hover — the premium touch that reads as "SaaS", not "Moodle" */
+[class*="path-local-rtocompliance"] .rtoc-table-wrapper tbody tr:nth-child(even) td,
+[class*="path-local-rtocompliance"] .rtoc-table-wrap tbody tr:nth-child(even) td,
+[class*="path-local-rtocompliance"] .rtoc-table-scroll tbody tr:nth-child(even) td {
+    background: var(--rtoc-surface-2);
+}
+[class*="path-local-rtocompliance"] .rtoc-table-wrapper tbody tr:hover td,
+[class*="path-local-rtocompliance"] .rtoc-table-wrap tbody tr:hover td,
+[class*="path-local-rtocompliance"] .rtoc-table-scroll tbody tr:hover td {
+    background: var(--rtoc-primary-light);
+}
+[class*="path-local-rtocompliance"] .rtoc-table-wrapper tbody tr:last-child td,
+[class*="path-local-rtocompliance"] .rtoc-table-wrap tbody tr:last-child td,
+[class*="path-local-rtocompliance"] .rtoc-table-scroll tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+/* Action column: keep buttons on one tidy right-aligned line and give them
+   breathing room so they never collide with the previous column. */
+[class*="path-local-rtocompliance"] .rtoc-table-wrapper td:last-child,
+[class*="path-local-rtocompliance"] .rtoc-table-wrap td:last-child,
+[class*="path-local-rtocompliance"] .rtoc-table-scroll td:last-child {
+    white-space: nowrap;
+    text-align: right;
+}
+[class*="path-local-rtocompliance"] .rtoc-table-wrapper td:last-child .btn,
+[class*="path-local-rtocompliance"] .rtoc-table-wrapper td:last-child button,
+[class*="path-local-rtocompliance"] .rtoc-table-wrapper td:last-child a.btn {
+    margin-left: 0.35rem;
+    vertical-align: middle;
+}
+
+/* Opt-in: sticky action column that stays pinned while the table scrolls.
+   Add class="rtoc-table--sticky-actions" on the wrapper to enable. */
+[class*="path-local-rtocompliance"] .rtoc-table--sticky-actions th:last-child,
+[class*="path-local-rtocompliance"] .rtoc-table--sticky-actions td:last-child {
+    position: sticky;
+    right: 0;
+    background: var(--rtoc-surface);
+    box-shadow: -8px 0 12px -8px rgba(15,23,42,0.15);
+}
+[class*="path-local-rtocompliance"] .rtoc-table--sticky-actions tbody tr:hover td:last-child {
+    background: var(--rtoc-primary-light);
+}
+
+/* Safety net for any plugin data-table that JS has not yet wrapped: never let a
+   wide table spill onto the page and overlap sibling cards — clip to the card. */
+[class*="path-local-rtocompliance"] .rtoc-admin-card,
+[class*="path-local-rtocompliance"] .rtoc-page-card {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+/* ── 3. Cross-Bootstrap 4 / 5 compatibility shims ───────────────────────────
+   The plugin markup uses Bootstrap-4 class names (badge-*, ml-/mr-/pl-/pr-*).
+   Moodle 4.4 ships Bootstrap 4 (these work) but Moodle 5.x ships Bootstrap 5
+   (these are renamed → the styling silently disappears). We define the BS4 names
+   ourselves, scoped to the plugin, so components look identical on every branch.
+   (The Bootstrap-5 names are also defined so either spelling works.) */
+
+/* Coloured badges — render on both BS4 and BS5 */
+[class*="path-local-rtocompliance"] .badge.badge-primary,
+[class*="path-local-rtocompliance"] .badge.text-bg-primary { background-color: var(--rtoc-primary) !important; color: #fff !important; }
+[class*="path-local-rtocompliance"] .badge.badge-secondary,
+[class*="path-local-rtocompliance"] .badge.text-bg-secondary { background-color: var(--rtoc-ink-muted) !important; color: #fff !important; }
+[class*="path-local-rtocompliance"] .badge.badge-success,
+[class*="path-local-rtocompliance"] .badge.text-bg-success { background-color: #16a34a !important; color: #fff !important; }
+[class*="path-local-rtocompliance"] .badge.badge-danger,
+[class*="path-local-rtocompliance"] .badge.text-bg-danger { background-color: #dc2626 !important; color: #fff !important; }
+[class*="path-local-rtocompliance"] .badge.badge-warning,
+[class*="path-local-rtocompliance"] .badge.text-bg-warning { background-color: #f59e0b !important; color: #111827 !important; }
+[class*="path-local-rtocompliance"] .badge.badge-info,
+[class*="path-local-rtocompliance"] .badge.text-bg-info { background-color: #0ea5e9 !important; color: #fff !important; }
+[class*="path-local-rtocompliance"] .badge.badge-light,
+[class*="path-local-rtocompliance"] .badge.text-bg-light { background-color: var(--rtoc-surface-3) !important; color: var(--rtoc-ink-2) !important; }
+[class*="path-local-rtocompliance"] .badge.badge-dark,
+[class*="path-local-rtocompliance"] .badge.text-bg-dark { background-color: var(--rtoc-ink) !important; color: #fff !important; }
+/* Give every badge a consistent modern pill shape regardless of Bootstrap version */
+[class*="path-local-rtocompliance"] .badge {
+    display: inline-block;
+    padding: 0.3em 0.6em;
+    font-size: 0.75em;
+    font-weight: 600;
+    line-height: 1;
+    border-radius: 9999px;
+    vertical-align: middle;
+}
+
+/* Spacing utilities — define the BS4 names (ml/mr/pl/pr) that vanish under BS5,
+   plus the BS5 names (ms/me/ps/pe) for forward safety. Scale matches Bootstrap. */
+[class*="path-local-rtocompliance"] .ml-0,[class*="path-local-rtocompliance"] .ms-0{margin-left:0 !important}
+[class*="path-local-rtocompliance"] .ml-1,[class*="path-local-rtocompliance"] .ms-1{margin-left:.25rem !important}
+[class*="path-local-rtocompliance"] .ml-2,[class*="path-local-rtocompliance"] .ms-2{margin-left:.5rem !important}
+[class*="path-local-rtocompliance"] .ml-3,[class*="path-local-rtocompliance"] .ms-3{margin-left:1rem !important}
+[class*="path-local-rtocompliance"] .mr-0,[class*="path-local-rtocompliance"] .me-0{margin-right:0 !important}
+[class*="path-local-rtocompliance"] .mr-1,[class*="path-local-rtocompliance"] .me-1{margin-right:.25rem !important}
+[class*="path-local-rtocompliance"] .mr-2,[class*="path-local-rtocompliance"] .me-2{margin-right:.5rem !important}
+[class*="path-local-rtocompliance"] .mr-3,[class*="path-local-rtocompliance"] .me-3{margin-right:1rem !important}
+[class*="path-local-rtocompliance"] .pl-0,[class*="path-local-rtocompliance"] .ps-0{padding-left:0 !important}
+[class*="path-local-rtocompliance"] .pl-1,[class*="path-local-rtocompliance"] .ps-1{padding-left:.25rem !important}
+[class*="path-local-rtocompliance"] .pl-2,[class*="path-local-rtocompliance"] .ps-2{padding-left:.5rem !important}
+[class*="path-local-rtocompliance"] .pl-3,[class*="path-local-rtocompliance"] .ps-3{padding-left:1rem !important}
+[class*="path-local-rtocompliance"] .pr-0,[class*="path-local-rtocompliance"] .pe-0{padding-right:0 !important}
+[class*="path-local-rtocompliance"] .pr-1,[class*="path-local-rtocompliance"] .pe-1{padding-right:.25rem !important}
+[class*="path-local-rtocompliance"] .pr-2,[class*="path-local-rtocompliance"] .pe-2{padding-right:.5rem !important}
+[class*="path-local-rtocompliance"] .pr-3,[class*="path-local-rtocompliance"] .pe-3{padding-right:1rem !important}
+/* Text alignment renamed in BS5 (text-left/right → text-start/end) */
+[class*="path-local-rtocompliance"] .text-left  { text-align: left  !important; }
+[class*="path-local-rtocompliance"] .text-right { text-align: right !important; }
+/* Legacy .close button (BS4) → give it the BS5 .btn-close look if theme dropped it */
+[class*="path-local-rtocompliance"] button.close {
+    background: transparent; border: 0; font-size: 1.4rem; line-height: 1;
+    opacity: .6; cursor: pointer; padding: .25rem .5rem;
+}
+[class*="path-local-rtocompliance"] button.close:hover { opacity: 1; }
+
+/* ── 4. Responsive system — phone / tablet / laptop ─────────────────────────
+   The sidebar drawer + breakpoints live in lib.php. These rules make the CONTENT
+   and TABLES behave on small screens, which was the main iPad/phone gap. */
+
+/* Laptop and below: slightly tighten table cell padding */
+@media (max-width: 1200px) {
+    [class*="path-local-rtocompliance"] .rtoc-table-wrapper th,
+    [class*="path-local-rtocompliance"] .rtoc-table-wrapper td { padding-left: .75rem; padding-right: .75rem; }
+}
+
+/* Tablet (iPad portrait) and below */
+@media (max-width: 992px) {
+    [class*="path-local-rtocompliance"] .rtoc-main-content { padding-left: 16px !important; padding-right: 12px !important; }
+    /* Stat / KPI grids collapse to two columns */
+    [class*="path-local-rtocompliance"] .rtoc-stat-grid,
+    [class*="path-local-rtocompliance"] .rtoc-stats-grid { grid-template-columns: repeat(2, minmax(0,1fr)) !important; }
+}
+
+/* Phone: stack KPI grids, let cards go full-bleed, and STACK data tables into
+   labelled rows so no horizontal scrolling is needed on a phone. Requires each
+   <td> to expose its heading via data-label (progressive enhancement — tables
+   without it simply fall back to horizontal scroll, which still works). */
+@media (max-width: 640px) {
+    [class*="path-local-rtocompliance"] .rtoc-main-content { padding: 0 10px 32px 12px !important; }
+    [class*="path-local-rtocompliance"] .rtoc-stat-grid,
+    [class*="path-local-rtocompliance"] .rtoc-stats-grid { grid-template-columns: 1fr !important; }
+
+    /* Stacked-card table mode (opt-in via .rtoc-table--stack on the wrapper) */
+    [class*="path-local-rtocompliance"] .rtoc-table--stack > table,
+    [class*="path-local-rtocompliance"] .rtoc-table--stack thead { min-width: 0; width: 100%; }
+    [class*="path-local-rtocompliance"] .rtoc-table--stack thead { position: absolute; left: -9999px; }
+    [class*="path-local-rtocompliance"] .rtoc-table--stack tr {
+        display: block; border-bottom: 1px solid var(--rtoc-border); padding: .5rem 0;
+    }
+    [class*="path-local-rtocompliance"] .rtoc-table--stack td {
+        display: flex; justify-content: space-between; gap: 1rem;
+        white-space: normal; border: 0; padding: .35rem 1rem; text-align: right;
+    }
+    [class*="path-local-rtocompliance"] .rtoc-table--stack td::before {
+        content: attr(data-label); font-weight: 600; color: var(--rtoc-ink-muted);
+        text-align: left; text-transform: uppercase; font-size: .7rem; letter-spacing: .04em;
+    }
+}
+
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    [class*="path-local-rtocompliance"] * { transition: none !important; animation: none !important; }
+}
+
+/* ─── end unified styling engine v5.9.341 ─────────────────────────────────── */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RTOC SIDEBAR — LIGHT THEME OVERRIDE  (v5.9.341)
+   ---------------------------------------------------------------------------
+   The sidebar is ALSO implemented in this file (the "v1.0" block above, ~line
+   5358) using `[class*="path-local-rtocompliance"] #rtoc-sidebar` selectors and
+   the `--rtoc-sb-*` tokens. Those selectors are HIGHER specificity than the
+   inline `#rtoc-sidebar {…}` block emitted by lib.php, so they win the cascade —
+   which is why recolouring only the inline block left the menu dark.
+
+   This block, appended last, redefines the `--rtoc-sb-*` tokens (light values)
+   and overrides the few hard-coded dark colours, so the rendered sidebar matches
+   the intended modern light theme. Defined at element scope so it beats :root.
+   ═══════════════════════════════════════════════════════════════════════════ */
+[class*="path-local-rtocompliance"],
+[class*="path-local-rtocompliance"] #rtoc-sidebar {
+    --rtoc-sb-bg:                #f8fafc;   /* slate-50 surface (was #1a3354 navy) */
+    --rtoc-sb-header-bg:         #ffffff;   /* white header (was #122847)          */
+    --rtoc-sb-item-hover:        #eef2f7;   /* slate-100 hover                     */
+    --rtoc-sb-item-active-bg:    #eff6ff;   /* blue-50 active pill                 */
+    --rtoc-sb-item-active-border:#2563eb;   /* blue-600 active bar                 */
+    --rtoc-sb-text:              #475569;   /* slate-600 nav text — ~8:1 on #f8fafc */
+    --rtoc-sb-text-hover:        #0f172a;   /* slate-900                           */
+    --rtoc-sb-text-active:       #1d4ed8;   /* blue-700                            */
+    --rtoc-sb-group-label:       #64748b;   /* slate-500 — passes AA (was #4d85b8) */
+    --rtoc-sb-divider:           #e5e9f0;   /* slate-200 hairline                  */
+    --rtoc-sb-shadow:            1px 0 0 #e5e9f0, 6px 0 24px rgba(15,23,42,0.05);
+}
+/* Brand title was hard-coded light for a dark bg — flip to dark ink on white. */
+[class*="path-local-rtocompliance"] #rtoc-sidebar .rtoc-sb-brand-title { color: #0f172a; }
+[class*="path-local-rtocompliance"] #rtoc-sidebar .rtoc-sb-brand-sub   { color: #64748b; }
+/* Scrollbars: flip white-alpha (invisible on light) to dark-alpha. */
+[class*="path-local-rtocompliance"] #rtoc-sidebar .rtoc-sb-nav { scrollbar-color: rgba(15,23,42,0.18) transparent; }
+[class*="path-local-rtocompliance"] #rtoc-sidebar .rtoc-sb-nav::-webkit-scrollbar-thumb { background: rgba(15,23,42,0.18); }
+/* Mobile hamburger button — was near-black, make it a white card. */
+[class*="path-local-rtocompliance"] #rtoc-mobile-btn {
+    background: #ffffff !important;
+    border: 1px solid #e5e9f0 !important;
+    color: #475569 !important;
+    box-shadow: 0 2px 10px rgba(15,23,42,0.12) !important;
+}
+[class*="path-local-rtocompliance"] #rtoc-mobile-btn:hover { background: #f1f5f9 !important; color: #0f172a !important; }
+/* Collapsed fly-out tooltip stays dark (correct on a light page) — no change. */
+/* ─── end sidebar light-theme override v5.9.341 ───────────────────────────── */
+
+
+/* v5.9.365 — BUTTON + NAV-TAB HOVER: stop Moodle Boost theme bleed on hover/focus. */
+[class*="path-local-rtocompliance"] .btn-primary,[class*="path-local-rtocompliance"] .btn-primary:hover,[class*="path-local-rtocompliance"] .btn-primary:focus,[class*="path-local-rtocompliance"] .btn-primary:active{background:#2563eb!important;background-image:none!important;border-color:#2563eb!important;color:#fff!important}
+[class*="path-local-rtocompliance"] .btn-success,[class*="path-local-rtocompliance"] .btn-success:hover,[class*="path-local-rtocompliance"] .btn-success:focus,[class*="path-local-rtocompliance"] .btn-success:active{background:#16a34a!important;background-image:none!important;border-color:#16a34a!important;color:#fff!important}
+[class*="path-local-rtocompliance"] .btn-secondary,[class*="path-local-rtocompliance"] .btn-secondary:hover,[class*="path-local-rtocompliance"] .btn-secondary:focus,[class*="path-local-rtocompliance"] .btn-secondary:active{background:#64748b!important;background-image:none!important;border-color:#64748b!important;color:#fff!important}
+[class*="path-local-rtocompliance"] .btn-danger,[class*="path-local-rtocompliance"] .btn-danger:hover,[class*="path-local-rtocompliance"] .btn-danger:focus,[class*="path-local-rtocompliance"] .btn-danger:active{background:#dc2626!important;background-image:none!important;border-color:#dc2626!important;color:#fff!important}
+[class*="path-local-rtocompliance"] .btn-warning,[class*="path-local-rtocompliance"] .btn-warning:hover,[class*="path-local-rtocompliance"] .btn-warning:focus,[class*="path-local-rtocompliance"] .btn-warning:active{background:#d97706!important;background-image:none!important;border-color:#d97706!important;color:#fff!important}
+[class*="path-local-rtocompliance"] .btn-info,[class*="path-local-rtocompliance"] .btn-info:hover,[class*="path-local-rtocompliance"] .btn-info:focus,[class*="path-local-rtocompliance"] .btn-info:active{background:#0ea5e9!important;background-image:none!important;border-color:#0ea5e9!important;color:#fff!important}
+[class*="path-local-rtocompliance"] .btn-dark,[class*="path-local-rtocompliance"] .btn-dark:hover,[class*="path-local-rtocompliance"] .btn-dark:focus,[class*="path-local-rtocompliance"] .btn-dark:active{background:#0f172a!important;background-image:none!important;border-color:#0f172a!important;color:#fff!important}
+[class*="path-local-rtocompliance"] .btn-primary:hover,[class*="path-local-rtocompliance"] .btn-success:hover,[class*="path-local-rtocompliance"] .btn-secondary:hover,[class*="path-local-rtocompliance"] .btn-danger:hover,[class*="path-local-rtocompliance"] .btn-warning:hover,[class*="path-local-rtocompliance"] .btn-info:hover,[class*="path-local-rtocompliance"] .btn-dark:hover{filter:brightness(.92)!important;text-decoration:none!important}
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn.btn-light,[class*="path-local-rtocompliance"] .rtoc-main-content .btn-outline-secondary{background:#fff!important;background-image:none!important;border-color:#e2e8f0!important;color:#334155!important}
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-light:hover,[class*="path-local-rtocompliance"] .rtoc-main-content .btn-outline-secondary:hover{background:#f1f5f9!important;border-color:#cbd5e1!important;color:#0f172a!important}
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn:focus,[class*="path-local-rtocompliance"] .rtoc-main-content .btn:focus-visible{box-shadow:0 0 0 3px rgba(37,99,235,.22)!important;outline:none!important}
+[class*="path-local-rtocompliance"] .nav-tabs{border-bottom:1px solid #e2e8f0!important}
+[class*="path-local-rtocompliance"] .nav-tabs .nav-link,[class*="path-local-rtocompliance"] .nav-tabs .nav-link:focus{color:#475569!important;background:transparent!important;border:1px solid transparent!important;border-top-left-radius:8px!important;border-top-right-radius:8px!important;margin-bottom:-1px!important}
+[class*="path-local-rtocompliance"] .nav-tabs .nav-link:hover{color:#0f172a!important;background:#f1f5f9!important;border-color:#e2e8f0 #e2e8f0 transparent #e2e8f0!important}
+[class*="path-local-rtocompliance"] .nav-tabs .nav-link.active,[class*="path-local-rtocompliance"] .nav-tabs .nav-link.active:hover,[class*="path-local-rtocompliance"] .nav-tabs .nav-link.active:focus{color:#2563eb!important;background:#fff!important;border-color:#e2e8f0 #e2e8f0 #fff #e2e8f0!important;font-weight:600!important}
+/* end button+nav-tab hover v5.9.365 */
+
+/* ROR-TABLE-AUTHOR (v5.9.366) — Record-of-Results table mock inside the editor
+   canvas field. Purely presentational so authors can see the 3-column layout;
+   the real table is rendered by TCPDF at issue time. */
+.rtoc-tmpl-field-rortable .rtoc-tmpl-field-inner{width:100%;height:100%;overflow:hidden}
+.rtoc-tmpl-ror-mock{width:100%;border-collapse:collapse;table-layout:fixed;font-size:inherit;color:inherit}
+.rtoc-tmpl-ror-mock th,.rtoc-tmpl-ror-mock td{border:1px solid rgba(0,0,0,.18);padding:1px 3px;text-align:left;vertical-align:top;overflow:hidden;white-space:normal;word-break:break-word}
+.rtoc-tmpl-ror-mock thead th{font-weight:700;background:rgba(139,92,246,.10)}
+/* end ror_table author v5.9.366 */
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RTOC — CANONICAL DESIGN SYSTEM (v5.9.416, appended LAST = single source of truth)
+   Premium SaaS pass: converges the token layer (3 competing :root blocks existed),
+   fixes WCAG-AA contrast on badges/buttons, unifies the button + badge + card
+   systems, one focus ring, tasteful hover. Scoped to the plugin; reversible.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. TOKENS (element-scoped so it beats every earlier :root/element block) ── */
+[class*="path-local-rtocompliance"] {
+  --rtoc-primary:        #2563eb;
+  --rtoc-primary-hover:  #1d4ed8;
+  --rtoc-primary-active: #1e40af;
+  --rtoc-primary-light:  #eff6ff;
+  --rtoc-primary-border: #bfdbfe;
+
+  --rtoc-gray-50:  #f8fafc;  --rtoc-gray-100: #f1f5f9;  --rtoc-gray-200: #e5e9f0;
+  --rtoc-gray-300: #cbd5e1;  --rtoc-gray-400: #94a3b8;  --rtoc-gray-500: #64748b;
+  --rtoc-gray-600: #475569;  --rtoc-gray-700: #334155;  --rtoc-gray-800: #1e293b;
+  --rtoc-gray-900: #0f172a;
+
+  --rtoc-surface:    #ffffff;
+  --rtoc-surface-2:  #f8fafc;
+  --rtoc-surface-3:  #f1f5f9;
+  --rtoc-border:     #e5e9f0;
+  --rtoc-border-strong: #cbd5e1;
+  --rtoc-ink:        #0f172a;
+  --rtoc-ink-2:      #334155;
+  --rtoc-ink-muted:  #64748b;
+
+  --rtoc-success:      #16a34a; --rtoc-success-solid: #15803d;
+  --rtoc-success-bg:   #dcfce7; --rtoc-success-text:  #15803d; --rtoc-success-border:#bbf7d0;
+  --rtoc-warning:      #f59e0b; --rtoc-warning-solid: #b45309;
+  --rtoc-warning-bg:   #fef3c7; --rtoc-warning-text:  #92400e; --rtoc-warning-border:#fde68a;
+  --rtoc-danger:       #dc2626; --rtoc-danger-solid:  #dc2626;
+  --rtoc-danger-bg:    #fee2e2; --rtoc-danger-text:   #b91c1c; --rtoc-danger-border: #fecaca;
+  --rtoc-info:         #0ea5e9; --rtoc-info-solid:    #0369a1;
+  --rtoc-info-bg:      #e0f2fe; --rtoc-info-text:     #0369a1; --rtoc-info-border:  #bae6fd;
+  --rtoc-success-light: var(--rtoc-success-bg);
+  --rtoc-warning-light: var(--rtoc-warning-bg);
+  --rtoc-danger-light:  var(--rtoc-danger-bg);
+  --rtoc-info-light:    var(--rtoc-info-bg);
+
+  --rtoc-space-2xs:0.125rem; --rtoc-space-xs:0.25rem; --rtoc-space-sm:0.5rem;
+  --rtoc-space-md:1rem; --rtoc-space-lg:1.5rem; --rtoc-space-xl:2rem; --rtoc-space-2xl:3rem;
+
+  --rtoc-radius-xs:4px; --rtoc-radius-sm:6px; --rtoc-radius-md:8px;
+  --rtoc-radius-btn:8px; --rtoc-radius-card:12px; --rtoc-radius-lg:16px;
+  --rtoc-radius-xl:20px; --rtoc-radius-pill:9999px;
+
+  --rtoc-shadow-xs: 0 1px 2px rgba(15,23,42,0.04);
+  --rtoc-shadow-sm: 0 1px 2px rgba(15,23,42,0.04), 0 1px 3px rgba(15,23,42,0.06);
+  --rtoc-shadow-md: 0 4px 12px rgba(15,23,42,0.08);
+  --rtoc-shadow-lg: 0 12px 28px rgba(15,23,42,0.12);
+  --rtoc-elev-card:  var(--rtoc-shadow-sm);
+  --rtoc-elev-hover: var(--rtoc-shadow-md);
+
+  --rtoc-focus-ring: 0 0 0 3px rgba(37,99,235,0.35);
+  --rtoc-shadow-focus: var(--rtoc-focus-ring);
+  --rtoc-shadow-focus-primary: var(--rtoc-focus-ring);
+  --rtoc-shadow-primary-sm: 0 1px 2px rgba(37,99,235,0.24);
+  --rtoc-shadow-primary-md: 0 4px 12px rgba(37,99,235,0.28);
+
+  --rtoc-transition: 0.16s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* ── 2. BUTTONS ── one scale: 14px text, 8px radius, quiet secondary ── */
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn,
+[class*="path-local-rtocompliance"] .rtoc-main-content button[type="submit"],
+[class*="path-local-rtocompliance"] .rtoc-main-content input[type="submit"] {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.875rem !important;
+  font-weight: 500; line-height: 1.4;
+  min-height: 2.25rem;
+  border-radius: var(--rtoc-radius-btn) !important;
+  border: 1px solid transparent;
+  transition: background var(--rtoc-transition), border-color var(--rtoc-transition),
+              box-shadow var(--rtoc-transition), transform var(--rtoc-transition);
+  cursor: pointer;
+}
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-primary {
+  background: var(--rtoc-primary) !important; border-color: var(--rtoc-primary) !important;
+  color: #fff !important; box-shadow: var(--rtoc-shadow-primary-sm) !important;
+}
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-primary:hover {
+  background: var(--rtoc-primary-hover) !important; border-color: var(--rtoc-primary-hover) !important;
+  transform: translateY(-1px); box-shadow: var(--rtoc-shadow-primary-md) !important; filter: none !important;
+}
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-primary:active {
+  background: var(--rtoc-primary-active) !important; transform: translateY(0);
+  box-shadow: var(--rtoc-shadow-primary-sm) !important;
+}
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-secondary,
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-light,
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-outline-secondary {
+  background: #fff !important; border-color: var(--rtoc-border-strong) !important;
+  color: var(--rtoc-ink-2) !important; box-shadow: var(--rtoc-shadow-xs) !important;
+}
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-secondary:hover,
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-light:hover,
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-outline-secondary:hover {
+  background: var(--rtoc-surface-3) !important; border-color: var(--rtoc-gray-400) !important;
+  color: var(--rtoc-ink) !important; transform: translateY(-1px);
+}
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-outline-primary {
+  background: #fff !important; border-color: var(--rtoc-primary-border) !important; color: var(--rtoc-primary-hover) !important; }
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-outline-primary:hover {
+  background: var(--rtoc-primary-light) !important; border-color: var(--rtoc-primary) !important; transform: translateY(-1px); }
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-danger {
+  background: var(--rtoc-danger) !important; border-color: var(--rtoc-danger) !important; color:#fff !important; }
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-danger:hover { filter: brightness(0.93) !important; transform: translateY(-1px); }
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-outline-danger {
+  background:#fff !important; border-color: var(--rtoc-danger-border) !important; color: var(--rtoc-danger-text) !important; }
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-outline-danger:hover { background: var(--rtoc-danger-bg) !important; border-color: var(--rtoc-danger) !important; }
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-success {
+  background: var(--rtoc-success) !important; border-color: var(--rtoc-success) !important; color:#fff !important; }
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-success:hover { filter: brightness(0.93) !important; transform: translateY(-1px); }
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-warning {
+  background: var(--rtoc-warning) !important; border-color: var(--rtoc-warning) !important; color:#111827 !important; }
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-outline-warning {
+  background:#fff !important; border-color: var(--rtoc-warning-border) !important; color: var(--rtoc-warning-text) !important; }
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-outline-warning:hover { background: var(--rtoc-warning-bg) !important; }
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn.rtoc-btn-ghost {
+  background: transparent !important; border-color: transparent !important; color: var(--rtoc-ink-2) !important; box-shadow:none !important; }
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn.rtoc-btn-ghost:hover { background: var(--rtoc-surface-3) !important; }
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-sm {
+  padding: 0.3125rem 0.625rem; min-height: 1.875rem; font-size: 0.8125rem !important; }
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn:focus-visible {
+  outline: none !important; box-shadow: var(--rtoc-focus-ring) !important; }
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn:disabled,
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn.disabled {
+  opacity: 0.5; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+
+/* ── 3. BADGES ── one soft-chip system (AA-safe, consistent pill radius) ── */
+[class*="path-local-rtocompliance"] .badge,
+[class*="path-local-rtocompliance"] .status-badge,
+[class*="path-local-rtocompliance"] .trainer-status {
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  padding: 0.2rem 0.55rem !important; font-size: 0.75rem !important; font-weight: 600 !important;
+  line-height: 1.4; border-radius: var(--rtoc-radius-pill) !important;
+  border: 1px solid transparent; white-space: nowrap;
+}
+[class*="path-local-rtocompliance"] .badge-success, [class*="path-local-rtocompliance"] .status-ok,
+[class*="path-local-rtocompliance"] .trainer-status.current,
+[class*="path-local-rtocompliance"] .badge.badge-success, [class*="path-local-rtocompliance"] .badge.text-bg-success {
+  background: var(--rtoc-success-bg) !important; color: var(--rtoc-success-text) !important; border-color: var(--rtoc-success-border) !important; }
+[class*="path-local-rtocompliance"] .badge-warning, [class*="path-local-rtocompliance"] .status-warning,
+[class*="path-local-rtocompliance"] .trainer-status.expiring, [class*="path-local-rtocompliance"] .trainer-status.expired-policy,
+[class*="path-local-rtocompliance"] .badge.badge-warning, [class*="path-local-rtocompliance"] .badge.text-bg-warning {
+  background: var(--rtoc-warning-bg) !important; color: var(--rtoc-warning-text) !important; border-color: var(--rtoc-warning-border) !important; }
+[class*="path-local-rtocompliance"] .badge-danger, [class*="path-local-rtocompliance"] .status-urgent,
+[class*="path-local-rtocompliance"] .trainer-status.expired,
+[class*="path-local-rtocompliance"] .badge.badge-danger, [class*="path-local-rtocompliance"] .badge.text-bg-danger {
+  background: var(--rtoc-danger-bg) !important; color: var(--rtoc-danger-text) !important; border-color: var(--rtoc-danger-border) !important; }
+[class*="path-local-rtocompliance"] .badge-info, [class*="path-local-rtocompliance"] .badge-blue,
+[class*="path-local-rtocompliance"] .badge.badge-info, [class*="path-local-rtocompliance"] .badge.text-bg-info {
+  background: var(--rtoc-info-bg) !important; color: var(--rtoc-info-text) !important; border-color: var(--rtoc-info-border) !important; }
+[class*="path-local-rtocompliance"] .badge-secondary,
+[class*="path-local-rtocompliance"] .badge.badge-secondary {
+  background: var(--rtoc-surface-3) !important; color: var(--rtoc-ink-2) !important; border-color: var(--rtoc-border) !important; }
+[class*="path-local-rtocompliance"] .badge-purple {
+  background: #ede9fe !important; color: #6d28d9 !important; border-color:#ddd6fe !important; }
+[class*="path-local-rtocompliance"] .rtoc-badge-solid.badge-success { background: var(--rtoc-success-solid)!important; color:#fff!important; border:0!important; }
+[class*="path-local-rtocompliance"] .rtoc-badge-solid.badge-info    { background: var(--rtoc-info-solid)!important;    color:#fff!important; border:0!important; }
+[class*="path-local-rtocompliance"] .rtoc-badge-solid.badge-danger  { background: var(--rtoc-danger-solid)!important;  color:#fff!important; border:0!important; }
+[class*="path-local-rtocompliance"] .rtoc-badge-solid.badge-warning { background: var(--rtoc-warning-solid)!important; color:#fff!important; border:0!important; }
+
+/* ── 4. CARDS ── consistent radius/shadow + tasteful hover lift ── */
+[class*="path-local-rtocompliance"] .stat-card,
+[class*="path-local-rtocompliance"] .info-card,
+[class*="path-local-rtocompliance"] .form-card,
+[class*="path-local-rtocompliance"] .rtoc-admin-card,
+[class*="path-local-rtocompliance"] .rtoc-page-card {
+  background: var(--rtoc-surface); border: 1px solid var(--rtoc-border);
+  border-radius: var(--rtoc-radius-card); box-shadow: var(--rtoc-elev-card);
+}
+[class*="path-local-rtocompliance"] .stat-card { transition: transform var(--rtoc-transition), box-shadow var(--rtoc-transition), border-color var(--rtoc-transition); }
+[class*="path-local-rtocompliance"] .stat-card:hover { transform: translateY(-2px); box-shadow: var(--rtoc-elev-hover); border-color: var(--rtoc-border-strong); }
+[class*="path-local-rtocompliance"] .info-card.warning {
+  background: var(--rtoc-warning-bg) !important; border-color: var(--rtoc-warning-border) !important;
+  border-top: 3px solid var(--rtoc-warning) !important; }
+[class*="path-local-rtocompliance"] .info-card.warning h4,
+[class*="path-local-rtocompliance"] .info-card.warning > strong { color: var(--rtoc-warning-text) !important; }
+
+/* ── 5. TABLE fallback: give untagged tables the premium hover too ── */
+[class*="path-local-rtocompliance"] .rtoc-main-content table:not(.rtoc-tmpl-ror-mock):not(.no-style) tbody tr:hover td {
+  background: var(--rtoc-primary-light); }
+
+/* ── 6. STATES ── empty + loading skeleton ── */
+[class*="path-local-rtocompliance"] .rtoc-empty {
+  text-align: center; padding: var(--rtoc-space-2xl) var(--rtoc-space-lg);
+  color: var(--rtoc-ink-muted); border: 1px dashed var(--rtoc-border-strong);
+  border-radius: var(--rtoc-radius-card); background: var(--rtoc-surface-2); }
+[class*="path-local-rtocompliance"] .rtoc-empty svg { width: 40px; height: 40px; opacity: 0.5; margin-bottom: var(--rtoc-space-sm); }
+[class*="path-local-rtocompliance"] .rtoc-skeleton {
+  background: linear-gradient(90deg, var(--rtoc-surface-3) 25%, var(--rtoc-surface-2) 37%, var(--rtoc-surface-3) 63%);
+  background-size: 400% 100%; border-radius: var(--rtoc-radius-sm); animation: rtoc-shimmer 1.4s ease infinite; }
+@keyframes rtoc-shimmer { 0%{background-position:100% 0} 100%{background-position:-100% 0} }
+
+/* ── 7. Utilities ── */
+[class*="path-local-rtocompliance"] .rtoc-text-muted { color: var(--rtoc-ink-muted) !important; }
+[class*="path-local-rtocompliance"] .rtoc-narrow { max-width: 880px; margin-inline: auto; }
+
+/* ============================================================================
+   PAGE HELP CARD  ·  premium redesign (v5.9.432)
+   World-class: brand blue→indigo gradient accent, a glowing gradient icon chip
+   with a WHITE icon that pops, a filled segmented-control tab bar, gradient
+   numbered How-steps, icon-led Key Features, subtle card shading and a hover
+   lift. NO load animation (the old blur made it look washed out). Pure-CSS tabs.
+   ============================================================================ */
+[class*="path-local-rtocompliance"] .rtoc-help-card {
+    position: relative;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    border: 1px solid #e1e8f3;
+    border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 16px 36px -18px rgba(29, 78, 216, 0.35);
+    margin: 0 0 24px 0;
+    overflow: hidden;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    transition: box-shadow 0.28s cubic-bezier(0.4, 0, 0.2, 1), transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+/* Gradient accent bar (the plugin banner gradient) */
+[class*="path-local-rtocompliance"] .rtoc-help-card::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+    background: linear-gradient(90deg, #1e3a8a 0%, #1d4ed8 55%, #3b82f6 100%);
+}
+[class*="path-local-rtocompliance"] .rtoc-help-card:hover {
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.07), 0 26px 50px -20px rgba(29, 78, 216, 0.48);
+    border-color: #ccd9ef;
+    transform: translateY(-3px);
+}
+/* Header */
+[class*="path-local-rtocompliance"] .rtoc-help-head { display: flex; align-items: center; gap: 13px; padding: 18px 22px 4px 22px; }
+[class*="path-local-rtocompliance"] .rtoc-help-ic {
+    flex: 0 0 auto; width: 42px; height: 42px;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #ffffff; border-radius: 12px;
+    background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
+    box-shadow: 0 9px 20px -6px rgba(29, 78, 216, 0.6);
+}
+[class*="path-local-rtocompliance"] .rtoc-help-ic svg { width: 20px; height: 20px; }
+[class*="path-local-rtocompliance"] .rtoc-help-title { font-size: 17px; font-weight: 750; color: #0f172a; letter-spacing: -0.015em; line-height: 1.2; }
+[class*="path-local-rtocompliance"] .rtoc-help-badge {
+    margin-left: auto; display: inline-flex; align-items: center; gap: 5px;
+    background: #eef2ff; color: #3730a3; border: 1px solid #dbe2fb;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.01em;
+    padding: 4px 11px; border-radius: 999px; white-space: nowrap; text-decoration: none;
+    box-shadow: 0 1px 2px rgba(55, 48, 163, 0.08);
+    transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+[class*="path-local-rtocompliance"] a.rtoc-help-badge-link:hover {
+    background: linear-gradient(135deg, #1d4ed8, #3b82f6); color: #ffffff; border-color: transparent;
+    box-shadow: 0 5px 13px -3px rgba(29, 78, 216, 0.55); transform: translateY(-1px);
+}
+[class*="path-local-rtocompliance"] a.rtoc-help-badge-link:focus-visible { outline: 2px solid #1d4ed8; outline-offset: 2px; }
+[class*="path-local-rtocompliance"] .rtoc-help-badge-ic { flex: 0 0 auto; opacity: 0.9; }
+/* Filled segmented-control tabs */
+[class*="path-local-rtocompliance"] .rtoc-help-tabs { position: relative; padding: 0 22px; }
+[class*="path-local-rtocompliance"] .rtoc-help-radio { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+[class*="path-local-rtocompliance"] .rtoc-help-tabbar {
+    display: inline-flex; gap: 4px; margin: 14px 0 0 0; padding: 5px;
+    background: #eef2f8; border: 1px solid #e2e9f4; border-radius: 13px;
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.05);
+    max-width: 100%; flex-wrap: wrap;
+}
+[class*="path-local-rtocompliance"] .rtoc-help-tab {
+    cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    font-size: 14px; font-weight: 650; color: #64748b;
+    padding: 9px 17px; border-radius: 9px;
+    transition: color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+    user-select: none; white-space: nowrap;
+}
+[class*="path-local-rtocompliance"] .rtoc-help-tab-ic { flex: 0 0 auto; }
+[class*="path-local-rtocompliance"] .rtoc-help-tab:hover { color: #1e293b; }
+/* Panels (no load animation) */
+[class*="path-local-rtocompliance"] .rtoc-help-panel { display: none; padding: 20px 24px 24px 24px; font-size: 15.5px; line-height: 1.68; color: #475569; }
+[class*="path-local-rtocompliance"] .rtoc-help-panel p { margin: 0; max-width: 80ch; }
+/* How steps — gradient numbered circles, white numbers */
+[class*="path-local-rtocompliance"] .rtoc-help-panel-how .rtoc-help-list { list-style: none; margin: 0; padding: 0; counter-reset: rh-step; display: grid; gap: 11px; max-width: 84ch; }
+[class*="path-local-rtocompliance"] .rtoc-help-panel-how .rtoc-help-list li { counter-increment: rh-step; position: relative; padding-left: 38px; min-height: 26px; display: flex; align-items: center; color: #334155; }
+[class*="path-local-rtocompliance"] .rtoc-help-panel-how .rtoc-help-list li::before {
+    content: counter(rh-step); position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+    width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: #ffffff;
+    background: linear-gradient(135deg, #1d4ed8, #3b82f6); border-radius: 50%;
+    box-shadow: 0 4px 10px -3px rgba(29, 78, 216, 0.5);
+}
+/* Key Features — icon rows (gradient chip + white check that pops) */
+[class*="path-local-rtocompliance"] .rtoc-help-featlist { list-style: none; margin: 0; padding: 0; display: grid; gap: 13px; max-width: 86ch; }
+[class*="path-local-rtocompliance"] .rtoc-help-featlist li { display: flex; align-items: flex-start; gap: 12px; }
+[class*="path-local-rtocompliance"] .rtoc-help-feat-ic {
+    flex: 0 0 auto; width: 28px; height: 28px; margin-top: 1px;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #ffffff; background: linear-gradient(135deg, #1d4ed8, #3b82f6); border-radius: 8px;
+    box-shadow: 0 4px 10px -3px rgba(29, 78, 216, 0.5);
+}
+[class*="path-local-rtocompliance"] .rtoc-help-feat-t { font-weight: 700; color: #0f172a; }
+[class*="path-local-rtocompliance"] .rtoc-help-feat-d { color: #475569; }
+[class*="path-local-rtocompliance"] .rtoc-help-panel-what .rtoc-help-list,
+[class*="path-local-rtocompliance"] .rtoc-help-panel-why .rtoc-help-list { margin: 0; padding-left: 18px; max-width: 80ch; }
+[class*="path-local-rtocompliance"] .rtoc-help-panel-what .rtoc-help-list li,
+[class*="path-local-rtocompliance"] .rtoc-help-panel-why .rtoc-help-list li { margin: 0 0 6px 0; }
+/* Active tab + panel */
+[class*="path-local-rtocompliance"] .rtoc-help-radio-what:checked ~ .rtoc-help-panel-what,
+[class*="path-local-rtocompliance"] .rtoc-help-radio-why:checked  ~ .rtoc-help-panel-why,
+[class*="path-local-rtocompliance"] .rtoc-help-radio-how:checked  ~ .rtoc-help-panel-how,
+[class*="path-local-rtocompliance"] .rtoc-help-radio-feat:checked ~ .rtoc-help-panel-feat { display: block; }
+[class*="path-local-rtocompliance"] .rtoc-help-radio-what:checked ~ .rtoc-help-tabbar .rtoc-help-tab-what,
+[class*="path-local-rtocompliance"] .rtoc-help-radio-why:checked  ~ .rtoc-help-tabbar .rtoc-help-tab-why,
+[class*="path-local-rtocompliance"] .rtoc-help-radio-how:checked  ~ .rtoc-help-tabbar .rtoc-help-tab-how,
+[class*="path-local-rtocompliance"] .rtoc-help-radio-feat:checked ~ .rtoc-help-tabbar .rtoc-help-tab-feat {
+    color: #ffffff; background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+    box-shadow: 0 6px 14px -4px rgba(29, 78, 216, 0.55); transform: translateY(-1px);
+}
+[class*="path-local-rtocompliance"] .rtoc-help-radio:focus-visible ~ .rtoc-help-tabbar .rtoc-help-tab { outline: 2px solid #1d4ed8; outline-offset: 2px; }
+@media (max-width: 560px) { [class*="path-local-rtocompliance"] .rtoc-help-badge { display: none; } }
+
+/* PAGE BANNER (v5.9.433) — subtitle under the title in the standard royal-blue banner. */
+[class*="path-local-rtocompliance"] .rtoc-page-banner .rtoc-page-banner-text { position: relative; z-index: 1; }
+[class*="path-local-rtocompliance"] .rtoc-page-banner .rtoc-page-banner-sub { margin: 4px 0 0 0; color: rgba(255,255,255,0.9); font-size: 14px; line-height: 1.45; }
+[class*="path-local-rtocompliance"] .rtoc-page-banner .rtoc-page-banner-actions { position: relative; z-index: 1; display: flex; align-items: center; gap: 8px; }
+
+/* HEADER BUTTON HOVER CONTRAST (v5.9.458) — the gradient page-header action
+   buttons (.qualbuilder-header etc.) render solid white because the outline
+   button base wins over the glassy header style; a later rule then forced white
+   TEXT on hover → white-on-white (e.g. "Auto-Create from Categories"). This late,
+   specific rule pins every header button's hover/focus to a readable pair:
+   a solid navy fill with white text. Wins by source order over the earlier rules. */
+[class*="path-local-rtocompliance"] .compliance-header .btn:hover,
+[class*="path-local-rtocompliance"] .compliance-header .btn:focus,
+[class*="path-local-rtocompliance"] .trainers-header .btn:hover,
+[class*="path-local-rtocompliance"] .trainers-header .btn:focus,
+[class*="path-local-rtocompliance"] .qualbuilder-header .btn:hover,
+[class*="path-local-rtocompliance"] .qualbuilder-header .btn:focus,
+[class*="path-local-rtocompliance"] .students-header .btn:hover,
+[class*="path-local-rtocompliance"] .students-header .btn:focus,
+[class*="path-local-rtocompliance"] .certificates-header .btn:hover,
+[class*="path-local-rtocompliance"] .certificates-header .btn:focus,
+[class*="path-local-rtocompliance"] .dashboard-header .btn:hover,
+[class*="path-local-rtocompliance"] .dashboard-header .btn:focus,
+[class*="path-local-rtocompliance"] .support-header .btn:hover,
+[class*="path-local-rtocompliance"] .support-header .btn:focus {
+    background: #1e3a8a !important;
+    border-color: #1e3a8a !important;
+    color: #ffffff !important;
+    text-decoration: none !important;
+}
+
+/* ============================================================
+   STICKY TABLE HEADERS (v6.0.6)
+   Keep the header row visible while scrolling any plugin table.
+   The header sticks to the top of its scroll frame: for tables
+   inside a scroll wrapper (.table-responsive / .rtoc-table-wrapper)
+   the wrapper is bounded so the body scrolls under a pinned header;
+   bare tables pin to the page as it scrolls.
+   ============================================================ */
+[class*="path-local-rtocompliance"] table thead th {
+    position: -webkit-sticky;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+}
+/* Solid header background so body rows never show through the pinned header. */
+[class*="path-local-rtocompliance"] table thead th,
+[class*="path-local-rtocompliance"] table.generaltable thead th,
+[class*="path-local-rtocompliance"] table.qualbuilder-table thead th,
+[class*="path-local-rtocompliance"] table.table thead th,
+[class*="path-local-rtocompliance"] .table-responsive table thead th,
+[class*="path-local-rtocompliance"] .rtoc-table-wrapper table thead th {
+    background: #f8fafc !important;
+    box-shadow: inset 0 -1px 0 var(--rtoc-gray-200, #e2e8f0);
+}
+/* Bound the common scroll wrappers so the sticky header has a frame to pin to
+   as the user scrolls a long table (short tables get no inner scrollbar). */
+[class*="path-local-rtocompliance"] .table-responsive,
+[class*="path-local-rtocompliance"] .rtoc-table-wrapper {
+    max-height: 78vh;
+    overflow: auto;
+}
+/* Where a sticky first/last column meets the sticky header, the corner cell must
+   sit above both so it is never overlapped. */
+[class*="path-local-rtocompliance"] thead .sticky-col,
+[class*="path-local-rtocompliance"] table thead th.sticky-col {
+    z-index: 30;
+}
+
+/* ============================================================
+   STICKY TOP BAR (v6.2.2) — keep the Dashboard / page / FAQ / Help
+   bar visible while scrolling any plugin page.
+   ============================================================ */
+[class*="path-local-rtocompliance"] .rtoc-nav-header {
+    position: -webkit-sticky;
+    position: sticky;
+    top: 0;
+    z-index: 45;
+    background: #ffffff;
+    box-shadow: 0 2px 8px -4px rgba(15,23,42,.18);
+}
+
+/* ==========================================================================
+   OUTLINE BUTTON HOVER CONTRAST — DEFINITIVE (v6.2.11)
+   The base ".btn { color: gray-700 !important }" rule plus several partial
+   hover rules (which set only background, not text colour) left the outline
+   action buttons (Edit / Preview / Make non-active / Archive / Duplicate /
+   Reset to ASQA starter / Delete) with dark text on a coloured/tinted hover
+   background — poor contrast — and the Boost theme could win the text colour.
+   This block is emitted LAST and uses high specificity + !important so it
+   beats BOTH the plugin's own earlier rules AND the Moodle theme. On hover
+   each outline button fills with its solid brand colour and switches to a
+   guaranteed-contrast text colour (white, or near-black on amber). Covers
+   <a>, <button> and <input>, plus :hover and :focus, in one place.
+   ========================================================================== */
+[class*="path-local-rtocompliance"] .rtoc-main-content a.btn-outline-primary:hover,
+[class*="path-local-rtocompliance"] .rtoc-main-content a.btn-outline-primary:focus,
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-outline-primary:hover,
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-outline-primary:focus {
+    background: #0f6cbf !important;
+    background-image: none !important;
+    border-color: #0f6cbf !important;
+    color: #ffffff !important;
+}
+[class*="path-local-rtocompliance"] .rtoc-main-content a.btn-outline-secondary:hover,
+[class*="path-local-rtocompliance"] .rtoc-main-content a.btn-outline-secondary:focus,
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-outline-secondary:hover,
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-outline-secondary:focus {
+    background: #475569 !important;
+    background-image: none !important;
+    border-color: #475569 !important;
+    color: #ffffff !important;
+}
+[class*="path-local-rtocompliance"] .rtoc-main-content a.btn-outline-warning:hover,
+[class*="path-local-rtocompliance"] .rtoc-main-content a.btn-outline-warning:focus,
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-outline-warning:hover,
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-outline-warning:focus {
+    background: #d97706 !important;
+    background-image: none !important;
+    border-color: #d97706 !important;
+    color: #ffffff !important;
+}
+[class*="path-local-rtocompliance"] .rtoc-main-content a.btn-outline-danger:hover,
+[class*="path-local-rtocompliance"] .rtoc-main-content a.btn-outline-danger:focus,
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-outline-danger:hover,
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-outline-danger:focus {
+    background: #dc2626 !important;
+    background-image: none !important;
+    border-color: #dc2626 !important;
+    color: #ffffff !important;
+}
+[class*="path-local-rtocompliance"] .rtoc-main-content a.btn-outline-success:hover,
+[class*="path-local-rtocompliance"] .rtoc-main-content a.btn-outline-success:focus,
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-outline-success:hover,
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-outline-success:focus {
+    background: #16a34a !important;
+    background-image: none !important;
+    border-color: #16a34a !important;
+    color: #ffffff !important;
+}
+[class*="path-local-rtocompliance"] .rtoc-main-content a.btn-outline-info:hover,
+[class*="path-local-rtocompliance"] .rtoc-main-content a.btn-outline-info:focus,
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-outline-info:hover,
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-outline-info:focus {
+    background: #0e7490 !important;
+    background-image: none !important;
+    border-color: #0e7490 !important;
+    color: #ffffff !important;
+}
+/* Keep the icon/text colour consistent with the button text on hover (some
+   labels wrap an <i>/<svg> that would otherwise keep its own colour). */
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-outline-primary:hover *,
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-outline-secondary:hover *,
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-outline-warning:hover *,
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-outline-danger:hover *,
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-outline-success:hover *,
+[class*="path-local-rtocompliance"] .rtoc-main-content .btn-outline-info:hover * {
+    color: #ffffff !important;
+}
+
+/* ==========================================================================
+   CERTIFICATE EDITOR BUTTON HOVER CONTRAST (v6.2.12)
+   The certificate template editor (cert_template_edit.php) renders OUTSIDE
+   ".rtoc-main-content" (it uses ".rtoc-tmpl-grid" + ".rtoc-tmpl-*" panels with
+   the admin page layout), so the general outline-button hover fix above did not
+   reach it — leaving buttons like "Auto-design from an image (AI)" and "Preview"
+   with white text on a white/tinted hover background (invisible). This block
+   applies the same guaranteed-contrast hover fill to every outline button inside
+   the editor grid, plus the auto-design button explicitly by id, with high
+   specificity + !important so the Moodle theme can never win the text colour.
+   ========================================================================== */
+[class*="path-local-rtocompliance"] .rtoc-tmpl-grid a.btn-outline-primary:hover,
+[class*="path-local-rtocompliance"] .rtoc-tmpl-grid a.btn-outline-primary:focus,
+[class*="path-local-rtocompliance"] .rtoc-tmpl-grid .btn-outline-primary:hover,
+[class*="path-local-rtocompliance"] .rtoc-tmpl-grid .btn-outline-primary:focus,
+[class*="path-local-rtocompliance"] #rtoc-tmpl-autodesign:hover,
+[class*="path-local-rtocompliance"] #rtoc-tmpl-autodesign:focus {
+    background: #0f6cbf !important;
+    background-image: none !important;
+    border-color: #0f6cbf !important;
+    color: #ffffff !important;
+}
+[class*="path-local-rtocompliance"] .rtoc-tmpl-grid a.btn-outline-secondary:hover,
+[class*="path-local-rtocompliance"] .rtoc-tmpl-grid a.btn-outline-secondary:focus,
+[class*="path-local-rtocompliance"] .rtoc-tmpl-grid .btn-outline-secondary:hover,
+[class*="path-local-rtocompliance"] .rtoc-tmpl-grid .btn-outline-secondary:focus {
+    background: #475569 !important;
+    background-image: none !important;
+    border-color: #475569 !important;
+    color: #ffffff !important;
+}
+[class*="path-local-rtocompliance"] .rtoc-tmpl-grid a.btn-outline-warning:hover,
+[class*="path-local-rtocompliance"] .rtoc-tmpl-grid a.btn-outline-warning:focus,
+[class*="path-local-rtocompliance"] .rtoc-tmpl-grid .btn-outline-warning:hover,
+[class*="path-local-rtocompliance"] .rtoc-tmpl-grid .btn-outline-warning:focus {
+    background: #d97706 !important;
+    background-image: none !important;
+    border-color: #d97706 !important;
+    color: #ffffff !important;
+}
+[class*="path-local-rtocompliance"] .rtoc-tmpl-grid a.btn-outline-danger:hover,
+[class*="path-local-rtocompliance"] .rtoc-tmpl-grid a.btn-outline-danger:focus,
+[class*="path-local-rtocompliance"] .rtoc-tmpl-grid .btn-outline-danger:hover,
+[class*="path-local-rtocompliance"] .rtoc-tmpl-grid .btn-outline-danger:focus {
+    background: #dc2626 !important;
+    background-image: none !important;
+    border-color: #dc2626 !important;
+    color: #ffffff !important;
+}
+[class*="path-local-rtocompliance"] .rtoc-tmpl-grid .btn-outline-primary:hover *,
+[class*="path-local-rtocompliance"] .rtoc-tmpl-grid .btn-outline-secondary:hover *,
+[class*="path-local-rtocompliance"] .rtoc-tmpl-grid .btn-outline-warning:hover *,
+[class*="path-local-rtocompliance"] .rtoc-tmpl-grid .btn-outline-danger:hover *,
+[class*="path-local-rtocompliance"] #rtoc-tmpl-autodesign:hover * {
+    color: #ffffff !important;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   STUDENT RESULTS FILTER BAR (v6.2.57) — a proper responsive filter bar. The old
+   inline flex row collapsed into a full-width vertical stack because Bootstrap's
+   .form-control { width:100% } overrides flex sizing on bare control children. A
+   CSS grid places the filters across the page in equal columns that wrap on narrow
+   screens; the search sits full-width on top and the actions in their own row.
+   ───────────────────────────────────────────────────────────────────────────── */
+[class*="path-local-rtocompliance"] .rtoc-results-filterbar {
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+}
+[class*="path-local-rtocompliance"] .rtoc-rf-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+[class*="path-local-rtocompliance"] .rtoc-rf-search { width: 100%; }
+[class*="path-local-rtocompliance"] .rtoc-rf-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+}
+[class*="path-local-rtocompliance"] .rtoc-rf-grid .form-control { width: 100%; min-width: 0; }
+[class*="path-local-rtocompliance"] .rtoc-rf-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+@media (max-width: 560px) {
+    [class*="path-local-rtocompliance"] .rtoc-rf-grid { grid-template-columns: 1fr 1fr; }
+}
+
+/* STICKY EDITOR TOOLBAR (v6.2.64) — keep the Undo/Zoom/Grid/Wide-canvas toolbar visible while
+   the canvas scrolls, so the editor stops "jumping" out of reach. Single sticky rule, no layout
+   restructure — degrades gracefully if unsupported. */
+[class*="path-local-rtocompliance"] .rtoc-tmpl-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 8;
+    background: #ffffff;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    border-radius: 6px;
+    box-shadow: 0 2px 6px rgba(15, 39, 66, 0.06);
+}
+[data-bs-theme="dark"] [class*="path-local-rtocompliance"] .rtoc-tmpl-toolbar,
+.dark [class*="path-local-rtocompliance"] .rtoc-tmpl-toolbar {
+    background: #2b2b2b;
 }

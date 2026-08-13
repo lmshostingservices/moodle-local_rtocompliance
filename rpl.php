@@ -15,21 +15,20 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — rpl.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
 $tab = optional_param('tab', 'rpl', PARAM_ALPHA);
 
 admin_externalpage_setup('local_rtocompliance_rpl');
+require_login();
 $PAGE->set_url('/local/rtocompliance/rpl.php', ['tab' => $tab]);
 $PAGE->set_title('RPL & Credit Transfer Register');
 $PAGE->set_heading('RPL & Credit Transfer Register');
@@ -47,7 +46,7 @@ echo html_writer::tag('h2', 'RPL & Credit Transfer Register');
 echo html_writer::link(
     new moodle_url('/local/rtocompliance/rpl_edit.php', ['tab' => $tab]),
     $tab === 'credit' ? 'Add Credit Transfer' : 'Add RPL Application',
-    ['class' => 'btn btn-primary']
+    ['class' => 'btn btn-primary', 'title' => 'Record a new RPL application or credit transfer']
 );
 echo html_writer::end_div();
 
@@ -84,17 +83,17 @@ if ($dbman->table_exists('local_rtocompliance_rpl')) {
 
 echo html_writer::start_div('stats-cards', ['style' => 'margin-bottom: 24px;']);
 $summaryStats = [
-    ['label' => 'Total RPL Applications',   'value' => $totalrpl,         'color' => 'blue',   'icon' => local_rtocompliance_stat_icon('bar')],
-    ['label' => 'Total Credit Transfers',   'value' => $totalct,          'color' => 'purple', 'icon' => local_rtocompliance_stat_icon('file')],
-    ['label' => 'Approved / Granted',       'value' => $totalapproved,    'color' => 'green',  'icon' => local_rtocompliance_stat_icon('check')],
-    ['label' => 'Pending Decision',         'value' => $totalpending,     'color' => $totalpending  > 0 ? 'amber' : 'green', 'icon' => local_rtocompliance_stat_icon('clock')],
-    ['label' => 'Not Approved',             'value' => $totalnotapproved, 'color' => $totalnotapproved > 0 ? 'rose' : 'green', 'icon' => local_rtocompliance_stat_icon('x')],
-    ['label' => 'Partially Approved',       'value' => $totalpartial,     'color' => $totalpartial  > 0 ? 'amber' : 'green', 'icon' => local_rtocompliance_stat_icon('clock')],
-    ['label' => 'Students with RPL / CT',   'value' => $totalstudentsrpl, 'color' => 'blue',   'icon' => local_rtocompliance_stat_icon('users')],
-    ['label' => 'Submitted This Year',      'value' => $rplthisyear,      'color' => 'purple', 'icon' => local_rtocompliance_stat_icon('calendar')],
+    ['label' => 'Total RPL Applications',   'value' => $totalrpl,         'color' => 'blue',   'icon' => local_rtocompliance_stat_icon('bar'),      'tip' => 'Total requests for RPL (recognition of prior learning) &ndash; giving a student credit for skills and knowledge they already have.'],
+    ['label' => 'Total Credit Transfers',   'value' => $totalct,          'color' => 'purple', 'icon' => local_rtocompliance_stat_icon('file'),     'tip' => 'Total credit transfers &ndash; giving credit for units the student already completed and was certified for somewhere else.'],
+    ['label' => 'Approved / Granted',       'value' => $totalapproved,    'color' => 'green',  'icon' => local_rtocompliance_stat_icon('check'),    'tip' => 'Applications where the credit was granted in full.'],
+    ['label' => 'Pending Decision',         'value' => $totalpending,     'color' => $totalpending  > 0 ? 'amber' : 'green', 'icon' => local_rtocompliance_stat_icon('clock'),    'tip' => 'Applications still waiting for a decision.'],
+    ['label' => 'Not Approved',             'value' => $totalnotapproved, 'color' => $totalnotapproved > 0 ? 'rose' : 'green', 'icon' => local_rtocompliance_stat_icon('x'),        'tip' => 'Applications where no credit was granted.'],
+    ['label' => 'Partially Approved',       'value' => $totalpartial,     'color' => $totalpartial  > 0 ? 'amber' : 'green', 'icon' => local_rtocompliance_stat_icon('clock'),    'tip' => 'Applications where some units were credited but not all.'],
+    ['label' => 'Students with RPL / CT',   'value' => $totalstudentsrpl, 'color' => 'blue',   'icon' => local_rtocompliance_stat_icon('users'),    'tip' => 'Number of separate students who have at least one RPL or credit transfer record.'],
+    ['label' => 'Submitted This Year',      'value' => $rplthisyear,      'color' => 'purple', 'icon' => local_rtocompliance_stat_icon('calendar'), 'tip' => 'Applications submitted since 1 January of this year.'],
 ];
 foreach ($summaryStats as $s) {
-    echo html_writer::start_div('stat-card stat-' . $s['color']);
+    echo html_writer::start_div('stat-card stat-' . $s['color'], ['title' => $s['tip']]);
     echo '<div class="stat-icon-wrap">' . $s['icon'] . '</div>';
     echo html_writer::start_div('stat-info');
     echo html_writer::tag('span', $s['value'], ['class' => 'stat-number']);
@@ -141,17 +140,18 @@ if ($records) {
     echo html_writer::start_tag('table', ['class' => 'data-table']);
     echo html_writer::start_tag('thead');
     echo html_writer::start_tag('tr');
-    echo html_writer::tag('th', 'Student');
-    echo html_writer::tag('th', 'Unit / Qualification');
-    echo html_writer::tag('th', 'Type');
-    echo html_writer::tag('th', 'Assessor');
-    echo html_writer::tag('th', 'Evidence');
-    echo html_writer::tag('th', 'Decision');
-    echo html_writer::tag('th', 'Decision Date');
+    echo html_writer::tag('th', 'Student', ['title' => 'Student the application relates to']);
+    echo html_writer::tag('th', 'Unit / Qualification', ['title' => 'Unit or qualification being recognised or credited']);
+    echo html_writer::tag('th', 'Type', ['title' => 'RPL application or credit transfer']);
+    echo html_writer::tag('th', 'Assessor', ['title' => 'Assessor who made the decision']);
+    echo html_writer::tag('th', 'Evidence', ['title' => 'Summary of the evidence submitted and assessed']);
+    echo html_writer::tag('th', 'Decision', ['title' => 'Outcome of the assessment']);
+    echo html_writer::tag('th', 'Decision Date', ['title' => 'Date the decision was made']);
+    echo html_writer::tag('th', 'Student Notified', ['title' => 'Whether the outcome has been communicated to the student']);
     if ($tab === 'credit' || $tab === 'all') {
-        echo html_writer::tag('th', 'USI Verified');
+        echo html_writer::tag('th', 'USI Verified', ['title' => 'Whether the USI transcript has been verified']);
     }
-    echo html_writer::tag('th', 'Actions');
+    echo html_writer::tag('th', 'Actions', ['title' => 'Edit this record']);
     echo html_writer::end_tag('tr');
     echo html_writer::end_tag('thead');
     echo html_writer::start_tag('tbody');
@@ -165,11 +165,20 @@ if ($records) {
 
         $decisionLabel = ucwords(str_replace('_', ' ', $rec->decision));
 
+        $decisionTitle = 'The outcome of this application.';
+        if ($rec->decision === 'approved')           $decisionTitle = 'Approved: the credit was granted in full.';
+        if ($rec->decision === 'partially_approved') $decisionTitle = 'Partially approved: some units were credited, others were not.';
+        if ($rec->decision === 'not_approved')       $decisionTitle = 'Not approved: no credit was granted.';
+        if ($rec->decision === 'pending')            $decisionTitle = 'Pending: a decision has not been made yet.';
+
         $typeLabel = $rec->rpltype === 'rpl' ? 'RPL' : 'Credit Transfer';
         $typeClass = $rec->rpltype === 'rpl' ? 'badge-blue' : 'badge-purple';
+        $typeTitle = $rec->rpltype === 'rpl'
+            ? 'RPL (recognition of prior learning): credit for skills and knowledge the student already has.'
+            : 'Credit transfer: credit for units the student already completed and was certified for somewhere else.';
 
         $unitDisplay = $rec->unitcode
-            ? s($rec->unitcode) . ($rec->unitname ? ' - ' . s(substr($rec->unitname, 0, 50)) : '')
+            ? s($rec->unitcode) . ($rec->unitname ? ' ' . s(substr($rec->unitname, 0, 50)) : '')
             : ($rec->qualcode ? s($rec->qualcode) . ($rec->qualname ? ' - ' . s(substr($rec->qualname, 0, 40)) : '') : '-');
 
         $assessorDisplay = $rec->assessorname
@@ -183,21 +192,38 @@ if ($records) {
         echo html_writer::start_tag('tr');
         echo html_writer::tag('td', html_writer::tag('strong', s($rec->studentname ?: 'Unknown')));
         echo html_writer::tag('td', $unitDisplay);
-        echo html_writer::tag('td', html_writer::tag('span', $typeLabel, ['class' => 'badge ' . $typeClass]));
+        echo html_writer::tag('td', html_writer::tag('span', $typeLabel, ['class' => 'badge ' . $typeClass, 'title' => $typeTitle]));
         echo html_writer::tag('td', $assessorDisplay);
         echo html_writer::tag('td', $evidenceSummary);
-        echo html_writer::tag('td', html_writer::tag('span', $decisionLabel, ['class' => 'badge ' . $decisionClass]));
+        echo html_writer::tag('td', html_writer::tag('span', $decisionLabel, ['class' => 'badge ' . $decisionClass, 'title' => $decisionTitle]));
         echo html_writer::tag('td', $rec->decisiondate ? userdate($rec->decisiondate, '%d %b %Y') : html_writer::tag('span', 'Pending', ['class' => 'text-muted']));
+        // RPL-P2 (v5.9.421): procedural-fairness signal — has the student been told the
+        // outcome? Only meaningful once a decision is finalised (not while pending).
+        if ($rec->decision === 'pending') {
+            $notifiedCell = html_writer::tag('span', '—', ['class' => 'text-muted']);
+        } else if (!empty($rec->outcomecommunicated)) {
+            $nlabel = 'Notified';
+            if (!empty($rec->outcomecommunicateddate)) {
+                $nlabel .= ' ' . userdate($rec->outcomecommunicateddate, '%d %b %Y');
+            }
+            $notifiedCell = html_writer::tag('span', $nlabel, ['class' => 'badge badge-success', 'title' => 'The student has been told the outcome in writing.']);
+        } else {
+            $notifiedCell = html_writer::tag('span', 'Not notified', ['class' => 'badge badge-warning', 'title' => 'The student has not yet been told the outcome in writing.']);
+        }
+        echo html_writer::tag('td', $notifiedCell);
         if ($tab === 'credit' || $tab === 'all') {
             $usiClass = $rec->usitranscriptverified ? 'badge-success' : 'badge-warning';
             $usiLabel = $rec->usitranscriptverified ? 'Verified' : 'Not Verified';
-            echo html_writer::tag('td', html_writer::tag('span', $usiLabel, ['class' => 'badge ' . $usiClass]));
+            $usiTitle = $rec->usitranscriptverified
+                ? 'The student USI (unique student identifier) transcript has been checked to confirm the earlier study is genuine.'
+                : 'The student USI (unique student identifier) transcript has not been checked yet.';
+            echo html_writer::tag('td', html_writer::tag('span', $usiLabel, ['class' => 'badge ' . $usiClass, 'title' => $usiTitle]));
         }
         echo html_writer::tag('td',
             html_writer::link(
                 new moodle_url('/local/rtocompliance/rpl_edit.php', ['id' => $rec->id]),
                 'Edit',
-                ['class' => 'btn btn-sm btn-secondary']
+                ['class' => 'btn btn-sm btn-secondary', 'title' => 'Edit this RPL or credit transfer record']
             )
         );
         echo html_writer::end_tag('tr');
@@ -214,7 +240,7 @@ if ($records) {
         echo html_writer::link(
             new moodle_url('/local/rtocompliance/rpl_edit.php', ['tab' => 'rpl']),
             'Record First RPL Application',
-            ['class' => 'btn btn-primary']
+            ['class' => 'btn btn-primary', 'title' => 'Record the first RPL application']
         );
     } elseif ($tab === 'credit') {
         echo html_writer::tag('h3', 'No Credit Transfers Recorded');
@@ -222,7 +248,7 @@ if ($records) {
         echo html_writer::link(
             new moodle_url('/local/rtocompliance/rpl_edit.php', ['tab' => 'credit']),
             'Record First Credit Transfer',
-            ['class' => 'btn btn-primary']
+            ['class' => 'btn btn-primary', 'title' => 'Record the first credit transfer']
         );
     } else {
         echo html_writer::tag('h3', 'No RPL or Credit Transfer Records');
@@ -230,7 +256,7 @@ if ($records) {
         echo html_writer::link(
             new moodle_url('/local/rtocompliance/rpl_edit.php'),
             'Add First Record',
-            ['class' => 'btn btn-primary']
+            ['class' => 'btn btn-primary', 'title' => 'Add the first RPL or credit transfer record']
         );
     }
     echo html_writer::end_div();

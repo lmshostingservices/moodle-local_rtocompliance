@@ -14,6 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * RTO Compliance plugin — adapter_interface.php.
+ *
+ * @package    local_rtocompliance
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 // LLN ADAPTER (v4.2.50) — pluggable LLN/ACSF result provider.
 //
 // Any RTO can wire their preferred LLN assessment system into the
@@ -39,12 +46,8 @@ defined('MOODLE_INTERNAL') || die();
 
 /**
  * Pluggable LLN adapter.
- * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
 interface adapter_interface {
-
     /**
      * Fetch the LLN/ACSF assessment level for this student in the
      * context of this qualification.

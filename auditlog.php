@@ -15,19 +15,19 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — auditlog.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_dashboard');
+require_login();
+require_capability('local/rtocompliance:manage', context_system::instance());
 $context = context_system::instance();
 
 $PAGE->set_url('/local/rtocompliance/auditlog.php');
@@ -61,14 +61,15 @@ $logs = $DB->get_records_sql(
 );
 
 if ($logs) {
+    echo '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px 18px;margin-bottom:16px;"><div style="font-weight:700;color:#1e3a8a;margin-bottom:6px;font-size:15px;">Audit Log</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px 22px;font-size:14.5px;color:#334155;line-height:1.5;"><div><strong>Time</strong> &mdash; when the action was recorded</div><div><strong>User</strong> &mdash; person who performed the action, or System</div><div><strong>Component</strong> &mdash; area of the plugin that raised the entry</div><div><strong>Action</strong> &mdash; operation that was carried out</div><div><strong>Details</strong> &mdash; additional context captured for the entry</div></div></div>';
     echo html_writer::start_tag('table', ['class' => 'table', 'style' => 'background: white; border: 1px solid #e5e7eb; border-radius: 12px;']);
     echo html_writer::start_tag('thead');
     echo html_writer::start_tag('tr');
-    echo html_writer::tag('th', get_string('auditlog_time', 'local_rtocompliance'));
-    echo html_writer::tag('th', get_string('auditlog_user', 'local_rtocompliance'));
-    echo html_writer::tag('th', 'Component');
-    echo html_writer::tag('th', get_string('auditlog_action', 'local_rtocompliance'));
-    echo html_writer::tag('th', get_string('auditlog_details', 'local_rtocompliance'));
+    echo html_writer::tag('th', get_string('auditlog_time', 'local_rtocompliance'), ['title' => 'Date and time the action was recorded']);
+    echo html_writer::tag('th', get_string('auditlog_user', 'local_rtocompliance'), ['title' => 'User who performed the action, or System for automated events']);
+    echo html_writer::tag('th', 'Component', ['title' => 'Area of the plugin that generated this log entry']);
+    echo html_writer::tag('th', get_string('auditlog_action', 'local_rtocompliance'), ['title' => 'Operation that was carried out']);
+    echo html_writer::tag('th', get_string('auditlog_details', 'local_rtocompliance'), ['title' => 'Additional context captured for this entry']);
     echo html_writer::end_tag('tr');
     echo html_writer::end_tag('thead');
     echo html_writer::start_tag('tbody');

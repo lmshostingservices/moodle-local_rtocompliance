@@ -15,15 +15,13 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — qualbuilder_unit.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once($CFG->libdir . '/formslib.php');
 require_once(__DIR__ . '/lib.php');
@@ -37,6 +35,7 @@ $action = optional_param('action', '', PARAM_ALPHA);
 $confirm = optional_param('confirm', 0, PARAM_INT);
 
 admin_externalpage_setup('local_rtocompliance_qualbuilder');
+require_login();
 $context = context_system::instance();
 
 $product = $DB->get_record('local_rtocompliance_qualbuilder', ['id' => $qualbuilderid], '*', MUST_EXIST);
@@ -83,8 +82,9 @@ if ($action === 'delete' && $id) {
             '/local/rtocompliance/qualbuilder.php',
             'qualbuilder'
         );
+        echo local_rtocompliance_page_banner(get_string('edit_unit', 'local_rtocompliance'));
         echo $OUTPUT->confirm(
-            get_string('confirm_delete_unit', 'local_rtocompliance', $unit->unitcode . ' - ' . $unit->unitname),
+            get_string('confirm_delete_unit', 'local_rtocompliance', $unit->unitcode . ' ' . $unit->unitname),
             new moodle_url('/local/rtocompliance/qualbuilder_unit.php', ['action' => 'delete', 'id' => $id, 'qualbuilderid' => $qualbuilderid, 'confirm' => 1]),
             new moodle_url('/local/rtocompliance/qualbuilder_edit.php', ['id' => $qualbuilderid])
         );
@@ -252,13 +252,15 @@ if ($form->is_cancelled()) {
 
 $PAGE->add_body_class("path-local-rtocompliance");
 
-// Auto-fill nominal hours from NCVER when the unit code is entered.
-$apiurl = get_config('local_rtocompliance', 'apiurl') ?: 'https://lms-labs.com';
+// NOMINAL-HOURS-INTERNAL (v5.9.418): auto-fill nominal hours from the plugin's OWN
+// authoritative reference table (nominalhours_lookup.php) — no longer from lms-labs.com.
+$nhendpoint = (new moodle_url('/local/rtocompliance/nominalhours_lookup.php'))->out(false);
 $PAGE->requires->js_call_amd('local_rtocompliance/nominalhours_autofill', 'init', [
-    'id_unitcode', 'id_unitname', 'id_nominalhours', $apiurl,
+    'id_unitcode', 'id_unitname', 'id_nominalhours', $nhendpoint,
 ]);
 
 echo $OUTPUT->header();
 echo local_rtocompliance_render_nav_header($id ? get_string('edit_unit', 'local_rtocompliance') : get_string('add_unit', 'local_rtocompliance'), get_string('qualificationbuilder', 'local_rtocompliance'), '/local/rtocompliance/qualbuilder.php', 'qualbuilder');
+echo local_rtocompliance_page_banner($id ? get_string('edit_unit', 'local_rtocompliance') : get_string('add_unit', 'local_rtocompliance'));
 $form->display();
 echo $OUTPUT->footer();

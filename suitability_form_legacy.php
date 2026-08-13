@@ -15,13 +15,12 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — suitability_form_legacy.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 // LEGACY pre-enrolment suitability form — preserved verbatim for v4.2.46
 // and earlier records that still have rows in
 // local_rtocompliance_suitability_answers.  New sends from v4.2.47 use the
@@ -94,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $answervals[$a->id]   = (int)$val;
         $evidencevals[$a->id] = substr($ev, 0, 2000);
     }
-    if (!optional_param('declaration', '', PARAM_RAW)) { // pipeline-ignore: PARAM_RAW — plain-text boolean check; empty = not ticked
+    if (!optional_param('declaration', '', PARAM_RAW)) {
         $errors[] = 'You must tick the declaration before submitting.';
     }
     if (empty($errors)) {

@@ -14,6 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * RTO Compliance plugin — survey_analyzer.php.
+ *
+ * @package    local_rtocompliance
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 namespace local_rtocompliance\ai;
 
 defined('MOODLE_INTERNAL') || die();
@@ -21,9 +28,6 @@ defined('MOODLE_INTERNAL') || die();
 /**
  * Survey Analyzer — routes all AI calls through the lms-labs.com platform.
  * Cost: 5 platform credits per analysis (deducted server-side by the platform).
- * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
 class survey_analyzer {
     const CREDIT_COST = 5;

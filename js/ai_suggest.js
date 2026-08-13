@@ -252,7 +252,7 @@
             '<div class="rtoc-ai-suggestions-area">' +
                 '<div class="rtoc-ai-loading">' +
                     '<div class="rtoc-ai-spinner"></div>' +
-                    '<span>Generating AI suggestions using ASQA practice guide context\u2026</span>' +
+                    '<span>Generating an AI-assisted draft for you to review\u2026</span>' +
                 '</div>' +
             '</div>';
     }
@@ -267,7 +267,7 @@
         suggArea.innerHTML =
             '<div class="rtoc-ai-loading">' +
             '<div class="rtoc-ai-spinner"></div>' +
-            '<span>Generating ' + (count > 1 ? count + ' options' : 'suggestion') + ' using ASQA practice guide context\u2026</span>' +
+            '<span>Generating ' + (count > 1 ? count + ' options' : 'a draft') + ' for you to review\u2026</span>' +
             '</div>';
 
         var qual = getQualInfo();
@@ -287,7 +287,20 @@
                 deliveryMode: qual.deliveryMode,
                 context:      ctx,
                 keyword:      keyword,
-                count:        count
+                count:        count,
+                // TAS-AI-GUIDANCE (v6.2.38): send ASQA 2025 grounding + anti-fabrication +
+                // online-authenticity + responsible-AI rules to the server model so the draft
+                // reflects current practice and is clearly a review-required draft.
+                guidance:     'Draft against the 2025 Standards for RTOs (Quality Area 1). '
+                    + 'Do not invent facts, hours, cohort data, industry findings, unit codes or '
+                    + 'statistics — where a fact is unknown, insert a clearly bracketed '
+                    + '[RTO to confirm: ...] placeholder instead of fabricating. Reflect this '
+                    + "qualification's real training-product requirements, not generic boilerplate. "
+                    + 'For any online or blended delivery, address learner identity verification, '
+                    + 'supervision, authenticity of student work (including that it is not plagiarised '
+                    + 'or AI-generated), and scheduled human touchpoints. This output is an AI-assisted '
+                    + 'draft that an RTO staff member must review, edit and validate before it becomes '
+                    + 'part of a compliance document.'
             })
         })
         .then(function (r) { return r.json(); })

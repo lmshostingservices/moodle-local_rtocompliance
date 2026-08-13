@@ -15,19 +15,43 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — student_support.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_student_support');
+require_login();
+
+// SUPPORT-SERVER-PERSIST (v5.9.419) — the organisation-level support/adjustment/
+// wellbeing selections on this page were previously saved only in the browser
+// (localStorage), so they were device-specific and invisible to an auditor on
+// another machine — an ASQA Std 2.1/2.3 evidence gap. They now persist server-side
+// in plugin config so the selections are shared, durable and auditable.
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && confirm_sesskey()
+        && optional_param('action', '', PARAM_ALPHANUMEXT) === 'save_support_state') {
+    require_capability('local/rtocompliance:manage', context_system::instance());
+    $state = optional_param('state', '', PARAM_RAW);
+    // Validate it is well-formed JSON before storing; cap size defensively.
+    $decoded = json_decode((string) $state, true);
+    if (is_array($decoded) && strlen((string) $state) < 65535) {
+        set_config('support_state', json_encode($decoded), 'local_rtocompliance');
+        echo json_encode(['ok' => true]);
+    } else {
+        echo json_encode(['ok' => false, 'error' => 'invalid state']);
+    }
+    exit;
+}
+$rtoc_support_state = get_config('local_rtocompliance', 'support_state');
+if ($rtoc_support_state === false || $rtoc_support_state === null || $rtoc_support_state === '') {
+    $rtoc_support_state = '{}';
+}
+
 $PAGE->set_url('/local/rtocompliance/student_support.php');
 $PAGE->set_title('Student Support');
 $PAGE->set_heading('Student Support');
@@ -141,14 +165,26 @@ echo html_writer::end_div(); // compliance-container
         'External support services'
     ];
 
-    var STORAGE_KEY = 'rto_support_v1';
+    // SUPPORT-SERVER-PERSIST (v5.9.419): state is loaded from the server (injected
+    // below) and saved back to the server, so it is shared and auditable rather than
+    // living only in this browser. An in-memory copy avoids re-parsing on every read.
+    var SERVER_STATE = <?php echo $rtoc_support_state; ?>;
+    var SUPPORT_SESSKEY = '<?php echo sesskey(); ?>';
+    var SUPPORT_SAVE_URL = '<?php echo (new moodle_url('/local/rtocompliance/student_support.php'))->out(false); ?>';
+    var _state = (SERVER_STATE && typeof SERVER_STATE === 'object') ? SERVER_STATE : {};
 
     function loadState() {
-        try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
-        catch (e) { return {}; }
+        return _state;
     }
     function saveState(state) {
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+        _state = state || {};
+        try {
+            var fd = new FormData();
+            fd.append('action', 'save_support_state');
+            fd.append('sesskey', SUPPORT_SESSKEY);
+            fd.append('state', JSON.stringify(_state));
+            fetch(SUPPORT_SAVE_URL, { method: 'POST', body: fd, credentials: 'same-origin' });
+        } catch (e) { /* non-fatal — selection stays in memory this session */ }
     }
     function escapeHtml(s) {
         return String(s).replace(/[&<>"']/g, function (c) {

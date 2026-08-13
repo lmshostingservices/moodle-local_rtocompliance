@@ -14,12 +14,19 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * RTO Compliance plugin — surveys.php.
+ *
+ * @package    local_rtocompliance
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_surveys');
+require_login();
 require_capability('local/rtocompliance:managesurveys', context_system::instance());
 $PAGE->set_title(get_string('surveys', 'local_rtocompliance'));
 $PAGE->set_heading(get_string('surveys', 'local_rtocompliance'));
@@ -35,9 +42,6 @@ $PAGE->set_heading(get_string('surveys', 'local_rtocompliance'));
  * @param string $type   'learner' or 'employer'
  * @param int    $year   Survey period year (e.g. 2026)
  * @param int    $count  Number of completed responses available for analysis
- * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
 function rtoc_render_run_analysis_form($type, $year, $count) {
     $confirmmsg = "Run AI analysis on {$count} completed " . ($type === 'employer' ? 'employer' : 'learner')
@@ -92,7 +96,7 @@ echo html_writer::start_div('surveys-container');
 echo html_writer::start_div('compliance-header');
 echo html_writer::tag('h2', get_string('surveys', 'local_rtocompliance'));
 echo html_writer::end_div();
-echo html_writer::tag('p', 'Quality Indicator surveys are required annually by ASQA/NCVER. Send these surveys to learners and employers to collect satisfaction data.', ['class' => 'text-muted', 'style' => 'margin-bottom:1.5rem;']);
+echo html_writer::tag('p', 'Quality Indicator surveys are required annually under the AQTF Quality Indicators framework. This feature uses the standard AQTF Learner Questionnaire (LQ) and Employer Questionnaire (EQ), each answered on the 4-point agreement scale, and reports the Learner Engagement, Competency Development and Employer Satisfaction indicators.', ['class' => 'text-muted', 'style' => 'margin-bottom:1.5rem;']);
 
 $currentyear = date('Y');
 
@@ -157,18 +161,18 @@ echo html_writer::end_div();
 
 echo html_writer::start_div('survey-type-card');
 echo html_writer::tag('h3', get_string('survey_learner', 'local_rtocompliance'));
-echo html_writer::tag('p', 'Collect feedback from students about their training experience, including quality of training, assessment, and support services.');
+echo html_writer::tag('p', 'The standard AQTF Learner Questionnaire (LQ) collects feedback across the Learner Engagement and Competency Development indicators — trainer quality, effective assessment, clarity of expectations, learning stimulation, active learning, training relevance, learning resources and effective support.');
 
 echo html_writer::start_div('rtoc-flex-row');
 echo html_writer::link(
     new moodle_url('/local/rtocompliance/survey_send.php', ['type' => 'learner']),
     get_string('survey_send', 'local_rtocompliance'),
-    ['class' => 'btn btn-primary']
+    ['class' => 'btn btn-primary', 'title' => 'Send the AQTF Learner Questionnaire to selected learners']
 );
 echo html_writer::link(
     new moodle_url('/local/rtocompliance/survey_responses.php', ['type' => 'learner']),
     get_string('survey_responses', 'local_rtocompliance'),
-    ['class' => 'btn btn-secondary']
+    ['class' => 'btn btn-secondary', 'title' => 'View individual completed learner survey responses']
 );
 // BUG-SURVEY-AI FIX: Add per-type Run AI Analysis buttons inside each survey card so
 // users can navigate directly to the analysis page for the correct survey type.
@@ -223,18 +227,18 @@ echo html_writer::end_div();
 
 echo html_writer::start_div('survey-type-card');
 echo html_writer::tag('h3', get_string('survey_employer', 'local_rtocompliance'));
-echo html_writer::tag('p', 'Collect feedback from employers about the quality of training, competency of graduates, and relevance to workplace needs.');
+echo html_writer::tag('p', 'The standard AQTF Employer Questionnaire (EQ) collects feedback for the Employer Satisfaction indicator — trainer quality, effective assessment, training relevance, competency development, training resources, effective support and overall satisfaction.');
 
 echo html_writer::start_div('rtoc-flex-row');
 echo html_writer::link(
     new moodle_url('/local/rtocompliance/survey_send.php', ['type' => 'employer']),
     get_string('survey_send', 'local_rtocompliance'),
-    ['class' => 'btn btn-primary']
+    ['class' => 'btn btn-primary', 'title' => 'Send the AQTF Employer Questionnaire to selected employers']
 );
 echo html_writer::link(
     new moodle_url('/local/rtocompliance/survey_responses.php', ['type' => 'employer']),
     get_string('survey_responses', 'local_rtocompliance'),
-    ['class' => 'btn btn-secondary']
+    ['class' => 'btn btn-secondary', 'title' => 'View individual completed employer survey responses']
 );
 // BUG-SURVEY-AI FIX: Per-type Run AI Analysis button for employer surveys.
 // BUG-SURVEY-BTN-PURPLE: removed inline indigo→purple gradient — see learner button above.
@@ -273,12 +277,12 @@ echo html_writer::start_div('rtoc-action-row');
 echo html_writer::link(
     new moodle_url('/local/rtocompliance/qi_report.php'),
     get_string('survey_summary', 'local_rtocompliance'),
-    ['class' => 'btn btn-outline-primary']
+    ['class' => 'btn btn-outline-primary', 'title' => 'Open the Quality Indicator summary report of all survey results']
 );
 echo html_writer::link(
     new moodle_url('/local/rtocompliance/ai_analysis.php'),
     'AI Survey Analysis',
-    ['class' => 'btn btn-primary', 'style' => 'background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border: none;']
+    ['class' => 'btn btn-primary', 'style' => 'background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border: none;', 'title' => 'Open the AI survey analysis page to choose a survey type and year before running']
 );
 echo html_writer::end_div();
 

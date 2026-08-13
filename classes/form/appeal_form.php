@@ -15,13 +15,12 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — appeal_form.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 namespace local_rtocompliance\form;
 
 defined('MOODLE_INTERNAL') || die();
@@ -78,7 +77,7 @@ class appeal_form extends \moodleform {
         $mform->addElement('header', 'appealgrounds', get_string('appeal_grounds', 'local_rtocompliance'));
 
         $mform->addElement('textarea', 'groundsforappeal', get_string('grounds_for_appeal', 'local_rtocompliance'), ['rows' => 8, 'cols' => 80]);
-        $mform->setType('groundsforappeal', PARAM_RAW); // pipeline-ignore: PARAM_RAW — rich-text long-form field; sanitised by format_text() before display and stored via Moodle form API
+        $mform->setType('groundsforappeal', PARAM_RAW);
         $mform->addRule('groundsforappeal', get_string('required'), 'required', null, 'client');
         $mform->addHelpButton('groundsforappeal', 'grounds_for_appeal', 'local_rtocompliance');
 
@@ -154,8 +153,12 @@ class appeal_form extends \moodleform {
 </script>');
 
         $mform->addElement('textarea', 'originaldecision', get_string('original_decision', 'local_rtocompliance'), ['rows' => 4, 'cols' => 80]);
-        $mform->setType('originaldecision', PARAM_RAW); // pipeline-ignore: PARAM_RAW — rich-text long-form field; sanitised before display
+        $mform->setType('originaldecision', PARAM_RAW);
         $mform->addHelpButton('originaldecision', 'original_decision', 'local_rtocompliance');
+
+        // Standard 2.8 independence: identify the original decision-maker.
+        $mform->addElement('text', 'originaldecisionmaker', 'Original decision-maker (who made the decision being appealed)', ['size' => 50, 'maxlength' => 255]);
+        $mform->setType('originaldecisionmaker', PARAM_TEXT);
 
         $mform->addElement('date_selector', 'originaldecisiondate', get_string('original_decision_date', 'local_rtocompliance'), ['optional' => true]);
         $mform->addHelpButton('originaldecisiondate', 'original_decision_date', 'local_rtocompliance');
@@ -184,8 +187,12 @@ class appeal_form extends \moodleform {
         $mform->addHelpButton('hearingdate', 'hearing_date', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'panelmembers', get_string('panel_members', 'local_rtocompliance'), ['rows' => 3, 'cols' => 80]);
-        $mform->setType('panelmembers', PARAM_RAW); // pipeline-ignore: PARAM_RAW — rich-text long-form field; sanitised before display
+        $mform->setType('panelmembers', PARAM_RAW);
         $mform->addHelpButton('panelmembers', 'panel_members', 'local_rtocompliance');
+
+        // Standard 2.8 independence confirmation.
+        $mform->addElement('advcheckbox', 'independenceconfirmed', 'I confirm the reviewer/panel is independent of the original decision-maker');
+        $mform->setDefault('independenceconfirmed', 0);
 
         $mform->addElement('header', 'appealoutcome', get_string('appeal_outcome', 'local_rtocompliance'));
 
@@ -200,7 +207,7 @@ class appeal_form extends \moodleform {
         $mform->addHelpButton('outcome', 'appeal_outcome', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'outcomereason', get_string('outcome_reason', 'local_rtocompliance'), ['rows' => 5, 'cols' => 80]);
-        $mform->setType('outcomereason', PARAM_RAW); // pipeline-ignore: PARAM_RAW — rich-text long-form field; sanitised before display
+        $mform->setType('outcomereason', PARAM_RAW);
         $mform->addHelpButton('outcomereason', 'outcome_reason', 'local_rtocompliance');
 
         $mform->addElement('html', '
@@ -279,6 +286,11 @@ class appeal_form extends \moodleform {
         $mform->addElement('date_selector', 'decisiondate', get_string('decision_date', 'local_rtocompliance'), ['optional' => true]);
         $mform->addHelpButton('decisiondate', 'decision_date', 'local_rtocompliance');
 
+        // Standard 2.8 record correction (assessment-decision appeals only).
+        $mform->addElement('advcheckbox', 'resultcorrected', 'Underlying record corrected');
+        $mform->setDefault('resultcorrected', 0);
+        $mform->hideIf('resultcorrected', 'appealtype', 'neq', 'assessment_decision');
+
         $mform->addElement('header', 'externalreview', get_string('external_review', 'local_rtocompliance'));
 
         $mform->addElement('advcheckbox', 'externalreviewoffered', get_string('external_review_offered', 'local_rtocompliance'));
@@ -298,7 +310,7 @@ class appeal_form extends \moodleform {
         $mform->addElement('header', 'additionalinfo', get_string('additional_information', 'local_rtocompliance'));
 
         $mform->addElement('textarea', 'notes', get_string('notes', 'local_rtocompliance'), ['rows' => 4, 'cols' => 80]);
-        $mform->setType('notes', PARAM_RAW); // pipeline-ignore: PARAM_RAW — rich-text long-form field; sanitised before display
+        $mform->setType('notes', PARAM_RAW);
         $mform->addHelpButton('notes', 'appeal_notes', 'local_rtocompliance');
 
         $this->add_action_buttons(true, get_string('savechanges'));

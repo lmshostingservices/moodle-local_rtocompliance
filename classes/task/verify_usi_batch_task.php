@@ -14,6 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * RTO Compliance plugin — verify_usi_batch_task.php.
+ *
+ * @package    local_rtocompliance
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 namespace local_rtocompliance\task;
 
 defined('MOODLE_INTERNAL') || die();
@@ -23,12 +30,8 @@ defined('MOODLE_INTERNAL') || die();
  * 
  * Runs periodically to verify student USIs against the Australian Government
  * USI Registry using the MAS-ST authentication service.
- * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
 class verify_usi_batch_task extends \core\task\scheduled_task {
-    
     const BATCH_SIZE = 25; // kept in sync with usi_verification_service::BATCH_SIZE
     
     public function get_name() {
@@ -56,12 +59,16 @@ class verify_usi_batch_task extends \core\task\scheduled_task {
         
         $status = $service->is_service_available();
         if (!$status['available']) {
-            mtrace('USI verification service not available: ' . $status['message']);
-            return;
+            // SERVICE-PING-ADVISORY (v6.2.36): a failed status ping (transient 500/timeout on
+            // /api/usi/status, or certReady momentarily false) must NOT zero out the whole run.
+            // Log it and still attempt the batch — each verify call has its own auth/error
+            // handling and the batch now aborts cleanly on a genuine site-level auth fault.
+            mtrace('USI status check reported not-available (' . ($status['message'] ?? 'no detail')
+                . ') — attempting the batch anyway; per-call handling gates individual requests.');
         }
-        
+
         mtrace('Starting USI batch verification...');
-        mtrace('Service mode: ' . ($status['test_mode'] ? 'TEST (EVTE)' : 'PRODUCTION'));
+        mtrace('Service mode: ' . (!empty($status['test_mode']) ? 'TEST (EVTE)' : 'PRODUCTION'));
         
         if (isset($status['days_until_expiry'])) {
             mtrace("Machine credential expires in {$status['days_until_expiry']} days");

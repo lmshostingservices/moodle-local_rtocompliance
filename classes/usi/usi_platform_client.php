@@ -14,6 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * RTO Compliance plugin — usi_platform_client.php.
+ *
+ * @package    local_rtocompliance
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 namespace local_rtocompliance\usi;
 
 defined('MOODLE_INTERNAL') || die();
@@ -33,9 +40,6 @@ require_once($CFG->libdir . '/filelib.php');
  * so no per-site credentials are needed on the Moodle side.
  *
  * Drop-in replacement for usi_registry_client.php.
- * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
 class usi_platform_client {
     const REQUEST_TIMEOUT_SECONDS = 30;
@@ -101,13 +105,29 @@ class usi_platform_client {
             ];
         }
 
+        // CONTRACT-MATCH (v5.9.455): send BOTH field-name conventions (snake_case and
+        // camelCase) and both dob spellings so the request matches the lms-labs.com
+        // /api/usi/verify contract regardless of exactly which keys it reads — the
+        // platform handover documents firstName/lastName/dob, while older builds used
+        // firstname/lastname/dateofbirth. Sending both is harmless (extras are ignored)
+        // and removes any chance of a name/dob field mismatch silently failing the match.
         $payload = json_encode([
             'usi'          => strtoupper($usi),
             'firstname'    => $firstname,
+            'firstName'    => $firstname,
             'lastname'     => $lastname,
+            'lastName'     => $lastname,
             'dateofbirth'  => $dateofbirth,
+            'dob'          => $dateofbirth,
+            // v6.2.71: send site credentials in BOTH camelCase and lowercase. The platform's
+            // /api/credits endpoint identifies a site by camelCase {siteId, apiKey}; this
+            // endpoint was only sent lowercase {siteid, apikey} (+ X-Site-Id/X-Api-Key
+            // headers). Mirrors the existing name/dob dual-spelling above so site identity can
+            // never silently mismatch regardless of which keys the endpoint reads.
             'siteid'       => $this->siteid,
             'apikey'       => $this->apikey,
+            'siteId'       => $this->siteid,
+            'apiKey'       => $this->apikey,
         ]);
 
         $endpoint = $this->apiurl . '/api/usi/verify';
@@ -115,7 +135,10 @@ class usi_platform_client {
         \core\session\manager::write_close();
         $curl = new \curl();
         $curl->setopt(['CURLOPT_TIMEOUT' => self::REQUEST_TIMEOUT_SECONDS, 'CURLOPT_SSL_VERIFYPEER' => true, 'CURLOPT_SSL_VERIFYHOST' => 2]);
-        $curl->setHeader(['Content-Type: application/json', 'Accept: application/json']);
+        // Auth is also sent as headers to match the platform's documented "Site API key +
+        // site ID header" scheme, in addition to the body (belt-and-suspenders).
+        $curl->setHeader(['Content-Type: application/json', 'Accept: application/json',
+            'X-Site-Id: ' . $this->siteid, 'X-Api-Key: ' . $this->apikey]);
         $raw      = $curl->post($endpoint, $payload);
         $httpcode = $curl->info['http_code'];
         $error    = $curl->error;
@@ -185,11 +208,33 @@ class usi_platform_client {
             ];
         }
 
+        // CONTRACT-MATCH (v5.9.455): the platform returns {verified, usiStatus, matchResult,
+        // testMode, steps[]}. Map usiStatus→status and compose a readable message from
+        // usiStatus/matchResult when the platform does not send a 'message' field, so the
+        // Students page and the verification log always show a meaningful outcome.
+        $usistatus   = is_scalar($data['usiStatus'] ?? null) ? (string) $data['usiStatus'] : '';
+        $matchresult = is_scalar($data['matchResult'] ?? null) ? (string) $data['matchResult'] : '';
+        $status = $data['status'] ?? ($usistatus !== '' ? $usistatus : 'UNKNOWN');
+        $message = (string) ($data['message'] ?? '');
+        if ($message === '') {
+            $bits = [];
+            if ($usistatus !== '')   { $bits[] = 'USI status: ' . $usistatus; }
+            if ($matchresult !== '') { $bits[] = 'Match: ' . $matchresult; }
+            $message = $bits ? implode(' · ', $bits) : 'No message from platform';
+        }
+        $details = is_array($data['details'] ?? null) ? $data['details'] : [];
+        $details += [
+            'usiStatus'   => $data['usiStatus'] ?? null,
+            'matchResult' => $data['matchResult'] ?? null,
+            'testMode'    => $data['testMode'] ?? null,
+            'steps'       => $data['steps'] ?? null,
+        ];
+
         return [
             'verified' => (bool) ($data['verified'] ?? false),
-            'status'   => $data['status']  ?? 'UNKNOWN',
-            'message'  => $data['message'] ?? 'No message from platform',
-            'details'  => $data['details'] ?? [],
+            'status'   => $status,
+            'message'  => $message,
+            'details'  => $details,
         ];
     }
 
@@ -276,7 +321,10 @@ class usi_platform_client {
         \core\session\manager::write_close();
         $curl = new \curl();
         $curl->setopt(['CURLOPT_TIMEOUT' => 10, 'CURLOPT_SSL_VERIFYPEER' => true, 'CURLOPT_SSL_VERIFYHOST' => 2]);
-        $curl->setHeader(['X-API-Key: ' . $this->apikey]);
+        // HEADER-CASING (v6.2.44): send X-Api-Key (and the site id) to match the verify/status/
+        // upload calls — a strict gateway can treat X-API-Key vs X-Api-Key differently and 401
+        // this endpoint while others pass.
+        $curl->setHeader(['X-Site-Id: ' . $this->siteid, 'X-Api-Key: ' . $this->apikey]);
         $raw      = $curl->get($url);
         $httpcode = $curl->info['http_code'];
         $curlerr  = $curl->error;
@@ -454,12 +502,22 @@ class usi_platform_client {
                 'error' => is_array($data) && !empty($data['error']) ? (string) $data['error'] : 'Platform returned non-OK response.',
             ];
         }
+        // SELF-SERVICE-UPLOAD (v6.2.18): when the platform creates a fresh client
+        // record from a plugin-side upload it issues (and returns) the API key this
+        // site must use on subsequent /api/usi/verify calls. Pass it back so the
+        // caller can persist it — without this, a self-onboarded RTO would keep an
+        // old/mismatched key in config and every later verify would 401. Also surface
+        // cert expiry/subject when the platform includes them.
         return [
-            'ok'        => true,
-            'message'   => $data['message']   ?? 'Credential uploaded.',
-            'certBytes' => (int) ($data['certBytes'] ?? 0),
-            'orgId'     => (string) ($data['orgId'] ?? $org_id),
-            'testMode'  => (bool) ($data['testMode'] ?? $test_mode),
+            'ok'          => true,
+            'message'     => $data['message']   ?? 'Credential uploaded.',
+            'certBytes'   => (int) ($data['certBytes'] ?? 0),
+            'orgId'       => (string) ($data['orgId'] ?? $org_id),
+            'testMode'    => (bool) ($data['testMode'] ?? $test_mode),
+            'apikey'      => (string) ($data['apikey'] ?? $data['apiKey'] ?? $data['api_key'] ?? ''),
+            'siteid'      => (string) ($data['siteid'] ?? $data['siteId'] ?? $data['site_id'] ?? ''),
+            'certExpiry'  => (string) ($data['certExpiry'] ?? $data['certExpiryDate'] ?? ''),
+            'certSubject' => (string) ($data['certSubject'] ?? ''),
         ];
     }
 }

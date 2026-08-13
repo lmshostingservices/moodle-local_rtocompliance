@@ -15,20 +15,19 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — survey_send.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once($CFG->libdir . '/formslib.php');
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_surveys');
+require_login();
 $context = context_system::instance();
 require_capability('local/rtocompliance:managesurveys', $context);
 
@@ -102,8 +101,8 @@ class survey_send_form extends moodleform {
         }
 
         $mform->addElement('editor', 'message', 'Email Message', ['rows' => 10]);
-        $mform->setType('message', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
- // pipeline-ignore: PARAM_RAW — rich-text/JSON field sanitised before display or decoded immediately
+        $mform->setType('message', PARAM_RAW);
+
         $defaultmessage = '<p>Dear {FIRSTNAME},</p>';
         if ($type === 'learner') {
             $defaultmessage .= '<p>We value your feedback on your training experience. Please take a few minutes to complete our Quality Indicator survey.</p>';
@@ -118,14 +117,9 @@ class survey_send_form extends moodleform {
 
         $mform->setDefault('message', ['text' => $defaultmessage, 'format' => FORMAT_HTML]);
 
-        $mform->addElement('header', 'optionsheader', 'Options');
-
-        $mform->addElement('advcheckbox', 'sendreminder', 'Send Reminder', 'Send a reminder after 7 days if not completed');
-        $mform->setDefault('sendreminder', 1);
-
-        $mform->addElement('date_selector', 'expirydate', 'Survey Expires On');
-        $mform->setDefault('expirydate', strtotime('+30 days'));
-
+        // v5.9.381: removed the "Send Reminder" and "Survey Expires On" options —
+        // they were never implemented (no reminder was ever sent and the link
+        // never expired), so they promised behaviour the code did not deliver.
         $this->add_action_buttons(true, 'Send Surveys');
     }
 }
@@ -338,14 +332,15 @@ if ($form->is_cancelled()) {
 $PAGE->add_body_class("path-local-rtocompliance");
 echo $OUTPUT->header();
 echo local_rtocompliance_render_nav_header('Send ' . ucfirst($type) . ' Survey', get_string('surveys', 'local_rtocompliance'), '/local/rtocompliance/surveys.php', 'surveys');
+echo local_rtocompliance_page_banner('Send ' . ucfirst($type) . ' Survey');
 echo html_writer::start_div('compliance-container');
 echo $OUTPUT->heading('Send ' . ucfirst($type) . ' Quality Indicator Survey');
 
 echo html_writer::start_div('info-card', ['style' => 'margin-bottom: 24px;']);
 if ($type === 'learner') {
-    echo html_writer::tag('p', 'The Learner Engagement Survey collects feedback from students about their training experience, including quality of training, assessment practices, and support services received.', ['style' => 'margin: 0;']);
+    echo html_writer::tag('p', 'Recipients receive the standard AQTF Learner Questionnaire (LQ). Its items feed the Learner Engagement and Competency Development quality indicators, each answered on the 4-point agreement scale (Strongly Disagree to Strongly Agree).', ['style' => 'margin: 0;']);
 } else {
-    echo html_writer::tag('p', 'The Employer Satisfaction Survey collects feedback from employers about the quality of training provided to their employees and the relevance of skills to workplace needs.', ['style' => 'margin: 0;']);
+    echo html_writer::tag('p', 'Recipients receive the standard AQTF Employer Questionnaire (EQ). Its items feed the Employer Satisfaction quality indicator, each answered on the 4-point agreement scale (Strongly Disagree to Strongly Agree).', ['style' => 'margin: 0;']);
 }
 echo html_writer::end_div();
 

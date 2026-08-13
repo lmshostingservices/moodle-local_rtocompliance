@@ -15,13 +15,12 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — foe_bulk_audit.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 // ─────────────────────────────────────────────────────────────────────────────
 // FOE Bulk Deletion Audit  (local_rtocompliance v5.9.150)
 //
@@ -58,11 +57,11 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_foe_bulk_audit');
+require_login();
 $context = context_system::instance();
 require_capability('local/rtocompliance:manage', $context);
 \core\session\manager::write_close();
@@ -135,7 +134,9 @@ $_imports = $DB->get_records_sql(
 // FORM (shown when action !== 'run')
 // ─────────────────────────────────────────────────────────────────────────────
 if ($action !== 'run') {
+    $PAGE->add_body_class('path-local-rtocompliance'); // v5.9.445: scoped CSS needs this on admin_externalpage pages.
     echo $OUTPUT->header();
+    echo local_rtocompliance_render_nav_header('Bulk Over-Enrolment Audit'); // v5.9.404: add sidebar.
     echo '<h2>FOE Bulk Deletion Audit</h2>';
     echo '<p class="text-muted" style="max-width:800px;">'
        . 'Reads every <code>user_enrolment_deleted</code> event from Moodle\'s standard log for the '
@@ -308,6 +309,7 @@ $_totalDeletions = count($_deletions);
 
 if ($_totalDeletions === 0) {
     echo $OUTPUT->header();
+    echo local_rtocompliance_render_nav_header('Bulk Over-Enrolment Audit'); // v5.9.404: add sidebar.
     echo '<h2>FOE Bulk Deletion Audit</h2>';
     echo '<div class="alert alert-warning">'
        . '<strong>No <code>user_enrolment_deleted</code> events found</strong> between '
@@ -504,6 +506,7 @@ if ($_fh) {
 // RENDER RESULTS
 // ─────────────────────────────────────────────────────────────────────────────
 echo $OUTPUT->header();
+echo local_rtocompliance_render_nav_header('Bulk Over-Enrolment Audit'); // v5.9.404: add sidebar.
 echo '<h2>FOE Bulk Deletion Audit — Results</h2>';
 
 // ── Summary tiles ─────────────────────────────────────────────────────────────

@@ -15,13 +15,12 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — suitability_pdf.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 // PDF report for a completed pre-enrolment suitability review.
 // AUDIT-REWRITE (v4.2.47): provides downloadable evidence for ASQA audit
 // of Standard 2 PI 2(a) & 2(b) — structured review + system-generated
@@ -111,7 +110,7 @@ $pdf->Ln(1);
 $row('Student name:',   fullname($student));
 $row('Student ID:',     'STU-' . str_pad((string)$student->id, 6, '0', STR_PAD_LEFT));
 $row('Student email:',  $student->email);
-$row('Qualification:',  $tas->qualificationcode . ' - ' . $tas->qualificationname);
+$row('Qualification:',  $tas->qualificationcode . ' ' . $tas->qualificationname);
 $row('Date submitted:', $suit->timecompleted ? userdate($suit->timecompleted) : 'Not yet submitted');
 $row('Report generated:', userdate(time()));
 $pdf->Ln(4);

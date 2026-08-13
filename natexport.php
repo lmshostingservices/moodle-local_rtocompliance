@@ -15,15 +15,13 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — natexport.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 require_once(__DIR__ . '/classes/nat_generator.php');
@@ -31,6 +29,7 @@ require_once(__DIR__ . '/classes/nat_generator.php');
 use local_rtocompliance\nat_generator;
 
 admin_externalpage_setup('local_rtocompliance_natexport');
+require_login();
 require_capability('local/rtocompliance:exportnat', context_system::instance());
 
 $action = optional_param('action', '', PARAM_ALPHA);
@@ -128,6 +127,16 @@ if ($action === 'generate' && confirm_sesskey()) {
     }
 }
 
+// TASK-77 (v5.9.357): Count VET enrolments with no qualification code — warn before export.
+$_blank_programcode_count = (int)$DB->count_records_sql(
+    "SELECT COUNT(*)
+       FROM {local_rtocompliance_enrolments}
+      WHERE (programcode IS NULL OR programcode = '')
+        AND courseid IS NOT NULL
+        AND courseid > 0
+        AND (vetflag IS NULL OR vetflag != 'N')"
+);
+
 $PAGE->add_body_class("path-local-rtocompliance");
 echo $OUTPUT->header();
 echo $navheader;
@@ -138,6 +147,87 @@ echo html_writer::start_div('compliance-header');
 echo html_writer::tag('h2', get_string('nat_export_title', 'local_rtocompliance'));
 echo html_writer::end_div();
 echo html_writer::tag('p', get_string('nat_export_desc', 'local_rtocompliance'), ['class' => 'text-muted', 'style' => 'margin-bottom:1.5rem;']);
+
+// TASK-24 (v5.9.323): State portal reference ID panel.
+// These config values are NOT NAT file fields — they are identifiers admins must type into
+// state portals (QLD RAPT, NSW Smart & Skilled, VIC SVTS, etc.) when uploading their AVETMISS
+// files. Showing them here saves navigating away to RTO Settings mid-export.
+// TASK-30 (v5.9.325): Each configured row now also shows a "Go to portal →" link.
+$_portal_urls = [
+    'qld_dtet_rtoid'    => 'https://rapt.training.qld.gov.au/',
+    'nsw_commitment_id' => 'https://smartandskilled.nsw.gov.au/',
+    'vic_contract_id'   => 'https://www.svts.vic.gov.au/',
+    'sa_contract_ref'   => 'https://starr.sa.gov.au/',
+    'wa_contract_number'=> 'https://rapt.dtwd.wa.gov.au/',
+    'tas_contract_ref'  => 'https://www.skills.tas.gov.au/',
+    'nt_contract_ref'   => 'https://training.nt.gov.au/',
+    'act_avetars_ref'   => 'https://www.avetars.act.gov.au/',
+];
+$_portal_ids = [
+    'qld_dtet_rtoid'   => get_config('local_rtocompliance', 'qld_dtet_rtoid'),
+    'nsw_commitment_id' => get_config('local_rtocompliance', 'nsw_commitment_id'),
+    'vic_contract_id'  => get_config('local_rtocompliance', 'vic_contract_id'),
+    'sa_contract_ref'  => get_config('local_rtocompliance', 'sa_contract_ref'),
+    'wa_contract_number' => get_config('local_rtocompliance', 'wa_contract_number'),
+    'tas_contract_ref' => get_config('local_rtocompliance', 'tas_contract_ref'),
+    'nt_contract_ref'  => get_config('local_rtocompliance', 'nt_contract_ref'),
+    'act_avetars_ref'  => get_config('local_rtocompliance', 'act_avetars_ref'),
+];
+$_configured_ids = array_filter($_portal_ids);
+
+$_statefundingurl = new moodle_url('/admin/settings.php', ['section' => 'local_rtocompliance_statefunding']);
+$_codeStyle = 'background:#e0f2fe;padding:2px 8px;border-radius:4px;font-size:0.875rem;letter-spacing:0.04em;';
+$_labelStyle = 'padding:4px 16px 4px 0;font-size:0.875rem;color:#374151;white-space:nowrap;font-weight:600;';
+$_valueStyle = 'padding:4px 0;';
+
+if (!empty($_configured_ids)) {
+    // One or more portal IDs are configured — show collapsible panel.
+    echo '<details style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:0;margin-bottom:24px;" open>';
+    echo '<summary style="padding:14px 20px;cursor:pointer;font-size:0.95rem;font-weight:600;color:#0c4a6e;list-style:none;display:flex;align-items:center;gap:8px;">';
+    echo '&#128193; ' . get_string('portal_reference_ids_heading', 'local_rtocompliance');
+    echo '</summary>';
+    echo '<div style="padding:0 20px 16px 20px;">';
+    echo html_writer::tag('p',
+        get_string('portal_reference_ids_desc', 'local_rtocompliance') . ' ' .
+        html_writer::link($_statefundingurl, get_string('portal_reference_ids_edit_link', 'local_rtocompliance'),
+            ['style' => 'font-size:0.85rem;']),
+        ['style' => 'font-size:0.85rem;color:#0369a1;margin:0 0 12px 0;']
+    );
+    echo html_writer::start_tag('table', ['style' => 'border-collapse:collapse;width:100%;max-width:700px;']);
+    foreach ($_configured_ids as $_key => $_val) {
+        echo html_writer::start_tag('tr');
+        echo html_writer::tag('td',
+            get_string($_key, 'local_rtocompliance') . ':',
+            ['style' => $_labelStyle]
+        );
+        echo html_writer::tag('td',
+            html_writer::tag('code', s($_val), ['style' => $_codeStyle]),
+            ['style' => $_valueStyle]
+        );
+        $_portalLink = '';
+        if (!empty($_portal_urls[$_key])) {
+            $_portalLink = html_writer::link(
+                $_portal_urls[$_key],
+                get_string('portal_go_to_portal', 'local_rtocompliance') . ' →',
+                ['target' => '_blank', 'rel' => 'noopener noreferrer',
+                 'style' => 'font-size:0.8rem;white-space:nowrap;margin-left:8px;']
+            );
+        }
+        echo html_writer::tag('td', $_portalLink, ['style' => 'padding:4px 0 4px 8px;']);
+        echo html_writer::end_tag('tr');
+    }
+    echo html_writer::end_tag('table');
+    echo '</div>';
+    echo '</details>';
+} else {
+    // None configured — show a subtle prompt so admins know the feature exists.
+    echo html_writer::start_div('', [
+        'style' => 'background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px 16px;margin-bottom:24px;font-size:0.85rem;color:#6b7280;',
+    ]);
+    echo get_string('portal_reference_ids_unconfigured', 'local_rtocompliance',
+        html_writer::link($_statefundingurl, get_string('statefunding_settings', 'local_rtocompliance')));
+    echo html_writer::end_div();
+}
 
 $currentyear = date('Y');
 $years = [];
@@ -226,16 +316,39 @@ foreach ($natfiles as $code => $file) {
 }
 echo html_writer::end_div();
 
+// TASK-77 (v5.9.357): Warn if any VET enrolments still have no qualification code.
+if ($_blank_programcode_count > 0) {
+    $_skipped_url = new moodle_url('/local/rtocompliance/skipped_programcodes.php');
+    echo html_writer::tag(
+        'div',
+        html_writer::tag('strong',
+            html_writer::tag('svg', '<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="9" x2="12" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="17" x2="12.01" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+                ['xmlns' => 'http://www.w3.org/2000/svg', 'viewBox' => '0 0 24 24', 'fill' => 'none', 'style' => 'width:16px;height:16px;vertical-align:middle;margin-right:6px;flex-shrink:0;']
+            ) .
+            get_string('nat_warn_blank_programcode_heading', 'local_rtocompliance', $_blank_programcode_count)
+        ) .
+        html_writer::tag('p',
+            get_string('nat_warn_blank_programcode_body', 'local_rtocompliance') . ' ' .
+            html_writer::link($_skipped_url,
+                get_string('nat_warn_blank_programcode_link', 'local_rtocompliance'),
+                ['style' => 'color:#92400e;font-weight:600;text-decoration:underline;']
+            ),
+            ['style' => 'margin:6px 0 0 22px;font-size:0.9rem;']
+        ),
+        ['style' => 'background:#fffbeb;border:1px solid #f59e0b;border-left:4px solid #d97706;border-radius:8px;padding:14px 18px;margin-bottom:20px;color:#92400e;']
+    );
+}
+
 echo html_writer::start_div('', ['style' => 'margin-top: 24px; display: flex; gap: 12px;']);
 echo html_writer::link(
     new moodle_url('/local/rtocompliance/natexport.php', ['action' => 'validate', 'year' => $year, 'sesskey' => sesskey()]),
     get_string('nat_validate', 'local_rtocompliance'),
-    ['class' => 'btn btn-secondary']
+    ['class' => 'btn btn-secondary', 'title' => 'Check the selected reporting period for data errors before generating files']
 );
 echo html_writer::link(
     new moodle_url('/local/rtocompliance/natexport.php', ['action' => 'generate', 'year' => $year, 'sesskey' => sesskey()]),
     get_string('nat_generate', 'local_rtocompliance'),
-    ['class' => 'btn btn-primary']
+    ['class' => 'btn btn-primary', 'title' => 'Generate and download the AVETMISS NAT files for the selected period']
 );
 echo html_writer::end_div();
 
@@ -243,14 +356,15 @@ $exports = $DB->get_records('local_rtocompliance_exports', [], 'timecreated DESC
 
 if ($exports) {
     echo html_writer::tag('h3', 'Recent Exports', ['style' => 'margin-top: 32px;']);
+    echo '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px 18px;margin-bottom:16px;"><div style="font-weight:700;color:#1e3a8a;margin-bottom:6px;font-size:15px;">Recent Exports</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px 22px;font-size:14.5px;color:#334155;line-height:1.5;"><div><strong>Date</strong> &mdash; when the export was generated</div><div><strong>Period</strong> &mdash; reporting year the files cover</div><div><strong>Records</strong> &mdash; total number of records included</div><div><strong>Validation</strong> &mdash; errors or warnings found, or Passed</div><div><strong>Download</strong> &mdash; retrieve the generated ZIP of NAT files</div></div></div>';
     echo html_writer::start_tag('table', ['class' => 'table', 'style' => 'background: white; border: 1px solid #e5e7eb; border-radius: 12px;']);
     echo html_writer::start_tag('thead');
     echo html_writer::start_tag('tr');
-    echo html_writer::tag('th', 'Date');
-    echo html_writer::tag('th', 'Period');
-    echo html_writer::tag('th', 'Records');
-    echo html_writer::tag('th', 'Validation');
-    echo html_writer::tag('th', '');
+    echo html_writer::tag('th', 'Date', ['title' => 'Date and time the export was generated']);
+    echo html_writer::tag('th', 'Period', ['title' => 'Reporting year the export covers']);
+    echo html_writer::tag('th', 'Records', ['title' => 'Total number of records included in the export']);
+    echo html_writer::tag('th', 'Validation', ['title' => 'Validation outcome: error or warning counts, or Passed']);
+    echo html_writer::tag('th', '', ['title' => 'Download the generated NAT export ZIP file']);
     echo html_writer::end_tag('tr');
     echo html_writer::end_tag('thead');
     echo html_writer::start_tag('tbody');
@@ -263,14 +377,14 @@ if ($exports) {
 
         $validationhtml = '';
         if ($export->validationerrors > 0) {
-            $validationhtml .= html_writer::tag('span', $export->validationerrors . ' errors', ['class' => 'status-badge status-urgent']);
+            $validationhtml .= html_writer::tag('span', $export->validationerrors . ' errors', ['class' => 'status-badge status-urgent', 'title' => 'Serious problems in this export that the national reporting system will reject. These need fixing before you submit.']);
         }
         if ($export->validationwarnings > 0) {
             $validationhtml .= ($validationhtml ? ' ' : '') .
-                html_writer::tag('span', $export->validationwarnings . ' warnings', ['class' => 'status-badge status-warning']);
+                html_writer::tag('span', $export->validationwarnings . ' warnings', ['class' => 'status-badge status-warning', 'title' => 'Possible problems worth checking. These will not stop you submitting, but may still need a look.']);
         }
         if (!$validationhtml) {
-            $validationhtml = html_writer::tag('span', 'Passed', ['class' => 'status-badge status-ok']);
+            $validationhtml = html_writer::tag('span', 'Passed', ['class' => 'status-badge status-ok', 'title' => 'No problems found. This export is ready to submit to the national reporting system.']);
         }
         echo html_writer::tag('td', $validationhtml);
 
@@ -278,7 +392,7 @@ if ($exports) {
             html_writer::link(
                 new moodle_url('/local/rtocompliance/download_nat.php', ['id' => $export->id, 'sesskey' => sesskey()]),
                 get_string('nat_download', 'local_rtocompliance'),
-                ['class' => 'btn btn-sm btn-primary']
+                ['class' => 'btn btn-sm btn-primary', 'title' => 'Download the ZIP of NAT files for this export']
             )
         );
         echo html_writer::end_tag('tr');

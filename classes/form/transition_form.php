@@ -15,13 +15,12 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — transition_form.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 namespace local_rtocompliance\form;
 
 defined('MOODLE_INTERNAL') || die();
@@ -98,8 +97,8 @@ class transition_form extends \moodleform {
         $mform->addHelpButton('transitionplan_section', 'transitionplan_header', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'transitionplan', get_string('transition_plan', 'local_rtocompliance'), ['rows' => 6, 'cols' => 80]);
-        $mform->setType('transitionplan', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
- // pipeline-ignore: PARAM_RAW — rich-text/JSON field sanitised before display or decoded immediately        $mform->addHelpButton('transitionplan', 'transitionplan', 'local_rtocompliance');
+        $mform->setType('transitionplan', PARAM_RAW);
+        $mform->addHelpButton('transitionplan', 'transitionplan', 'local_rtocompliance');
 
         // FEAT-TRANSITION-AI (v4.4.69): AI Generate button for Transition Plan field.
         $mform->addElement('static', 'transitionplan_ai', '',
@@ -152,8 +151,8 @@ class transition_form extends \moodleform {
         $mform->addElement('header', 'additionalinfo', get_string('additional_information', 'local_rtocompliance'));
 
         $mform->addElement('textarea', 'notes', get_string('notes', 'local_rtocompliance'), ['rows' => 4, 'cols' => 80]);
-        $mform->setType('notes', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
- // pipeline-ignore: PARAM_RAW — rich-text/JSON field sanitised before display or decoded immediately        $mform->addHelpButton('notes', 'transition_notes', 'local_rtocompliance');
+        $mform->setType('notes', PARAM_RAW);
+        $mform->addHelpButton('notes', 'transition_notes', 'local_rtocompliance');
 
         $this->add_action_buttons(true, get_string('savechanges'));
     }

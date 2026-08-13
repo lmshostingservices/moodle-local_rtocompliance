@@ -14,14 +14,21 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * RTO Compliance plugin — validation_edit.php.
+ *
+ * @package    local_rtocompliance
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
 use local_rtocompliance\form\validation_form;
 
 admin_externalpage_setup('local_rtocompliance_validation');
+require_login();
 $context = context_system::instance();
 
 $id = optional_param('id', 0, PARAM_INT);
@@ -69,9 +76,6 @@ $riskfactorkeys  = ['new_product', 'new_trainer', 'high_enrolments', 'high_compl
 /**
  * Decode a stored selection field into ['keys' => [...], 'notes' => '...'].
  * Supports the new JSON format and the legacy "key1, key2\nFreeform notes" format.
- * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
 $rtoc_decode_selection = function ($raw, $validkeys) {
     $result = ['keys' => [], 'notes' => ''];
@@ -229,6 +233,25 @@ if ($form->is_cancelled()) {
     $record->reportdocument = $data->reportdocument ?? '';
     $record->adclinked = $data->adclinked;
     $record->notes = $data->notes ?? '';
+
+    // Standard 1.5 (P2-2): rectification wire-up — persist outcome and improvements.
+    $record->outcome = !empty($data->outcome) ? $data->outcome : null;
+    $record->improvements = $data->improvements ?? '';
+
+    // Standard 1.5 (T-P1-1): persist the validator-independence declaration.
+    // Enforcement that status='completed' requires the confirmation is handled
+    // in validation_form::validation(), so an unconfirmed completion never
+    // reaches this point and the stored status is left as-is.
+    $record->independenceconfirmed = !empty($data->independenceconfirmed) ? 1 : 0;
+    $record->independencedeclaration = $data->independencedeclaration ?? '';
+
+    // Standard 1.5 (T-P1-2): five-year validation cycle. Compute next-due date
+    // from the actual completion date when known, otherwise the scheduled date.
+    // High-risk products are re-validated sooner, on a two-year cycle.
+    $basedate = !empty($record->actualdate) ? (int) $record->actualdate : (int) $record->scheduleddate;
+    $cycleseconds = ($data->risklevel === 'high') ? (2 * 365 * 86400) : (5 * 365 * 86400);
+    $record->nextduedate = $basedate > 0 ? ($basedate + $cycleseconds) : null;
+
     $record->timemodified = $now;
 
     if ($id > 0) {
@@ -259,9 +282,47 @@ $_rtoc_apibase = rtrim(get_config('local_rtocompliance', 'apiurl') ?: 'https://l
 $PAGE->add_body_class("path-local-rtocompliance");
 echo $OUTPUT->header();
 echo local_rtocompliance_render_nav_header($id ? 'Edit Validation' : 'New Validation', get_string('validation', 'local_rtocompliance'), '/local/rtocompliance/validation.php', 'validation');
+echo local_rtocompliance_page_banner($id ? 'Edit Validation' : 'New Validation');
 echo $OUTPUT->heading($id ? 'Edit Validation Event' : 'New Validation Event');
 
+// Advisory (audit P2): TAE Training Package products require independent validation
+// of assessment before the first assessment cohort, and the validator must be
+// independent of the person who designed/delivered the assessment. Show an info
+// notice when the product being validated is a TAE product. This is advisory only
+// (no schema change, no hard block) — rendered server-side for existing TAE
+// records and toggled client-side as the product code is typed for new records.
+$_rtoc_istae = $validation && strpos(strtoupper((string) ($validation->productcode ?? '')), 'TAE') === 0;
+echo html_writer::tag('div',
+    html_writer::tag('strong', 'TAE independent validation reminder: ') .
+    'Assessments for TAE Training Package products must undergo independent validation of '
+    . 'assessment <strong>before the first assessment cohort</strong> (and thereafter on the '
+    . 'usual validation cycle). The validator must be <strong>independent</strong> — not the '
+    . 'person who designed or delivered the assessment being validated (Standard 1.5). '
+    . 'Record the independence declaration in the Independence section below.',
+    [
+        'id' => 'rtoc-tae-validation-advisory',
+        'class' => 'alert alert-info',
+        'style' => 'margin-bottom:12px;' . ($_rtoc_istae ? '' : 'display:none;'),
+    ]
+);
+
 $form->display();
+
+// Toggle the TAE advisory as the user types/edits the product code (advisory only).
+echo '<script>
+(function () {
+    var advisory = document.getElementById("rtoc-tae-validation-advisory");
+    var pc = document.getElementById("id_productcode");
+    if (!advisory || !pc) { return; }
+    function sync() {
+        var v = (pc.value || "").trim().toUpperCase();
+        advisory.style.display = (v.indexOf("TAE") === 0) ? "" : "none";
+    }
+    pc.addEventListener("input", sync);
+    pc.addEventListener("change", sync);
+    sync();
+})();
+</script>';
 
 // AI Suggest button — injected after the form renders so DOM is ready.
 echo '<div id="rtoc-val-ai-config"'

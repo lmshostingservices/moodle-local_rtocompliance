@@ -14,6 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * RTO Compliance plugin — lln_dispatcher.php.
+ *
+ * @package    local_rtocompliance
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 // LLN DISPATCHER (v4.2.50) — picks the active adapter and fetches the
 // student's ACSF level.  Always falls back to the manual adapter if the
 // configured one fails or returns null, so trainer-entered levels are
@@ -27,10 +34,7 @@ class lln_dispatcher {
     /**
      * Build the active adapter from the `lln_adapter` site setting.
      * Defaults to manual.
- * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
- */
+     */
     public static function get_active_adapter(): adapter_interface {
         $code = (string) get_config('local_rtocompliance', 'lln_adapter');
         if ($code === 'webhook') {

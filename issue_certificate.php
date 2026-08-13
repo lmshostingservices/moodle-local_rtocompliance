@@ -15,15 +15,13 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — issue_certificate.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once($CFG->libdir . '/formslib.php');
 require_once(__DIR__ . '/lib.php');
@@ -36,6 +34,7 @@ use local_rtocompliance\certificate_validator;
 use local_rtocompliance\usi\usi_platform_client;
 
 admin_externalpage_setup('local_rtocompliance_certificates');
+require_login();
 $context = context_system::instance();
 require_capability('local/rtocompliance:issuecerts', $context);
 
@@ -222,17 +221,22 @@ if ($form->is_cancelled()) {
         );
     }
 
-    $prefix = get_config('local_rtocompliance', 'certprefix') ?: 'CERT';
-    $year = date('Y');
-    // FIX-LIKE-ESCAPE (v5.9.277): escape LIKE wildcards in $prefix (same fix
-    // applied to lib.php in v5.9.276 — this file had the identical unescaped
-    // pattern; a prefix containing % or _ inflates $sequence and skips numbers).
-    $prefix_escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $prefix);
-    $sequence = $DB->count_records_sql(
-        "SELECT COUNT(*) FROM {local_rtocompliance_certs} WHERE certnumber LIKE ?",
-        [$prefix_escaped . '-' . $year . '-%']
-    ) + 1;
-    $certnumber = sprintf('%s-%s-%05d', $prefix, $year, $sequence);
+    // F3 (v5.9.389): mandatory RTO identity must be configured — a blank national
+    // provider code or signatory on an AQF certificate is never acceptable, so this
+    // is NOT bypassable via bypassvalidation.
+    $missingrtoset = local_rtocompliance_missing_cert_settings();
+    if (!empty($missingrtoset)) {
+        redirect(
+            $PAGE->url,
+            'Certificate cannot be issued — required RTO details are not configured: '
+                . implode(', ', $missingrtoset) . '. Set them in RTO Settings first.',
+            null,
+            \core\output\notification::NOTIFY_ERROR
+        );
+    }
+
+    // v5.9.361: type-aware number (ABC-<TYPE>-YYYY-NNNNN) via shared helper.
+    $certnumber = local_rtocompliance_generate_cert_number($data->certtype);
 
     $units = null;
     if ($data->certtype === 'statement' && !empty($unitsarray)) {
@@ -262,6 +266,13 @@ if ($form->is_cancelled()) {
     $cert->certtype = $data->certtype;
     $cert->qualificationcode = $data->qualificationcode ?? '';
     $cert->qualificationname = $data->qualificationname ?? '';
+    // C-P1-2 (v5.9.387): snapshot the student's USI at the moment of issuance so a
+    // later USI correction cannot silently rewrite this already-issued document.
+    // The programmatic issuer already snapshots; this interactive path previously
+    // left cert.usi NULL, so the renderer fell back to the live student USI.
+    $cert->usi = (string)($DB->get_field('local_rtocompliance_students', 'usi', ['userid' => (int)$data->userid]) ?? '');
+    // F1 (v5.9.389): snapshot the RTO identity settings as-issued.
+    $cert->issuesnapshot = local_rtocompliance_cert_issue_snapshot();
     $cert->units = $units;
     $cert->issuedate = $data->issuedate;
     $cert->expirydate = !empty($data->expirydate) ? $data->expirydate : null;
@@ -318,7 +329,7 @@ if ($form->is_cancelled()) {
             $buymsg = ' ' . html_writer::link(
                 $creditresult['buyUrl'],
                 'Purchase credits',
-                ['class' => 'btn btn-sm btn-primary', 'target' => '_blank']
+                ['class' => 'btn btn-sm btn-primary', 'target' => '_blank', 'title' => 'Open the credit purchase page in a new tab']
             );
         }
         redirect(
@@ -356,11 +367,22 @@ if ($form->is_cancelled()) {
     }
 
     // Publish to AI Grader central verification registry (best-effort).
-    // This makes the QR code scannable via essaygradeai.app/verify/<token>
+    // This makes the QR code scannable via lms-labs.com/verify/<token>
     // independently of this Moodle server.
     $certissueuser = core_user::get_user($data->userid);
     if ($certissueuser) {
         local_rtocompliance_publish_cert_to_registry($cert, $certissueuser);
+    }
+
+    // ── Microsoft Teams notification (best-effort, no-op unless enabled) ────────
+    if (function_exists('local_rtocompliance_teams_notify')) {
+        $teamscerttypes2 = local_rtocompliance_get_certificate_types();
+        $teamstypelabel2 = $teamscerttypes2[$data->certtype] ?? strtoupper($data->certtype);
+        $teamsstudent2   = $certissueuser ? fullname($certissueuser) : ('User #' . $data->userid);
+        local_rtocompliance_teams_notify(
+            '✅ Certificate issued: **' . $certnumber . '** — ' . $teamstypelabel2
+            . ' for ' . $teamsstudent2 . ' (' . ($data->qualificationcode ?? '') . ' ' . ($data->qualificationname ?? '') . ').'
+        );
     }
 
     $logdetails = [
@@ -459,6 +481,7 @@ if ($form->is_cancelled()) {
 $PAGE->add_body_class("path-local-rtocompliance");
 echo $OUTPUT->header();
 echo local_rtocompliance_render_nav_header(get_string('issue_certificate', 'local_rtocompliance'), get_string('certificates', 'local_rtocompliance'), '/local/rtocompliance/certificates.php', 'certificates');
+echo local_rtocompliance_page_banner(get_string('issue_certificate', 'local_rtocompliance'));
 
 echo html_writer::start_div('', ['style' => 'max-width: 800px; margin: 0 auto; padding: 20px;']);
 
@@ -471,7 +494,7 @@ if (empty($rtoname) || empty($rtocode)) {
         html_writer::link(
             new moodle_url('/admin/settings.php', ['section' => 'local_rtocompliance_settings']),
             'Configure RTO Settings',
-            ['class' => 'btn btn-sm btn-primary ml-2']
+            ['class' => 'btn btn-sm btn-primary ml-2', 'title' => 'Open RTO Settings to enter your provider name and code']
         ),
         'warning'
     );

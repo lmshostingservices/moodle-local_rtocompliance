@@ -14,12 +14,18 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * RTO Compliance plugin — avetmiss_codes.php.
+ *
+ * @package    local_rtocompliance
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 namespace local_rtocompliance;
 
 defined('MOODLE_INTERNAL') || die();
 
 class avetmiss_codes {
-    
     /**
      * Returns all AVETMISS 2.3 Outcome Identifier - National codes and their
      * official descriptions. Source: AVETMISS Data Element Definitions Edition 2.3
@@ -29,10 +35,7 @@ class avetmiss_codes {
      *   '53', '54' - Recognition of Current Competency codes (deleted in Edition 2.1)
      *   '65', '66' - Non-standard codes (never in the AVETMISS standard)
      *   '90' - "Not yet available at interim collection" (deleted in Edition 2.3)
- * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
- */
+     */
     public static function get_outcome_identifiers() {
         return [
             '20' => 'Competency achieved/pass',
@@ -640,6 +643,14 @@ class avetmiss_codes {
      * Return state-specific funding source codes for AVETMISS "below the line" reporting.
      * Each State Training Authority (STA) uses its own code set beyond the national standard.
      *
+     * IMPORTANT: these values are an INDICATIVE convenience list only. Each STA defines and
+     * periodically changes its own "Funding source - state training authority" identifiers (e.g.
+     * Queensland replaced Certificate 3 Guarantee / User Choice / Higher Level Skills with Career
+     * Start / Career Boost from 1 July 2025). Before reporting or claiming, the RTO must confirm the
+     * exact code against its STA's CURRENT AVETMISS/reporting specification and funded contract.
+     * Some jurisdictions (e.g. WA) report through their own system (RAPT/TAMS) rather than plain
+     * AVETMISS. Do not treat this list as the authoritative source of truth for a live claim.
+     *
      * @param string $state Two or three letter state code: QLD, NSW, VIC, SA, WA, TAS, NT, ACT
      * @return array  code => description
      */
@@ -647,11 +658,11 @@ class avetmiss_codes {
         $codes = [
             'QLD' => [
                 ''    => '— Not specified —',
-                'B01' => 'B01 — Career Boost (eligible job seekers & mature age)',
-                'S01' => 'S01 — Career Start (young people 15–24)',
-                'QL1' => 'QL1 — Certificate 3 Guarantee',
-                'QC1' => 'QC1 — Higher Level Skills (Certificate IV and above)',
-                'UC1' => 'UC1 — User Choice (Apprenticeships & Traineeships)',
+                'B01' => 'B01 — Career Boost (current, from 1 Jul 2025)',
+                'S01' => 'S01 — Career Start (current, from 1 Jul 2025)',
+                'UC1' => 'UC1 — Apprenticeships & Traineeships',
+                'QL1' => 'QL1 — Certificate 3 Guarantee (LEGACY — pre 1 Jul 2025)',
+                'QC1' => 'QC1 — Higher Level Skills (LEGACY — pre 1 Jul 2025)',
                 'B11' => 'B11 — Skills and Jobs Centres',
                 'B02' => 'B02 — Skilling Queenslanders for Work',
                 'VE1' => 'VE1 — VET in Schools (VETiS)',
@@ -676,7 +687,7 @@ class avetmiss_codes {
             ],
             'SA'  => [
                 ''     => '— Not specified —',
-                'SK1'  => 'SK1 — Skills for All (subsidised)',
+                'SK1'  => 'SK1 — Skills SA / Subsidised Training List (subsidised)',
                 'SApp' => 'SApp — SA Apprenticeship/Traineeship (User Choice)',
                 'SFFS' => 'SFFS — Fee for Service',
                 'SVIS' => 'SVIS — VET in Schools',
@@ -827,7 +838,7 @@ class avetmiss_codes {
             'statement' => [
                 'name' => 'Statement of Attainment',
                 'description' => 'Issued for completed units of competency that do not form a complete qualification',
-                'requires' => 'At least one unit with competent outcome (20, 51, 52, 60, 81, 82)',
+                'requires' => 'At least one unit with a competent outcome (20, 51, 60, 81)',
                 'documents' => ['Statement of Attainment'],
             ],
             'record' => [

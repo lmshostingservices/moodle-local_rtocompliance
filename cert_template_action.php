@@ -15,13 +15,12 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — cert_template_action.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 // CERT-TEMPLATE-BUILDER (v4.2.40) — POST action handler.
 //
 // Single endpoint for all status transitions: submit, activate, archive,
@@ -85,8 +84,32 @@ switch ($action) {
             null, \core\output\notification::NOTIFY_SUCCESS);
         break;
 
+    case 'deactivate':
+        // DEACTIVATE (v5.9.408) — "Make non-active" button. Clears the active
+        // flag but keeps the template approved so it can be re-activated later.
+        if (!cert_template::deactivate($id)) {
+            redirect($listurl, get_string('cert_template_action_err_notallowed', 'local_rtocompliance'),
+                null, \core\output\notification::NOTIFY_ERROR);
+        }
+        redirect($listurl, get_string('cert_template_action_ok_deactivated', 'local_rtocompliance'),
+            null, \core\output\notification::NOTIFY_SUCCESS);
+        break;
+
     case 'delete':
         if (!cert_template::delete($id)) {
+            redirect($listurl, get_string('cert_template_action_err_notallowed', 'local_rtocompliance'),
+                null, \core\output\notification::NOTIFY_ERROR);
+        }
+        redirect($listurl, get_string('cert_template_action_ok_deleted', 'local_rtocompliance'),
+            null, \core\output\notification::NOTIFY_SUCCESS);
+        break;
+
+    case 'forcedelete':
+        // FORCE-DELETE (v5.9.408) — admin "Delete" button on the templates list.
+        // Removes ANY template regardless of status (incl. the active one) so the
+        // admin can clear it out and regenerate a fresh ASQA starter. Confirm
+        // prompt is enforced on the list page.
+        if (!cert_template::force_delete($id)) {
             redirect($listurl, get_string('cert_template_action_err_notallowed', 'local_rtocompliance'),
                 null, \core\output\notification::NOTIFY_ERROR);
         }
