@@ -15,12 +15,13 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * RTO Compliance plugin — reissue_cert.php.
+ * local_rtocompliance file.
  *
  * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
+
 // v4.2.36 CERTIFICATES-REDESIGN — One-click certificate reissue endpoint.
 //
 // Creates a new certificate based on an existing source cert, marks the source
@@ -78,7 +79,7 @@ if (in_array($source->certtype, ['testamur', 'statement'], true)) {
     $dbman = $DB->get_manager();
     if ($dbman->table_exists('local_rtocompliance_students')) {
         $student = $DB->get_record('local_rtocompliance_students', ['userid' => $source->userid]);
-        if (!$student || !local_rtocompliance_usi_is_verified($student->usiverified)) {
+        if (!$student || empty($student->usiverified)) {
             http_response_code(400);
             echo json_encode([
                 'ok' => false,
@@ -89,8 +90,14 @@ if (in_array($source->certtype, ['testamur', 'statement'], true)) {
     }
 }
 
-// Generate new cert number (type-aware: ABC-<TYPE>-YYYY-NNNN). v5.9.361.
-$newcertnumber = local_rtocompliance_generate_cert_number($source->certtype);
+// Generate new cert number.
+$prefix = get_config('local_rtocompliance', 'certprefix') ?: 'CERT';
+$year = date('Y');
+$sequence = $DB->count_records_sql(
+    "SELECT COUNT(*) FROM {local_rtocompliance_certs} WHERE certnumber LIKE ?",
+    [$prefix . '-' . $year . '-%']
+) + 1;
+$newcertnumber = sprintf('%s-%s-%05d', $prefix, $year, $sequence);
 
 // Charge 5 credits BEFORE the DB insert so a credit failure does not leave
 // orphan cert records (same pattern as issue_certificate.php).
@@ -126,11 +133,6 @@ $newcert->certtype          = $source->certtype;
 $newcert->qualificationcode = $source->qualificationcode;
 $newcert->qualificationname = $source->qualificationname;
 $newcert->units             = $source->units;
-// C-P2-1 / F1 (v5.9.394): a reissue is a FAITHFUL COPY — preserve the original
-// as-issued USI snapshot and RTO-identity snapshot so the reissued document shows
-// exactly what the original showed, not the student's current USI or today's settings.
-$newcert->usi               = $source->usi ?? null;
-$newcert->issuesnapshot     = $source->issuesnapshot ?? null;
 $newcert->issuedate         = $now;
 $newcert->expirydate        = $source->expirydate;
 $newcert->verifytoken       = local_rtocompliance_generate_certificate_token();

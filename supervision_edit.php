@@ -15,19 +15,20 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * RTO Compliance plugin — supervision_edit.php.
+ * local_rtocompliance file.
  *
  * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
+
 require_once(__DIR__ . '/../../config.php');
+require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once($CFG->libdir . '/formslib.php');
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_supervision');
-require_login();
 $context = context_system::instance();
 require_capability('local/rtocompliance:managetrainers', $context);
 
@@ -96,33 +97,11 @@ class supervision_edit_form extends moodleform {
             $traineroptions[$t->id] = fullname($t);
         }
 
-        // Std 3.2 / Credential Policy: a supervisor must be FULLY credentialled. Exclude trainers who
-        // are Working Towards, have a blank TAE credential, or hold an expired TAE (taeexpirydate < now).
-        $supervisors = $DB->get_records_sql(
-            "SELECT t.id, u.firstname, u.lastname, u.firstnamephonetic, u.lastnamephonetic, u.middlename, u.alternatename
-             FROM {local_rtocompliance_trainers} t
-             JOIN {user} u ON u.id = t.userid
-             WHERE t.taecredential IS NOT NULL
-               AND t.taecredential <> ''
-               AND t.taecredential <> 'Working Towards'
-               AND (t.taeexpirydate IS NULL OR t.taeexpirydate = 0 OR t.taeexpirydate >= :now)
-             ORDER BY u.lastname, u.firstname",
-            ['now' => time()]
-        );
-
-        $supervisoroptions = ['' => 'Select supervisor...'];
-        foreach ($supervisors as $s) {
-            $supervisoroptions[$s->id] = fullname($s);
-        }
-
         $mform->addElement('select', 'trainerid', get_string('trainer_supervised', 'local_rtocompliance'), $traineroptions);
         $mform->addRule('trainerid', null, 'required', null, 'client');
         $mform->addHelpButton('trainerid', 'trainer_supervised', 'local_rtocompliance');
 
-        $mform->addElement('static', 'supervisorcredhelp', '',
-            '<div class="alert alert-info" style="margin-bottom: 12px;">Only fully credentialled trainers are listed as supervisors. Trainers who are Working Towards, have no TAE credential, or hold an expired TAE are excluded.</div>');
-
-        $mform->addElement('select', 'supervisorid', get_string('supervisor', 'local_rtocompliance'), $supervisoroptions);
+        $mform->addElement('select', 'supervisorid', get_string('supervisor', 'local_rtocompliance'), $traineroptions);
         $mform->addRule('supervisorid', null, 'required', null, 'client');
         $mform->addHelpButton('supervisorid', 'supervisor', 'local_rtocompliance');
 
@@ -189,7 +168,6 @@ class supervision_edit_form extends moodleform {
     }
 
     public function validation($data, $files) {
-        global $DB;
         $errors = parent::validation($data, $files);
 
         if (empty($data['trainerid'])) {
@@ -202,19 +180,6 @@ class supervision_edit_form extends moodleform {
 
         if (!empty($data['trainerid']) && !empty($data['supervisorid']) && $data['trainerid'] == $data['supervisorid']) {
             $errors['supervisorid'] = get_string('error_same_trainer_supervisor', 'local_rtocompliance');
-        }
-
-        // Std 3.2 / Credential Policy: reject any supervisor who is not fully credentialled, even if
-        // an out-of-date value was submitted (e.g. the trainer became unqualified after page load).
-        if (!empty($data['supervisorid'])) {
-            $sup = $DB->get_record('local_rtocompliance_trainers',
-                ['id' => $data['supervisorid']], 'id, taecredential, taeexpirydate');
-            if (!$sup
-                    || trim((string)$sup->taecredential) === ''
-                    || $sup->taecredential === 'Working Towards'
-                    || (!empty($sup->taeexpirydate) && $sup->taeexpirydate < time())) {
-                $errors['supervisorid'] = 'Selected supervisor is not fully credentialled. A supervisor must hold a current TAE credential (not Working Towards, not blank, not expired).';
-            }
         }
 
         return $errors;
@@ -281,7 +246,6 @@ if ($form->is_cancelled()) {
 $PAGE->add_body_class("path-local-rtocompliance");
 echo $OUTPUT->header();
 echo local_rtocompliance_render_nav_header($id ? get_string('edit_supervision', 'local_rtocompliance') : get_string('add_supervision', 'local_rtocompliance'), get_string('supervision_log', 'local_rtocompliance'), '/local/rtocompliance/supervision.php', 'supervision');
-echo local_rtocompliance_page_banner($id ? get_string('edit_supervision', 'local_rtocompliance') : get_string('add_supervision', 'local_rtocompliance'));
 
 echo html_writer::start_div('', ['style' => 'max-width: 900px; margin: 0 auto; padding: 20px;']);
 

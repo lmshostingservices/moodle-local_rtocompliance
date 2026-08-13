@@ -15,13 +15,15 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * RTO Compliance plugin — student_enrolments.php.
+ * local_rtocompliance file.
  *
  * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
+
 require_once(__DIR__ . '/../../config.php');
+require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once($CFG->libdir . '/tablelib.php');
 require_once(__DIR__ . '/lib.php');
@@ -37,7 +39,6 @@ $enrolid = optional_param('enrolid', 0, PARAM_INT);
 $confirm = optional_param('confirm', 0, PARAM_INT);
 
 admin_externalpage_setup('local_rtocompliance_students');
-require_login();
 $context = context_system::instance();
 require_capability('local/rtocompliance:viewall', $context);
 
@@ -71,7 +72,6 @@ if (!$user) {
         '/local/rtocompliance/students.php',
         'students'
     );
-    echo local_rtocompliance_page_banner(get_string('enrolments', 'local_rtocompliance'));
     echo html_writer::div(
         html_writer::tag('p', get_string('error_student_not_found', 'local_rtocompliance')) .
         html_writer::link(
@@ -128,23 +128,6 @@ function rtocompliance_get_moodle_enrolments($userid) {
 if ($action === 'import' && confirm_sesskey()) {
     require_sesskey();
 
-    // TASK-32 (v5.9.325): Resolve the optional contract slot submitted with the import form.
-    // When at least one QLD purchasing contract is configured and the admin chose a specific
-    // slot (contract1/2/3), resolve it to the actual contract string and stamp purchasingcontract1
-    // on every enrolment record created in this batch.  The default 'auto' (or absent) leaves
-    // purchasingcontract1 empty so the NAT exporter applies the RTO-level default at export time,
-    // preserving the existing behaviour for RTOs that do not use the slot selector.
-    $import_contract_slot = optional_param('purchasingcontract_slot', 'auto', PARAM_ALPHANUMEXT);
-    $resolved_import_contract = '';
-    if ($import_contract_slot !== '' && $import_contract_slot !== 'auto') {
-        $slotmap_import = [
-            'contract1' => get_config('local_rtocompliance', 'qld_purchasing_contract_1') ?: '',
-            'contract2' => get_config('local_rtocompliance', 'qld_purchasing_contract_2') ?: '',
-            'contract3' => get_config('local_rtocompliance', 'qld_purchasing_contract_3') ?: '',
-        ];
-        $resolved_import_contract = substr($slotmap_import[$import_contract_slot] ?? '', 0, 20);
-    }
-
     $moodle_enrolments = rtocompliance_get_moodle_enrolments($userid);
     $now = time();
     $imported = 0;
@@ -170,6 +153,7 @@ if ($action === 'import' && confirm_sesskey()) {
                JOIN {local_rtocompliance_qualunits} qu2  ON qu2.id = quc.qualunitid
                JOIN {local_rtocompliance_qualbuilder} qb2 ON qb2.id = qu2.qualbuilderid
               WHERE quc.courseid = :courseid2
+                AND quc.is_archive = 0
                 AND qu2.selected = 1
               ORDER BY unitcode ASC",
             ['courseid1' => $me->courseid, 'courseid2' => $me->courseid]
@@ -206,10 +190,6 @@ if ($action === 'import' && confirm_sesskey()) {
                 $rec->status              = 'active';
                 $rec->timecreated         = $now;
                 $rec->timemodified        = $now;
-                // TASK-32: stamp the resolved contract on each created record.
-                if ($resolved_import_contract !== '') {
-                    $rec->purchasingcontract1 = $resolved_import_contract;
-                }
                 $DB->insert_record('local_rtocompliance_enrolments', $rec);
                 $imported++;
             }
@@ -230,6 +210,7 @@ if ($action === 'import' && confirm_sesskey()) {
                        JOIN {local_rtocompliance_qualunits} qu2  ON qu2.qualbuilderid = qb2.id
                        JOIN {local_rtocompliance_qualunit_courses} quc ON quc.qualunitid = qu2.id
                       WHERE quc.courseid = :courseid2
+                        AND quc.is_archive = 0
                  ) combined LIMIT 1",
                 ['courseid1' => $me->courseid, 'courseid2' => $me->courseid]
             );
@@ -257,10 +238,6 @@ if ($action === 'import' && confirm_sesskey()) {
             if ($fallback_qual) {
                 $rec->programcode = $fallback_qual->qualificationcode;
                 $rec->programname = $fallback_qual->qualificationname;
-            }
-            // TASK-32: stamp the resolved contract on the fallback record too.
-            if ($resolved_import_contract !== '') {
-                $rec->purchasingcontract1 = $resolved_import_contract;
             }
             $DB->insert_record('local_rtocompliance_enrolments', $rec);
             $imported++;
@@ -316,7 +293,6 @@ if ($action === 'delete' && $enrolid) {
             '/local/rtocompliance/students.php',
             'students'
         );
-        echo local_rtocompliance_page_banner(get_string('enrolments', 'local_rtocompliance'));
         echo $OUTPUT->confirm(
             get_string('confirmdelete', 'local_rtocompliance'),
             new moodle_url('/local/rtocompliance/student_enrolments.php', ['userid' => $userid, 'action' => 'delete', 'enrolid' => $enrolid, 'confirm' => 1]),
@@ -521,62 +497,12 @@ if ($action === 'edit' || $action === 'add') {
             $data->scheduledhours = ($val === '' || $val === null || $val === false) ? null : (int) $val;
         }
 
-        // NOMINAL-HOURS-DEFAULT (v5.9.419) — Phase 3: when the admin leaves AVETMISS
-        // scheduled hours blank, default them from the unit's authoritative nominal
-        // hours so NAT00120 reports a sensible value without manual entry. RPL (51) and
-        // Credit Transfer (60) involve no delivery → 0. A value the admin actually typed
-        // is never overwritten (this only fills blanks).
-        if (property_exists($data, 'scheduledhours') && $data->scheduledhours === null) {
-            $_oc = property_exists($data, 'outcomeidentifier') ? (string) $data->outcomeidentifier : '';
-            if (in_array($_oc, ['51', '60'], true)) {
-                $data->scheduledhours = 0;
-            } else if (property_exists($data, 'unitcode') && trim((string) $data->unitcode) !== ''
-                    && function_exists('local_rtocompliance_lookup_nominalhours')) {
-                $_nh = local_rtocompliance_lookup_nominalhours((string) $data->unitcode);
-                if ($_nh !== null && (int) $_nh['nominalhours'] > 0) {
-                    $data->scheduledhours = (int) $_nh['nominalhours'];
-                }
-            }
-        }
-
         // Nullable text columns — empty string is fine but coerce false to null.
         foreach (['holdreason', 'validationerrors'] as $field) {
             if (property_exists($data, $field) && $data->$field === false) {
                 $data->$field = null;
             }
         }
-
-        // TASK-25 (v5.9.324): Resolve purchasingcontract_slot → purchasingcontract1.
-        // The slot selector is a virtual form field (not a DB column).  Resolve it to
-        // the actual QLD contract string before the DB write, then unset it so
-        // update_record() doesn't try to write a non-existent column.
-        //
-        // 'auto' (or absent) — leave purchasingcontract1 exactly as submitted from the
-        // manual text field below the selector; the NAT generator applies the RTO-level
-        // default at export time when the column is empty.  We must NOT clear the
-        // text field value here because non-QLD state-funded enrolments (NSW, VIC, etc.)
-        // and non-state-funded rows also pass through this save handler with slot='auto'.
-        //
-        // contract1/2/3 — overwrite purchasingcontract1 with the configured QLD code.
-        // This is only reachable when the form rendered the slot selector (i.e. at least
-        // one qld_purchasing_contract_N config is non-empty) and the admin selected a
-        // specific QLD slot for this enrolment.
-        if (!empty($data->purchasingcontract_slot) && $data->purchasingcontract_slot !== 'auto') {
-            $slotmap = [
-                'contract1' => get_config('local_rtocompliance', 'qld_purchasing_contract_1') ?: '',
-                'contract2' => get_config('local_rtocompliance', 'qld_purchasing_contract_2') ?: '',
-                'contract3' => get_config('local_rtocompliance', 'qld_purchasing_contract_3') ?: '',
-            ];
-            $resolved = $slotmap[$data->purchasingcontract_slot] ?? '';
-            if ($resolved !== '') {
-                // Overwrite with the resolved QLD contract string (max 20 chars per column length).
-                $data->purchasingcontract1 = substr($resolved, 0, 20);
-            }
-            // If the selected slot has no configured value, fall through and leave
-            // purchasingcontract1 as submitted from the manual text field.
-        }
-        // Always remove the virtual field before the DB write regardless of slot value.
-        unset($data->purchasingcontract_slot);
 
         // BUG-SR-OUTCOME-AUTOREVERT (v4.2.27): mark this row as a MANUAL outcome
         // so the user_graded observer (classes/observer.php), course_completed
@@ -736,24 +662,6 @@ if ($action === 'edit' || $action === 'add') {
     // fixed for the SUBMITTED branch).
     $ispost = ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST';
     if (!$ispost) {
-        // TASK-25 (v5.9.324): Pre-populate purchasingcontract_slot from the
-        // saved purchasingcontract1 value so the slot selector shows the correct
-        // option when re-opening an existing enrolment for edit.
-        // Compare the stored value against the three configured QLD contract codes
-        // and select the matching slot; fall back to 'auto' when no match is found.
-        $qld_slot_c1 = get_config('local_rtocompliance', 'qld_purchasing_contract_1') ?: '';
-        $qld_slot_c2 = get_config('local_rtocompliance', 'qld_purchasing_contract_2') ?: '';
-        $qld_slot_c3 = get_config('local_rtocompliance', 'qld_purchasing_contract_3') ?: '';
-        $saved_contract = $enrolment->purchasingcontract1 ?? '';
-        if ($saved_contract !== '' && $qld_slot_c1 !== '' && $saved_contract === $qld_slot_c1) {
-            $enrolment->purchasingcontract_slot = 'contract1';
-        } elseif ($saved_contract !== '' && $qld_slot_c2 !== '' && $saved_contract === $qld_slot_c2) {
-            $enrolment->purchasingcontract_slot = 'contract2';
-        } elseif ($saved_contract !== '' && $qld_slot_c3 !== '' && $saved_contract === $qld_slot_c3) {
-            $enrolment->purchasingcontract_slot = 'contract3';
-        } else {
-            $enrolment->purchasingcontract_slot = 'auto';
-        }
         $form->set_data($enrolment);
     } else {
         // POST happened but get_data() returned null → validation failed.
@@ -791,7 +699,6 @@ if ($action === 'edit' || $action === 'add') {
     $PAGE->add_body_class("path-local-rtocompliance");
     echo $OUTPUT->header();
     echo local_rtocompliance_render_nav_header(($action === 'edit' ? get_string('edit_enrolment', 'local_rtocompliance') : get_string('add_enrolment', 'local_rtocompliance')), get_string('students', 'local_rtocompliance'), '/local/rtocompliance/students.php');
-    echo local_rtocompliance_page_banner(($action === 'edit' ? get_string('edit_enrolment', 'local_rtocompliance') : get_string('add_enrolment', 'local_rtocompliance')));
     echo $OUTPUT->heading(($action === 'edit' ? get_string('edit_enrolment', 'local_rtocompliance') : get_string('add_enrolment', 'local_rtocompliance')), 3);
     $form->display();
     echo $OUTPUT->footer();
@@ -801,27 +708,13 @@ if ($action === 'edit' || $action === 'add') {
 $PAGE->add_body_class("path-local-rtocompliance");
 echo $OUTPUT->header();
 echo local_rtocompliance_render_nav_header(get_string('enrolments', 'local_rtocompliance'), get_string('students', 'local_rtocompliance'), '/local/rtocompliance/students.php', 'students');
-echo local_rtocompliance_page_banner(get_string('enrolments', 'local_rtocompliance'));
 echo $OUTPUT->heading(fullname($user) . ' - ' . get_string('enrolments', 'local_rtocompliance'), 3);
 
 $addurl = new moodle_url('/local/rtocompliance/student_enrolments.php', ['userid' => $userid, 'action' => 'add']);
-echo html_writer::link($addurl, get_string('add_enrolment', 'local_rtocompliance'), ['class' => 'btn btn-primary mb-3', 'title' => 'Add a new unit enrolment record for this learner']);
+echo html_writer::link($addurl, get_string('add_enrolment', 'local_rtocompliance'), ['class' => 'btn btn-primary mb-3']);
 
 $profileurl = new moodle_url('/local/rtocompliance/student_profile.php', ['userid' => $userid]);
-echo html_writer::link($profileurl, get_string('editprofile', 'local_rtocompliance'), ['class' => 'btn btn-outline-secondary mb-3 ml-2', 'title' => 'Open and edit the AVETMISS profile for this learner']);
-
-// Plain-English explainer card for the enrolments table.
-echo '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px 18px;margin-bottom:16px;">'
-    . '<div style="font-weight:700;color:#1e3a8a;margin-bottom:6px;font-size:15px;">About this enrolments list</div>'
-    . '<div style="font-size:14.5px;color:#334155;line-height:1.55;margin-bottom:8px;">Each row is one unit of competency this learner is enrolled in, with its AVETMISS result. These records feed national reporting and certificate issuance. Here is what each column means:</div>'
-    . '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px 22px;font-size:14.5px;color:#334155;line-height:1.5;">'
-    . '<div><strong>Unit</strong> &mdash; the unit code and title the learner is enrolled in.</div>'
-    . '<div><strong>Start date</strong> &mdash; the activity start date for the unit.</div>'
-    . '<div><strong>Outcome</strong> &mdash; the AVETMISS national outcome, or Not yet assessed if none is recorded.</div>'
-    . '<div><strong>Status</strong> &mdash; whether the enrolment is active, completed, withdrawn or on hold.</div>'
-    . '<div><strong>Contract</strong> &mdash; the purchasing contract for state-funded enrolments (shown only when relevant).</div>'
-    . '<div><strong>Actions</strong> &mdash; edit, mark complete, or delete the enrolment record.</div>'
-    . '</div></div>';
+echo html_writer::link($profileurl, get_string('editprofile', 'local_rtocompliance'), ['class' => 'btn btn-outline-secondary mb-3 ml-2']);
 
 // ----------------------------------------------------------------
 // Detect Moodle-native course enrolments not yet in the RTO table.
@@ -853,7 +746,7 @@ if (!empty($unimported)) {
             $label .= ' <small class="text-muted">(' . s($mc->shortname) . ')</small>';
         }
         if ($mc->timestart) {
-            $label .= ' — enrolled ' . userdate($mc->timestart, get_string('strftimedate', 'langconfig')); // v5.9.405: include year.
+            $label .= ' — enrolled ' . userdate($mc->timestart, get_string('strftimedateshort'));
         }
         echo html_writer::tag('li', $label);
     }
@@ -864,46 +757,14 @@ if (!empty($unimported)) {
         'action'  => 'import',
         'sesskey' => sesskey(),
     ]);
-    echo html_writer::start_tag('form', ['method' => 'post', 'action' => $import_url->out(false)]);
+    echo html_writer::start_tag('form', ['method' => 'post', 'action' => $import_url->out(false), 'style' => 'display:inline']);
     echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'action',  'value' => 'import']);
     echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'userid',  'value' => $userid]);
     echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
-
-    // TASK-32 (v5.9.325): Contract slot selector — only shown when at least one QLD
-    // purchasing contract is configured.  Defaults to Auto so existing behaviour is
-    // unchanged for RTOs that have not configured QLD contracts.
-    $imp_qld_c1 = get_config('local_rtocompliance', 'qld_purchasing_contract_1') ?: '';
-    $imp_qld_c2 = get_config('local_rtocompliance', 'qld_purchasing_contract_2') ?: '';
-    $imp_qld_c3 = get_config('local_rtocompliance', 'qld_purchasing_contract_3') ?: '';
-    if ($imp_qld_c1 !== '' || $imp_qld_c2 !== '' || $imp_qld_c3 !== '') {
-        $imp_slots = ['auto' => get_string('purchasingcontract_slot_auto', 'local_rtocompliance')];
-        $slot1label = $imp_qld_c1 ?: get_string('purchasingcontract_slot_notset', 'local_rtocompliance');
-        $imp_slots['contract1'] = get_string('purchasingcontract_slot_1', 'local_rtocompliance', $slot1label);
-        if ($imp_qld_c2 !== '') {
-            $imp_slots['contract2'] = get_string('purchasingcontract_slot_2', 'local_rtocompliance', $imp_qld_c2);
-        }
-        if ($imp_qld_c3 !== '') {
-            $imp_slots['contract3'] = get_string('purchasingcontract_slot_3', 'local_rtocompliance', $imp_qld_c3);
-        }
-
-        $select_html = html_writer::start_div('form-group d-flex align-items-center mb-2', ['style' => 'gap:0.5rem']);
-        $select_html .= html_writer::tag('label',
-            get_string('purchasingcontract_slot', 'local_rtocompliance') . ':',
-            ['for' => 'import_contract_slot', 'class' => 'mb-0 font-weight-bold', 'style' => 'white-space:nowrap']);
-        $select_opts = '';
-        foreach ($imp_slots as $val => $label) {
-            $select_opts .= html_writer::tag('option', s($label), ['value' => $val]);
-        }
-        $select_html .= html_writer::tag('select', $select_opts,
-            ['name' => 'purchasingcontract_slot', 'id' => 'import_contract_slot', 'class' => 'custom-select custom-select-sm', 'style' => 'max-width:280px']);
-        $select_html .= html_writer::end_div();
-        echo $select_html;
-    }
-
     echo html_writer::tag(
         'button',
         get_string('import_moodle_enrolments_btn', 'local_rtocompliance', ['count' => count($unimported)]),
-        ['type' => 'submit', 'class' => 'btn btn-primary', 'title' => 'Create RTO enrolment records from the Moodle course enrolments listed above']
+        ['type' => 'submit', 'class' => 'btn btn-primary']
     );
     echo html_writer::end_tag('form');
     echo html_writer::tag('p', get_string('import_moodle_enrolments_hint', 'local_rtocompliance'), ['class' => 'mt-2 mb-0 text-muted small']);
@@ -911,20 +772,6 @@ if (!empty($unimported)) {
 }
 
 $enrolments = $DB->get_records('local_rtocompliance_enrolments', ['studentid' => $student->id], 'activitystartdate DESC');
-
-// TASK-31: Determine whether to show the Contract column.
-// Only shown when the student has at least one state-funded enrolment (QLD codes 13 or 15).
-$has_state_funded = false;
-foreach ($enrolments as $_e) {
-    if (in_array((string)$_e->fundingsourcenat, ['13', '15'])) {
-        $has_state_funded = true;
-        break;
-    }
-}
-// RTO-level default contract — used as a fallback label when purchasingcontract1 is empty.
-$rto_default_contract = $has_state_funded
-    ? (get_config('local_rtocompliance', 'qld_purchasing_contract_1') ?: '')
-    : '';
 
 if (empty($enrolments)) {
     if (empty($moodle_courses)) {
@@ -937,16 +784,12 @@ if (empty($enrolments)) {
 } else {
     $table = new html_table();
     $table->head = [
-        html_writer::tag('span', get_string('unit', 'local_rtocompliance'), ['title' => 'The unit of competency code and title the learner is enrolled in']),
-        html_writer::tag('span', get_string('activitystartdate', 'local_rtocompliance'), ['title' => 'The activity start date recorded for this unit']),
-        html_writer::tag('span', get_string('outcome', 'local_rtocompliance'), ['title' => 'The AVETMISS national outcome, or Not yet assessed if none is recorded']),
-        html_writer::tag('span', get_string('enrolmentstatus', 'local_rtocompliance'), ['title' => 'Whether the enrolment is active, completed, withdrawn or on hold']),
+        get_string('unit', 'local_rtocompliance'),
+        get_string('activitystartdate', 'local_rtocompliance'),
+        get_string('outcome', 'local_rtocompliance'),
+        get_string('enrolmentstatus', 'local_rtocompliance'),
+        get_string('actions'),
     ];
-    // TASK-31: Show Contract column only when at least one state-funded enrolment exists.
-    if ($has_state_funded) {
-        $table->head[] = html_writer::tag('span', get_string('col_contract', 'local_rtocompliance'), ['title' => 'The purchasing contract for this state-funded enrolment']);
-    }
-    $table->head[] = html_writer::tag('span', get_string('actions'), ['title' => 'Edit, mark complete or delete this enrolment record']);
     $table->attributes['class'] = 'generaltable';
 
     $outcomes = avetmiss_codes::get_outcome_identifiers();
@@ -973,13 +816,9 @@ if (empty($enrolments)) {
             }
         }
         
-        // v5.9.405: use the FULL date (with year) — strftimedateshort omits the year.
-        $startdate = $enrolment->activitystartdate ? userdate($enrolment->activitystartdate, get_string('strftimedate', 'langconfig')) : '-';
-
-        // v5.9.405: '00'/'10'/blank are not valid AVETMISS national outcomes — they mean
-        // "no result recorded yet". Show a clear label instead of the raw code.
-        $oc = trim((string)$enrolment->outcomeidentifier);
-        $outcomename = $outcomes[$oc] ?? (($oc === '' || $oc === '00' || $oc === '10') ? 'Not yet assessed' : $oc);
+        $startdate = $enrolment->activitystartdate ? userdate($enrolment->activitystartdate, get_string('strftimedateshort')) : '-';
+        
+        $outcomename = $outcomes[$enrolment->outcomeidentifier] ?? $enrolment->outcomeidentifier;
         
         $statusbadge = '';
         switch ($enrolment->status) {
@@ -1001,44 +840,19 @@ if (empty($enrolments)) {
         $deleteurl = new moodle_url('/local/rtocompliance/student_enrolments.php', ['userid' => $userid, 'action' => 'delete', 'enrolid' => $enrolment->id]);
         $completeurl = new moodle_url('/local/rtocompliance/student_enrolments.php', ['userid' => $userid, 'action' => 'markcomplete', 'enrolid' => $enrolment->id, 'sesskey' => sesskey()]);
         
-        $actions = html_writer::link($editurl, get_string('edit'), ['class' => 'btn btn-sm btn-outline-primary mr-1', 'title' => 'Edit this enrolment record']);
+        $actions = html_writer::link($editurl, get_string('edit'), ['class' => 'btn btn-sm btn-outline-primary mr-1']);
         if ($enrolment->status !== 'completed') {
             $actions .= html_writer::link($completeurl, 'Complete', ['class' => 'btn btn-sm btn-outline-success mr-1', 'title' => 'Mark this enrolment as completed (outcome: Competency Achieved)']);
         }
-        $actions .= html_writer::link($deleteurl, get_string('delete'), ['class' => 'btn btn-sm btn-outline-danger', 'title' => 'Delete this enrolment record']);
+        $actions .= html_writer::link($deleteurl, get_string('delete'), ['class' => 'btn btn-sm btn-outline-danger']);
         
-        // TASK-31: Build the contract cell for state-funded rows.
-        $contractcell = '';
-        if ($has_state_funded) {
-            if (in_array((string)$enrolment->fundingsourcenat, ['13', '15'])) {
-                $val = trim($enrolment->purchasingcontract1 ?? '');
-                if ($val !== '') {
-                    $contractcell = s($val);
-                } elseif ($rto_default_contract !== '') {
-                    // Empty on the enrolment — NAT export will use the RTO default.
-                    $contractcell = html_writer::tag(
-                        'span',
-                        s($rto_default_contract),
-                        ['class' => 'text-muted', 'title' => get_string('col_contract_default_tip', 'local_rtocompliance')]
-                    );
-                } else {
-                    $contractcell = html_writer::tag('span', '—', ['class' => 'text-muted']);
-                }
-            }
-            // Non-state-funded rows: leave $contractcell empty (no contract applies).
-        }
-
-        $row = [
+        $table->data[] = [
             $unitcell,
             $startdate,
             $outcomename,
             $statusbadge,
+            $actions,
         ];
-        if ($has_state_funded) {
-            $row[] = $contractcell;
-        }
-        $row[] = $actions;
-        $table->data[] = $row;
     }
 
     echo html_writer::table($table);

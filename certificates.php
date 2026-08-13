@@ -15,12 +15,13 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * RTO Compliance plugin — certificates.php.
+ * local_rtocompliance file.
  *
  * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
+
 // v4.2.36 CERTIFICATES-REDESIGN — Substantial UX overhaul.
 //
 // Replaces the previous filter-tabs + 50-card grid with a proper management UI:
@@ -37,11 +38,11 @@
 // Top section (clause banner + stat cards + USI alert) is unchanged from v4.2.35.
 
 require_once(__DIR__ . '/../../config.php');
+require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_certificates');
-require_login();
 require_capability('local/rtocompliance:issuecerts', context_system::instance());
 $PAGE->set_title(get_string('certificates', 'local_rtocompliance'));
 $PAGE->set_heading(get_string('certificates', 'local_rtocompliance'));
@@ -82,7 +83,7 @@ echo html_writer::start_div('d-flex gap-2 flex-wrap');
 echo html_writer::link(
     new moodle_url('/local/rtocompliance/issue_certificate.php'),
     get_string('issue_certificate', 'local_rtocompliance'),
-    ['class' => 'btn btn-secondary', 'title' => 'Manually issue a single certificate to one student']
+    ['class' => 'btn btn-secondary']
 );
 echo html_writer::link(
     new moodle_url('/local/rtocompliance/soa_issue.php'),
@@ -95,12 +96,8 @@ echo html_writer::tag('button',
     [
         'type'            => 'button',
         'class'           => 'btn btn-success',
-        // Dual BS4 + BS5 attributes so the modal opens on Moodle 4.4 (Bootstrap 4)
-        // and Moodle 5.x (Bootstrap 5). v5.9.341.
         'data-toggle'     => 'modal',
         'data-target'     => '#generateCourseModal',
-        'data-bs-toggle'  => 'modal',
-        'data-bs-target'  => '#generateCourseModal',
         'title'           => 'Bulk-generate certificates for all students who completed a specific unit-of-competency course',
     ]
 );
@@ -112,8 +109,6 @@ echo html_writer::tag('button',
         'class'           => 'btn btn-primary',
         'data-toggle'     => 'modal',
         'data-target'     => '#generateQualModal',
-        'data-bs-toggle'  => 'modal',
-        'data-bs-target'  => '#generateQualModal',
         'title'           => 'Bulk-generate Testamur + Record of Results for all students who completed all units of a full qualification',
     ]
 );
@@ -147,7 +142,7 @@ echo '
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="generateCourseModalLabel">Generate Certificates for a Course</h5>
-        <button type="button" class="close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
       </div>
       <div class="modal-body">
         <p class="text-muted">Select a unit-of-competency course to see all students who have completed it. The system automatically determines the correct certificate type (Testamur + RoR, Statement of Attainment, or Completion Certificate) based on the course\'s qualification settings.</p>
@@ -157,7 +152,7 @@ echo '
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
         <button type="button" class="btn btn-success" onclick="' . htmlspecialchars($courseNavOnclick, ENT_QUOTES) . '">Go to Course</button>
       </div>
     </div>
@@ -189,7 +184,7 @@ echo '
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="generateQualModalLabel">Generate Certificates for a Qualification</h5>
-        <button type="button" class="close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
       </div>
       <div class="modal-body">
         <p class="text-muted">Select a qualification to see all students who have completed every linked unit of competency. The system will generate a <strong>Testamur + Record of Results</strong> for each eligible student.</p>
@@ -201,7 +196,7 @@ echo '
         . '
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
         <button type="button" class="btn btn-primary" onclick="' . htmlspecialchars($qualNavOnclick, ENT_QUOTES) . '">Go to Qualification</button>
       </div>
     </div>
@@ -218,11 +213,52 @@ $nrtLogoUrl     = 'https://www.asqa.gov.au/resources/fact-sheets/nrt-logo';
 // Replaced with the current canonical Training Product Transitions Register URL.
 $transitionsUrl = 'https://www.training.gov.au/Organisation/Registers/TrainingProductTransitions';
 
-// DECLUTTER (v5.9.417): removed the "Certificate Compliance — Clauses 9–14" explainer
-// banner (five clause cards restating the legislation) that sat above the register on
-// every visit. It was educational, not actionable — the same clause content lives on
-// the ASQA Compliance Mapping page and in the Support centre. The register, its
-// actions and the actual compliance gates (USI, templates, 30-day rule) are unchanged.
+echo html_writer::start_div('rtoc-clause-banner');
+echo html_writer::start_div('rtoc-clause-banner-title');
+echo html_writer::tag('span', 'ASQA Standards', ['class' => 'rtoc-clause-banner-label']);
+echo html_writer::tag('h4', 'Certificate Compliance — Clauses 9–14');
+echo html_writer::link(
+    $asqaFactSheet,
+    'ASQA Fact Sheet on AQF Certification Documentation ↗',
+    ['class' => 'rtoc-clause-factsheet-link', 'target' => '_blank',
+     'style' => 'font-size:0.78rem;color:rgba(255,255,255,0.75);text-decoration:underline;margin-top:4px;display:inline-block;']
+);
+echo html_writer::end_div();
+echo html_writer::start_div('rtoc-clause-grid');
+$clauses = [
+    ['num' => '9',  'title' => 'Issuance Timeline',   'desc' => 'Issue within 30 calendar days of the student meeting all requirements.',
+     'link' => null, 'linktext' => null],
+    ['num' => '11', 'title' => 'Template Compliance', 'desc' => 'Testamurs and SoAs must use approved templates with all mandatory elements.',
+     'link' => $templateUrl, 'linktext' => 'Manage Templates →'],
+    ['num' => '12', 'title' => 'USI Requirement',     'desc' => 'USI must be recorded and verified on the registry before any certificate is issued.',
+     'link' => null, 'linktext' => null],
+    ['num' => '13', 'title' => 'NRT Logo',            'desc' => 'The NRT logo must appear on all Testamurs and Statements of Attainment.',
+     'link' => $nrtLogoUrl, 'linktext' => 'NRT Logo conditions ↗'],
+    ['num' => '14', 'title' => 'Transitions',         'desc' => 'Superseded qualifications can only be certified within the approved teach-out period.',
+     'link' => $transitionsUrl, 'linktext' => 'Transitions Register ↗'],
+];
+foreach ($clauses as $c) {
+    echo html_writer::start_div('rtoc-clause-item');
+    echo html_writer::tag('div', $c['num'], ['class' => 'rtoc-clause-num']);
+    echo html_writer::start_div('rtoc-clause-body');
+    echo html_writer::tag('div', $c['title'], ['class' => 'rtoc-clause-title']);
+    echo html_writer::tag('div', $c['desc'],  ['class' => 'rtoc-clause-desc']);
+    if (!empty($c['link'])) {
+        $isExternal = str_starts_with($c['link'], 'http');
+        echo html_writer::link(
+            $c['link'],
+            $c['linktext'],
+            array_merge(
+                ['class' => 'rtoc-clause-link', 'style' => 'font-size:0.75rem;color:rgba(255,255,255,0.8);text-decoration:underline;margin-top:5px;display:inline-block;'],
+                $isExternal ? ['target' => '_blank'] : []
+            )
+        );
+    }
+    echo html_writer::end_div();
+    echo html_writer::end_div();
+}
+echo html_writer::end_div();
+echo html_writer::end_div();
 
 // ── Stats cards (unchanged from v4.2.35) ────────────────────────────────────
 $dbman = $DB->get_manager();
@@ -241,12 +277,12 @@ if ($studentsTableExists) {
 
 echo html_writer::start_div('stats-cards');
 $summaryStats = [
-    ['label' => 'Certificates Issued',          'value' => $totalcerts,   'color' => 'blue',  'icon' => local_rtocompliance_stat_icon('award'), 'tip' => 'The total number of certificates you have issued that are still valid.'],
-    ['label' => 'Emailed to Students',          'value' => $emailedcerts, 'color' => 'green', 'icon' => local_rtocompliance_stat_icon('mail'), 'tip' => 'How many of those certificates have been emailed to the student. Use the Email button on any row to send the rest.'],
-    ['label' => 'USI Not Verified (Clause 12)', 'value' => $usimissing,   'color' => $usimissing > 0 ? 'rose' : 'green', 'icon' => local_rtocompliance_stat_icon('alert'), 'tip' => 'Certificates issued to students whose USI (the student ID number) is not yet verified. Verify each one on the Students page as soon as you can.'],
+    ['label' => 'Certificates Issued',          'value' => $totalcerts,   'color' => 'blue',  'icon' => local_rtocompliance_stat_icon('award')],
+    ['label' => 'Emailed to Students',          'value' => $emailedcerts, 'color' => 'green', 'icon' => local_rtocompliance_stat_icon('mail')],
+    ['label' => 'USI Not Verified (Clause 12)', 'value' => $usimissing,   'color' => $usimissing > 0 ? 'rose' : 'green', 'icon' => local_rtocompliance_stat_icon('alert')],
 ];
 foreach ($summaryStats as $s) {
-    echo html_writer::start_div('stat-card stat-' . $s['color'], ['title' => $s['tip']]);
+    echo html_writer::start_div('stat-card stat-' . $s['color']);
     echo '<div class="stat-icon-wrap">' . $s['icon'] . '</div>';
     echo html_writer::start_div('stat-info');
     echo html_writer::tag('span', $s['value'], ['class' => 'stat-number']);
@@ -263,7 +299,7 @@ if ($usimissing > 0) {
     echo html_writer::link(
         new moodle_url('/local/rtocompliance/students.php'),
         'Review Students USI Status',
-        ['class' => 'btn btn-warning btn-sm', 'title' => 'Open the Students register to check and verify USI status']
+        ['class' => 'btn btn-warning btn-sm']
     );
     echo html_writer::end_div();
 }
@@ -488,9 +524,6 @@ $baseparams = compact('search', 'certtype', 'qualcode', 'year', 'datefrom', 'dat
 $cardsUrl = new moodle_url('/local/rtocompliance/certificates.php', $baseparams + ['view' => 'cards']);
 $tableUrl = new moodle_url('/local/rtocompliance/certificates.php', $baseparams + ['view' => 'table']);
 
-// ── Explainer card (column legend for the register) ──────────────────────────
-echo '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px 18px;margin-bottom:16px;"><div style="font-weight:700;color:#1e3a8a;margin-bottom:6px;font-size:15px;">Certificate Register</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px 22px;font-size:14.5px;color:#334155;line-height:1.5;"><div><strong>Cert #</strong> &mdash; unique certificate number used for tracking and verification</div><div><strong>Student</strong> &mdash; name and email of the person the certificate belongs to</div><div><strong>Type</strong> &mdash; Testamur, Statement of Attainment, Record of Results or Completion</div><div><strong>Qualification</strong> &mdash; national code and title the certificate is issued for</div><div><strong>Issued</strong> &mdash; date the certificate was generated</div><div><strong>USI</strong> &mdash; whether the student&rsquo;s Unique Student Identifier is verified (Clause 12)</div><div><strong>Email</strong> &mdash; whether the certificate has been emailed to the student</div><div><strong>Actions</strong> &mdash; download, email, reissue, view, verify or delete the certificate</div></div></div>';
-
 echo html_writer::start_div('', ['style' => 'display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin: 12px 0;']);
 
 if ($totalmatching > 0) {
@@ -508,14 +541,12 @@ echo html_writer::start_div('', ['style' => 'display:flex; gap:6px;']);
 echo html_writer::link(
     $tableUrl,
     get_string('certificates_view_table', 'local_rtocompliance'),
-    ['class' => 'btn btn-sm ' . ($view === 'table' ? 'btn-primary' : 'btn-secondary'),
-     'title' => 'Show certificates as a sortable table']
+    ['class' => 'btn btn-sm ' . ($view === 'table' ? 'btn-primary' : 'btn-secondary')]
 );
 echo html_writer::link(
     $cardsUrl,
     get_string('certificates_view_cards', 'local_rtocompliance'),
-    ['class' => 'btn btn-sm ' . ($view === 'cards' ? 'btn-primary' : 'btn-secondary'),
-     'title' => 'Show certificates as compact cards']
+    ['class' => 'btn btn-sm ' . ($view === 'cards' ? 'btn-primary' : 'btn-secondary')]
 );
 echo html_writer::end_div();
 echo html_writer::end_div();
@@ -548,7 +579,7 @@ $buildActions = function ($cert, $usiMissing, $isReplacedOriginal) use ($USER) {
         $out .= html_writer::tag('button', get_string('certificates_action_download', 'local_rtocompliance'),
             ['class' => 'btn btn-sm btn-secondary', 'disabled' => 'disabled', 'title' => $replacedTitle, 'style' => 'cursor:not-allowed; opacity:0.55;']);
     } else {
-        $downloadAttrs = ['class' => 'btn btn-sm btn-primary', 'title' => 'Download this certificate as a PDF', 'data-testid' => ($usiMissing ? 'link-download-warn-' : 'link-download-') . $cert->id];
+        $downloadAttrs = ['class' => 'btn btn-sm btn-primary', 'data-testid' => ($usiMissing ? 'link-download-warn-' : 'link-download-') . $cert->id];
         if ($usiMissing) { $downloadAttrs['onclick'] = $usiWarnJs; }
         $out .= html_writer::link(
             new moodle_url('/local/rtocompliance/download_cert.php', ['id' => $cert->id]),
@@ -583,7 +614,6 @@ $buildActions = function ($cert, $usiMissing, $isReplacedOriginal) use ($USER) {
         $emailAttrs = [
             'type'           => 'button',
             'class'          => 'btn btn-sm btn-secondary rtoc-cert-email-btn',
-            'title'          => 'Email this certificate to the student',
             'data-cert-id'   => $cert->id,
             'data-sesskey'   => $sesskey,
             'data-testid'    => ($usiMissing ? 'button-email-warn-' : 'button-email-') . $cert->id,
@@ -602,7 +632,6 @@ $buildActions = function ($cert, $usiMissing, $isReplacedOriginal) use ($USER) {
         $out .= ' ' . html_writer::tag('button', get_string('certificates_action_reissue', 'local_rtocompliance'), [
             'type'              => 'button',
             'class'             => 'btn btn-sm btn-warning rtoc-cert-reissue-btn',
-            'title'             => 'Issue a replacement with a fresh number (charges credits; original kept for audit)',
             'data-cert-id'      => $cert->id,
             'data-cert-number'  => $cert->certnumber,
             'data-fullname'     => fullname($cert),
@@ -638,7 +667,7 @@ $buildActions = function ($cert, $usiMissing, $isReplacedOriginal) use ($USER) {
     // is unverified the warning popup is shown but does NOT block the
     // open (v4.2.55 — see comment block above).
     if (!$isReplacedOriginal) {
-        $viewAttrs = ['class' => 'btn btn-sm btn-link', 'target' => '_blank', 'title' => 'Open the certificate PDF in a new tab', 'data-testid' => ($usiMissing ? 'link-view-warn-' : 'link-view-') . $cert->id];
+        $viewAttrs = ['class' => 'btn btn-sm btn-link', 'target' => '_blank', 'data-testid' => ($usiMissing ? 'link-view-warn-' : 'link-view-') . $cert->id];
         if ($usiMissing) { $viewAttrs['onclick'] = $usiWarnJs; }
         $out .= ' ' . html_writer::link(
             new moodle_url('/local/rtocompliance/download_cert.php', ['id' => $cert->id]),
@@ -688,22 +717,22 @@ if (!$certs) {
 
     echo '<div class="rtoc-table-wrapper" style="overflow-x:auto;"><table class="generaltable" style="width:100%;" data-testid="table-certificates">';
     echo '<thead><tr>';
-    echo '<th style="width:32px;" title="Select certificates for bulk actions"><input type="checkbox" id="rtoc-select-all" data-testid="checkbox-select-all" title="Select/deselect all on this page"></th>';
-    echo '<th title="Unique certificate number used for tracking and verification">' . $sortLink('certnumber',        'Cert #') . '</th>';
-    echo '<th title="Name and email of the person the certificate belongs to">' . $sortLink('lastname',          'Student') . '</th>';
-    echo '<th title="Certificate type: Testamur, Statement of Attainment, Record of Results or Completion">' . $sortLink('certtype',          'Type') . '</th>';
-    echo '<th title="National code and title the certificate is issued for">' . $sortLink('qualificationcode', 'Qualification') . '</th>';
-    echo '<th title="Date the certificate was generated">' . $sortLink('issuedate',         'Issued') . '</th>';
+    echo '<th style="width:32px;"><input type="checkbox" id="rtoc-select-all" data-testid="checkbox-select-all" title="Select/deselect all on this page"></th>';
+    echo '<th>' . $sortLink('certnumber',        'Cert #') . '</th>';
+    echo '<th>' . $sortLink('lastname',          'Student') . '</th>';
+    echo '<th>' . $sortLink('certtype',          'Type') . '</th>';
+    echo '<th>' . $sortLink('qualificationcode', 'Qualification') . '</th>';
+    echo '<th>' . $sortLink('issuedate',         'Issued') . '</th>';
     if ($studentsTableExists) {
-        echo '<th title="Whether the student&rsquo;s Unique Student Identifier is verified (Clause 12)">USI</th>';
+        echo '<th>USI</th>';
     }
-    echo '<th title="Whether the certificate has been emailed to the student">' . $sortLink('emailsent', 'Email') . '</th>';
-    echo '<th title="Actions you can take on each certificate">Actions</th>';
+    echo '<th>' . $sortLink('emailsent', 'Email') . '</th>';
+    echo '<th>Actions</th>';
     echo '</tr></thead><tbody>';
 
     foreach ($certs as $cert) {
         $requiresUsi = in_array($cert->certtype, ['testamur', 'statement']);
-        $usiVerified = local_rtocompliance_usi_is_verified($cert->usiverified);
+        $usiVerified = !empty($cert->usiverified);
         $usiMissing  = $studentsTableExists && $requiresUsi && !$usiVerified;
         $isReplacedOriginal = !empty($cert->reissued_at);
         $isReissue          = !empty($cert->replacement_of);
@@ -717,11 +746,11 @@ if (!$certs) {
         // Cert #
         echo '<td><span class="certificate-number" data-testid="text-certnumber-' . $cert->id . '">' . s($cert->certnumber) . '</span>';
         if ($isReplacedOriginal && isset($replacedByMap[(int)$cert->id])) {
-            echo '<br><span class="badge badge-secondary" style="font-size:0.7rem;" title="This certificate was reissued. The number shown is the replacement now in use; this original is kept only for the audit trail." data-testid="badge-replaced-' . $cert->id . '">'
+            echo '<br><span class="badge badge-secondary" style="font-size:0.7rem;" data-testid="badge-replaced-' . $cert->id . '">'
                 . s(get_string('certificates_replaced_by', 'local_rtocompliance', $replacedByMap[(int)$cert->id])) . '</span>';
         }
         if ($isReissue && isset($replacesMap[(int)$cert->replacement_of])) {
-            echo '<br><span class="badge badge-info" style="font-size:0.7rem;" title="This is a reissued certificate that takes the place of the earlier certificate number shown." data-testid="badge-replaces-' . $cert->id . '">'
+            echo '<br><span class="badge badge-info" style="font-size:0.7rem;" data-testid="badge-replaces-' . $cert->id . '">'
                 . s(get_string('certificates_replaces', 'local_rtocompliance', $replacesMap[(int)$cert->replacement_of])) . '</span>';
         }
         echo '</td>';
@@ -771,7 +800,7 @@ if (!$certs) {
     echo html_writer::start_div('certificates-grid');
     foreach ($certs as $cert) {
         $requiresUsi = in_array($cert->certtype, ['testamur', 'statement']);
-        $usiVerified = local_rtocompliance_usi_is_verified($cert->usiverified);
+        $usiVerified = !empty($cert->usiverified);
         $usiMissing  = $studentsTableExists && $requiresUsi && !$usiVerified;
         $isReplacedOriginal = !empty($cert->reissued_at);
         $isReissue          = !empty($cert->replacement_of);
@@ -792,30 +821,30 @@ if (!$certs) {
         if ($isReplacedOriginal && isset($replacedByMap[(int)$cert->id])) {
             echo html_writer::tag('p',
                 html_writer::tag('span', get_string('certificates_replaced_by', 'local_rtocompliance', $replacedByMap[(int)$cert->id]),
-                ['class' => 'badge badge-secondary', 'title' => 'This certificate was reissued. The number shown is the replacement now in use; this original is kept only for the audit trail.'])
+                ['class' => 'badge badge-secondary'])
             );
         }
         if ($isReissue && isset($replacesMap[(int)$cert->replacement_of])) {
             echo html_writer::tag('p',
                 html_writer::tag('span', get_string('certificates_replaces', 'local_rtocompliance', $replacesMap[(int)$cert->replacement_of]),
-                ['class' => 'badge badge-info', 'title' => 'This is a reissued certificate that takes the place of the earlier certificate number shown.'])
+                ['class' => 'badge badge-info'])
             );
         }
 
         echo html_writer::tag('p', 'Issued: ' . userdate($cert->issuedate, '%d %b %Y'));
         if ($cert->qualificationname) {
-            echo html_writer::tag('p', $cert->qualificationcode . ' ' . $cert->qualificationname, ['class' => 'text-muted']);
+            echo html_writer::tag('p', $cert->qualificationcode . ' - ' . $cert->qualificationname, ['class' => 'text-muted']);
         }
 
         if ($studentsTableExists && $requiresUsi) {
             if ($usiVerified) {
                 $usiVerifiedDate = !empty($cert->usiverifieddate) ? ' (' . userdate($cert->usiverifieddate, '%d %b %Y') . ')' : '';
                 echo html_writer::tag('p',
-                    html_writer::tag('span', 'USI Verified' . $usiVerifiedDate, ['class' => 'badge badge-success', 'title' => 'The student USI (the student ID number) has been checked against the USI Registry, so this certificate meets Clause 12.'])
+                    html_writer::tag('span', 'USI Verified' . $usiVerifiedDate, ['class' => 'badge badge-success'])
                 );
             } else {
                 echo html_writer::tag('p',
-                    html_writer::tag('span', 'USI Not Verified — Clause 12 Issue', ['class' => 'badge badge-danger', 'title' => 'The student USI (the student ID number) has not been checked yet. Verify it on the Students page as soon as you can (Clause 12).'])
+                    html_writer::tag('span', 'USI Not Verified — Clause 12 Issue', ['class' => 'badge badge-danger'])
                 );
             }
         }
@@ -841,19 +870,19 @@ echo html_writer::tag('p', 'Certificates for superseded, deleted, or transitione
 echo html_writer::link(
     new moodle_url('/local/rtocompliance/transitions.php'),
     'View Training Product Transitions',
-    ['class' => 'btn btn-secondary btn-sm', 'title' => 'Open the plugin&rsquo;s Training Product Transitions register']
+    ['class' => 'btn btn-secondary btn-sm']
 );
 echo ' ';
 echo html_writer::link(
     $transitionsUrl,
     'Training.gov.au Transitions Register ↗',
-    ['class' => 'btn btn-outline-secondary btn-sm', 'target' => '_blank', 'title' => 'Open the official Training.gov.au transitions register in a new tab']
+    ['class' => 'btn btn-outline-secondary btn-sm', 'target' => '_blank']
 );
 echo ' ';
 echo html_writer::link(
     $asqaFactSheet,
     'ASQA Fact Sheet ↗',
-    ['class' => 'btn btn-outline-secondary btn-sm', 'target' => '_blank', 'title' => 'Open the ASQA certification documentation fact sheet in a new tab']
+    ['class' => 'btn btn-outline-secondary btn-sm', 'target' => '_blank']
 );
 echo html_writer::end_div();
 
@@ -871,8 +900,8 @@ $bulkEndpoint    = (new moodle_url('/local/rtocompliance/bulk_action_cert.php'))
 <?php if ($view === 'table'): ?>
 <div id="rtoc-bulk-bar" style="visibility:hidden; position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#1f2937; color:#fff; padding:10px 18px; border-radius:8px; box-shadow:0 4px 18px rgba(0,0,0,0.3); display:flex; align-items:center; gap:10px; z-index:1050;" data-testid="bar-bulk-actions">
   <span data-testid="text-bulk-count" style="font-size:0.9rem;font-weight:600;white-space:nowrap;margin-right:4px;"><strong id="rtoc-bulk-count">0</strong> selected</span>
-  <button type="button" class="btn btn-sm btn-light" id="rtoc-bulk-email" data-testid="button-bulk-email" title="Email all selected certificates to their students" style="min-width:80px;font-size:0.82rem;padding:5px 14px;font-weight:500;">Email</button>
-  <button type="button" class="btn btn-sm btn-light" id="rtoc-bulk-zip" data-testid="button-bulk-zip" title="Download all selected certificates as a single ZIP" style="min-width:120px;font-size:0.82rem;padding:5px 14px;font-weight:500;">Download ZIP</button>
+  <button type="button" class="btn btn-sm btn-light" id="rtoc-bulk-email" data-testid="button-bulk-email" style="min-width:80px;font-size:0.82rem;padding:5px 14px;font-weight:500;">Email</button>
+  <button type="button" class="btn btn-sm btn-light" id="rtoc-bulk-zip" data-testid="button-bulk-zip" style="min-width:120px;font-size:0.82rem;padding:5px 14px;font-weight:500;">Download ZIP</button>
   <button type="button" class="btn btn-sm btn-light" id="rtoc-bulk-csv" data-testid="button-bulk-csv" style="min-width:100px;font-size:0.82rem;padding:5px 14px;font-weight:500;">Export CSV</button>
   <button type="button" class="btn btn-sm btn-light" id="rtoc-bulk-clear" data-testid="button-bulk-clear" style="min-width:60px;font-size:0.82rem;padding:5px 14px;font-weight:500;opacity:0.75;">Clear</button>
 </div>

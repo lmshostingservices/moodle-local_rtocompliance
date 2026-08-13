@@ -15,12 +15,13 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * RTO Compliance plugin — cricos_codes.php.
+ * local_rtocompliance file.
  *
  * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
+
 namespace local_rtocompliance;
 
 defined('MOODLE_INTERNAL') || die();

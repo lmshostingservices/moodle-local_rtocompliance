@@ -15,12 +15,13 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * RTO Compliance plugin — suitability_bulk.php.
+ * local_rtocompliance file.
  *
  * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
+
 // Bulk suitability checklist sender.
 // Two modes (action param):
 //   bulk_send  – POST a list of userids[] from the students.php checkbox form
@@ -28,13 +29,13 @@
 //                with no suitability record for the chosen TAS
 
 require_once(__DIR__ . '/../../config.php');
+require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
-$action = optional_param('action', 'fill_gaps', PARAM_ALPHANUMEXT); // PARAM_ALPHA stripped the underscore from a submitted 'fill_gaps'.
+$action = optional_param('action', 'fill_gaps', PARAM_ALPHA);
 
 admin_externalpage_setup('local_rtocompliance_students');
-require_login();
 
 $PAGE->set_url(new moodle_url('/local/rtocompliance/suitability_bulk.php', ['action' => $action]));
 $PAGE->set_title(get_string('suitability_fill_gaps_title', 'local_rtocompliance'));
@@ -164,7 +165,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && confirm_sesskey()) {
 // ─── GET: Fill-Compliance-Gaps confirmation form ──────────────────────────────
 echo $OUTPUT->header();
 echo local_rtocompliance_render_nav_header(get_string('students', 'local_rtocompliance'), null, null, 'students');
-echo local_rtocompliance_page_banner(get_string('students', 'local_rtocompliance'));
 echo $OUTPUT->heading(get_string('suitability_fill_gaps_title', 'local_rtocompliance'), 2);
 
 // Load approved TAS records with entry requirements
@@ -227,7 +227,6 @@ if (empty($tas_records)) {
         [
             'type'    => 'submit',
             'class'   => 'btn btn-warning',
-            'title'   => 'Email a Student Suitability Check to every student who has no record yet for the selected qualification',
             'onclick' => 'return confirm("' . get_string('suitability_fill_gaps_confirm', 'local_rtocompliance') . '")',
         ]
     );

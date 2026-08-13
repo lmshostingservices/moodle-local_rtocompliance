@@ -14,13 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-/**
- * RTO Compliance plugin — email_cert.php.
- *
- * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
 // v4.2.36 CERTIFICATES-REDESIGN — One-click email certificate.
 //
 // Now supports TWO call paths:
@@ -60,6 +53,9 @@ $returnurl = new moodle_url('/local/rtocompliance/certificates.php');
  * @param array $payload
  * @param int $http
  * @return void
+ * @package    local_rtocompliance
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
 function rtoc_email_cert_json_response(array $payload, int $http = 200): void {
     header('Content-Type: application/json');
@@ -80,7 +76,7 @@ if (in_array($cert->certtype, ['testamur', 'statement'])) {
     $dbman = $DB->get_manager();
     if ($dbman->table_exists('local_rtocompliance_students')) {
         $student = $DB->get_record('local_rtocompliance_students', ['userid' => $cert->userid]);
-        if (!$student || !local_rtocompliance_usi_is_verified($student->usiverified)) {
+        if (!$student || empty($student->usiverified)) {
             $rtoc_usi_warning = 'Note: this student\'s USI has not yet been verified with the USI Registry. The email has still been sent — please verify the student\'s USI on the Students register as soon as possible.';
             if (!$ajax) {
                 \core\notification::add($rtoc_usi_warning, \core\notification::WARNING);
@@ -143,7 +139,6 @@ if ($confirm && confirm_sesskey()) {
 $PAGE->add_body_class("path-local-rtocompliance");
 echo $OUTPUT->header();
 echo local_rtocompliance_render_nav_header('Email Certificate', 'Certificates', new moodle_url('/local/rtocompliance/certificates.php'));
-echo local_rtocompliance_page_banner('Email Certificate');
 
 $certtypes = local_rtocompliance_get_certificate_types();
 

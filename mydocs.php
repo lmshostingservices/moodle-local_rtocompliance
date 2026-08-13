@@ -15,12 +15,13 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * RTO Compliance plugin — mydocs.php.
+ * local_rtocompliance file.
  *
  * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
+
 // v4.9.108 STUDENT-DOC-REPOSITORY — Central student document & certificate portal.
 //
 // One page per student that combines:
@@ -213,27 +214,18 @@ echo html_writer::end_div();
 echo html_writer::end_div();
 
 // ── SECTION 1: Certificates ───────────────────────────────────────────────
-// White content card (matches the plugin's card system) — the previous
-// rtoc-clause-banner rendered a dark navy panel with white title text, so the
-// muted empty-state text was unreadable on the dark background.
-echo html_writer::start_div('mb-4', ['style' => 'background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;box-shadow:0 1px 2px rgba(15,23,42,.04);']);
-echo html_writer::start_div('', ['style' => 'margin-bottom:12px;']);
-echo html_writer::tag('span', 'Certificates', ['style' => 'display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6366f1;margin-bottom:4px;']);
-echo html_writer::tag('h4', 'Issued Certificates', ['style' => 'margin:0;font-size:1.125rem;font-weight:700;color:#0f172a;']);
+echo html_writer::start_div('rtoc-clause-banner mb-4');
+echo html_writer::start_div('rtoc-clause-banner-title');
+echo html_writer::tag('span', 'Certificates', ['class' => 'rtoc-clause-banner-label']);
+echo html_writer::tag('h4', 'Issued Certificates');
 echo html_writer::end_div();
-echo html_writer::start_div('');
+echo html_writer::start_div('rtoc-clause-banner-body');
 
 if (empty($certs)) {
     echo html_writer::tag('p', 'No certificates have been issued yet.', ['class' => 'text-muted']);
 } else {
     echo '<table class="table table-sm table-bordered" style="background:#fff;">';
-    echo '<thead><tr>'
-        . '<th title="The kind of certificate — Testamur, Statement of Attainment, Record of Results or Course Completion">Type</th>'
-        . '<th title="The qualification (or unit) this certificate was issued for">Qualification / Unit</th>'
-        . '<th title="The unique certificate number for verification and your records">Cert Number</th>'
-        . '<th title="The date this certificate was issued">Issued</th>'
-        . '<th title="Download the certificate PDF, or open the public verification page">Actions</th>'
-        . '</tr></thead>';
+    echo '<thead><tr><th>Type</th><th>Qualification / Unit</th><th>Cert Number</th><th>Issued</th><th>Actions</th></tr></thead>';
     echo '<tbody>';
     foreach ($certs as $cert) {
         $typelabel = $certtypes[$cert->certtype] ?? $cert->certtype;
@@ -253,8 +245,8 @@ if (empty($certs)) {
         echo '<td><code>' . htmlspecialchars($cert->certnumber ?? '—') . '</code></td>';
         echo '<td>' . $issuedate . '</td>';
         echo '<td>';
-        echo '<a href="' . $downloadurl->out(false) . '" class="btn btn-sm btn-outline-primary mr-1" title="Download this certificate as a PDF">Download PDF</a>';
-        echo '<a href="' . $verifyurl->out(false) . '" class="btn btn-sm btn-outline-secondary" target="_blank" title="Open the public verification page for this certificate (new tab)">Verify</a>';
+        echo '<a href="' . $downloadurl->out(false) . '" class="btn btn-sm btn-outline-primary mr-1">Download PDF</a>';
+        echo '<a href="' . $verifyurl->out(false) . '" class="btn btn-sm btn-outline-secondary" target="_blank">Verify</a>';
         echo '</td>';
         echo '</tr>';
     }
@@ -265,25 +257,18 @@ echo html_writer::end_div();
 echo html_writer::end_div();
 
 // ── SECTION 2: Uploaded Documents ────────────────────────────────────────
-echo html_writer::start_div('mb-4', ['style' => 'background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;box-shadow:0 1px 2px rgba(15,23,42,.04);']);
-echo html_writer::start_div('', ['style' => 'margin-bottom:12px;']);
-echo html_writer::tag('span', 'Documents', ['style' => 'display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6366f1;margin-bottom:4px;']);
-echo html_writer::tag('h4', 'Uploaded Documents', ['style' => 'margin:0;font-size:1.125rem;font-weight:700;color:#0f172a;']);
+echo html_writer::start_div('rtoc-clause-banner mb-4');
+echo html_writer::start_div('rtoc-clause-banner-title');
+echo html_writer::tag('span', 'Documents', ['class' => 'rtoc-clause-banner-label']);
+echo html_writer::tag('h4', 'Uploaded Documents');
 echo html_writer::end_div();
-echo html_writer::start_div('');
+echo html_writer::start_div('rtoc-clause-banner-body');
 
 if (empty($docs)) {
     echo html_writer::tag('p', 'No documents have been uploaded yet.', ['class' => 'text-muted']);
 } else {
     echo '<table class="table table-sm table-bordered" style="background:#fff;">';
-    echo '<thead><tr>'
-        . '<th title="The document category (e.g. RPL Decision, USI Verification Letter, Enrolment Agreement)">Type</th>'
-        . '<th title="The uploaded file name and its size">Filename</th>'
-        . '<th title="Any notes recorded when the document was uploaded">Notes</th>'
-        . '<th title="The staff member or student who uploaded this document">Uploaded By</th>'
-        . '<th title="The date the document was uploaded">Date</th>'
-        . '<th title="Download the file, or delete it (staff only)">Actions</th>'
-        . '</tr></thead>';
+    echo '<thead><tr><th>Type</th><th>Filename</th><th>Notes</th><th>Uploaded By</th><th>Date</th><th>Actions</th></tr></thead>';
     echo '<tbody>';
     foreach ($docs as $doc) {
         $dtlabel  = $doctypelabels[$doc->doctype] ?? htmlspecialchars($doc->doctype);
@@ -301,7 +286,7 @@ if (empty($docs)) {
                 'sesskey' => sesskey(),
             ]);
             $deletehtml = ' <a href="' . $delurl->out(false) . '" class="btn btn-sm btn-outline-danger"'
-                        . ' title="Delete this document permanently" onclick="return confirm(\'Delete this document?\')">Delete</a>';
+                        . ' onclick="return confirm(\'Delete this document?\')">Delete</a>';
         }
         echo '<tr>';
         echo '<td><span class="badge badge-secondary">' . htmlspecialchars($dtlabel) . '</span></td>';
@@ -309,7 +294,7 @@ if (empty($docs)) {
         echo '<td>' . htmlspecialchars($doc->notes ?: '—') . '</td>';
         echo '<td>' . htmlspecialchars($doc->uploadername) . '</td>';
         echo '<td>' . date('d M Y', $doc->timecreated) . '</td>';
-        echo '<td><a href="' . $dlurl->out(false) . '" class="btn btn-sm btn-outline-primary mr-1" title="Download this document">Download</a>' . $deletehtml . '</td>';
+        echo '<td><a href="' . $dlurl->out(false) . '" class="btn btn-sm btn-outline-primary mr-1">Download</a>' . $deletehtml . '</td>';
         echo '</tr>';
     }
     echo '</tbody></table>';

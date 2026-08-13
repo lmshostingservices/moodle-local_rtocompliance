@@ -14,13 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-/**
- * RTO Compliance plugin — nat_generator.php.
- *
- * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
 namespace local_rtocompliance;
 
 defined('MOODLE_INTERNAL') || die();
@@ -37,6 +30,9 @@ require_once(__DIR__ . '/avetmiss_codes.php');
  * DB schema verified against install.xml and upgrade.php.
  * All field positions and lengths match the official specification.
  * National record lengths enforced per spec; state-only fields appended after.
+ * @package    local_rtocompliance
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
 class nat_generator {
     private $periodstart;
@@ -45,12 +41,6 @@ class nat_generator {
     private $errors = [];
     private $warnings = [];
     private $recordcounts = [];
-    /** @var string v5.9.321 ORPHAN-FIX: AVETMISS state code fallback from RTO Settings. */
-    private $defaultstate;
-    /** @var array v5.9.321 ORPHAN-FIX: per-state purchasing contract IDs from RTO Settings. */
-    private $statefundingcontracts;
-    /** @var array v5.9.322 TASK-23: per-state default AVETMISS funding source codes from RTO Settings. */
-    private $statefundingcodes;
 
     public function __construct($year) {
         $this->year = $year;
@@ -64,55 +54,6 @@ class nat_generator {
         $dtEnd   = new \DateTime("$year-12-31 23:59:59", $tz);
         $this->periodstart = $dtStart->getTimestamp();
         $this->periodend   = $dtEnd->getTimestamp();
-
-        // v5.9.321 ORPHAN-FIX: load admin-configured defaults at construction time
-        // so every generate_natXXXXX() method can use them without repeated config reads.
-        //
-        // defaultstate — AVETMISS 2-char state code (e.g. 'QLD', 'NSW') used as fallback
-        // for student/location records that have no statecode set. Prevents NCVER rejecting
-        // records with '@@' (not-stated) when the RTO operates in a single state.
-        $this->defaultstate = get_config('local_rtocompliance', 'defaultstate') ?: '@@';
-
-        // statefundingcontracts — per-state purchasing contract identifiers set by the
-        // admin in RTO Settings → State Funding. Used as fallback for NAT00120 pos 125-136
-        // when an enrolment row has no purchasingcontract1 value. The map key is the
-        // AVETMISS 2-char abbreviation matching the delivery location statecode.
-        // Only the first QLD contract slot is used as the primary fallback; RTOs with
-        // multiple QLD contracts should set purchasingcontract1 per-enrolment.
-        // v5.9.322 TASK-23: Added TAS, NT, ACT — previously missing from this map,
-        // causing blank pos 125-136 for those three states even when the admin had
-        // configured a contract ref in RTO Settings.
-        $this->statefundingcontracts = [
-            'QLD' => get_config('local_rtocompliance', 'qld_purchasing_contract_1') ?: '',
-            'NSW' => get_config('local_rtocompliance', 'nsw_purchasing_contract')   ?: '',
-            'VIC' => get_config('local_rtocompliance', 'vic_contract_id')           ?: '',
-            'SA'  => get_config('local_rtocompliance', 'sa_contract_ref')           ?: '',
-            'WA'  => get_config('local_rtocompliance', 'wa_contract_number')        ?: '',
-            'TAS' => get_config('local_rtocompliance', 'tas_contract_ref')          ?: '',
-            'NT'  => get_config('local_rtocompliance', 'nt_contract_ref')           ?: '',
-            'ACT' => get_config('local_rtocompliance', 'act_avetars_ref')           ?: '',
-        ];
-
-        // statefundingcodes — per-state default AVETMISS funding source codes (3-char).
-        // v5.9.322 TASK-23: Wired for the first time. These settings were present in
-        // RTO Settings → State Funding but were never read by the generator.
-        // Used as fallback for NAT00120 pos 115-117 (fundingsourcestate) when:
-        //   (a) the enrolment has no fundingsourcestate set, AND
-        //   (b) fundingsourcenational is 13 (State – other) or 15 (State – funded).
-        // Non-state-funded enrolments (fundingsourcenational 11 = Commonwealth, 30 = fee,
-        // etc.) intentionally export blank at pos 115-117 — only state funding rows need it.
-        // normalise_statecode() maps the AVETMISS 2-char DB code (01–08) to the 3-char
-        // abbreviation key used here before the map lookup.
-        $this->statefundingcodes = [
-            'QLD' => get_config('local_rtocompliance', 'qld_funding_code_default') ?: '',
-            'NSW' => get_config('local_rtocompliance', 'nsw_funding_code_default') ?: '',
-            'VIC' => get_config('local_rtocompliance', 'vic_funding_code_default') ?: '',
-            'SA'  => get_config('local_rtocompliance', 'sa_funding_code_default')  ?: '',
-            'WA'  => get_config('local_rtocompliance', 'wa_funding_code_default')  ?: '',
-            'TAS' => get_config('local_rtocompliance', 'tas_funding_code_default') ?: '',
-            'NT'  => get_config('local_rtocompliance', 'nt_funding_code_default')  ?: '',
-            'ACT' => get_config('local_rtocompliance', 'act_funding_code_default') ?: '',
-        ];
     }
 
     public function validate() {
@@ -240,7 +181,7 @@ class nat_generator {
         // whose activity OVERLAPS the period, not just those that started within it.
         $enrolments = $DB->count_records_sql(
             "SELECT COUNT(*) FROM {local_rtocompliance_enrolments}
-             WHERE (activitystartdate IS NULL OR activitystartdate <= ?)
+             WHERE activitystartdate <= ?
                AND (activityenddate IS NULL OR activityenddate = 0 OR activityenddate >= ?)",
             [$this->periodend, $this->periodstart]
         );
@@ -269,7 +210,7 @@ class nat_generator {
         $units = $DB->count_records_sql(
             "SELECT COUNT(DISTINCT unitcode) FROM {local_rtocompliance_enrolments}
              WHERE unitcode IS NOT NULL AND unitcode != ''
-               AND (activitystartdate IS NULL OR activitystartdate <= ?)
+               AND activitystartdate <= ?
                AND (activityenddate IS NULL OR activityenddate = 0 OR activityenddate >= ?)",
             [$this->periodend, $this->periodstart]
         );
@@ -294,6 +235,61 @@ class nat_generator {
         );
         if ($stateFundedMissingCode > 0) {
             $this->warnings[] = "$stateFundedMissingCode government-funded enrolments are missing state funding codes";
+
+            // Task #26: When state funding codes are missing, also identify which states
+            // have no default configured in settings — so admins know exactly what to fix.
+            $stateDefaults = [
+                'QLD' => get_config('local_rtocompliance', 'qld_funding_code_default'),
+                'NSW' => get_config('local_rtocompliance', 'nsw_funding_code_default'),
+                'VIC' => get_config('local_rtocompliance', 'vic_funding_code_default'),
+                'SA'  => get_config('local_rtocompliance', 'sa_funding_code_default'),
+                'WA'  => get_config('local_rtocompliance', 'wa_funding_code_default'),
+                'TAS' => get_config('local_rtocompliance', 'tas_funding_code_default'),
+                'NT'  => get_config('local_rtocompliance', 'nt_funding_code_default'),
+                'ACT' => get_config('local_rtocompliance', 'act_funding_code_default'),
+            ];
+            $unconfiguredStates = array_keys(array_filter($stateDefaults, fn($v) => empty($v)));
+            if (!empty($unconfiguredStates)) {
+                $this->warnings[] = "No default state funding code is configured for: "
+                    . implode(', ', $unconfiguredStates)
+                    . " — government-funded enrolments from these states will have blank state funding codes in NAT00120. "
+                    . "Set defaults under Site Administration → Plugins → Local plugins → AI RTO Compliance → State Funding.";
+            }
+        }
+
+        // Task #39: Warn if government-funded enrolments in the reporting period have no
+        // purchasing contract identifier (NAT00120 pos 125-136). This field is mandatory
+        // for QLD DESBT and other state authority contracts. A blank field is written
+        // silently — this warning surfaces the issue before NCVER submission.
+        $missingContract = $DB->count_records_sql(
+            "SELECT COUNT(*) FROM {local_rtocompliance_enrolments}
+             WHERE fundingsourcenat IN ('11','13','15')
+               AND (purchasingcontract1 IS NULL OR purchasingcontract1 = '')
+               AND activitystartdate <= ?
+               AND (activityenddate IS NULL OR activityenddate = 0 OR activityenddate >= ?)",
+            [$this->periodend, $this->periodstart]
+        );
+        if ($missingContract > 0) {
+            $this->warnings[] = "$missingContract government-funded enrolments have no purchasing contract identifier — "
+                . "NAT00120 field at position 125-136 will be blank. "
+                . "For QLD (DESBT) and other state contracts, enter the contract ID on each enrolment before submitting to NCVER.";
+        }
+
+        // Task #120: Count enrolments in the reporting period with no qualification code
+        // (programcode). These are scoped to the reporting year — the count reflects what is
+        // actually missing from this submission, not a global all-time total. Enrolments with
+        // no programcode are excluded from NAT00130 and may fail NCVER validation for NAT00120.
+        $missingProgramCode = $DB->count_records_sql(
+            "SELECT COUNT(*) FROM {local_rtocompliance_enrolments}
+             WHERE (programcode IS NULL OR programcode = '')
+               AND activitystartdate <= ?
+               AND (activityenddate IS NULL OR activityenddate = 0 OR activityenddate >= ?)",
+            [$this->periodend, $this->periodstart]
+        );
+        if ($missingProgramCode > 0) {
+            $this->warnings[] = "$missingProgramCode enrolments in the $this->year reporting period have no qualification code — "
+                . "they will be excluded from NAT00130 and may fail NCVER validation. "
+                . "Assign a qualification code to each enrolment before submitting.";
         }
 
         // Bug 38: Warn about prior-year ongoing activities (activitystartdate before
@@ -390,97 +386,37 @@ class nat_generator {
         return $this->pad($name, 60);
     }
 
-    /**
-     * Normalise an AVETMISS 2-char numeric state code (01–08 / @@) to the
-     * 3-char Australian abbreviation used as keys in $statefundingdefaults and
-     * $statefundingcontracts. Returns the abbreviation string, or '' if
-     * the code is blank, '@@' (not stated), or unrecognised.
-     *
-     * AVETMISS state codes per Release 8.0 specification:
-     *   01 = ACT, 02 = NSW, 03 = VIC, 04 = QLD,
-     *   05 = SA,  06 = WA,  07 = TAS, 08 = NT
-     *
-     * v5.9.322: introduced to bridge the gap between the 2-char AVETMISS codes
-     * stored in local_rtocompliance_students.statecode (CHAR 2) and the
-     * 3-char abbreviation keys in the per-state admin-config maps.
-     */
-    private function normalise_statecode($code) {
-        static $map = [
-            '01' => 'NSW', '02' => 'VIC', '03' => 'QLD', '04' => 'SA',
-            '05' => 'WA',  '06' => 'TAS', '07' => 'NT',  '08' => 'ACT',
-            // '09' (Other Australian Territories) and '99' (Overseas) have no
-            // corresponding state funding default — intentionally omitted so the
-            // lookup returns '' and the fallback is safely skipped.
-        ];
-        $code = trim((string)($code ?? ''));
-        return $map[$code] ?? '';
-    }
-
     // -------------------------------------------------------------------------
     // NAT00010 – Training organisation
     // National record length: 268
     // Fields: Training org ID (10) + org name (100) + padding (158) = 268
     // State-only fields: contact name (60) + telephone (20) + fax (20) + email (80)
     // -------------------------------------------------------------------------
-    // -------------------------------------------------------------------------
-    // NAT00010 – Training organisation
-    // National record length: 268
-    // Fields per AVETMISS 8.0:
-    //  pos 1-10    Training organisation identifier (10, A)
-    //  pos 11-110  Training organisation name (100, A)
-    //  pos 111-160 Postal address – street/address line (50, A)
-    //  pos 161-210 Postal address – suburb/locality/town (50, A)
-    //  pos 211-212 Postal address – state identifier (2, A)
-    //  pos 213-216 Postal address – postcode (4, A)
-    //  pos 217-220 Postal address – country identifier (4, A)
-    //  pos 221-260 Training organisation web address (40, A)
-    //  pos 261-268 Spare / padding (8, A)
-    // State-only (pos 269+):
-    //  pos 269-328 Contact name (60, A)
-    //  pos 329-348 Telephone number (20, A)
-    //  pos 349-368 Facsimile number (20, A)
-    //  pos 369-448 Email address (80, A)
-    // FIX-NAT00010-FULL-WIRING (v5.9.319): address/suburb/state/postcode/
-    //   country/website config values were not being read or emitted — a
-    //   158-char blank padding block was emitted instead.  contactname had no
-    //   settings.php definition (also added in v5.9.319).
-    // -------------------------------------------------------------------------
     public function generate_nat00010() {
         $rtocode     = get_config('local_rtocompliance', 'rtocode');
         $rtoname     = get_config('local_rtocompliance', 'rtoname');
-        $address     = get_config('local_rtocompliance', 'address')     ?: '';
-        $suburb      = get_config('local_rtocompliance', 'suburb')      ?: '';
-        $state       = get_config('local_rtocompliance', 'state')       ?: '@@';
-        $postcode    = get_config('local_rtocompliance', 'postcode')    ?: '0000';
-        $website     = get_config('local_rtocompliance', 'website')     ?: '';
         $contactname = get_config('local_rtocompliance', 'contactname') ?: '';
-        $phone       = get_config('local_rtocompliance', 'phone')       ?: '';
-        $email       = get_config('local_rtocompliance', 'email')       ?: '';
+        $phone       = get_config('local_rtocompliance', 'phone') ?: '';
+        $email       = get_config('local_rtocompliance', 'email') ?: '';
 
         $record = '';
-        $record .= $this->pad($rtocode, 10);                                        // pos 1-10:   Training organisation identifier
-        $record .= $this->pad($rtoname, 100);                                       // pos 11-110: Training organisation name
-        $record .= $this->pad($address, 50);                                        // pos 111-160: Postal address – street
-        $record .= $this->pad($suburb, 50);                                         // pos 161-210: Postal address – suburb
-        $record .= $this->pad($state, 2);                                           // pos 211-212: Postal address – state identifier
-        $record .= $this->pad($postcode, 4);                                        // pos 213-216: Postal address – postcode
-        $record .= $this->pad('1101', 4);                                          // pos 217-220: Postal address – country (1101 = Australia)
-        $record .= $this->pad(substr($website, 0, 40), 40);                        // pos 221-260: Web address (truncated to 40)
-        $record .= $this->pad('', 8);                                              // pos 261-268: Spare padding (national record = 268)
+        $record .= $this->pad($rtocode, 10);    // pos 1-10:   Training organisation identifier
+        $record .= $this->pad($rtoname, 100);   // pos 11-110: Training organisation name
+        $record .= $this->pad('', 158);          // pos 111-268: padding to national record length
         // State/optional fields (positions 269+):
-        $record .= $this->pad($contactname, 60);                                    // pos 269-328: Contact name
+        $record .= $this->pad($contactname, 60);                               // pos 269-328: Contact name
         $record .= $this->pad(preg_replace('/[^0-9+\s\-()]/', '', $phone), 20); // pos 329-348: Telephone number
-        $record .= $this->pad('', 20);                                             // pos 349-368: Facsimile number
-        $record .= $this->pad($email, 80);                                          // pos 369-448: Email address
+        $record .= $this->pad('', 20);                                          // pos 349-368: Facsimile number
+        $record .= $this->pad($email, 80);                                     // pos 369-448: Email address
 
         return $record . "\r\n";
     }
 
     // -------------------------------------------------------------------------
     // NAT00020 – Training organisation delivery location
-    // National record length: 130
-    // Fields: org ID(10) + location ID(10) + location name(50) + postcode(4) +
-    //         state(2) + suburb(50) + country(4) = 130
+    // National record length: 180
+    // Fields: org ID(10) + location ID(10) + location name(100) + postcode(4) +
+    //         state(2) + suburb(50) + country(4) = 180
     // Reads from local_rtocompliance_locations table. Falls back to plugin config
     // if no locations have been configured.
     // -------------------------------------------------------------------------
@@ -513,9 +449,9 @@ class nat_generator {
                 $record = '';
                 $record .= $this->pad($rtocode, 10);                // pos 1-10:   Training organisation identifier
                 $record .= $this->pad($loc->locationid, 10);        // pos 11-20:  Delivery location identifier
-                $record .= $this->pad(substr($loc->locationname, 0, 100), 100); // pos 21-120: Delivery location name (100)
+                $record .= $this->pad($loc->locationname, 100);     // pos 21-120: Delivery location name
                 $record .= $this->pad($loc->postcode ?: '0000', 4); // pos 121-124: Postcode
-                $record .= $this->pad($loc->statecode ?: $this->defaultstate, 2);  // pos 125-126: State identifier
+                $record .= $this->pad($loc->statecode ?: '@@', 2);  // pos 125-126: State identifier
                 $record .= $this->pad($loc->suburb ?: '', 50);      // pos 127-176: Address – suburb/locality/town
                 $record .= $this->pad($loc->country ?: '1101', 4);  // pos 177-180: Country identifier
                 $output .= $record . "\r\n";
@@ -541,11 +477,11 @@ class nat_generator {
                 $record  = '';
                 $record .= $this->pad($rtocode, 10);   // pos 1-10
                 $record .= $this->pad('MAIN', 10);      // pos 11-20
-                $record .= $this->pad(substr($rtoname, 0, 100), 100); // pos 21-120:  MAIN location name (100)
+                $record .= $this->pad($rtoname, 100);  // pos 21-120
                 $record .= $this->pad($postcode, 4);   // pos 121-124
-                $record .= $this->pad($state ?: $this->defaultstate, 2);  // pos 75-76
-                $record .= $this->pad($suburb, 50);    // pos 77-126
-                $record .= $this->pad('1101', 4);      // pos 127-130
+                $record .= $this->pad($state, 2);      // pos 125-126
+                $record .= $this->pad($suburb, 50);    // pos 127-176
+                $record .= $this->pad('1101', 4);      // pos 177-180
                 $output .= $record . "\r\n";
             }
         } else {
@@ -553,11 +489,11 @@ class nat_generator {
             $record  = '';
             $record .= $this->pad($rtocode, 10);   // pos 1-10:   Training organisation identifier
             $record .= $this->pad('MAIN', 10);      // pos 11-20:  Delivery location identifier
-            $record .= $this->pad(substr($rtoname, 0, 50), 50); // pos 21-70:  Delivery location name (truncated to 50)
-            $record .= $this->pad($postcode, 4);   // pos 71-74:   Postcode
-            $record .= $this->pad($state ?: $this->defaultstate, 2);  // pos 75-76:  State identifier
-            $record .= $this->pad($suburb, 50);    // pos 77-126:  Address – suburb/locality/town
-            $record .= $this->pad('1101', 4);      // pos 127-130: Country identifier (1101 = Australia)
+            $record .= $this->pad($rtoname, 100);  // pos 21-120: Delivery location name
+            $record .= $this->pad($postcode, 4);   // pos 121-124: Postcode
+            $record .= $this->pad($state, 2);      // pos 125-126: State identifier
+            $record .= $this->pad($suburb, 50);    // pos 127-176: Address – suburb/locality/town
+            $record .= $this->pad('1101', 4);      // pos 177-180: Country identifier (1101 = Australia)
             $output .= $record . "\r\n";
         }
 
@@ -565,36 +501,25 @@ class nat_generator {
     }
 
     // -------------------------------------------------------------------------
-    // NAT00030 – Program (Course / Qualification)
+    // NAT00030 – Program
     // National record length: 130
-    // Fields per AVETMISS 8.0:
-    //  pos 1-10    Training organisation identifier (10, A)
-    //  pos 11-20   Course identifier / qualification code (10, A)
-    //  pos 21-120  Course name (100, A)
-    //  pos 121     Type of attendance identifier (1, A)
-    //  pos 122-125 Nominal hours (4, N)
-    //  pos 126-127 Funding source – national (2, A)
-    //  pos 128     VET in schools flag (1, A)
-    //  pos 129-130 Study reason identifier (2, A)
-    // FIX-NAT00030-FULL-WIRING (v5.9.319):
-    //   - Training organisation identifier was absent (first field missing).
-    //   - Course identifier used programid (internal DB ID) instead of programcode
-    //     (the national qualification code e.g. BSB40120).
-    //   - Type of attendance, funding source, VET in schools, study reason were absent.
+    // Fields: program ID(10) + program name(100) + nominal hours(4) + padding(16) = 130
+    // One record per unique programcode. Nominal hours = sum of max scheduled hours
+    // per distinct unit linked to the program (best available approximation from DB).
     // -------------------------------------------------------------------------
     public function generate_nat00030() {
         global $DB;
-        $output  = '';
-        $rtocode = get_config('local_rtocompliance', 'rtocode');
+        $output = '';
 
-        // GROUP BY programcode to guarantee one record per program.
-        // FIX: select MAX(fundingsourcenat), MAX(vetinschoolsflag), MAX(studyreason-equivalent)
-        // for program-level defaults; use programcode (national qual code) as the identifier.
+        // GROUP BY programcode to guarantee one record per program (DISTINCT on multiple
+        // columns would create duplicates when the same program has varying field values).
+        // Bug 8: Use MAX(programname) so the most-recent/longest name is preferred
+        // over the alphabetically-first one produced by MIN. This is a better
+        // approximation when programname has been updated since first enrolment.
         $programs = $DB->get_records_sql(
             "SELECT programcode,
-                    MAX(programname)       AS programname,
-                    MAX(fundingsourcenat)  AS fundingsourcenat,
-                    MAX(vetinschoolsflag)  AS vetinschoolsflag
+                    MAX(programname) AS programname,
+                    MIN(programid)   AS programid
              FROM {local_rtocompliance_enrolments}
              WHERE programcode IS NOT NULL AND programcode != ''
              GROUP BY programcode
@@ -602,11 +527,11 @@ class nat_generator {
         );
 
         foreach ($programs as $program) {
-            // FIX: use programcode (national qualification code) as the course identifier,
-            // not programid (which is an internal Moodle-side value).
-            $courseid = $program->programcode;
+            $progid = $program->programid ?: $program->programcode;
 
             // Sum the max scheduled hours for each distinct unit in this program.
+            // This gives a reasonable approximation of total nominal hours without
+            // inflating by the number of students enrolled.
             $totalhours = $DB->get_field_sql(
                 "SELECT COALESCE(SUM(unit_max_hours), 0)
                  FROM (
@@ -621,14 +546,10 @@ class nat_generator {
             );
 
             $record = '';
-            $record .= $this->pad($rtocode, 10);                                // pos 1-10:   Training organisation identifier
-            $record .= $this->pad($courseid, 10);                               // pos 11-20:  Course identifier (national qual code)
-            $record .= $this->pad($program->programname, 100);                  // pos 21-120: Course name
-            $record .= $this->pad('@@', 1);                                    // pos 121:    Type of attendance (@@=not stated; no DB column)
-            $record .= $this->padnum($totalhours ?: 0, 4);                      // pos 122-125: Nominal hours
-            $record .= $this->pad($program->fundingsourcenat ?: '@@', 2);      // pos 126-127: Funding source – national
-            $record .= $this->pad($program->vetinschoolsflag ?: 'N', 1);       // pos 128:    VET in schools flag
-            $record .= $this->pad('@@', 2);                                    // pos 129-130: Study reason (@@=not stated; programme-level default)
+            $record .= $this->pad($progid, 10);                 // pos 1-10:   Program identifier
+            $record .= $this->pad($program->programname, 100);  // pos 11-110: Program name
+            $record .= $this->padnum($totalhours ?: 0, 4);      // pos 111-114: Nominal hours
+            $record .= $this->pad('', 16);                      // pos 115-130: pad to national record length
 
             $output .= $record . "\r\n";
         }
@@ -653,13 +574,11 @@ class nat_generator {
         // current period causes AVETMISS Data Quality Report validation errors.
         // Fix: filter to units with any training activity overlapping the reporting period,
         // matching the corrected NAT00120 period filter (bug 6).
-        $rtocode = get_config('local_rtocompliance', 'rtocode');
         $units = $DB->get_records_sql(
             "SELECT unitcode,
-                    MIN(unitname)       AS unitname,
-                    MIN(subjectid)      AS subjectid,
-                    MAX(scheduledhours) AS scheduledhours,
-                    MAX(vetflag)        AS vetflag
+                    MIN(unitname)   AS unitname,
+                    MIN(subjectid)  AS subjectid,
+                    MAX(scheduledhours) AS scheduledhours
              FROM {local_rtocompliance_enrolments}
              WHERE unitcode IS NOT NULL AND unitcode != ''
                AND activitystartdate <= :periodend
@@ -671,22 +590,12 @@ class nat_generator {
 
         foreach ($units as $unit) {
             $subjectid = $unit->subjectid ?: $unit->unitcode;
-            // FIX-NAT00060-FULL-WIRING (v5.9.319):
-            //  - Training organisation identifier added as pos 1-10.
-            //  - VET flag now reads from enrolments.vetflag (MAX per unit) instead of hardcoding Y.
-            //  - Field of Education remains blank (no ASCED column in DB); blank is accepted by NCVER
-            //    when the subject is from the national TGA (which is the case for all VET units).
-            $vetflag = (!empty($unit->vetflag) && in_array($unit->vetflag, ['Y','N'], true))
-                       ? $unit->vetflag : 'Y';
 
-            // NAT00060-TOID-REMOVED (v6.2.35): NCVER NAT00060 starts with the Subject Identifier
-            // (pos 1-12) and has NO training-organisation field. The v5.9.319 prefix made the
-            // record 133 instead of 123 and pushed the VET flag / nominal hours +10 — removed.
             $record = '';
-            $record .= $this->pad($subjectid, 12);                         // pos 1-12:   Subject identifier
+            $record .= $this->pad($subjectid, 12);                        // pos 1-12:   Subject identifier
             $record .= $this->pad($unit->unitname, 100);                   // pos 13-112: Subject name
-            $record .= $this->pad('', 6);                                  // pos 113-118: Field of education (blank = TGA-sourced unit)
-            $record .= $this->pad($vetflag, 1);                            // pos 119:    VET flag (from enrolments.vetflag)
+            $record .= $this->pad('', 6);                                  // pos 113-118: Subject field of education identifier (blank = per TGA)
+            $record .= $this->pad('Y', 1);                                 // pos 119:    VET flag
             $record .= $this->padnum($unit->scheduledhours ?: 0, 4);      // pos 120-123: Nominal hours
 
             $output .= $record . "\r\n";
@@ -703,8 +612,7 @@ class nat_generator {
     // -------------------------------------------------------------------------
     public function generate_nat00080() {
         global $DB;
-        $output  = '';
-        $rtocode = get_config('local_rtocompliance', 'rtocode');
+        $output = '';
 
         // Bug 24: Alias u.firstname/u.lastname as moodle_firstname/moodle_lastname to avoid
         // column name collisions when the students table also has firstname/lastname fields.
@@ -733,40 +641,31 @@ class nat_generator {
 
         foreach ($students as $student) {
             $clientid = $student->clientid ?: $student->userid;
-            // FIX-NAT00080-NAME-SOURCE (v5.9.319): prefer students.firstname/lastname
-            // (the AVETMISS-registered name as entered by the admin) over the Moodle user
-            // account name (which is the login/LMS name and may differ). Fall back to
-            // Moodle name when the student record name is blank (e.g. auto-created accounts).
-            $firstname = !empty($student->firstname) ? $student->firstname : $student->moodle_firstname;
-            $lastname  = !empty($student->lastname)  ? $student->lastname  : $student->moodle_lastname;
+            // Use explicit moodle_* aliases to avoid collision with students table fields.
+            $firstname = $student->moodle_firstname;
+            $lastname  = $student->moodle_lastname;
 
-            // NAT00080-TOID-REMOVED (v6.2.35): the NCVER NAT00080 client record STARTS with the
-            // Client Identifier (pos 1-10) and carries NO training-organisation field. The
-            // v5.9.319 change wrongly prepended the RTO code, shifting every field +10 — that
-            // broke the 327-char record length (it became 337), pushed the USI to 160-169
-            // (spec 150-159) and the DOB off-position, and failed AVS validation + the plugin's
-            // own unit test. Prefix removed; all fields below sit at their correct spec positions.
             $record = '';
             $record .= $this->pad($clientid, 10);                                      // pos 1-10:   Client identifier
-            $record .= $this->nameforencryption($lastname, $firstname);                // pos 11-70:  Name for encryption (60)
-            $record .= $this->pad($student->highestschoollevel ?: '@@', 2);            // pos 81-82:  Highest school level completed identifier
-            $record .= $this->pad($student->sex ?: '@', 1);                            // pos 83:     Gender
-            $record .= $this->formatdate($student->dateofbirth);                       // pos 84-91:  Date of birth (DDMMYYYY)
-            $record .= $this->pad($student->postcode ?: '@@@@', 4);                   // pos 92-95:  Postcode
-            $record .= $this->pad($student->indigenousstatus ?: '@', 1);               // pos 96:     Indigenous status identifier
-            $record .= $this->pad($student->languageathome ?: '1201', 4);             // pos 97-100: Language identifier
+            $record .= $this->nameforencryption($lastname, $firstname);                // pos 11-70: Name for encryption (60)
+            $record .= $this->pad($student->highestschoollevel ?: '@@', 2);            // pos 71-72:  Highest school level completed identifier
+            $record .= $this->pad($student->sex ?: '@', 1);                            // pos 73:     Gender
+            $record .= $this->formatdate($student->dateofbirth);                       // pos 74-81:  Date of birth (DDMMYYYY)
+            $record .= $this->pad($student->postcode ?: '@@@@', 4);                   // pos 82-85:  Postcode
+            $record .= $this->pad($student->indigenousstatus ?: '@', 1);               // pos 86:     Indigenous status identifier
+            $record .= $this->pad($student->languageathome ?: '1201', 4);             // pos 87-90:  Language identifier
             // BUG-9 FIX: The ?? (null-coalescing) operator only substitutes defaults for NULL,
             // not for empty string ''. AVETMISS coded fields must not contain blank values —
             // NCVER validation rejects '  ' or ' ' as unknown codes. Using ?: (falsy check)
             // ensures both NULL and '' are replaced with the correct AVETMISS not-stated code.
-            $record .= $this->pad($student->labourforcestatus ?: '@@', 2);            // pos 101-102: Labour force status identifier
-            $record .= $this->pad($student->countryofbirth ?: '1101', 4);             // pos 103-106: Country identifier
-            $record .= $this->pad($student->disabilityflag ?: 'N', 1);                // pos 107:    Disability flag
-            $record .= $this->pad($student->prioreducationflag ?: '@', 1);            // pos 108:    Prior educational achievement flag
-            $record .= $this->pad($student->atschoolflag ?: 'N', 1);                  // pos 109:    At school flag
-            $record .= $this->pad($student->suburb ?: '', 50);                        // pos 110-159: Address – suburb, locality or town
+            $record .= $this->pad($student->labourforcestatus ?: '@@', 2);            // pos 91-92:  Labour force status identifier
+            $record .= $this->pad($student->countryofbirth ?: '1101', 4);             // pos 93-96:  Country identifier
+            $record .= $this->pad($student->disabilityflag ?: 'N', 1);                // pos 97:     Disability flag
+            $record .= $this->pad($student->prioreducationflag ?: '@', 1);            // pos 98:     Prior educational achievement flag
+            $record .= $this->pad($student->atschoolflag ?: 'N', 1);                  // pos 99:     At school flag
+            $record .= $this->pad($student->suburb ?: '', 50);                        // pos 100-149: Address – suburb, locality or town
             $record .= $this->pad($student->usi ?: '', 10);                           // pos 150-159: Unique student identifier
-            $record .= $this->pad($student->statecode ?: $this->defaultstate, 2);                   // pos 160-161: State identifier
+            $record .= $this->pad($student->statecode ?: '@@', 2);                   // pos 160-161: State identifier
             $record .= $this->pad($student->buildingname ?: '', 50);                  // pos 162-211: Address building/property name
             $record .= $this->pad($student->unitno ?: '', 30);                        // pos 212-241: Address flat/unit details
             // Bug 5: blank (space-fill) is the correct AVETMISS default for unknown address
@@ -784,34 +683,18 @@ class nat_generator {
 
     // -------------------------------------------------------------------------
     // NAT00085 – Client contact details
-    // National record length: 567 (after FIX-NAT00085-FULL-WIRING v5.9.319)
-    // Fields per AVETMISS 8.0:
-    //  pos 1-10    Training organisation identifier (10, A) ← was missing
-    //  pos 11-20   Client identifier (10, A)
-    //  pos 21-24   Client title (4, A)
-    //  pos 25-64   Client first given name (40, A)
-    //  pos 65-104  Client family name (40, A)
-    //  pos 105-154 Address building/property name (50, A)
-    //  pos 155-184 Address flat/unit details (30, A)
-    //  pos 185-199 Address street number (15, A)
-    //  pos 200-269 Address street name (70, A)
-    //  pos 270-291 Address postal delivery box (22, A)
-    //  pos 292-341 Address suburb/locality/town (50, A)
-    //  pos 342-345 Address postcode (4, A)
-    //  pos 346-347 Address state identifier (2, A)
-    //  pos 348-351 Address country identifier (4, A) ← was missing; defaults to 1101
-    //  pos 352-371 Telephone – home (20, A)
-    //  pos 372-391 Telephone – work (20, A)
-    //  pos 392-411 Telephone – mobile (20, A)
-    //  pos 412-491 Email address (80, A)
-    //  pos 492-571 Email address – alternative (80, A)
-    // FIX-NAT00085-FULL-WIRING (v5.9.319): Training organisation identifier added
-    //   as first field; country identifier added (defaults 1101 = Australia).
+    // National record length: 557
+    // Fields: client ID(10) + title(4) + firstname(40) + lastname(40) +
+    //         building(50) + unit(30) + streetno(15) + streetname(70) +
+    //         postalbox(22) + suburb(50) + postcode(4) + state(2) +
+    //         phone_home(20) + phone_work(20) + phone_mobile(20) +
+    //         email(80) + email_alt(80) = 557
+    // DB schema: local_rtocompliance_students (verified against install.xml).
+    // Phone: uses surveycontactphone (20 chars) from students table.
     // -------------------------------------------------------------------------
     public function generate_nat00085() {
         global $DB;
-        $output  = '';
-        $rtocode = get_config('local_rtocompliance', 'rtocode');
+        $output = '';
 
         // Bug 25: Alias u.firstname/u.lastname/u.email explicitly to avoid column name
         // collisions with same-named fields on the students table.
@@ -845,35 +728,27 @@ class nat_generator {
             // Bug 40: AVETMISS survey contact email takes precedence over Moodle login email.
             $email = !empty($student->surveycontactemail) ? $student->surveycontactemail : ($student->moodle_email ?? '');
 
-            // FIX-NAT00085-FULL-WIRING (v5.9.319):
-            //   rtocode added as pos 1-10; country identifier added after state.
-            //   residentialcountry column read when present, defaults to 1101 (Australia).
-            $country = !empty($student->residentialcountry) ? $student->residentialcountry : '1101';
-            // NAT00085-TOID-REMOVED (v6.2.35): client postal record starts with the Client
-            // Identifier (pos 1-10); no training-organisation field (v5.9.319 regression).
             $record = '';
             $record .= $this->pad($clientid, 10);                              // pos 1-10:   Client identifier
-            // BUG-12 FIX: NAT00085 title is a free-text field; space-fill is correct.
+            // BUG-12 FIX: NAT00085 title is a free-text field; space-fill is the correct
+            // AVETMISS "not stated" value. '@@' is valid for coded fields but not text fields.
             $title = !empty($student->title) ? $student->title : '    ';
-            $record .= $this->pad($title, 4);                                  // pos 21-24:  Client title
-            $record .= $this->pad(strtoupper($firstname), 40);                 // pos 25-64:  Client first given name
-            $record .= $this->pad(strtoupper($lastname), 40);                  // pos 65-104: Client family name
-            $record .= $this->pad($student->buildingname ?: '', 50);           // pos 105-154: Address building/property name
-            $record .= $this->pad($student->unitno ?: '', 30);                 // pos 155-184: Address flat/unit details
-            $record .= $this->pad($student->streetno ?: '', 15);               // pos 185-199: Address street number
-            $record .= $this->pad($student->streetname ?: '', 70);             // pos 200-269: Address street name
-            $record .= $this->pad('', 22);                                     // pos 270-291: Address postal delivery box
-            $record .= $this->pad($student->suburb ?: '', 50);                 // pos 292-341: Address suburb/locality/town
-            $record .= $this->pad($student->postcode ?: '@@@@', 4);           // pos 342-345: Postcode
-            $record .= $this->pad($student->statecode ?: $this->defaultstate, 2);            // State identifier
-            // NAT00085-COUNTRY-REMOVED (v6.2.35): the v5.9.319 country field is not part of the
-            // NAT00085 postal record (country of birth is carried in NAT00080) and broke the
-            // 557-char spec length. Removed so the record validates.
-            $record .= $this->pad($phone, 20);                                  // Telephone number [home]
-            $record .= $this->pad('', 20);                                      // pos 372-391: Telephone number [work]
-            $record .= $this->pad('', 20);                                      // pos 392-411: Telephone number [mobile]
-            $record .= $this->pad($email, 80);                                  // pos 412-491: Email address
-            $record .= $this->pad('', 80);                                      // pos 492-571: Email address [alternative]
+            $record .= $this->pad($title, 4);                                  // pos 11-14:  Client title
+            $record .= $this->pad(strtoupper($firstname), 40);                 // pos 15-54:  Client first given name
+            $record .= $this->pad(strtoupper($lastname), 40);                  // pos 55-94:  Client family name
+            $record .= $this->pad($student->buildingname ?: '', 50);           // pos 95-144: Address building/property name
+            $record .= $this->pad($student->unitno ?: '', 30);                 // pos 145-174: Address flat/unit details
+            $record .= $this->pad($student->streetno ?: '', 15);               // pos 175-189: Address street number
+            $record .= $this->pad($student->streetname ?: '', 70);             // pos 190-259: Address street name
+            $record .= $this->pad('', 22);                                     // pos 260-281: Address postal delivery box
+            $record .= $this->pad($student->suburb ?: '', 50);                 // pos 282-331: Address suburb/locality/town
+            $record .= $this->pad($student->postcode ?: '@@@@', 4);           // pos 332-335: Postcode
+            $record .= $this->pad($student->statecode ?: '@@', 2);            // pos 336-337: State identifier
+            $record .= $this->pad($phone, 20);                                  // pos 338-357: Telephone number [home]
+            $record .= $this->pad('', 20);                                      // pos 358-377: Telephone number [work]
+            $record .= $this->pad('', 20);                                      // pos 378-397: Telephone number [mobile]
+            $record .= $this->pad($email, 80);                                  // pos 398-477: Email address (Bug 40: AVETMISS contact email)
+            $record .= $this->pad('', 80);                                      // pos 478-557: Email address [alternative]
 
             $output .= $record . "\r\n";
         }
@@ -883,14 +758,12 @@ class nat_generator {
 
     // -------------------------------------------------------------------------
     // NAT00090 – Disability
-    // National record length: 22 (after FIX-NAT00090-RTOCODE v5.9.319)
-    // Fields: org ID(10) + client ID(10) + disability type identifier(2) = 22
-    // FIX-NAT00090-RTOCODE (v5.9.319): Training organisation identifier was absent.
+    // National record length: 12
+    // Fields: client ID(10) + disability type identifier(2) = 12
     // -------------------------------------------------------------------------
     public function generate_nat00090() {
         global $DB;
-        $output  = '';
-        $rtocode = get_config('local_rtocompliance', 'rtocode');
+        $output = '';
 
         // BUG-NAT90-PERIOD-FILTER (v5.2.18): NAT00090 previously exported ALL students
         // with disabilityflag='Y', regardless of reporting period. NCVER AVETMISS validation
@@ -920,10 +793,8 @@ class nat_generator {
             foreach ($types as $type) {
                 $type = trim($type);
                 if (!empty($type)) {
-                    // NAT00090-TOID-REMOVED (v6.2.35): record is Client Identifier(10) +
-                    // Disability type(2) = 12; no training-organisation field (v5.9.319 regression).
                     $record = '';
-                    $record .= $this->pad($clientid, 10);  // pos 1-10:  Client identifier
+                    $record .= $this->pad($clientid, 10);  // pos 1-10: Client identifier
                     $record .= $this->pad($type, 2);       // pos 11-12: Disability type identifier
                     $output .= $record . "\r\n";
                 }
@@ -935,14 +806,12 @@ class nat_generator {
 
     // -------------------------------------------------------------------------
     // NAT00100 – Prior educational achievement
-    // National record length: 23 (after FIX-NAT00100-RTOCODE v5.9.319)
-    // Fields: org ID(10) + client ID(10) + prior achievement identifier(3) = 23
-    // FIX-NAT00100-RTOCODE (v5.9.319): Training organisation identifier was absent.
+    // National record length: 13
+    // Fields: client ID(10) + prior achievement identifier(3) = 13
     // -------------------------------------------------------------------------
     public function generate_nat00100() {
         global $DB;
-        $output  = '';
-        $rtocode = get_config('local_rtocompliance', 'rtocode');
+        $output = '';
 
         // Bug 43: NAT00100 must only include students who have declared prior education
         // (prioreducationflag='Y'). Emitting records for students without prior education
@@ -980,14 +849,12 @@ class nat_generator {
             ]);
 
             if (empty($priors)) {
-                $priors = ['@@@']; // AVETMISS "not stated" for the 3-char prior-achievement id.
+                $priors = ['@@'];
             }
 
             foreach ($priors as $prior) {
-                // NAT00100-TOID-REMOVED (v6.2.35): Client Identifier(10) + Prior achievement(3)
-                // = 13; no training-organisation field (v5.9.319 regression).
                 $record = '';
-                $record .= $this->pad($clientid, 10);  // pos 1-10:  Client identifier
+                $record .= $this->pad($clientid, 10);  // pos 1-10: Client identifier
                 $record .= $this->pad($prior, 3);      // pos 11-13: Prior educational achievement identifier
                 $output .= $record . "\r\n";
             }
@@ -1051,43 +918,27 @@ class nat_generator {
                     s.clientid    AS studentclientid,
                     s.userid      AS studentuserid,
                     s.studyreason AS studentstudyreason,
-                    s.schooltype  AS studentschooltype,
-                    s.statecode   AS studentstatecode,
-                    e.programcode AS programcode
+                    s.schooltype  AS studentschooltype
              FROM {local_rtocompliance_enrolments} e
              JOIN {local_rtocompliance_students} s ON s.id = e.studentid
-             WHERE (e.activitystartdate IS NULL OR e.activitystartdate <= :periodend)
+             WHERE e.activitystartdate <= :periodend
                AND (e.activityenddate IS NULL OR e.activityenddate = 0 OR e.activityenddate >= :periodstart)
              ORDER BY e.activitystartdate",
             ['periodend' => $this->periodend, 'periodstart' => $this->periodstart]
         );
 
         foreach ($enrolments as $enrol) {
-            // BUG-8 FIX: Convert invalid '00' outcome to '70' (Continuing activity)
+            // BUG-8 FIX: Convert invalid '00' outcome to '70' (Continuing Enrollment)
             // instead of silently skipping the entire enrolment record. Skipping meant
             // the student's enrolment was completely absent from the AVETMISS NAT file,
             // which is a worse AVETMISS error than submitting with a corrected outcome code.
-            // A-P2-3 FIX (v5.9.411): a "Continuing activity" (70) is by definition NOT
-            // finished, so it must not carry a completed activity end date — emitting
-            // 70 together with a past end date is internally inconsistent and NCVER
-            // flags it. When we coerce a blank/'00' outcome to 70 we therefore also
-            // treat the record as open (end date = reporting period end, set below),
-            // rather than reporting a completion end date with no result. The
-            // AVETMISS Validation page separately flags these records so the RTO
-            // records the real outcome. $coerced_continuing drives the end-date choice.
-            $coerced_continuing = false;
             if (empty($enrol->outcomeidentifier) || $enrol->outcomeidentifier === '00') {
                 $enrol->outcomeidentifier = '70';
-                $coerced_continuing = true;
             }
 
             $clientid  = $enrol->studentclientid ?: $enrol->studentuserid;
             $subjectid = $enrol->subjectid ?: $enrol->unitcode;
-            // PROGRAM-ID-CONSISTENCY (v6.2.35): prefer the national programcode (matching
-            // NAT00030 line 607 and NAT00130 line 1258). NAT00120 previously preferred the
-            // internal programid, so when programid != programcode the NAT00120 program
-            // identifier had no matching NAT00030 record -> AVS referential-integrity error.
-            $programid = $enrol->programcode ?: $enrol->programid;
+            $programid = $enrol->programid ?: $enrol->programcode;
             // BUG-11 FIX: If deliverylocationid is empty AND no defaultdeliverylocation is
             // configured, NAT00120 pos 11-20 would contain 10 spaces — NCVER AVETMISS
             // validation requires a non-blank delivery location identifier and will hard-fail
@@ -1106,10 +957,7 @@ class nat_generator {
             $record .= $this->formatdate($enrol->activitystartdate);                    // pos 53-60:  Activity start date (DDMMYYYY)
             // BUG-14 FIX: Use reporting period end date for active enrolments with no
             // activityenddate. An empty field (8 spaces) may fail NCVER AVETMISS validation.
-            // A-P2-3 FIX (v5.9.411): a record coerced to 70 (Continuing) is reported as
-            // open — use the period end, never the stray recorded completion date.
-            $enddate = ($coerced_continuing || empty($enrol->activityenddate))
-                ? $this->periodend : $enrol->activityenddate;
+            $enddate = (!empty($enrol->activityenddate)) ? $enrol->activityenddate : $this->periodend;
             $record .= $this->formatdate($enddate);                                     // pos 61-68:  Activity end date (DDMMYYYY)
             $record .= $this->pad($enrol->deliverymode ?: '10', 3);                    // pos 69-71:  Delivery mode identifier
             $record .= $this->pad($enrol->outcomeidentifier ?: '70', 2);               // pos 72-73:  Outcome identifier – national
@@ -1127,46 +975,17 @@ class nat_generator {
             $record .= $this->pad($schooltypecode, 2);                                  // pos 110-111: School type identifier
             // --- State-only fields (appended after national record) ---
             $record .= $this->pad('', 3);                                               // pos 112-114: Outcome identifier – training organisation
-            // v5.9.322 TASK-23: Apply per-state default funding code when the enrolment has
-            // no fundingsourcestate set AND the national code is state-funded (13 or 15).
-            // Non-state-funded enrolments (e.g. 11=Commonwealth, 30=fee-for-service) must
-            // remain blank here — only state funding rows require a state code at pos 115-117.
-            // normalise_statecode() converts the AVETMISS 2-char DB code (01–08) stored in
-            // s.statecode (aliased as studentstatecode in the SELECT) to the 3-char abbreviation
-            // (QLD/NSW/…) used as map keys. The enrolments table has no statecode column, so
-            // the student's statecode (which reflects the student's registered state) is used.
-            $_fundingstate = $enrol->fundingsourcestate ?? '';
-            if ($_fundingstate === '' && !empty($this->statefundingcodes)) {
-                $_natcode = trim($enrol->fundingsourcenat ?? '');
-                if ($_natcode === '13' || $_natcode === '15') {
-                    $_stateabbrev = $this->normalise_statecode($enrol->studentstatecode ?? '');
-                    if ($_stateabbrev !== '' && !empty($this->statefundingcodes[$_stateabbrev] ?? '')) {
-                        $_fundingstate = $this->statefundingcodes[$_stateabbrev];
-                    }
-                }
-            }
-            $record .= $this->pad($_fundingstate, 3);                                  // pos 115-117: Funding source – state training authority
+            $record .= $this->pad($enrol->fundingsourcestate ?? '', 3);                // pos 115-117: Funding source – state training authority
             // Bug 4: Round tuitionfee to nearest integer before padnum().
             // padnum() formats as zero-padded integer; passing a float like 1500.50
             // causes padnum() to produce '1500.5' which is 6 chars and corrupts the
             // fixed-width field (NAT00120 pos 118-122 is 5 numeric digits, no decimals).
             $record .= $this->padnum(round((float)($enrol->tuitionfee ?? 0)), 5); // pos 118-122: Client tuition fee (N)
             $record .= $this->pad($enrol->feeexemption ?: '@@', 2);                    // pos 123-124: Fee exemption/concession type identifier
-            // v5.9.321 ORPHAN-FIX: use per-state contract from RTO Settings as fallback
-            // when the enrolment row has no purchasing contract set.
-            $_purchcontract = $enrol->purchasingcontract1 ?? '';
-            if (empty($_purchcontract) && !empty($this->statefundingcontracts)) {
-                // normalise_statecode() maps the AVETMISS 2-char DB code (01–08) stored in
-                // s.statecode (aliased as studentstatecode) to the 3-char abbreviation (QLD/NSW/…).
-                $_contractstate = $this->normalise_statecode($enrol->studentstatecode ?? '');
-                if ($_contractstate !== '' && isset($this->statefundingcontracts[$_contractstate])) {
-                    $_purchcontract = $this->statefundingcontracts[$_contractstate];
-                }
-            }
-            $record .= $this->pad($_purchcontract, 12);                                   // pos 125-136: Purchasing contract identifier
+            $record .= $this->pad($enrol->purchasingcontract1 ?? '', 12);              // pos 125-136: Purchasing contract identifier
             $record .= $this->pad('', 3);                                               // pos 137-139: Purchasing contract schedule identifier [no DB column]
             $record .= $this->padnum(0, 4);                                             // pos 140-143: Hours attended [no DB column — zero]
-            $record .= $this->pad($enrol->programcode ?: ($enrol->programid ?: ''), 10); // pos 144-153: Associated course identifier (qual code)
+            $record .= $this->pad('', 10);                                              // pos 144-153: Associated course identifier [no DB column]
             $record .= $this->padnum($enrol->scheduledhours ?: 0, 4);                 // pos 154-157: Scheduled hours (N)
             $record .= $this->pad('', 1);                                               // pos 158:     Predominant delivery mode [no DB column]
 
@@ -1255,11 +1074,10 @@ class nat_generator {
 
         foreach ($completions as $comp) {
             $clientid  = $comp->studentclientid ?: $comp->studentuserid;
-            // FIX-NAT00130-PROGRAMCODE (v5.9.319): use programcode (the national
-            // qualification code e.g. BSB40120) as the primary identifier, falling back
-            // to programid only when programcode is blank.  Previously programid (an
-            // internal DB id) was used first, which produced non-standard qual codes.
-            $programid = substr($comp->programcode ?: $comp->programid, 0, 10);
+            // Bug 48: NAT00130 program identifier field is only 10 chars. Truncate any
+            // programid value longer than 10 chars (e.g., a 12-char qual code like
+            // 'BSB50120ABC') to prevent fixed-width field corruption.
+            $programid = substr($comp->programid ?: $comp->programcode, 0, 10);
             // Use activityenddate as the date program was completed (DDMMYYYY).
             $datecompleted = $this->formatdate($comp->activityenddate);
             // BUG-12 FIX: issuedflag was hardcoded 'Y', falsely asserting the parchment
@@ -1278,32 +1096,6 @@ class nat_generator {
                 $issuedflag = $certissued ? 'Y' : 'N';
             }
 
-            // FIX-NAT00130-PARCHMENT (v5.9.319): read certnumber from certs table
-            // for issued certificates as the parchment number; also record issue date.
-            $parchmentnumber = '';
-            $parchmentdate   = '';
-            if ($certs_table_exists && $issuedflag === 'Y') {
-                // PORTABILITY (v5.9.395): a raw "LIMIT 1" is MySQL/Postgres-only and
-                // fails on Oracle/MSSQL (both Moodle-supported). Use get_records_sql with
-                // a limit parameter (0,1) and take the first row instead.
-                $certrows = $DB->get_records_sql(
-                    "SELECT certnumber, timecreated
-                       FROM {local_rtocompliance_certs}
-                      WHERE studentid = :studentid
-                        AND programcode = :programcode
-                        AND status IN ('issued','active')
-                      ORDER BY timecreated DESC",
-                    ['studentid' => $comp->studentid, 'programcode' => $comp->programcode],
-                    0, 1
-                );
-                $certrow = $certrows ? reset($certrows) : null;
-                if ($certrow) {
-                    $parchmentnumber = $certrow->certnumber ?? '';
-                    $parchmentdate   = !empty($certrow->timecreated)
-                        ? date('dmY', $certrow->timecreated) : '';
-                }
-            }
-
             $record = '';
             // --- National record (39 bytes) ---
             $record .= $this->pad($rtocode, 10);      // pos 1-10:  Training organisation identifier
@@ -1312,8 +1104,8 @@ class nat_generator {
             $record .= $datecompleted;                 // pos 31-38: Date program completed (DDMMYYYY)
             $record .= $this->pad($issuedflag, 1);    // pos 39:    Issued flag
             // --- State-only fields ---
-            $record .= $this->pad($parchmentdate, 8);    // pos 40-47: Parchment issue date (from certs.timecreated)
-            $record .= $this->pad($parchmentnumber, 25); // pos 48-72: Parchment number (from certs.certnumber)
+            $record .= $this->pad('', 8);             // pos 40-47: Parchment issue date
+            $record .= $this->pad('', 25);            // pos 48-72: Parchment number
 
             $output .= $record . "\r\n";
         }

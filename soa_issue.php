@@ -15,12 +15,13 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * RTO Compliance plugin — soa_issue.php.
+ * local_rtocompliance file.
  *
  * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
+
 // v4.6.101 MULTI-UNIT-SOA — Issue a Statement of Attainment for multiple units.
 //
 // World-class multi-unit SOA wizard for Australian RTOs. Features:
@@ -39,22 +40,37 @@
 // Check /tmp/rtoc_soa_*.txt or PHP error log, or run in Moodle DB:
 //   SELECT value FROM mdl_config WHERE plugin='local_rtocompliance' AND name='_soa_cp';
 // Remove this block once the root cause of the HTTP 500 is identified.
-// v5.9.368 DIAG-REMOVED: the HTTP-500 tracing instrumentation (per-request temp files,
-// error_log spam, and a shutdown handler) has been removed. _soa_log() is kept as a
-// no-op so the many call sites throughout this file stay valid without side effects.
+$_soa_log = sys_get_temp_dir() . '/rtoc_soa_' . date('Ymd_His') . '_' . getmypid() . '.txt';
 if (!function_exists('_soa_log')) {
-    function _soa_log(string $step): void { /* no-op */ }
+    function _soa_log(string $step): void {
+        global $_soa_log;
+        $line = date('[H:i:s] ') . $step . "\n";
+        @file_put_contents($_soa_log, $line, FILE_APPEND);
+        error_log('[RTOC-SOA] ' . $step);
+    }
 }
+register_shutdown_function(function () {
+    $err = error_get_last();
+    if ($err) {
+        _soa_log('SHUTDOWN fatal type=' . $err['type'] . ' msg=' . $err['message'] . ' in ' . $err['file'] . ':' . $err['line']);
+    } else {
+        _soa_log('SHUTDOWN normal');
+    }
+});
 _soa_log('START pid=' . getmypid() . ' method=' . ($_SERVER['REQUEST_METHOD'] ?? '?') . ' uri=' . ($_SERVER['REQUEST_URI'] ?? '?'));
 
 require_once(__DIR__ . '/../../config.php');
+require_login();
 _soa_log('config.php loaded');
+try { set_config('_soa_cp', json_encode(['t' => date('c'), 'pid' => getmypid(), 'step' => 'config_loaded']), 'local_rtocompliance'); } catch (\Throwable $_e) {}
 
 require_once($CFG->libdir . '/adminlib.php');
 _soa_log('adminlib.php loaded');
+try { set_config('_soa_cp', json_encode(['t' => date('c'), 'pid' => getmypid(), 'step' => 'adminlib_loaded']), 'local_rtocompliance'); } catch (\Throwable $_e) {}
 
 require_once(__DIR__ . '/lib.php');
 _soa_log('lib.php loaded');
+try { set_config('_soa_cp', json_encode(['t' => date('c'), 'pid' => getmypid(), 'step' => 'lib_loaded']), 'local_rtocompliance'); } catch (\Throwable $_e) {}
 // NOTE: Neither soa_compliance_engine nor usi_platform_client are require_once'd here.
 // Both classes live in classes/ and are handled by Moodle's PSR-4 autoloader via the
 // use statements below. Explicitly requiring classes/ files on an admin page that loads
@@ -68,8 +84,8 @@ _soa_log('lib.php loaded');
 use local_rtocompliance\usi\usi_platform_client;
 
 admin_externalpage_setup('local_rtocompliance_soa_issue');
-require_login();
 _soa_log('admin_externalpage_setup done');
+try { set_config('_soa_cp', json_encode(['t' => date('c'), 'pid' => getmypid(), 'step' => 'setup_done']), 'local_rtocompliance'); } catch (\Throwable $_e) {}
 $context = context_system::instance();
 require_capability('local/rtocompliance:issuecerts', $context);
 
@@ -79,125 +95,22 @@ $PAGE->set_heading('Issue Multi-Unit SOA');
 $PAGE->add_body_class('path-local-rtocompliance');
 $PAGE->requires->css('/local/rtocompliance/styles.css');
 
-// SOA-SEARCH-OVERHAUL (v5.9.382): the picker now lists STUDENTS WHO HAVE RESULTS
-// (the population that can actually receive an SoA), each tagged with the
-// qualifications and categories they belong to — resolved through the
-// course→qualification map — so an admin can find the right student by
-// qualification or category, not only by name.
+// Pre-load users for the autocomplete picker (up to 10 000)
+// FIX-SOA-MEMORY (v5.2.38): raise memory before potentially-large user query.
 raise_memory_limit(MEMORY_HUGE);
-
-// Qualification Builder metadata: code → [category id, name].
-$soaQualMeta = [];
-foreach ($DB->get_records('local_rtocompliance_qualbuilder', null, '',
-        'id, qualificationcode, qualificationname, categoryid') as $qb) {
-    $code = strtoupper(trim((string)$qb->qualificationcode));
-    if ($code !== '') {
-        $soaQualMeta[$code] = ['cat' => (int)$qb->categoryid, 'name' => (string)$qb->qualificationname];
-    }
-}
-
-// Students with at least one result row, surname-first.
-$soaStudents = $DB->get_records_sql(
-    "SELECT u.id AS userid, u.firstname, u.lastname, u.email
-       FROM {local_rtocompliance_students} s
-       JOIN {user} u ON u.id = s.userid AND u.deleted = 0
-       JOIN {local_rtocompliance_enrolments} e ON e.studentid = s.id
-   GROUP BY u.id, u.firstname, u.lastname, u.email
-   ORDER BY u.lastname, u.firstname",
+$users = $DB->get_records_sql(
+    "SELECT u.id, u.firstname, u.lastname, u.email,
+            u.firstnamephonetic, u.lastnamephonetic, u.middlename, u.alternatename
+     FROM   {user} u
+     WHERE  u.deleted = 0 AND u.suspended = 0 AND u.id > 1
+     ORDER BY u.lastname, u.firstname",
     [], 0, 10000
 );
-
-// userid → distinct qualification codes they hold results in.
-$soaUserQuals = [];
-foreach ($DB->get_records_sql(
-    "SELECT " . $DB->sql_concat('u.id', "'|'", 'UPPER(e.programcode)') . " AS k,
-            u.id AS userid, UPPER(e.programcode) AS pc
-       FROM {local_rtocompliance_students} s
-       JOIN {user} u ON u.id = s.userid
-       JOIN {local_rtocompliance_enrolments} e ON e.studentid = s.id
-      WHERE e.programcode IS NOT NULL AND e.programcode <> ''
-   GROUP BY u.id, UPPER(e.programcode)") as $r) {
-    $soaUserQuals[(int)$r->userid][] = $r->pc;
-}
-
-// Category names for the filter dropdown (only categories used by a built qual).
-$soaCatNames = [];
-$soaUsedCats = array_values(array_unique(array_filter(array_map(function ($m) {
-    return $m['cat'];
-}, $soaQualMeta))));
-if (!empty($soaUsedCats) && $DB->get_manager()->table_exists('course_categories')) {
-    list($cin, $cinp) = $DB->get_in_or_equal($soaUsedCats, SQL_PARAMS_NAMED, 'sc');
-    foreach ($DB->get_records_select('course_categories', "id $cin", $cinp, '', 'id, name') as $cc) {
-        $soaCatNames[(int)$cc->id] = $cc->name;
-    }
-}
-
-// v6.2.80 CASCADE FILTER DATA — sourced from the students' ACTUAL result courses
-// (enrolments.courseid), because most qualbuilder products have no Moodle categoryid.
-$soaParents  = [];   // parentid => name
-$soaSubs     = [];   // subid => ['name'=>.., 'parent'=>..]
-$soaCourses  = [];   // courseid => ['name'=>.., 'catpath'=>..]
-if ($DB->get_manager()->table_exists('course_categories')) {
-    foreach ($DB->get_records_sql(
-        "SELECT c.id, c.fullname, cc.id AS catid, cc.name AS catname, cc.parent AS catparent, cc.path AS catpath
-           FROM {course} c
-           JOIN {course_categories} cc ON cc.id = c.category
-          WHERE c.id IN (SELECT DISTINCT e.courseid FROM {local_rtocompliance_enrolments} e
-                          WHERE e.courseid IS NOT NULL AND e.courseid > 0)
-          ORDER BY cc.path, c.fullname") as $co) {
-        $catid = (int)$co->catid;
-        $soaCourses[(int)$co->id] = ['name' => (string)$co->fullname, 'catpath' => (string)$co->catpath];
-        $soaSubs[$catid] = ['name' => (string)$co->catname, 'parent' => (int)$co->catparent];
-    }
-    $soaParentIds = [];
-    foreach ($soaSubs as $sm) { if ((int)$sm['parent'] > 0) { $soaParentIds[(int)$sm['parent']] = true; } }
-    if (!empty($soaParentIds)) {
-        list($pin_a, $pin_p) = $DB->get_in_or_equal(array_keys($soaParentIds), SQL_PARAMS_NAMED, 'pp');
-        foreach ($DB->get_records_select('course_categories', "id $pin_a", $pin_p, '', 'id, name') as $pc) {
-            $soaParents[(int)$pc->id] = (string)$pc->name;
-        }
-    }
-}
-// userid => distinct course ids they hold results in (Course-level filter + catpaths).
-$soaUserCourses = [];
-foreach ($DB->get_records_sql(
-    "SELECT " . $DB->sql_concat('u.id', "'|'", 'e.courseid') . " AS k, u.id AS userid, e.courseid
-       FROM {local_rtocompliance_students} s
-       JOIN {user} u ON u.id = s.userid
-       JOIN {local_rtocompliance_enrolments} e ON e.studentid = s.id
-      WHERE e.courseid IS NOT NULL AND e.courseid > 0
-   GROUP BY u.id, e.courseid") as $r) {
-    $soaUserCourses[(int)$r->userid][] = (int)$r->courseid;
-}
-// userid => distinct category paths of their result courses (for parent/sub matching).
-$soaUserCatpaths = [];
-foreach ($soaUserCourses as $uid => $cids) {
-    $paths = [];
-    foreach ($cids as $cid) { if (isset($soaCourses[$cid])) { $paths[$soaCourses[$cid]['catpath']] = true; } }
-    $soaUserCatpaths[$uid] = array_keys($paths);
-}
-
-// Build the hidden <option> markup with data-quals / data-cats for JS filtering,
-// and a richer label including USI + qualification codes.
-$soaOptionsHtml = '<option value=""></option>';
-foreach ($soaStudents as $st) {
-    $uid   = (int)$st->userid;
-    $quals = $soaUserQuals[$uid] ?? [];
-    $cats  = [];
-    foreach ($quals as $qc) {
-        if (isset($soaQualMeta[$qc]['cat']) && $soaQualMeta[$qc]['cat'] > 0) {
-            $cats[$soaQualMeta[$qc]['cat']] = true;
-        }
-    }
-    $label = trim($st->lastname) . ', ' . trim($st->firstname) . ' (' . $st->email . ')';
-    $catpaths = $soaUserCatpaths[$uid] ?? [];
-    $ucourses = $soaUserCourses[$uid] ?? [];
-    $soaOptionsHtml .= '<option value="' . $uid . '"'
-        . ' data-quals="' . s(implode(' ', $quals)) . '"'
-        . ' data-cats="' . s(implode(' ', array_keys($cats))) . '"'
-        . ' data-catpath="' . s(implode(' ', $catpaths)) . '"'
-        . ' data-courses="' . s(implode(' ', array_map('strval', $ucourses))) . '">'
-        . s($label) . '</option>';
+// FIX-STUDENT-SURNAME-FIRST (v4.9.142): surname first so the list is
+// scannable alphabetically. Format: "Surname, Firstname (email)"
+$useroptions = ['' => ''];
+foreach ($users as $user) {
+    $useroptions[$user->id] = trim($user->lastname) . ', ' . trim($user->firstname) . ' (' . $user->email . ')';
 }
 
 $ajaxurl  = (new moodle_url('/local/rtocompliance/soa_ajax.php'))->out(false);
@@ -225,7 +138,6 @@ echo local_rtocompliance_render_nav_header(
     '/local/rtocompliance/certificates.php',
     'certificates'
 );
-echo local_rtocompliance_page_banner('Issue Multi-Unit SOA');
 
 // ── RTO config warning ────────────────────────────────────────────────────────
 if (empty($rtoname) || empty($rtocode)) {
@@ -234,7 +146,7 @@ if (empty($rtoname) || empty($rtocode)) {
         html_writer::link(
             new moodle_url('/admin/settings.php', ['section' => 'local_rtocompliance_settings']),
             'Configure RTO Settings',
-            ['class' => 'btn btn-sm btn-primary ml-2', 'title' => 'Open plugin settings to set the RTO name and code']
+            ['class' => 'btn btn-sm btn-primary ml-2']
         ),
         'warning'
     );
@@ -264,101 +176,33 @@ if ($cfgd && !$unlim) {
 echo '</div></div>';
 
 // ── Main 2-column layout ──────────────────────────────────────────────────────
-// v6.2.83: single full-width column, steps in order — Student (1) -> Units (2) -> Options (3).
-echo '<div id="rtoc-soa-wrap" style="display:flex;flex-direction:column;gap:16px;max-width:1400px;">';
-
-// v6.2.81 SELECT STUDENT ACROSS THE TOP: the picker card now spans the full grid width
-// (grid-column:1/-1) with horizontal filters; Step 3 (options) + Step 2 (units) sit below.
-echo '<div class="rtoc-soa-card" style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:18px;grid-column:1 / -1;">';
-echo '<h3 style="margin:0 0 14px;font-size:1rem;color:#1e3a5f;display:flex;align-items:center;gap:8px;">';
-echo '<span style="background:#1e3a5f;color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">1</span> Select Student</h3>';
-
-echo '<label style="display:block;font-size:0.85rem;font-weight:600;color:#374151;margin-bottom:6px;">Find a student</label>';
-
-// v5.9.382: qualification + category filters — narrow the student list by the
-// qualification or category they belong to (via the course→qualification map).
-// v6.2.81 CLEAN FILTER STACK: in the narrow picker panel, four dropdowns crammed 2-across
-// truncated their labels. They are now a full-width labelled vertical stack.
-// Cascade: Parent category -> Sub-category -> Course (parent/sub narrow by category path,
-// course by the student's result courses); Qualification narrows by qual code.
-$soa_grp = 'display:flex;flex-direction:column;gap:3px;flex:1;min-width:190px;';
-$soa_lbl = 'font-size:0.68rem;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.04em;';
-$soa_sel = 'width:100%;box-sizing:border-box;padding:7px 9px;border:1px solid #d1d5db;border-radius:6px;font-size:0.82rem;background:#fff;color:#374151;';
-echo '<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px;align-items:flex-end;">';
-
-echo '<div style="' . $soa_grp . '"><span style="' . $soa_lbl . '">Qualification</span>';
-echo '<select id="rtoc-soa-filter-qual" title="Filter students by qualification" style="' . $soa_sel . '">';
-echo '<option value="">All qualifications</option>';
-foreach ($soaQualMeta as $code => $m) {
-    echo '<option value="' . s($code) . '">' . s($code) . ' — ' . s(shorten_text($m['name'], 42)) . '</option>';
-}
-echo '</select></div>';
-
-if (!empty($soaParents)) {
-    echo '<div style="' . $soa_grp . '"><span style="' . $soa_lbl . '">Parent category</span>';
-    echo '<select id="rtoc-soa-filter-parent" title="Filter by parent category" style="' . $soa_sel . '">';
-    echo '<option value="">All parent categories</option>';
-    foreach ($soaParents as $pid => $pname) {
-        // v6.2.84 AUTO-FILL STEP 3: parent categories are named after the qualification they
-        // deliver (e.g. "Diploma of Customs Broking (TLI50822)"). Parse the national code out of
-        // the name so choosing a parent category can pre-fill Step 3's Qualification Code + Name.
-        // If no code is present we still pass the cleaned name so the field isn't left blank.
-        $pqcode = '';
-        $pqname = (string)$pname;
-        if (preg_match('/\b([A-Z]{2,6}\d{3,6}[A-Z]?)\b/', (string)$pname, $mcode)) {
-            $pqcode = $mcode[1];
-            $pqname = trim(preg_replace('/[\-\(\s]*\b' . preg_quote($pqcode, '/') . '\b[\)\s]*/', ' ', (string)$pname));
-            $pqname = trim($pqname, " \t-–—()");
-        }
-        echo '<option value="' . (int)$pid . '"'
-            . ' data-qualcode="' . s($pqcode) . '"'
-            . ' data-qualname="' . s($pqname) . '">'
-            . s(shorten_text($pname, 42)) . '</option>';
-    }
-    echo '</select></div>';
-}
-if (!empty($soaSubs)) {
-    echo '<div style="' . $soa_grp . '"><span style="' . $soa_lbl . '">Sub-category</span>';
-    echo '<select id="rtoc-soa-filter-sub" title="Filter by sub-category" style="' . $soa_sel . '">';
-    echo '<option value="">All sub-categories</option>';
-    foreach ($soaSubs as $sid => $sm) {
-        echo '<option value="' . (int)$sid . '" data-parent="' . (int)$sm['parent'] . '">' . s(shorten_text($sm['name'], 42)) . '</option>';
-    }
-    echo '</select></div>';
-}
-if (!empty($soaCourses)) {
-    echo '<div style="' . $soa_grp . '"><span style="' . $soa_lbl . '">Course</span>';
-    echo '<select id="rtoc-soa-filter-course" title="Filter by course" style="' . $soa_sel . '">';
-    echo '<option value="">All courses</option>';
-    foreach ($soaCourses as $coid => $cm) {
-        echo '<option value="' . (int)$coid . '" data-catpath="' . s($cm['catpath']) . '">' . s(shorten_text($cm['name'], 46)) . '</option>';
-    }
-    echo '</select></div>';
-}
-echo '</div>';
-
-// Hidden native select — JS typeahead reads its options (incl. data-quals /
-// data-cats) and writes the chosen value back.
-echo '<select id="rtoc-soa-userid" name="userid" style="display:none;" aria-hidden="true">';
-echo $soaOptionsHtml;
-echo '</select>';
-// Typeahead container — populated by JS below.
-echo '<div id="rtoc-picker-wrap" style="position:relative;"></div>';
-echo '<div id="rtoc-soa-picker-hint" style="font-size:0.72rem;color:#9ca3af;margin-top:5px;">Only students with recorded results are listed. Use the filters above to narrow by qualification or category.</div>';
-
-echo '<div id="rtoc-student-card" style="display:none;margin-top:14px;padding:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;font-size:0.85rem;"></div>';
-echo '</div>'; // step 1 card
-
+echo '<div id="rtoc-soa-wrap" style="display:grid;grid-template-columns:320px 1fr;gap:20px;align-items:start;max-width:1400px;">';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // LEFT PANEL — Step 1: Student Picker + Step 3: SOA Options + Generate
 // ═══════════════════════════════════════════════════════════════════════════════
-echo '<div id="rtoc-soa-left" style="order:3;">';
+echo '<div id="rtoc-soa-left">';
 
 // Step 1 card
+echo '<div class="rtoc-soa-card" style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:18px;margin-bottom:16px;">';
+echo '<h3 style="margin:0 0 14px;font-size:1rem;color:#1e3a5f;display:flex;align-items:center;gap:8px;">';
+echo '<span style="background:#1e3a5f;color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">1</span> Select Student</h3>';
+
+echo '<label style="display:block;font-size:0.85rem;font-weight:600;color:#374151;margin-bottom:6px;">Student</label>';
+// Hidden native select — JS typeahead reads its options and writes the value back.
+echo '<select id="rtoc-soa-userid" name="userid" style="display:none;" aria-hidden="true">';
+foreach ($useroptions as $val => $lbl) {
+    echo '<option value="' . s($val) . '">' . s($lbl) . '</option>';
+}
+echo '</select>';
+// Typeahead container — populated by JS below.
+echo '<div id="rtoc-picker-wrap" style="position:relative;"></div>';
+
+echo '<div id="rtoc-student-card" style="display:none;margin-top:14px;padding:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;font-size:0.85rem;"></div>';
+echo '</div>'; // step 1 card
 
 // Step 3 card (SOA options — hidden until units loaded)
-echo '<div id="rtoc-soa-options-card" style="display:none;background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:18px;margin-bottom:16px;max-width:620px;">';
+echo '<div id="rtoc-soa-options-card" style="display:none;background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:18px;margin-bottom:16px;">';
 echo '<h3 style="margin:0 0 14px;font-size:1rem;color:#1e3a5f;display:flex;align-items:center;gap:8px;">';
 echo '<span style="background:#1e3a5f;color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">3</span> SOA Options</h3>';
 
@@ -389,7 +233,7 @@ echo '</div>'; // options card
 echo '<div id="rtoc-soa-generate-card" style="display:none;background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:18px;">';
 echo '<div id="rtoc-soa-selection-summary" style="font-size:0.85rem;color:#374151;margin-bottom:12px;padding:8px 10px;background:#f0f9ff;border-radius:5px;border:1px solid #bae6fd;">No units selected</div>';
 echo '<div id="rtoc-soa-compliance-summary" style="margin-bottom:12px;"></div>';
-echo '<button id="rtoc-soa-generate-btn" class="btn btn-primary" style="width:100%;" disabled title="Run compliance checks and generate the Statement of Attainment PDF for the selected units">';
+echo '<button id="rtoc-soa-generate-btn" class="btn btn-primary" style="width:100%;" disabled>';
 echo 'Generate SOA';
 echo '</button>';
 echo '<div id="rtoc-soa-result" style="margin-top:12px;display:none;"></div>';
@@ -400,7 +244,7 @@ echo '</div>'; // left panel
 // ═══════════════════════════════════════════════════════════════════════════════
 // RIGHT PANEL — Step 2: Eligible Units Table + Suggested Groups
 // ═══════════════════════════════════════════════════════════════════════════════
-echo '<div id="rtoc-soa-right" style="order:2;">';
+echo '<div id="rtoc-soa-right">';
 
 // Step 2 placeholder
 echo '<div id="rtoc-soa-units-placeholder" class="rtoc-soa-card" style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:40px;text-align:center;color:#9ca3af;">';
@@ -411,10 +255,6 @@ echo '</div>';
 
 // Step 2 panel (hidden until loaded)
 echo '<div id="rtoc-soa-units-panel" style="display:none;">';
-
-// v5.9.369: auto-detection banner — filled by JS once units load. Tells the user which
-// qualification(s) were recognised and, for the single-qual case, that Step 3 was pre-filled.
-echo '<div id="rtoc-soa-autodetect" style="display:none;margin-bottom:14px;"></div>';
 
 echo '<div class="rtoc-soa-card" style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:18px;margin-bottom:16px;">';
 echo '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">';
@@ -437,8 +277,8 @@ echo '<select id="rtoc-unit-filter-outcome" style="padding:5px 8px;border:1px so
 echo '<option value="">All outcomes</option>';
 echo '<option value="20">Competency achieved (20)</option>';
 echo '<option value="51">RPL — granted (51)</option>';
-echo '<option value="60">Credit transfer (60)</option>';
-echo '<option value="8x">Non-assessable enrolment (81/82)</option>';
+echo '<option value="52">Credit transfer (52)</option>';
+echo '<option value="8x">Superseded competent (81/82)</option>';
 echo '</select>';
 echo '<label style="display:flex;align-items:center;gap:5px;font-size:0.82rem;color:#374151;cursor:pointer;white-space:nowrap;">';
 echo '<input type="checkbox" id="rtoc-unit-hide-issued"> Hide already on SOA';
@@ -451,31 +291,18 @@ echo '<button id="rtoc-unit-clear-filters" class="btn btn-sm btn-secondary" titl
 echo '</div>';
 echo '</div></div>'; // filter rows + header row
 
-// Plain-English explainer card for the eligible units table.
-echo '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px 18px;margin-bottom:16px;">'
-    . '<div style="font-weight:700;color:#1e3a8a;margin-bottom:6px;font-size:15px;">About this units table</div>'
-    . '<div style="font-size:14.5px;color:#334155;line-height:1.55;margin-bottom:8px;">These are the completed units for the selected learner that can go on a Statement of Attainment. Tick the units to include, then generate the SOA. Here is what each column means:</div>'
-    . '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px 22px;font-size:14.5px;color:#334155;line-height:1.5;">'
-    . '<div><strong>Unit Code</strong> &mdash; the unit of competency code.</div>'
-    . '<div><strong>Unit Title</strong> &mdash; the full name of the unit.</div>'
-    . '<div><strong>Qualification</strong> &mdash; the qualification the unit belongs to.</div>'
-    . '<div><strong>Completed</strong> &mdash; the date the unit result was recorded.</div>'
-    . '<div><strong>Outcome</strong> &mdash; the AVETMISS outcome, such as competency achieved, RPL or credit transfer.</div>'
-    . '<div><strong>Compliance</strong> &mdash; whether the unit passes the checks needed to appear on a Statement of Attainment.</div>'
-    . '</div></div>';
-
 // Unit table
 echo '<div style="overflow-x:auto;">';
 echo '<table id="rtoc-unit-table" style="width:100%;border-collapse:collapse;font-size:0.85rem;">';
 echo '<thead>';
 echo '<tr style="background:#f8fafc;border-bottom:2px solid #e5e7eb;">';
-echo '<th style="padding:8px 10px;text-align:left;width:36px;" title="Tick the units to include on this Statement of Attainment"><input type="checkbox" id="rtoc-select-all" title="Select all visible units" style="cursor:pointer;"></th>';
-echo '<th style="padding:8px 10px;text-align:left;cursor:pointer;white-space:nowrap;" data-sort="code" title="The unit of competency code; click to sort">Unit Code <span class="rtoc-sort-icon">↕</span></th>';
-echo '<th style="padding:8px 10px;text-align:left;cursor:pointer;" data-sort="title" title="The unit name; click to sort">Unit Title <span class="rtoc-sort-icon">↕</span></th>';
-echo '<th style="padding:8px 10px;text-align:left;cursor:pointer;" data-sort="group" title="The qualification the unit belongs to; click to sort">Qualification <span class="rtoc-sort-icon">↕</span></th>';
-echo '<th style="padding:8px 10px;text-align:left;cursor:pointer;white-space:nowrap;" data-sort="date" title="The date the unit was completed; click to sort">Completed <span class="rtoc-sort-icon">↕</span></th>';
-echo '<th style="padding:8px 10px;text-align:left;cursor:pointer;white-space:nowrap;" data-sort="outcome" title="The AVETMISS outcome for the unit; click to sort">Outcome <span class="rtoc-sort-icon">↕</span></th>';
-echo '<th style="padding:8px 10px;text-align:left;white-space:nowrap;" title="Whether the unit passes the checks required to appear on a Statement of Attainment">Compliance</th>';
+echo '<th style="padding:8px 10px;text-align:left;width:36px;"><input type="checkbox" id="rtoc-select-all" title="Select all visible units" style="cursor:pointer;"></th>';
+echo '<th style="padding:8px 10px;text-align:left;cursor:pointer;white-space:nowrap;" data-sort="code">Unit Code <span class="rtoc-sort-icon">↕</span></th>';
+echo '<th style="padding:8px 10px;text-align:left;cursor:pointer;" data-sort="title">Unit Title <span class="rtoc-sort-icon">↕</span></th>';
+echo '<th style="padding:8px 10px;text-align:left;cursor:pointer;" data-sort="group">Qualification Group <span class="rtoc-sort-icon">↕</span></th>';
+echo '<th style="padding:8px 10px;text-align:left;cursor:pointer;white-space:nowrap;" data-sort="date">Completed <span class="rtoc-sort-icon">↕</span></th>';
+echo '<th style="padding:8px 10px;text-align:left;cursor:pointer;white-space:nowrap;" data-sort="outcome">Outcome <span class="rtoc-sort-icon">↕</span></th>';
+echo '<th style="padding:8px 10px;text-align:left;white-space:nowrap;">Compliance</th>';
 echo '</tr></thead>';
 echo '<tbody id="rtoc-unit-tbody"></tbody>';
 echo '</table>';
@@ -485,8 +312,8 @@ echo '</div>'; // overflow-x
 echo '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;flex-wrap:wrap;gap:8px;">';
 echo '<div id="rtoc-table-counter" style="font-size:0.82rem;color:#6b7280;"></div>';
 echo '<div style="display:flex;gap:6px;">';
-echo '<button id="rtoc-select-compliant" class="btn btn-sm btn-secondary" title="Tick every unit that passes the compliance checks">Select all compliant</button>';
-echo '<button id="rtoc-deselect-all" class="btn btn-sm btn-secondary" title="Clear the selection of all units">Deselect all</button>';
+echo '<button id="rtoc-select-compliant" class="btn btn-sm btn-secondary">Select all compliant</button>';
+echo '<button id="rtoc-deselect-all" class="btn btn-sm btn-secondary">Deselect all</button>';
 echo '</div></div>';
 
 echo '</div>'; // card
@@ -494,7 +321,7 @@ echo '</div>'; // card
 // ── Suggested SOA Groups ────────────────────────────────────────────────────
 echo '<div id="rtoc-soa-groups-panel" class="rtoc-soa-card" style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:18px;">';
 echo '<h3 style="margin:0 0 4px;font-size:1rem;color:#1e3a5f;">Suggested SOA Groups</h3>';
-echo '<p style="margin:0 0 12px;font-size:0.82rem;color:#6b7280;">Units are grouped by the qualification they belong to (resolved from your Course&nbsp;&rarr;&nbsp;Category&nbsp;&rarr;&nbsp;Qualification map). Picking a group selects its units and auto-fills the qualification code &amp; name in Step&nbsp;3.</p>';
+echo '<p style="margin:0 0 12px;font-size:0.82rem;color:#6b7280;">Units grouped by Moodle qualification category. "Select all" also auto-fills the qualification code &amp; name in Step 3.</p>';
 echo '<div id="rtoc-groups-list"></div>';
 echo '</div>';
 
@@ -594,28 +421,21 @@ echo <<<'HTML'
     return '<span style="font-size:11px;font-weight:600;padding:2px 7px;border-radius:999px;background:'+info.bg+';color:'+info.fg+';" title="Outcome '+escHtml(oc)+'">'+escHtml(info.label)+'</span>';
   }
 
-  // v5.9.369: Auto-populate Step 3 (doc type + qual code + qual name) from the resolved
-  // qualification for a group. Only fills empty fields so a manual override is respected.
-  function autoPopulateQualFromGroup(groupkey) {
-    var grp = allGroups.find(function (g){ return String(g.groupkey) === String(groupkey); });
-    if (!grp) return;
+  // Auto-populate Step 3 qual code/name from a group's category data
+  function autoPopulateQualFromGroup(catid) {
+    var grp = allGroups.find(function (g){ return String(g.categoryid) === String(catid); });
+    if (!grp || !grp.units || !grp.units.length) return;
+    var sampleUnit = grp.units[0];
+    var catidnum   = sampleUnit.categoryidnumber || '';
+    var catname    = grp.categoryname || '';
     var qcEl = qs('#rtoc-soa-qualcode');
     var qnEl = qs('#rtoc-soa-qualname');
-    var dtEl = qs('#rtoc-soa-doctype');
-    // Choose the document type from the resolved product type (skillset vs qualification).
-    if (dtEl && grp.qualcode) {
-      var want = (grp.qualtype === 'skillset') ? 'skillset' : 'qualification';
-      if (dtEl.value !== want) { dtEl.value = want; dtEl.dispatchEvent(new Event('change')); }
-    }
-    if (qcEl && !qcEl.value && grp.qualcode) { qcEl.value = grp.qualcode; flashField(qcEl); }
-    if (qnEl && !qnEl.value && grp.qualname) { qnEl.value = grp.qualname; flashField(qnEl); }
+    // Only auto-fill if the field is currently empty
+    if (qcEl && !qcEl.value && catidnum) { qcEl.value = catidnum; qcEl.style.background='#f0fdf4'; setTimeout(function (){ qcEl.style.background=''; }, 1200); }
+    if (qnEl && !qnEl.value && catname)  { qnEl.value = catname;  qnEl.style.background='#f0fdf4'; setTimeout(function (){ qnEl.style.background=''; }, 1200); }
+    // Reveal Step 3 card if hidden
     var oc = qs('#rtoc-soa-options-card');
     if (oc) oc.style.display = 'block';
-  }
-
-  function flashField(el) {
-    el.style.background = '#f0fdf4';
-    setTimeout(function (){ el.style.background = ''; }, 1200);
   }
 
   function complianceBadge(unit) {
@@ -696,60 +516,11 @@ echo <<<'HTML'
         var commaIdx = namePart.indexOf(',');
         var surname   = commaIdx > -1 ? namePart.slice(0, commaIdx).trim() : namePart;
         var firstname = commaIdx > -1 ? namePart.slice(commaIdx + 1).trim() : '';
-        return {val: o.value, label: label, surname: surname, firstname: firstname, email: email,
-                quals:   (o.getAttribute('data-quals')   || '').toUpperCase(),
-                cats:    (o.getAttribute('data-cats')    || ''),
-                catpath: (o.getAttribute('data-catpath') || ''),
-                courses: (o.getAttribute('data-courses') || '')};
+        return {val: o.value, label: label, surname: surname, firstname: firstname, email: email};
       });
 
     var activeIdx = -1;
     var visible   = [];
-
-    // v5.9.382: qualification + category filters wired into the typeahead.
-    var qualFilter   = qs('#rtoc-soa-filter-qual');
-    var parentFilter = qs('#rtoc-soa-filter-parent');
-    var subFilter    = qs('#rtoc-soa-filter-sub');
-    var courseFilter = qs('#rtoc-soa-filter-course');
-    // Cascade: parent -> sub (by data-parent) -> course (by data-catpath contains /sub/).
-    function cascadeApply(resetChildren) {
-      if (subFilter) {
-        var pv = parentFilter ? String(parentFilter.value || '') : '';
-        Array.prototype.forEach.call(subFilter.options, function (o) {
-          if (!o.value) { o.hidden = false; return; }
-          o.hidden = pv !== '' && String(o.getAttribute('data-parent') || '') !== pv;
-        });
-        if (resetChildren && subFilter.options[subFilter.selectedIndex] && subFilter.options[subFilter.selectedIndex].hidden) { subFilter.value = ''; }
-      }
-      if (courseFilter) {
-        var sv = subFilter ? String(subFilter.value || '') : '';
-        Array.prototype.forEach.call(courseFilter.options, function (o) {
-          if (!o.value) { o.hidden = false; return; }
-          var path = (o.getAttribute('data-catpath') || '') + '/';
-          o.hidden = sv !== '' && path.indexOf('/' + sv + '/') === -1;
-        });
-        if (resetChildren && courseFilter.options[courseFilter.selectedIndex] && courseFilter.options[courseFilter.selectedIndex].hidden) { courseFilter.value = ''; }
-      }
-    }
-    function matchesFilters(o) {
-      if (qualFilter && qualFilter.value) {
-        var want = qualFilter.value.toUpperCase();
-        var have = (' ' + o.quals + ' ').indexOf(' ' + want + ' ') > -1;
-        if (!have) return false;
-      }
-      // Category path match: use the deepest chosen level (sub if set, else parent).
-      var wantCat = (subFilter && subFilter.value) ? String(subFilter.value)
-                  : (parentFilter && parentFilter.value) ? String(parentFilter.value) : '';
-      if (wantCat) {
-        var paths = ' ' + (o.catpath || '').replace(/\//g, ' / ') + ' ';
-        if (paths.indexOf(' ' + wantCat + ' ') === -1) return false;
-      }
-      if (courseFilter && courseFilter.value) {
-        var wc = String(courseFilter.value);
-        if ((' ' + (o.courses || '') + ' ').indexOf(' ' + wc + ' ') === -1) return false;
-      }
-      return true;
-    }
 
     function esc(s) {
       return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -763,41 +534,12 @@ echo <<<'HTML'
     function showDropdown(q) {
       var q2 = q.toLowerCase().trim();
       visible = opts.filter(function (o){
-        if (!matchesFilters(o)) return false;
         return !q2 || o.label.toLowerCase().indexOf(q2) > -1;
       }).slice(0, 80);
       activeIdx = -1;
       render(q2);
       dropdown.style.display = 'block';
     }
-
-    // Re-open the dropdown with the current filters when a filter changes.
-    function onFilterChange(){ if (!searchInput.readOnly) showDropdown(searchInput.value); }
-    if (qualFilter)   { qualFilter.addEventListener('change', onFilterChange); }
-    // v6.2.84 AUTO-FILL STEP 3 from the chosen parent category. The parent categories are named
-    // after the qualification they deliver, so selecting one pre-fills the SOA Options doc type
-    // (Part of Qualification) + Qualification Code + Name, saving the user re-typing them.
-    function autofillStepThreeFromParent() {
-      if (!parentFilter) return;
-      var opt = parentFilter.options[parentFilter.selectedIndex];
-      if (!opt || !opt.value) return;
-      var code = opt.getAttribute('data-qualcode') || '';
-      var name = opt.getAttribute('data-qualname') || '';
-      var dtEl = qs('#rtoc-soa-doctype');
-      var qcEl = qs('#rtoc-soa-qualcode');
-      var qnEl = qs('#rtoc-soa-qualname');
-      // Keep it as a "Part of Qualification" SOA and reveal the code/name fields.
-      if (dtEl && dtEl.value !== 'qualification') {
-        dtEl.value = 'qualification';
-        dtEl.dispatchEvent(new Event('change'));
-      }
-      if (qcEl && code) { qcEl.value = code; if (typeof flashField === 'function') flashField(qcEl); }
-      if (qnEl && name) { qnEl.value = name; if (typeof flashField === 'function') flashField(qnEl); }
-    }
-    if (parentFilter) { parentFilter.addEventListener('change', function (){ cascadeApply(true); autofillStepThreeFromParent(); onFilterChange(); }); }
-    if (subFilter)    { subFilter.addEventListener('change',    function (){ cascadeApply(true); onFilterChange(); }); }
-    if (courseFilter) { courseFilter.addEventListener('change', onFilterChange); }
-    cascadeApply(false);
 
     function render(q2) {
       dropdown.innerHTML = '';
@@ -819,10 +561,7 @@ echo <<<'HTML'
             '<strong style="color:#111827;">' + hi(o.surname, q2) + '</strong>' +
             (o.firstname ? '<span style="color:#4b5563;">, ' + hi(o.firstname, q2) + '</span>' : '') +
           '</div>' +
-          '<div style="font-size:0.76rem;color:#9ca3af;margin-top:2px;">' + hi(o.email, q2) + '</div>' +
-          (o.quals ? '<div style="margin-top:3px;">' + o.quals.split(' ').filter(Boolean).slice(0,4).map(function (c){
-              return '<span style="display:inline-block;background:#eef2ff;color:#3730a3;border:1px solid #e0e7ff;border-radius:4px;padding:0px 5px;font-size:0.68rem;margin:1px 2px 1px 0;">' + esc(c) + '</span>';
-            }).join('') + '</div>' : '');
+          '<div style="font-size:0.76rem;color:#9ca3af;margin-top:2px;">' + hi(o.email, q2) + '</div>';
 
         item.addEventListener('mouseenter', function (){ setActive(idx); });
         var _md = false;
@@ -971,59 +710,7 @@ echo <<<'HTML'
       renderTable();
       renderGroups();
       updateSelectionSummary();
-      autoDetectQualification();
     });
-  }
-
-  // v5.9.369: after units load, recognise the qualification automatically.
-  // Single qualification  → auto-fill Step 3 + pre-select its compliant, not-yet-issued
-  //                          units so the user can review and Generate in one glance.
-  // Several qualifications → prompt the user to pick a group.
-  // None mapped           → explain the SoA can still be issued manually.
-  function autoDetectQualification() {
-    var banner = qs('#rtoc-soa-autodetect');
-    if (!banner) { return; }
-    var resolved = allGroups.filter(function (g){ return g.source && g.source !== 'none'; });
-    var unmapped = allUnits.filter(function (u){ return !u.qualcode; }).length;
-    var unmappedNote = unmapped
-      ? ' <span style="color:#b45309;">'+unmapped+' unit'+(unmapped!==1?'s are':' is')+' not mapped to a qualification.</span>'
-      : '';
-
-    if (!allUnits.length) { banner.style.display = 'none'; return; }
-
-    if (resolved.length === 1) {
-      var g = resolved[0];
-      autoPopulateQualFromGroup(g.groupkey);
-      var picked = 0;
-      g.units.forEach(function (u){
-        if (!u.compliant || u.already_on_soa) { return; }
-        var cb  = qs('.rtoc-unit-cb[data-courseid="'+u.courseid+'"]');      if (cb)  cb.checked  = true;
-        var cbg = qs('.rtoc-unit-cb-grp[data-courseid="'+u.courseid+'"]');  if (cbg) cbg.checked = true;
-        picked++;
-      });
-      updateSelectionSummary();
-      banner.style.display = 'block';
-      banner.innerHTML =
-        '<div style="background:#ecfdf5;border:1px solid #6ee7b7;border-radius:8px;padding:12px 14px;">'+
-          '<div style="font-weight:700;color:#065f46;font-size:0.92rem;">&#10003; Qualification detected: '+
-            '<span style="font-family:monospace;">'+escHtml(g.qualcode)+'</span> '+escHtml(g.qualname||'')+'</div>'+
-          '<div style="color:#047857;font-size:0.83rem;margin-top:3px;">Step&nbsp;3 auto-filled and <strong>'+picked+'</strong> compliant unit'+(picked!==1?'s':'')+' pre-selected. Review below, then Generate.'+unmappedNote+'</div>'+
-        '</div>';
-    } else if (resolved.length > 1) {
-      banner.style.display = 'block';
-      banner.innerHTML =
-        '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px;">'+
-          '<div style="font-weight:700;color:#1d4ed8;font-size:0.92rem;">'+resolved.length+' qualifications detected</div>'+
-          '<div style="color:#1e40af;font-size:0.83rem;margin-top:3px;">A Statement of Attainment covers one qualification &mdash; pick a group below to select its units and auto-fill Step&nbsp;3.'+unmappedNote+'</div>'+
-        '</div>';
-    } else {
-      banner.style.display = 'block';
-      banner.innerHTML =
-        '<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:12px 14px;">'+
-          '<div style="font-weight:700;color:#92400e;font-size:0.92rem;">No qualification mapping found for these units</div>'+
-          '<div style="color:#92400e;font-size:0.83rem;margin-top:3px;">You can still issue the SoA &mdash; select units and enter the qualification code &amp; name in Step&nbsp;3, or choose &ldquo;Standalone Units&rdquo;. To auto-recognise qualifications next time, map these courses in the Course Map / Qualification Builder.</div>'+
-        '</div>';
-    }
   }
 
   // ── Group filter dropdown ─────────────────────────────────────────────────
@@ -1032,12 +719,11 @@ echo <<<'HTML'
     sel.innerHTML = '<option value="">All qualifications</option>';
     var seen = {};
     allUnits.forEach(function (u){
-      var key = u.qualgroupkey || ('cat:' + u.categoryid);
-      if (!seen[key]) {
-        seen[key] = true;
+      if (!seen[u.categoryid]) {
+        seen[u.categoryid] = true;
         var o = document.createElement('option');
-        o.value = key;
-        o.textContent = u.qualgrouplabel || u.categoryname;
+        o.value = u.categoryid;
+        o.textContent = u.categoryname;
         sel.appendChild(o);
       }
     });
@@ -1064,8 +750,8 @@ echo <<<'HTML'
             u.unittitle.toLowerCase().indexOf(q) === -1 &&
             tp.indexOf(q) === -1) return false;
       }
-      // Qualification group filter (by resolved qualification group key)
-      if (grp && String(u.qualgroupkey || ('cat:' + u.categoryid)) !== String(grp)) return false;
+      // Qualification group filter
+      if (grp && String(u.categoryid) !== String(grp)) return false;
       // Compliance filter
       if (comp === 'ok'   && (!u.compliant || (u.compliance.warnings && u.compliance.warnings.length))) return false;
       if (comp === 'warn' && (!u.compliance.warnings || !u.compliance.warnings.length)) return false;
@@ -1093,7 +779,7 @@ echo <<<'HTML'
       var av, bv;
       if (sortCol === 'code')    { av = a.unitcode;          bv = b.unitcode; }
       else if (sortCol === 'title')   { av = a.unittitle;    bv = b.unittitle; }
-      else if (sortCol === 'group')   { av = a.qualgrouplabel || a.categoryname; bv = b.qualgrouplabel || b.categoryname; }
+      else if (sortCol === 'group')   { av = a.categoryname; bv = b.categoryname; }
       else if (sortCol === 'date')    { av = a.completiondate || 0; bv = b.completiondate || 0; }
       else if (sortCol === 'outcome') { av = String(a.outcomeidentifier || ''); bv = String(b.outcomeidentifier || ''); }
       else { av = a.unitcode; bv = b.unitcode; }
@@ -1135,21 +821,11 @@ echo <<<'HTML'
       var alreadyHtml = u.already_on_soa
         ? ' <span style="font-size:10px;background:#e0e7ff;color:#4338ca;padding:1px 6px;border-radius:999px;">On existing SOA</span>'
         : '';
-      // v5.9.369: Qualification column shows the resolved qual (code + name) with the
-      // semester/category as a small sub-line; unmapped units are clearly flagged.
-      var qualCell;
-      if (u.qualcode) {
-        qualCell = '<div style="color:#1e3a5f;font-size:0.82rem;"><span style="font-family:monospace;font-weight:700;">'+escHtml(u.qualcode)+'</span> '+escHtml(u.qualname||'')+'</div>'+
-                   '<div style="color:#9ca3af;font-size:0.72rem;margin-top:1px;">'+escHtml(u.semesterlabel||'')+'</div>';
-      } else {
-        qualCell = '<div style="color:#b45309;font-size:0.8rem;">Unmapped</div>'+
-                   '<div style="color:#9ca3af;font-size:0.72rem;margin-top:1px;">'+escHtml(u.semesterlabel||u.categoryname||'')+'</div>';
-      }
-      return '<tr data-courseid="'+u.courseid+'" data-compliant="'+(u.compliant?'1':'0')+'" data-haswarn="'+((u.compliance.warnings&&u.compliance.warnings.length)?'1':'0')+'" data-haserr="'+((u.compliance.errors&&u.compliance.errors.length)?'1':'0')+'" data-groupkey="'+escHtml(u.qualgroupkey||'')+'">' +
+      return '<tr data-courseid="'+u.courseid+'" data-compliant="'+(u.compliant?'1':'0')+'" data-haswarn="'+((u.compliance.warnings&&u.compliance.warnings.length)?'1':'0')+'" data-haserr="'+((u.compliance.errors&&u.compliance.errors.length)?'1':'0')+'" data-catid="'+u.categoryid+'">' +
         '<td><input type="checkbox" class="rtoc-unit-cb" data-courseid="'+u.courseid+'" '+isChecked+'></td>'+
         '<td>'+tpBadge+'<strong style="color:#1e3a5f;font-family:monospace;font-size:0.83rem;">'+escHtml(u.unitcode)+'</strong>'+alreadyHtml+'</td>'+
         '<td>'+escHtml(u.unittitle)+'</td>'+
-        '<td>'+qualCell+'</td>'+
+        '<td style="color:#6b7280;font-size:0.8rem;">'+escHtml(u.categoryname)+'</td>'+
         '<td style="white-space:nowrap;color:#6b7280;font-size:0.82rem;">'+fmtDate(u.completiondate)+'</td>'+
         '<td>'+outcomeChip(u.outcomeidentifier)+'</td>'+
         '<td>'+complianceBadge(u)+'</td>'+
@@ -1181,33 +857,26 @@ echo <<<'HTML'
       // Progress fraction for the group
       var progressPct = totalCount ? Math.round((compliantCount / totalCount) * 100) : 0;
       var progressColor = progressPct === 100 ? '#059669' : progressPct >= 60 ? '#d97706' : '#dc2626';
-      // v5.9.369: header shows the resolved qualification (code + name). The semester /
-      // archive folders the units actually live in are shown as a small "from:" sub-line.
-      var qcode = g.qualcode || '';
-      var qcodeBadge = qcode
-        ? '<span style="font-size:11px;font-family:monospace;background:#eff6ff;color:#1d4ed8;padding:1px 7px;border-radius:3px;margin-right:6px;" title="Qualification code">'+escHtml(qcode)+'</span>'
-        : '<span style="font-size:11px;background:#fef3c7;color:#92400e;padding:1px 7px;border-radius:3px;margin-right:6px;" title="These units are not mapped to a qualification in your Course Map / Qualification Builder">Unmapped</span>';
-      var qtitle = qcode ? (g.qualname || '') : (g.categoryname || '');
-      var gk = String(g.groupkey || '').replace(/'/g, '');
+      // Category ID number (qual code from Moodle category idnumber)
+      var catIdNum = (g.units.length && g.units[0].categoryidnumber) ? g.units[0].categoryidnumber : '';
+      var catIdBadge = catIdNum
+        ? '<span style="font-size:11px;font-family:monospace;background:#eff6ff;color:#1d4ed8;padding:1px 7px;border-radius:3px;margin-left:6px;" title="Moodle category idnumber / qualification code">'+escHtml(catIdNum)+'</span>'
+        : '';
       var badge = '<span style="font-size:11px;background:#d1fae5;color:#065f46;padding:1px 8px;border-radius:999px;margin-left:6px;">'+compliantCount+'/'+totalCount+' compliant</span>';
       var warnBadge = (totalCount - compliantCount) > 0
         ? '<span style="font-size:11px;background:#fee2e2;color:#991b1b;padding:1px 8px;border-radius:999px;margin-left:4px;">'+(totalCount-compliantCount)+' blocked</span>'
         : '';
-      var semLine = (g.semesters && g.semesters.length)
-        ? '<div style="color:#9ca3af;font-size:0.72rem;margin-top:2px;">from: '+escHtml(g.semesters.join(', '))+'</div>'
-        : '';
       return '<div class="rtoc-group-card">'+
         '<div class="rtoc-group-card-head" onclick="this.nextElementSibling.classList.toggle(\'open\');this.querySelector(\'.rtoc-chevron\').style.transform=this.nextElementSibling.classList.contains(\'open\')?\'rotate(90deg)\':\'\'">'+
           '<div style="flex:1;min-width:0;">'+
-            '<div style="font-weight:600;font-size:0.9rem;color:#1e3a5f;">'+qcodeBadge+escHtml(qtitle)+badge+warnBadge+'</div>'+
-            semLine+
+            '<div style="font-weight:600;font-size:0.9rem;color:#1e3a5f;">'+escHtml(g.categoryname)+catIdBadge+badge+warnBadge+'</div>'+
             '<div style="margin-top:5px;background:#e5e7eb;border-radius:999px;height:4px;width:100%;overflow:hidden;">'+
               '<div style="height:4px;border-radius:999px;background:'+progressColor+';width:'+progressPct+'%;transition:width .4s;"></div>'+
             '</div>'+
           '</div>'+
           '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:12px;">'+
-            '<button class="btn btn-sm btn-secondary rtoc-grp-select-btn" onclick="event.stopPropagation();selectGroup(\''+gk+'\',false)" title="Select every unit in this qualification group">Select all</button>'+
-            '<button class="btn btn-sm btn-primary rtoc-grp-select-ok-btn" onclick="event.stopPropagation();selectGroup(\''+gk+'\',true)" title="Select only compliant units in this group">Select compliant</button>'+
+            '<button class="btn btn-sm btn-secondary rtoc-grp-select-btn" data-catid="'+g.categoryid+'" onclick="event.stopPropagation();selectGroup('+g.categoryid+',false)">Select all</button>'+
+            '<button class="btn btn-sm btn-primary rtoc-grp-select-ok-btn" data-catid="'+g.categoryid+'" onclick="event.stopPropagation();selectGroup('+g.categoryid+',true)" title="Select only compliant units in this group">Select compliant</button>'+
             '<svg class="rtoc-chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:#9ca3af;transition:transform .2s;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>'+
           '</div>'+
         '</div>'+
@@ -1229,17 +898,17 @@ echo <<<'HTML'
     }).join('');
   }
 
-  window.selectGroup = function (groupkey, compliantOnly) {
+  window.selectGroup = function (catid, compliantOnly) {
     allUnits.forEach(function (u){
-      if (String(u.qualgroupkey || ('cat:' + u.categoryid)) !== String(groupkey)) return;
+      if (String(u.categoryid) !== String(catid)) return;
       if (compliantOnly && !u.compliant) return;
       var cb = qs('.rtoc-unit-cb[data-courseid="'+u.courseid+'"]');
       if (cb) cb.checked = true;
       var cbg = qs('.rtoc-unit-cb-grp[data-courseid="'+u.courseid+'"]');
       if (cbg) cbg.checked = true;
     });
-    // Auto-populate qualification code/name in Step 3 from the resolved qualification.
-    autoPopulateQualFromGroup(groupkey);
+    // Auto-populate qualification code/name in Step 3 from categoryidnumber
+    autoPopulateQualFromGroup(catid);
     updateSelectionSummary();
   };
 
@@ -1407,8 +1076,8 @@ echo <<<'HTML'
           '<strong>&#10003; SOA Issued Successfully!</strong><br>'+
           'Certificate number: <strong>'+escHtml(r.certnumber)+'</strong><br>'+
           r.unitcount+' unit'+(r.unitcount!==1?'s':'')+' listed on SOA.<br><br>'+
-          '<a href="'+r.downloadurl+'" class="btn btn-sm btn-primary" target="_blank" title="Download the generated Statement of Attainment PDF">Download PDF</a> &nbsp;'+
-          '<a href="'+r.viewurl+'" class="btn btn-sm btn-secondary" title="View all certificates issued for this learner">View All Certificates</a>'+
+          '<a href="'+r.downloadurl+'" class="btn btn-sm btn-primary" target="_blank">Download PDF</a> &nbsp;'+
+          '<a href="'+r.viewurl+'" class="btn btn-sm btn-secondary">View All Certificates</a>'+
           '</div>';
         // Clear selection
         qsa('.rtoc-unit-cb').forEach(function (cb){ cb.checked = false; });
@@ -1423,7 +1092,7 @@ echo <<<'HTML'
         resultEl.innerHTML =
           '<div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:14px;color:#991b1b;">'+
           '<strong>&#10007; Could not generate SOA</strong><br>'+escHtml(r.error)+detail+
-          (r.buyUrl ? '<br><br><a href="'+escHtml(r.buyUrl)+'" target="_blank" class="btn btn-sm btn-primary" title="Buy more certificate credits">Purchase Credits</a>' : '')+
+          (r.buyUrl ? '<br><br><a href="'+escHtml(r.buyUrl)+'" target="_blank" class="btn btn-sm btn-primary">Purchase Credits</a>' : '')+
           '</div>';
         updateSelectionSummary();
       }

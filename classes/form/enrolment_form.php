@@ -15,12 +15,13 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * RTO Compliance plugin — enrolment_form.php.
+ * local_rtocompliance file.
  *
  * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
+
 namespace local_rtocompliance\form;
 
 defined('MOODLE_INTERNAL') || die();
@@ -228,49 +229,6 @@ class enrolment_form extends \moodleform {
         $mform->setType('concessionstatus', PARAM_ALPHA);
         $mform->addHelpButton('concessionstatus', 'concessionstatus', 'local_rtocompliance');
 
-        // TASK-25 (v5.9.324): QLD DTET purchasing contract slot selector.
-        // Only added when at least one QLD contract is configured in RTO Settings.
-        // RTOs without QLD contracts see no change — the selector is not rendered at all
-        // and the purchasingcontract1 text field below continues to work as before.
-        // When configured, the selector lets admins assign the correct QLD contract per
-        // funded enrolment (NAT00120 pos 125–136). The resolved contract string is stored
-        // in purchasingcontract1 at save time (see student_enrolments.php save block).
-        // Only shown when the enrolment is state/government funded (fundingsourcenat
-        // is not '20' domestic fee-for-service or '30' international fee).
-        $qld_c1 = get_config('local_rtocompliance', 'qld_purchasing_contract_1') ?: '';
-        $qld_c2 = get_config('local_rtocompliance', 'qld_purchasing_contract_2') ?: '';
-        $qld_c3 = get_config('local_rtocompliance', 'qld_purchasing_contract_3') ?: '';
-
-        // Only render the slot selector when at least one QLD contract code is configured.
-        // An RTO with no QLD contracts should not see this UI at all.
-        if ($qld_c1 !== '' || $qld_c2 !== '' || $qld_c3 !== '') {
-            // Build slot options — always include Auto and Contract 1; add 2/3 only when configured.
-            $contractslots = [
-                'auto' => get_string('purchasingcontract_slot_auto', 'local_rtocompliance'),
-            ];
-            $slot1label = $qld_c1 ?: get_string('purchasingcontract_slot_notset', 'local_rtocompliance');
-            $contractslots['contract1'] = get_string('purchasingcontract_slot_1', 'local_rtocompliance', $slot1label);
-            if ($qld_c2 !== '') {
-                $contractslots['contract2'] = get_string('purchasingcontract_slot_2', 'local_rtocompliance', $qld_c2);
-            }
-            if ($qld_c3 !== '') {
-                $contractslots['contract3'] = get_string('purchasingcontract_slot_3', 'local_rtocompliance', $qld_c3);
-            }
-
-            $mform->addElement('select', 'purchasingcontract_slot',
-                get_string('purchasingcontract_slot', 'local_rtocompliance'), $contractslots);
-            $mform->setType('purchasingcontract_slot', PARAM_ALPHANUMEXT);
-            $mform->setDefault('purchasingcontract_slot', 'auto');
-            $mform->addHelpButton('purchasingcontract_slot', 'purchasingcontract_slot', 'local_rtocompliance');
-            // Hide for non-state-funded enrolments (domestic fee '20' and international fee '30').
-            $mform->hideIf('purchasingcontract_slot', 'fundingsourcenat', 'eq', '20');
-            $mform->hideIf('purchasingcontract_slot', 'fundingsourcenat', 'eq', '30');
-        }
-
-        // Manual override text field — kept visible for all funding codes and all states.
-        // For QLD state-funded rows the slot selector above pre-fills this column on save;
-        // for all other states (NSW, VIC, SA, WA, TAS, NT, ACT) or non-state-funded rows
-        // the admin enters the contract/reference directly here as before.
         $mform->addElement('text', 'purchasingcontract1', get_string('purchasingcontract1', 'local_rtocompliance'), ['size' => 25, 'maxlength' => 20]);
         $mform->setType('purchasingcontract1', PARAM_ALPHANUMEXT);
         $mform->addHelpButton('purchasingcontract1', 'purchasingcontract1', 'local_rtocompliance');

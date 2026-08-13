@@ -15,12 +15,13 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * RTO Compliance plugin — data_import.php.
+ * local_rtocompliance file.
  *
  * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
+
 // AVETMISS NAT file import for local_rtocompliance.
 // Parses NAT00010, NAT00080, NAT00085, NAT00120, NAT00130 fixed-width text files
 // exported from Wisenet and other AVETMISS-compliant Student Management Systems.
@@ -36,7 +37,7 @@ function _di_log(string $step): void {
     @file_put_contents($_di_log, $line, FILE_APPEND);
     error_log('[RTOC-DI] ' . $step);
 }
-register_shutdown_function (function () {
+register_shutdown_function(function () {
     $err = error_get_last();
     if ($err) {
         _di_log('SHUTDOWN fatal type=' . $err['type'] . ' msg=' . $err['message'] . ' in ' . $err['file'] . ':' . $err['line']);
@@ -83,55 +84,6 @@ $PAGE->set_title(get_string('dataimport_title', 'local_rtocompliance'));
 $PAGE->set_heading(get_string('dataimport_title', 'local_rtocompliance'));
 $PAGE->requires->css('/local/rtocompliance/styles.css');
 $PAGE->add_body_class('path-local-rtocompliance');
-
-// ─────────────────────────────────────────────────────────────────────────────
-// ENROLMENT-WRITE HARD BLOCK (v5.9.387 — audit A-P1-3).
-//
-// This plugin must NEVER create or delete Moodle enrolments or course
-// completions — it reads them as an authoritative source only. Historically
-// this file contained an auto-enrolment / over-enrolment-repair wizard whose
-// UI entry points were removed in v5.9.380, but whose POST handlers
-// (doenrol, autoenrol, foe_apply_chunk, rollback, fix_overenrolments,
-// fix_overenrolments_apply) were left in place and remained reachable by URL.
-// Those handlers are the ONLY code in the whole plugin that calls
-// enrol_user()/unenrol_user() or writes to {course_completions}.
-//
-// This guard intercepts every one of those actions BEFORE any handler runs, so
-// none of that code can execute. The individual write calls downstream are ALSO
-// disabled behind the RTOC_ENROL_WRITES_DISABLED constant (defense in depth) —
-// see the enrol/completion call sites below. Together these guarantee the
-// "no Moodle enrolments created or deleted" constraint holds absolutely.
-define('RTOC_ENROL_WRITES_DISABLED', true);
-// NO-CORE-WRITES (v5.9.414): audit found three more actions that still wrote to
-// Moodle core tables and were NOT in this retired list — 'repairnames' (edits
-// {user} firstname/lastname/email), 'backfill_records' (set_field {user}.idnumber),
-// and 'hide_archive_cats' (toggles {course_categories}.visible). They are now
-// blocked here too, so the plugin's guarantee — it only READS Moodle
-// enrolments/completions/users/categories and writes ONLY to its own tables —
-// holds with no reachable exception.
-$rtoc_retired_enrol_actions = [
-    'doenrol', 'autoenrol', 'foe_apply_chunk', 'rollback',
-    'fix_overenrolments', 'fix_overenrolments_apply',
-    'repairnames', 'backfill_records', 'hide_archive_cats',
-];
-if (in_array($action, $rtoc_retired_enrol_actions, true)) {
-    echo $OUTPUT->header();
-    echo $OUTPUT->notification(
-        'This function has been retired. To protect the integrity of your Moodle '
-        . 'data, RTO Compliance no longer creates, removes or modifies Moodle '
-        . 'enrolments, course completions, user accounts or categories — it only '
-        . 'reads them. Import your NAT files as data (they flow into Student Results '
-        . 'and the register without touching Moodle core).',
-        \core\output\notification::NOTIFY_INFO
-    );
-    echo html_writer::link(
-        new moodle_url('/local/rtocompliance/data_import.php'),
-        '← Back to Data Import',
-        ['class' => 'btn btn-secondary']
-    );
-    echo $OUTPUT->footer();
-    exit;
-}
 
 // ─── AVETMISS outcome code labels ────────────────────────────────────────────
 
@@ -565,24 +517,15 @@ function local_rtocompliance_parse_nat00080(string $line, int $detectedUsiPos = 
         if ($sex === null) $dataissuefields[] = 'sex_not_stated';
 
         return [
-            'clientid'           => $clientid,
-            'name'               => $familyname . ($firstname !== '' ? ', ' . $firstname : ''),
-            'firstname'          => $firstname  !== '' ? $firstname  : null,
-            'familyname'         => $familyname !== '' ? $familyname : null,
-            'sex'                => $sex,
-            'dob'                => $dob,
-            'usi'                => $usi,
-            // Tab-delimited format does not expose these fields at extractable positions.
-            'indigenousstatus'   => null,
-            'labourforcestatus'  => null,
-            'highestschoollevel' => null,
-            'languageathome'     => null,
-            'countryofbirth'     => null,
-            'disabilityflag'     => null,
-            'prioreducationflag' => null,
-            'atschoolflag'       => null,
-            'hasdataissues'      => !empty($dataissuefields) ? 1 : 0,
-            'dataissuefields'    => json_encode($dataissuefields),
+            'clientid'        => $clientid,
+            'name'            => $familyname . ($firstname !== '' ? ', ' . $firstname : ''),
+            'firstname'       => $firstname  !== '' ? $firstname  : null,
+            'familyname'      => $familyname !== '' ? $familyname : null,
+            'sex'             => $sex,
+            'dob'             => $dob,
+            'usi'             => $usi,
+            'hasdataissues'   => !empty($dataissuefields) ? 1 : 0,
+            'dataissuefields' => json_encode($dataissuefields),
         ];
     }
 
@@ -618,7 +561,6 @@ function local_rtocompliance_parse_nat00080(string $line, int $detectedUsiPos = 
     $sex       = null;
     $dob       = null;
     $dobAbsEnd = null;   // absolute index of first byte AFTER the 8-char DOB
-    $sexAbsPos = -1;     // absolute index of sex identifier byte (set in both branches below)
     $lineUp    = strtoupper($line);
 
     if (preg_match('/([MFX@])([0-3]\d[0-1]\d(?:19|20)\d{2})/',
@@ -641,7 +583,6 @@ function local_rtocompliance_parse_nat00080(string $line, int $detectedUsiPos = 
             $dobpos     = $isExtended ? 73 : 63;
         }
         $dobAbsEnd  = $dobpos + 8;
-        $sexAbsPos  = $sexpos;   // unify with regex-branch variable name
         $sexraw     = isset($lineUp[$sexpos]) ? $lineUp[$sexpos] : '';
         // '@' is the official AVETMISS "not stated" gender code — treat as valid, not missing.
         $sex        = in_array($sexraw, ['M', 'F', 'X', '@'], true) ? $sexraw : null;
@@ -739,98 +680,6 @@ function local_rtocompliance_parse_nat00080(string $line, int $detectedUsiPos = 
         }
     }
 
-    // ── AVETMISS demographic fields relative to sex+DOB anchor ──────────────────
-    // STANDARD AVETMISS 8.0 layout (0-indexed) relative to $sexAbsPos / $dobAbsEnd:
-    //   sexAbsPos - 2 (2A): Highest school level completed (Field 3; 02–12, @@)
-    //   dobAbsEnd + 0 (4A): Postcode (Field 6; 4 digits or @@@@)
-    //   dobAbsEnd + 4 (1A): Indigenous status identifier   (Field 7; 1–4, @)
-    //   dobAbsEnd + 5 (4A): Language identifier / lang at home (Field 8; ASCL code)
-    //   dobAbsEnd + 9 (2A): Labour force status identifier (Field 9; 01–08, @@)  [standard: 2A]
-    //   dobAbsEnd +11 (4A): Country identifier             (Field 10; SACC code)  [standard offset]
-    //   dobAbsEnd +15 (1A): Disability flag                (Field 11; Y/N/@)      [standard offset]
-    //   dobAbsEnd +16 (1A): Prior educational achievement  (Field 12; Y/N/@)      [standard offset]
-    //   dobAbsEnd +17 (1A): At school flag                 (Field 13; Y/N)        [standard offset]
-    //
-    // Pre-2022 / short format (USI at pos 90, name=50, labour=1A): labour is 1 char,
-    // so country/disability/priored/atschool offsets are each 1 less (10/14/15/16).
-    //
-    // FIX-NAT00080-FULL-DEMOGRAPHICS (v5.9.317): v5.9.316 read wrong offsets
-    // (dobAbsEnd+0,1,3) because it missed the 4-char postcode block between DOB
-    // and indigenous status.  englishproficiency is intentionally not extracted —
-    // it was removed from NAT00080 in AVETMISS Release 8.
-
-    $highestschoollevel = null;
-    $indigenousstatus   = null;
-    $languageathome     = null;
-    $labourforcestatus  = null;
-    $countryofbirth     = null;
-    $disabilityflag     = null;
-    $prioreducationflag = null;
-    $atschoolflag       = null;
-
-    // Highest school level sits 2 bytes BEFORE sex in all fixed-width formats.
-    if ($sexAbsPos >= 2 && strlen($line) >= $sexAbsPos) {
-        $schlRaw = strtoupper(substr($line, $sexAbsPos - 2, 2));
-        if ($schlRaw !== '' && !preg_match('/^\s+$/', $schlRaw)) $highestschoollevel = $schlRaw;
-    }
-
-    if ($dobAbsEnd !== null && strlen($line) > $dobAbsEnd + 4) {
-        // Determine labour force field width: standard=2 chars, pre-2022 short=1 char.
-        // Heuristic: if detected USI is at pos 90 the file is pre-2022 short format.
-        // Fall back to line-length: standard records are >= 159 chars (up to State field).
-        if ($detectedUsiPos === 90) {
-            $labW = 1;
-        } elseif ($detectedUsiPos >= 100) {
-            $labW = 2;
-        } else {
-            $labW = (strlen($line) >= 159) ? 2 : 1;
-        }
-        $cntryOff  = 9 + $labW;      // 11 (standard) or 10 (short)
-        $disOff    = $cntryOff + 4;  // 15 or 14
-        $priorOff  = $disOff   + 1;  // 16 or 15
-        $atschOff  = $priorOff + 1;  // 17 or 16
-
-        // Indigenous status (dobAbsEnd+4, 1 char).
-        $indRaw = strtoupper(substr($line, $dobAbsEnd + 4, 1));
-        if ($indRaw !== '' && !preg_match('/^\s+$/', $indRaw)) $indigenousstatus = $indRaw;
-
-        // Language at home (dobAbsEnd+5, 4 chars).
-        if (strlen($line) >= $dobAbsEnd + 9) {
-            $langRaw = strtoupper(substr($line, $dobAbsEnd + 5, 4));
-            if ($langRaw !== '' && !preg_match('/^[@\s]+$/', $langRaw)) $languageathome = $langRaw;
-        }
-
-        // Labour force status (dobAbsEnd+9, $labW chars).
-        if (strlen($line) >= $dobAbsEnd + 9 + $labW) {
-            $labRaw = strtoupper(substr($line, $dobAbsEnd + 9, $labW));
-            if ($labRaw !== '' && !preg_match('/^\s+$/', $labRaw)) $labourforcestatus = $labRaw;
-        }
-
-        // Country of birth (dobAbsEnd+$cntryOff, 4 chars).
-        if (strlen($line) >= $dobAbsEnd + $cntryOff + 4) {
-            $cntryRaw = strtoupper(substr($line, $dobAbsEnd + $cntryOff, 4));
-            if ($cntryRaw !== '' && !preg_match('/^[@\s]+$/', $cntryRaw)) $countryofbirth = $cntryRaw;
-        }
-
-        // Disability flag (dobAbsEnd+$disOff, 1 char).
-        if (strlen($line) >= $dobAbsEnd + $disOff + 1) {
-            $disRaw = strtoupper(substr($line, $dobAbsEnd + $disOff, 1));
-            if ($disRaw !== '' && !preg_match('/^\s+$/', $disRaw)) $disabilityflag = $disRaw;
-        }
-
-        // Prior educational achievement flag (dobAbsEnd+$priorOff, 1 char).
-        if (strlen($line) >= $dobAbsEnd + $priorOff + 1) {
-            $priorRaw = strtoupper(substr($line, $dobAbsEnd + $priorOff, 1));
-            if ($priorRaw !== '' && !preg_match('/^\s+$/', $priorRaw)) $prioreducationflag = $priorRaw;
-        }
-
-        // At school flag (dobAbsEnd+$atschOff, 1 char).
-        if (strlen($line) >= $dobAbsEnd + $atschOff + 1) {
-            $atschRaw = strtoupper(substr($line, $dobAbsEnd + $atschOff, 1));
-            if ($atschRaw !== '' && !preg_match('/^\s+$/', $atschRaw)) $atschoolflag = $atschRaw;
-        }
-    }
-
     // ── Data-issue flags ──────────────────────────────────────────────────────
     $dobAbsent = ($dob === null);
     $sexKnown  = ($sex !== null);
@@ -841,21 +690,13 @@ function local_rtocompliance_parse_nat00080(string $line, int $detectedUsiPos = 
     $hasdataissues = count($dataissuefields) > 0;
 
     return [
-        'clientid'           => $clientid,
-        'name'               => $name,
-        'sex'                => $sex,
-        'dob'                => $dob,
-        'usi'                => $usi,
-        'indigenousstatus'   => $indigenousstatus,
-        'labourforcestatus'  => $labourforcestatus,
-        'highestschoollevel' => $highestschoollevel,
-        'languageathome'     => $languageathome,
-        'countryofbirth'     => $countryofbirth,
-        'disabilityflag'     => $disabilityflag,
-        'prioreducationflag' => $prioreducationflag,
-        'atschoolflag'       => $atschoolflag,
-        'hasdataissues'      => $hasdataissues ? 1 : 0,
-        'dataissuefields'    => json_encode($dataissuefields),
+        'clientid'        => $clientid,
+        'name'            => $name,
+        'sex'             => $sex,
+        'dob'             => $dob,
+        'usi'             => $usi,
+        'hasdataissues'   => $hasdataissues ? 1 : 0,
+        'dataissuefields' => json_encode($dataissuefields),
     ];
 }
 
@@ -901,22 +742,6 @@ function local_rtocompliance_parse_nat00085(string $line): ?array {
     $rawState = strlen($line) >= 337 ? trim(substr($line, 335, 2)) : '';
     $state    = (preg_match('/^(0[1-9]|99|@@)$/', $rawState)) ? $rawState : null;
 
-    // ADDRESS-PARSE (v5.9.396): the street address was previously never extracted.
-    // Building/property name (pos 94, len 50); flat/unit (pos 144, len 30);
-    // street number (pos 174, len 15) + street name (pos 189, len 70) combined into
-    // the profile's single streetname column. AVETMISS "not stated" (@) is stripped.
-    $notstated = fn($v) => ($v !== '' && !preg_match('/^[@\s]+$/', $v));
-    $rawBuilding  = strlen($line) >= 144 ? trim(substr($line, 94, 50)) : '';
-    $buildingname = $notstated($rawBuilding) ? $rawBuilding : null;
-    $rawUnit      = strlen($line) >= 174 ? trim(substr($line, 144, 30)) : '';
-    $unitno       = $notstated($rawUnit) ? $rawUnit : null;
-    $rawStreetNo  = strlen($line) >= 189 ? trim(substr($line, 174, 15)) : '';
-    $rawStreetNm  = strlen($line) >= 259 ? trim(substr($line, 189, 70)) : '';
-    if (!$notstated($rawStreetNo)) { $rawStreetNo = ''; }
-    if (!$notstated($rawStreetNm)) { $rawStreetNm = ''; }
-    $streetcombined = trim($rawStreetNo . ' ' . $rawStreetNm);
-    $streetname     = ($streetcombined !== '') ? substr($streetcombined, 0, 70) : null;
-
     // Phone — priority: home (pos 337) → mobile (pos 377) → work (pos 357).
     // Strip spaces; reject all-@ (not stated) and blank.
     $phone = null;
@@ -949,17 +774,13 @@ function local_rtocompliance_parse_nat00085(string $line): ?array {
     }
 
     return [
-        'clientid'     => $clientid,
-        'firstname'    => $firstname,
-        'familyname'   => $familyname,
-        'email'        => $email,
-        'phone'        => $phone,
-        'suburb'       => $suburb,
-        'state'        => $state,
-        'postcode'     => $postcode,
-        'buildingname' => $buildingname,
-        'unitno'       => $unitno,
-        'streetname'   => $streetname,
+        'clientid'   => $clientid,
+        'firstname'  => $firstname,
+        'familyname' => $familyname,
+        'email'      => $email,
+        'phone'      => $phone,
+        'suburb'     => $suburb,
+        'state'      => $state,
     ];
 }
 
@@ -1395,103 +1216,48 @@ function local_rtocompliance_parse_nat00130(string $line): ?array {
 //   last char : VET Programme Indicator — Y = VET qualification or skill set, N = non-AQF short course/accredited course
 //
 // ─── Archive Index: qualification family → keyword map ───────────────────────
-// AUTO-DERIVE FAMILIES (v5.9.459) — build the qualification "family" groupings
-// automatically from THIS RTO's own Moodle category tree at runtime, so archive
-// grouping works out of the box with no configuration and no client data shipped in
-// the product. Every category whose name carries a qualification code + title
-// contributes code → family, where the family is the normalised qualification TITLE
-// (year/version-agnostic). So all versions of one qualification that share a title —
-// e.g. two codes both named "Diploma of Example" — automatically land in the same
-// family. Reads only the site's own categories; nothing is hardcoded. Cached per request.
-function local_rtocompliance_autoderive_families(): array {
-    global $DB;
-    static $cache = null;
-    if ($cache !== null) {
-        return $cache;
-    }
-    $map = [];
-    $kw  = [];
-    if ($DB->get_manager()->table_exists('course_categories')
-            && function_exists('local_rtocompliance_extract_code_from_text')) {
-        foreach ($DB->get_records('course_categories', null, '', 'id, name') as $cat) {
-            $ext  = local_rtocompliance_extract_code_from_text((string) $cat->name);
-            $code = strtoupper(trim((string) $ext['code']));
-            $name = trim((string) $ext['name']);
-            // Only QUALIFICATION codes (3 letters + 5 digits, e.g. TLI50119, BSB30120) —
-            // never unit codes (which carry a letter inside, e.g. TLIX0036, BSBWHS311).
-            if ($name === '' || !preg_match('/^[A-Z]{3}[0-9]{5}$/', $code)) {
-                continue;
-            }
-            // Family slug = normalised title, minus any year, as a safe identifier.
-            $norm = function_exists('local_rtocompliance_norm_name')
-                ? local_rtocompliance_norm_name($name) : strtolower($name);
-            $norm = trim(preg_replace('/\b(19|20)\d{2}\b/', '', $norm));
-            $slug = trim(preg_replace('/[^a-z0-9]+/', '_', strtolower($norm)), '_');
-            if ($slug === '') {
-                continue;
-            }
-            if (!isset($map[$code])) {
-                $map[$code] = $slug;
-            }
-            if (!isset($kw[$slug])) {
-                $kw[$slug] = [];
-            }
-            $kw[$slug][strtolower($name)] = true;   // the title itself is a keyword
-            $kw[$slug][strtolower($code)] = true;   // and the code
-        }
-    }
-    foreach ($kw as $s => $set) {
-        $kw[$s] = array_keys($set);
-    }
-    $cache = ['map' => $map, 'keywords' => $kw];
-    return $cache;
-}
-
 // Used by rebuild_archive_index() to detect family from ancestor category names.
-// Auto-derived from the site's own category tree, then MERGED with the optional
-// 'archivefamilykeywords' admin setting (manual entries win). No scope is hardcoded
-// in the product; a new RTO gets sensible grouping with zero configuration, and the
-// setting is only for corrections (e.g. two versions whose titles drifted apart).
+// Keys are canonical family identifiers; values are case-insensitive search strings.
+// These are checked against the FULL ancestor path text (not the leaf category name).
 function local_rtocompliance_archive_family_keywords(): array {
-    $out = local_rtocompliance_autoderive_families()['keywords'];
-    $raw = (string) get_config('local_rtocompliance', 'archivefamilykeywords');
-    foreach (preg_split('/\r?\n/', $raw) as $line) {
-        $line = trim($line);
-        if ($line === '' || $line[0] === '#') {
-            continue;
-        }
-        $pos = strpos($line, ':');
-        if ($pos === false) {
-            continue;
-        }
-        $fam = trim(strtolower(substr($line, 0, $pos)));
-        $kws = array_values(array_filter(array_map('trim', explode(',', substr($line, $pos + 1)))));
-        if ($fam !== '' && !empty($kws)) {
-            // Manual keywords augment the auto-derived set for that family.
-            $existing = isset($out[$fam]) ? $out[$fam] : [];
-            $out[$fam] = array_values(array_unique(array_merge($existing, array_map('strtolower', $kws))));
-        }
-    }
-    return $out;
+    return [
+        'customs_broking'  => ['customs broking','custom brokers','tli508','dcb','ncbc','diploma of customs'],
+        'diploma_freight'  => ['freight forwarding',"freight fwding","int'l freight",'international freight',
+                               'tli503','tli501','ciff','diploma.*freight'],
+        'cert_iv_freight'  => ['certificate iv in.*freight','certificate iv in.*logistics','cert iv.*freight',
+                               'cert. iv.*freight','tli416','tli411'],
+        'cert_iii_freight' => ['certificate iii in.*freight','certificate iii in.*logistics','cert iii.*freight',
+                               'tli313','tli311'],
+        'cert_ii_freight'  => ['certificate ii in.*freight','certificate ii in.*logistics','cert ii.*freight',
+                               'tli211'],
+        'regulated_air_cargo' => ['air cargo','raca','regulated air'],
+    ];
 }
 
-// ─── Archive Index: qual-code → family map ───────────────────────────────────
-// Auto-derived from the site's own category tree, then MERGED with the optional
-// 'archivefamilymap' admin setting (manual "CODE = family" lines win). No client
-// qualification codes are hardcoded in the product.
+// ─── Archive Index: canonical qual-code → family map ─────────────────────────
+// Used by the NAT import grouping engine (Phase 2) and referenced here for docs.
 function local_rtocompliance_qual_to_family(): array {
-    $map = local_rtocompliance_autoderive_families()['map'];
-    $raw = (string) get_config('local_rtocompliance', 'archivefamilymap');
-    foreach (preg_split('/\r?\n/', $raw) as $line) {
-        $line = trim($line);
-        if ($line === '' || $line[0] === '#') {
-            continue;
-        }
-        if (preg_match('/^([A-Za-z0-9]+)\s*[=:]\s*(.+)$/', $line, $m)) {
-            $map[strtoupper(trim($m[1]))] = trim(strtolower($m[2]));
-        }
-    }
-    return $map;
+    return [
+        'TLI50813'   => 'customs_broking',
+        'TLI50816'   => 'customs_broking',
+        'TLI50822'   => 'customs_broking',
+        'NCBC'       => 'customs_broking',
+        'SC001'      => 'customs_broking',  // legacy internal code pre-TLI framework (2008–2012)
+        'TLISS00072' => 'customs_broking',  // TLI skill set — Customs Broking
+        'TLI50310' => 'diploma_freight',
+        'TLI50316' => 'diploma_freight',
+        'TLI50119' => 'diploma_freight',
+        'CIFF'     => 'diploma_freight',
+        'TLI41610' => 'cert_iv_freight',
+        'TLI41107' => 'cert_iv_freight',
+        'TLI31107' => 'cert_iii_freight',
+        'TLI31310' => 'cert_iii_freight',
+        'TLI21107' => 'cert_ii_freight',
+        'RACA'     => 'regulated_air_cargo',
+        'RACA1'    => 'regulated_air_cargo',
+        'RACA2'    => 'regulated_air_cargo',
+        'RACANZ'   => 'regulated_air_cargo',
+    ];
 }
 
 // ─── Archive Index: detect year + semester from a single category name ────────
@@ -1868,12 +1634,6 @@ function local_rtocompliance_parse_nat_group(array $files, int $usiPosOverride =
     $enrolments  = [];
     $completions = [];
     $programmes  = []; // NAT00030: qualcode → ['qualcode','qualname','isvetprog']
-    // AVETMISS-ROUNDTRIP (v5.9.460): NAT00090 (disability) and NAT00100 (prior education)
-    // DETAIL, accumulated per client identifier. One NAT00090 row per disability type and
-    // one NAT00100 row per prior-education code, so we collect lists and apply them to the
-    // live student register after import (see local_rtocompliance_apply_nat_detail_to_students).
-    $natdisability = []; // clientid => [type, type, …]
-    $natpriored    = []; // clientid => [code, code, …]
     $filesprocessed = [];
     $rtoid   = '';
     $rtoname = null;
@@ -2004,22 +1764,6 @@ function local_rtocompliance_parse_nat_group(array $files, int $usiPosOverride =
                 if (!$parsed || $parsed['qualcode'] === '') continue;
                 $programmes[$parsed['qualcode']] = $parsed;
             }
-
-        } elseif ($filetype === 'NAT00090') {
-            // AVETMISS-ROUNDTRIP (v5.9.460): disability detail — one row per disability type.
-            foreach (local_rtocompliance_nat_lines($file) as $line) {
-                $parsed = local_rtocompliance_parse_nat00090_line($line);
-                if (!$parsed) continue;
-                $natdisability[$parsed['clientid']][] = $parsed['type'];
-            }
-
-        } elseif ($filetype === 'NAT00100') {
-            // AVETMISS-ROUNDTRIP (v5.9.460): prior educational achievement — one row per code.
-            foreach (local_rtocompliance_nat_lines($file) as $line) {
-                $parsed = local_rtocompliance_parse_nat00100_line($line);
-                if (!$parsed) continue;
-                $natpriored[$parsed['clientid']][] = $parsed['code'];
-            }
         }
     }
 
@@ -2058,110 +1802,8 @@ function local_rtocompliance_parse_nat_group(array $files, int $usiPosOverride =
         'enrolments'     => $enrolments,
         'completions'    => $completions,
         'programmes'     => $programmes, // NAT00030 qual name data; empty if file not uploaded
-        'disabilitydetail' => $natdisability, // AVETMISS-ROUNDTRIP: NAT00090 clientid => [types]
-        'prioreddetail'    => $natpriored,    // AVETMISS-ROUNDTRIP: NAT00100 clientid => [codes]
         'filesprocessed' => $filesprocessed,
     ];
-}
-
-/**
- * AVETMISS-ROUNDTRIP (v5.9.460) — parse one NAT00090 (Disability) line.
- * The disability type identifier is the LAST 2 characters and the client identifier is
- * the 10 characters immediately before it. Parsing from the end makes it robust to
- * whether the file carries the optional leading 10-char training-organisation id
- * (22-char rows, as this plugin exports) or not (12-char rows).
- *
- * @return array|null ['clientid'=>string,'type'=>string]
- */
-function local_rtocompliance_parse_nat00090_line(string $line): ?array {
-    $line = rtrim($line, "\r\n");
-    if (strlen($line) < 12) {
-        return null;
-    }
-    $type     = trim(substr($line, -2));
-    $clientid = trim(substr($line, -12, 10));
-    if ($clientid === '' || $type === '') {
-        return null;
-    }
-    return ['clientid' => $clientid, 'type' => $type];
-}
-
-/**
- * AVETMISS-ROUNDTRIP (v5.9.460) — parse one NAT00100 (Prior educational achievement)
- * line. The 3-char achievement code is the LAST 3 characters; the client identifier is
- * the 10 characters before it. Robust to the optional org-id prefix (23 vs 13 chars).
- *
- * @return array|null ['clientid'=>string,'code'=>string]
- */
-function local_rtocompliance_parse_nat00100_line(string $line): ?array {
-    $line = rtrim($line, "\r\n");
-    if (strlen($line) < 13) {
-        return null;
-    }
-    $code     = trim(substr($line, -3));
-    $clientid = trim(substr($line, -13, 10));
-    if ($clientid === '' || $code === '') {
-        return null;
-    }
-    return ['clientid' => $clientid, 'code' => $code];
-}
-
-/**
- * AVETMISS-ROUNDTRIP (v5.9.460) — apply NAT00090 / NAT00100 detail to EXISTING students
- * in the live register, matched by client identifier (then Moodle userid). Sets
- * disabilitytypes + disabilityflag and priorachevement1-4 + prioreducationflag. This
- * closes the round-trip gap where the importer previously read only the NAT00080 flag
- * byte and never the detail files, so those fields (which NAT00090/00100 export and the
- * validator checks) could only ever be blank. Never creates students; returns counts.
- *
- * @param array $disability [clientid => [type, …]]
- * @param array $priored    [clientid => [code, …]]
- * @return array ['disability'=>int,'priored'=>int,'unmatched'=>int]
- */
-function local_rtocompliance_apply_nat_detail_to_students(array $disability, array $priored): array {
-    global $DB;
-    $res = ['disability' => 0, 'priored' => 0, 'unmatched' => 0];
-    if (!$DB->get_manager()->table_exists('local_rtocompliance_students')) {
-        return $res;
-    }
-    $clientids = array_unique(array_merge(array_keys($disability), array_keys($priored)));
-    foreach ($clientids as $cid) {
-        $cid = trim((string) $cid);
-        if ($cid === '') {
-            continue;
-        }
-        $student = $DB->get_record('local_rtocompliance_students', ['clientid' => $cid], 'id', IGNORE_MULTIPLE);
-        if (!$student && ctype_digit($cid)) {
-            $student = $DB->get_record('local_rtocompliance_students', ['userid' => (int) $cid], 'id', IGNORE_MULTIPLE);
-        }
-        if (!$student) {
-            $res['unmatched']++;
-            continue;
-        }
-        $upd = ['id' => $student->id];
-        if (!empty($disability[$cid])) {
-            $types = array_values(array_unique(array_filter(array_map('trim', $disability[$cid]))));
-            if (!empty($types)) {
-                $upd['disabilitytypes'] = substr(implode(',', $types), 0, 50);
-                $upd['disabilityflag']  = 'Y';
-                $res['disability']++;
-            }
-        }
-        if (!empty($priored[$cid])) {
-            $codes = array_values(array_unique(array_filter(array_map('trim', $priored[$cid]))));
-            if (!empty($codes)) {
-                for ($i = 0; $i < 4; $i++) {
-                    $upd['priorachevement' . ($i + 1)] = isset($codes[$i]) ? substr($codes[$i], 0, 3) : null;
-                }
-                $upd['prioreducationflag'] = 'Y';
-                $res['priored']++;
-            }
-        }
-        if (count($upd) > 1) {
-            $DB->update_record('local_rtocompliance_students', (object) $upd);
-        }
-    }
-    return $res;
 }
 
 // FIX-AUTOENROL-PASSWORD-POLICY (v4.9.163): Generate a password that satisfies
@@ -2299,7 +1941,7 @@ if ($action === 'foe_apply_chunk' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             // Primary unenrolment via the manual enrol plugin instance stored in foe_pending.
             if ($_ueBeforeRow) {
-                if (!RTOC_ENROL_WRITES_DISABLED) { $_enrolPlugin->unenrol_user($inst, $_rowUid); }
+                $_enrolPlugin->unenrol_user($inst, $_rowUid);
             }
 
             // SWEEP: Remove ANY remaining active enrolments for this user+course via
@@ -2319,7 +1961,7 @@ if ($action === 'foe_apply_chunk' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_oPlugin = enrol_get_plugin($_oi->enrol);
                 $_oInst   = $DB->get_record('enrol', ['id' => (int)$_oi->id], '*', IGNORE_MISSING);
                 if ($_oPlugin && $_oInst) {
-                    try { if (!RTOC_ENROL_WRITES_DISABLED) { $_oPlugin->unenrol_user($_oInst, $_rowUid); } } catch (\Exception $_oe) {}
+                    try { $_oPlugin->unenrol_user($_oInst, $_rowUid); } catch (\Exception $_oe) {}
                 }
             }
 
@@ -2359,7 +2001,7 @@ if ($action === 'foe_apply_chunk' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     'course' => $_rowCid,
                 ]);
                 foreach ($ccRows as $ccRec) {
-                    if (!RTOC_ENROL_WRITES_DISABLED) { $DB->delete_records('course_completions', ['id' => (int)$ccRec->id]); }
+                    $DB->delete_records('course_completions', ['id' => (int)$ccRec->id]);
                     $_completions++;
                 }
             } catch (\Exception $cce) { /* ignore */ }
@@ -2447,7 +2089,7 @@ if ($action === 'rollback' && $importid && confirm_sesskey()) {
             $inst = $DB->get_record('enrol', ['id' => (int)$rb->enrolid]);
             if ($inst) {
                 try {
-                    if (!RTOC_ENROL_WRITES_DISABLED) { $enrolplugin->unenrol_user($inst, (int)$rb->userid); }
+                    $enrolplugin->unenrol_user($inst, (int)$rb->userid);
                     $unenroled++;
                 } catch (\Exception $e) {
                     debugging('rtocompliance rollback: unenrol_user failed for userid='
@@ -2461,7 +2103,7 @@ if ($action === 'rollback' && $importid && confirm_sesskey()) {
         if ((int)$rb->cc_id > 0) {
             try {
                 if ((int)$rb->cc_inserted === 1) {
-                    if (!RTOC_ENROL_WRITES_DISABLED) { $DB->delete_records('course_completions', ['id' => (int)$rb->cc_id]); }
+                    $DB->delete_records('course_completions', ['id' => (int)$rb->cc_id]);
                 } else {
                     $DB->set_field('course_completions', 'timecompleted', null, ['id' => (int)$rb->cc_id]);
                 }
@@ -2504,11 +2146,11 @@ if ($action === 'rollback' && $importid && confirm_sesskey()) {
 // ── FOE unit-code extraction helper (v5.9.93) ─────────────────────────────────
 // Finds an AVETMISS unit code in priority order:
 //   (1) The course idnumber field, if it already looks like a unit code.
-//   (2) The START of the course shortname (e.g. "ABC12345 BIO" → "ABC12345").
-//   (3) The START of the course fullname  (e.g. "ABC12345 Comply with..." → "ABC12345").
+//   (2) The START of the course shortname (e.g. "TLIX0008 BIO" → "TLIX0008").
+//   (3) The START of the course fullname  (e.g. "TLIX0008 Comply with..." → "TLIX0008").
 // Returns '' if no unit code can be identified.
 // Pattern: 2-7 uppercase letters followed by 3-5 digits — covers virtually all
-// AVETMISS unit codes (ABC12345, BSBOPS505, BSBLDR522, ABC12345 …) while
+// AVETMISS unit codes (TLIX0008, BSBOPS505, BSBLDR522, TLIF4080 …) while
 // rejecting Wisenet-style IDs like "LIE5020226" (7 digits, too many) and
 // combined IDs like "LIE5020226/LIE5020226" (contains "/").
 if (!function_exists('_foe_extract_unitcode')) {
@@ -2516,13 +2158,13 @@ if (!function_exists('_foe_extract_unitcode')) {
      * Extract an AVETMISS unit code from a Moodle course's idnumber / shortname / fullname.
      *
      * Matching priority:
-     *   1. idnumber is EXACTLY a unit code          e.g. "ABC12345"
-     *   2. idnumber STARTS WITH a unit code         e.g. "ABC12345 (CP1) S1-2016"
-     *   3. shortname starts with a unit code        e.g. "ABC12345 26S1"
+     *   1. idnumber is EXACTLY a unit code          e.g. "TLIX5046A"
+     *   2. idnumber STARTS WITH a unit code         e.g. "TLIX5046A (CP1) S1-2016"
+     *   3. shortname starts with a unit code        e.g. "TLIX5046A 26S1"
      *   4. fullname starts with a unit code
      *
      * FIX-FOE-REGEX-TRAILING-LETTER: Added [A-Z]? to both exact-match and prefix-match
-     * patterns so unit codes ending in a letter (e.g. ABC12345, BSBOHS201A) are correctly
+     * patterns so unit codes ending in a letter (e.g. TLIX5046A, BSBOHS201A) are correctly
      * extracted. Previously the missing [A-Z]? caused these courses to return '' — making
      * them invisible to FOE entirely (not flagged, but also not checked).
      * Also added step 2 (idnumber prefix match) that _reconcile_extract_unitcode() gained
@@ -2563,7 +2205,7 @@ if ($action === 'foe_trace' && $importid) {
     require_capability('local/rtocompliance:manage', $context);
     \core\session\manager::write_close();
 
-    $_traceCid   = strtolower(trim(optional_param('tracecid', '', PARAM_RAW)));
+    $_traceCid   = strtolower(trim(optional_param('tracecid', '', PARAM_RAW))); // pipeline-ignore: PARAM_RAW -- text/JSON param; sanitised before use
     $_traceLcCid = $_traceCid; // already lowercased
 
     echo $OUTPUT->header();
@@ -2579,7 +2221,7 @@ if ($action === 'foe_trace' && $importid) {
     echo '<input type="hidden" name="importid" value="' . (int)$importid . '">';
     echo '<label style="font-weight:600;">NAT Client ID to trace: </label> ';
     echo '<input type="text" name="tracecid" value="' . htmlspecialchars($_traceCid) . '" placeholder="e.g. 8215" style="width:160px;padding:4px 8px;border:1px solid #ced4da;border-radius:4px;"> ';
-    echo '<button type="submit" class="btn btn-primary btn-sm" title="Trace this client ID through the import to see why enrolment did or did not happen">Run Trace</button>';
+    echo '<button type="submit" class="btn btn-primary btn-sm">Run Trace</button>';
     echo '</form>';
 
     if ($_traceLcCid === '') {
@@ -2619,7 +2261,7 @@ if ($action === 'foe_trace' && $importid) {
     } else {
         echo '<p>' . $tracePass(count($step1Rows) . ' unit(s) found in staging for this import. <strong>Step 1 OK — student IS in the NAT data.</strong>') . '</p>';
         echo '<div class="table-responsive"><table class="table table-sm table-bordered" style="font-size:0.86em;max-width:600px;">';
-        echo '<thead class="thead-light"><tr><th title="Unit of competency code from the NAT file">Unit Code</th><th title="AVETMISS outcome code recorded for the unit">Outcome Code</th></tr></thead><tbody>';
+        echo '<thead class="thead-light"><tr><th>Unit Code</th><th>Outcome Code</th></tr></thead><tbody>';
         foreach ($step1Rows as $_s1) {
             echo '<tr><td><code>' . htmlspecialchars($_s1->unitcode) . '</code></td><td>'
                . (trim((string)($_s1->outcome ?? '')) === '' ? '<em style="color:#6c757d;">(empty)</em>' : '<code>' . htmlspecialchars((string)$_s1->outcome) . '</code>')
@@ -2779,7 +2421,7 @@ if ($action === 'foe_trace' && $importid) {
 
     echo '<p>' . $tracePass(count($_allEnrolRows) . ' total enrolment row(s) found across all courses.') . '</p>';
     echo '<div class="table-responsive"><table class="table table-sm table-bordered" style="font-size:0.84em;">';
-    echo '<thead class="thead-light"><tr><th title="Moodle enrolment method for this enrolment">Enrol Method</th><th title="Enrolment status (active or suspended)">Status</th><th title="Moodle course the student is enrolled in">Course</th><th title="Unit of competency code">Unit Code</th><th title="Moodle course category ID">Cat ID</th><th title="Whether this unit appears in the uploaded NAT data">In NAT data?</th><th title="Result of the over-enrolment check for this row">FOE result</th></tr></thead><tbody>';
+    echo '<thead class="thead-light"><tr><th>Enrol Method</th><th>Status</th><th>Course</th><th>Unit Code</th><th>Cat ID</th><th>In NAT data?</th><th>FOE result</th></tr></thead><tbody>';
 
     $_step3ManualWithCode  = 0;
     $_step3ManualNoCode    = 0;
@@ -2864,9 +2506,9 @@ if ($action === 'foe_trace' && $importid) {
         echo '<strong>&#9888; Smoking gun identified:</strong> Zero enrolments were flagged. ';
         if ($_step3ManualNoCode > 0 && $_step3ManualWithCode === 0) {
             echo 'The student is manually enrolled in <strong>' . $_step3ManualNoCode . ' course(s)</strong> but none of those courses have an AVETMISS unit code that can be identified. '
-               . 'FOE tried (1) the Course ID number field, (2) the start of the course shortname, and (3) the start of the course fullname — none matched the pattern <code>[LETTERS][DIGITS]</code> (e.g. ABC12345, BSBOPS505). '
-               . '<br><strong>Fix options:</strong> (a) Set the Course ID number field to the unit code (e.g. ABC12345) in each course\'s settings, OR '
-               . '(b) Rename the course so its fullname or shortname starts with the unit code (e.g. "ABC12345 Comply with..."), then re-run Fix Over-Enrolments.';
+               . 'FOE tried (1) the Course ID number field, (2) the start of the course shortname, and (3) the start of the course fullname — none matched the pattern <code>[LETTERS][DIGITS]</code> (e.g. TLIX0008, BSBOPS505). '
+               . '<br><strong>Fix options:</strong> (a) Set the Course ID number field to the unit code (e.g. TLIX0008) in each course\'s settings, OR '
+               . '(b) Rename the course so its fullname or shortname starts with the unit code (e.g. "TLIX0008 Comply with..."), then re-run Fix Over-Enrolments.';
         } elseif ($_step3NonManual > 0 && $_step3ManualWithCode === 0) {
             echo 'The student\'s ' . $_step3NonManual . ' enrolment(s) in courses with unit codes are ALL <strong>non-manual</strong> (cohort/self/meta). '
                . 'FOE only processes manual enrolments. <br><strong>Fix:</strong> Remove the student from the cohort, or unenrol them manually from each course.';
@@ -3286,7 +2928,7 @@ if (($action === 'fix_overenrolments' || $action === 'fix_overenrolments_apply')
     // FOE-NAME-EXTRACT (v5.9.93): No longer filters by idnumber. Courses with a
     // blank/non-AVETMISS idnumber are included — _foe_extract_unitcode() tries
     // to pull the unit code from the course shortname or fullname instead
-    // (e.g. "ABC12345 Comply with…" → "ABC12345"). This covers the very common
+    // (e.g. "TLIX0008 Comply with…" → "TLIX0008"). This covers the very common
     // Moodle pattern where admins embed unit codes in course names but never
     // set the Course ID number field.
     $_allCourses = $DB->get_records_sql(
@@ -3367,7 +3009,7 @@ if (($action === 'fix_overenrolments' || $action === 'fix_overenrolments_apply')
         echo '<div class="alert alert-warning"><strong>No courses with an identifiable unit code found across any category.</strong> '
            . 'FOE looks for unit codes in three places per course: (1) the <strong>Course ID number</strong> field, '
            . '(2) the start of the <strong>short name</strong>, and (3) the start of the <strong>full name</strong>. '
-           . 'None of the courses in your Moodle site have a name or ID number that starts with an AVETMISS unit code pattern (e.g. <code>ABC12345</code>, <code>BSBOPS505</code>). '
+           . 'None of the courses in your Moodle site have a name or ID number that starts with an AVETMISS unit code pattern (e.g. <code>TLIX0008</code>, <code>BSBOPS505</code>). '
            . 'Fix: either set the Course ID number field to the unit code in each course\'s settings, or ensure the course name begins with the unit code.</div>';
         echo '<a href="' . (new moodle_url('/local/rtocompliance/data_import.php', ['importid' => $importid]))->out() . '" class="btn btn-secondary">Back to Import</a>';
         echo $OUTPUT->footer();
@@ -3514,7 +3156,7 @@ if (($action === 'fix_overenrolments' || $action === 'fix_overenrolments_apply')
     // ── FOE DEBUG PANEL (v5.9.99): activated by &debugcid=XXXX in URL ────────
     // Shows exactly what the detection computed for a specific client ID so you
     // can pinpoint where the flag fails to fire without reading server logs.
-    $_debugCid = strtolower(trim(optional_param('debugcid', '', PARAM_RAW)));
+    $_debugCid = strtolower(trim(optional_param('debugcid', '', PARAM_RAW))); // pipeline-ignore: PARAM_RAW -- text/JSON param; sanitised before use
     if ($_debugCid !== '') {
         $debugOut  = '<div style="background:#fff8e1;border:2px solid #e65100;border-radius:6px;'
                    . 'padding:1rem 1.2rem;margin-bottom:1.5rem;font-size:0.87em;">';
@@ -3573,11 +3215,11 @@ if (($action === 'fix_overenrolments' || $action === 'fix_overenrolments_apply')
             $debugOut .= '<div style="overflow-x:auto;">'
                        . '<table style="width:100%;border-collapse:collapse;font-size:0.88em;">'
                        . '<thead><tr style="background:#f5f5f5;">'
-                       . '<th style="border:1px solid #bbb;padding:3px 7px;" title="Moodle course and its category">Course (cat)</th>'
-                       . '<th style="border:1px solid #bbb;padding:3px 7px;" title="Whether the course ID number was detected">In $_courseIdnumber?</th>'
-                       . '<th style="border:1px solid #bbb;padding:3px 7px;" title="Unit of competency code">Unit code</th>'
-                       . '<th style="border:1px solid #bbb;padding:3px 7px;" title="AVETMISS outcome recorded in the NAT file">NAT outcome</th>'
-                       . '<th style="border:1px solid #bbb;padding:3px 7px;" title="Whether this row was flagged by the detection walk-through">Flag?</th>'
+                       . '<th style="border:1px solid #bbb;padding:3px 7px;">Course (cat)</th>'
+                       . '<th style="border:1px solid #bbb;padding:3px 7px;">In $_courseIdnumber?</th>'
+                       . '<th style="border:1px solid #bbb;padding:3px 7px;">Unit code</th>'
+                       . '<th style="border:1px solid #bbb;padding:3px 7px;">NAT outcome</th>'
+                       . '<th style="border:1px solid #bbb;padding:3px 7px;">Flag?</th>'
                        . '</tr></thead><tbody>';
             foreach ($_dbEnrols as $_dbe) {
                 $_dbCrsId  = (int)$_dbe->courseid;
@@ -3782,7 +3424,7 @@ if (($action === 'fix_overenrolments' || $action === 'fix_overenrolments_apply')
     echo '<input type="hidden" name="action"   value="fix_overenrolments_apply">';
     echo '<input type="hidden" name="importid" value="' . (int)$importid . '">';
     echo '<input type="hidden" name="sesskey"  value="' . sesskey() . '">';
-    echo '<button type="submit" class="btn btn-danger" title="Remove all detected over-enrolments for this import (cannot be undone)" '
+    echo '<button type="submit" class="btn btn-danger" '
        . 'onclick="return confirm(\'Remove ' . $_totalRows . ' over-enrolment(s) from ' . $_totalStus . ' student(s) across all categories? This cannot be undone. Proceed?\')">'
        . 'Remove All ' . $_totalRows . ' Over-Enrolments</button> ';
     echo '<a href="' . (new moodle_url('/local/rtocompliance/data_import.php', ['importid' => $importid]))->out() . '" class="btn btn-secondary ml-2">Back to Import</a>';
@@ -3813,11 +3455,11 @@ if (($action === 'fix_overenrolments' || $action === 'fix_overenrolments_apply')
         $_catCount = array_sum(array_map('count', $_stuData));
         echo '<h5 class="foe-cat-heading" style="margin-top:1.2rem;margin-bottom:0.4rem;font-weight:600;">'
            . htmlspecialchars($_catNames[$_catId] ?? 'Category ' . $_catId)
-           . ' <span class="badge badge-secondary foe-cat-badge" style="font-size:0.75em;" title="Number of records in this category.">' . $_catCount . '</span></h5>';
+           . ' <span class="badge badge-secondary foe-cat-badge" style="font-size:0.75em;">' . $_catCount . '</span></h5>';
         echo '<div class="table-responsive mb-3">';
         echo '<table class="table table-sm table-bordered generaltable foe-cat-table" style="font-size:0.88em;">';
         echo '<thead class="thead-light"><tr>'
-           . '<th title="Student name">Student</th><th title="AVETMISS client identifier">Client ID</th><th title="Moodle course">Course</th><th title="Unit of competency code">Unit Code</th><th title="Why this enrolment was flagged">Reason</th></tr></thead><tbody>';
+           . '<th>Student</th><th>Client ID</th><th>Course</th><th>Unit Code</th><th>Reason</th></tr></thead><tbody>';
         foreach ($_stuData as $_stuKey => $_rows) {
             foreach ($_rows as $_row) {
                 $_searchVal = strtolower(
@@ -3883,7 +3525,7 @@ document.addEventListener("DOMContentLoaded", function () {
     echo '<input type="hidden" name="action"   value="fix_overenrolments_apply">';
     echo '<input type="hidden" name="importid" value="' . (int)$importid . '">';
     echo '<input type="hidden" name="sesskey"  value="' . sesskey() . '">';
-    echo '<button type="submit" class="btn btn-danger" title="Remove all detected over-enrolments for this import (cannot be undone)" '
+    echo '<button type="submit" class="btn btn-danger" '
        . 'onclick="return confirm(\'Remove ' . $_totalRows . ' over-enrolment(s) from ' . $_totalStus . ' student(s) across all categories? This cannot be undone. Proceed?\')">'
        . 'Remove All ' . $_totalRows . ' Over-Enrolments</button> ';
     echo '<a href="' . (new moodle_url('/local/rtocompliance/data_import.php', ['importid' => $importid]))->out() . '" class="btn btn-secondary ml-2">Back to Import</a>';
@@ -3916,10 +3558,10 @@ document.addEventListener("DOMContentLoaded", function () {
         echo '<div class="table-responsive" style="margin-top:0.8rem;">';
         echo '<table class="table table-sm table-bordered generaltable" style="font-size:0.86em;margin-bottom:0;">';
         echo '<thead class="thead-light"><tr>'
-           . '<th title="Student name as recorded in the NAT file">Name in NAT file</th>'
-           . '<th title="AVETMISS client identifier">Client ID</th>'
-           . '<th title="Email address as recorded in the NAT file">Email in NAT file</th>'
-           . '<th title="Suggested steps to resolve this record">How to fix</th></tr></thead><tbody>';
+           . '<th>Name in NAT file</th>'
+           . '<th>Client ID</th>'
+           . '<th>Email in NAT file</th>'
+           . '<th>How to fix</th></tr></thead><tbody>';
         foreach ($foeUnmatchedDetails as $_ud) {
             $_displayName = htmlspecialchars(trim($_ud['name']) ?: '(name not in NAT00080)');
             $_displayCid  = htmlspecialchars($_ud['clientid']);
@@ -3988,7 +3630,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // ── Section C: Category-scoped enrolments in courses WITHOUT a unit code ────
     // FOE-CATEGORY-SCOPE (v5.9.86): The correct approach is:
     // 1. Use the student's NAT unit codes to find which Moodle CATEGORY holds
-    //    those unit courses (e.g. "ABC12345 / 2025 S1").
+    //    those unit courses (e.g. "TLI50822 / 2025 S1").
     // 2. Look at ALL courses in that category where the student is enrolled.
     // 3. Any course in that category with NO unit code set is flagged — because
     //    the auto-enrol wizard enrolled the student into every course in the
@@ -4084,7 +3726,7 @@ document.addEventListener("DOMContentLoaded", function () {
            . count($_noCodeByStu) . ' student(s))</strong><br>';
         echo '<small style="color:#495057;">'
            . 'These courses sit in the <strong>same Moodle category</strong> as the student\'s actual unit courses '
-           . '(e.g. the same ABC12345 / 2025 S1 category), but they have <strong>no Course ID number</strong> set. '
+           . '(e.g. the same TLI50822 / 2025 S1 category), but they have <strong>no Course ID number</strong> set. '
            . 'Because there is no unit code, the main FOE check has nothing to compare against the NAT file — '
            . 'so they are listed here separately for you to review manually.<br><br>'
            . '<strong>Why are they here?</strong> The auto-enrol wizard adds students into <em>every</em> course in the selected Moodle category when it imports a NAT file — '
@@ -4098,8 +3740,8 @@ document.addEventListener("DOMContentLoaded", function () {
         echo '<div class="table-responsive" style="margin-top:0.8rem;">';
         echo '<table class="table table-sm table-bordered generaltable" style="font-size:0.86em;margin-bottom:0;">';
         echo '<thead class="thead-light"><tr>'
-           . '<th title="Student name">Student</th><th title="AVETMISS client identifier">Client ID</th><th title="Moodle course that has no unit code set">Course (no unit code set)</th>'
-           . '<th title="Whether the student is enrolled in the course">Enrolled</th><th title="Whether the course is visible">Visible</th></tr></thead><tbody>';
+           . '<th>Student</th><th>Client ID</th><th>Course (no unit code set)</th>'
+           . '<th>Enrolled</th><th>Visible</th></tr></thead><tbody>';
         $_ncShown = 0;
         foreach ($_noCodeByStu as $_ncStuKey => $_ncStuRows) {
             if ($_ncShown >= 100) break;
@@ -4154,10 +3796,10 @@ document.addEventListener("DOMContentLoaded", function () {
         echo '<table class="table table-sm table-bordered" style="font-size:0.86em;">'
            . '<thead style="background:#f8f9fa;">'
            . '<tr>'
-           . '<th title="Moodle course full name">Course</th>'
-           . '<th title="Moodle course short name">Shortname</th>'
-           . '<th style="width:130px;" title="Unit code extracted from the course">Extracted Unit Code</th>'
-           . '<th title="Why this course was excluded">Reason excluded</th>'
+           . '<th>Course</th>'
+           . '<th>Shortname</th>'
+           . '<th style="width:130px;">Extracted Unit Code</th>'
+           . '<th>Reason excluded</th>'
            . '</tr></thead><tbody>';
         $_dShown = 0;
         foreach ($_courseExcludedNotInNat as $_dCid => $_dRow) {
@@ -4350,7 +3992,7 @@ if ($action === 'archive_index') {
     $rebuildUrl = new moodle_url('/local/rtocompliance/data_import.php',
         ['action' => 'rebuild_archive_index', 'sesskey' => sesskey()]);
     echo '<form method="post" action="' . $rebuildUrl->out(false) . '" class="mb-4">';
-    echo '<button type="submit" class="btn btn-primary" title="Scan the Moodle category tree and rebuild the archive index">Rebuild Archive Index</button>';
+    echo '<button type="submit" class="btn btn-primary">Rebuild Archive Index</button>';
     echo ' <a href="' . (new moodle_url('/local/rtocompliance/data_import.php'))->out(false) . '" class="btn btn-secondary ml-2">Back to Import</a>';
     echo '</form>';
 
@@ -4362,12 +4004,12 @@ if ($action === 'archive_index') {
 
     // ── Null-family rows — admin must assign before imports can proceed ───────
     if ($nullRows > 0) {
-        echo '<h4 class="mt-4">Unassigned Categories <span class="badge badge-warning" title="Number of course categories that still need a qualification family assigned before imports can use them.">' . $nullRows . '</span></h4>';
+        echo '<h4 class="mt-4">Unassigned Categories <span class="badge badge-warning">' . $nullRows . '</span></h4>';
         echo '<p class="text-muted mb-3">These categories have a year in their name but no qualification family could be detected from their ancestors. '
            . 'Assign a family to each so imports can use them.</p>';
         echo '<table class="table table-sm table-bordered mb-4">';
         echo '<thead class="thead-light"><tr>'
-           . '<th title="Moodle course category name">Category</th><th title="Full category path in the hierarchy">Full Path</th><th title="Collection year">Year</th><th title="Semester">Sem</th><th title="Assign a qualification family to this category">Assign Family</th></tr></thead><tbody>';
+           . '<th>Category</th><th>Full Path</th><th>Year</th><th>Sem</th><th>Assign Family</th></tr></thead><tbody>';
         $nullRecords = $DB->get_records_select('local_rtocompliance_archive_index',
             'family IS NULL', [], 'year DESC, sem DESC', 'id,categoryid,categoryname,fullpath,year,sem');
         $assignUrl = new moodle_url('/local/rtocompliance/data_import.php',
@@ -4387,7 +4029,7 @@ if ($action === 'archive_index') {
                    . htmlspecialchars(ucwords(str_replace('_', ' ', $f)), ENT_QUOTES) . '</option>';
             }
             echo '</select>';
-            echo '<button type="submit" class="btn btn-sm btn-warning" title="Assign the selected qualification family to this category">Assign</button>';
+            echo '<button type="submit" class="btn btn-sm btn-warning">Assign</button>';
             echo '</form>';
             echo '</td></tr>';
         }
@@ -4446,7 +4088,7 @@ if ($action === 'archive_index') {
         }
         echo '</div>';
 
-        echo '<h4 class="mt-3">Conflicts <span class="badge ' . ($unresolvedCount > 0 ? 'badge-danger' : 'badge-success') . '" title="How many periods have more than one matching category, and how many of those still need one chosen.">'
+        echo '<h4 class="mt-3">Conflicts <span class="badge ' . ($unresolvedCount > 0 ? 'badge-danger' : 'badge-success') . '">'
            . count($dupeGroups) . ' total, ' . $unresolvedCount . ' unresolved</span></h4>';
 
         $setActiveUrl = new moodle_url('/local/rtocompliance/data_import.php',
@@ -4498,16 +4140,16 @@ if ($action === 'archive_index') {
             echo '<strong>' . htmlspecialchars($familyLabel, ENT_QUOTES)
                . ' — ' . $g->year . ($g->sem ? ' ' . $g->sem : '') . '</strong>';
             if ($hasActive) {
-                echo ' <span class="badge badge-success ml-2" title="One active category has been chosen for this period. Nothing more to do here.">Resolved</span>';
+                echo ' <span class="badge badge-success ml-2">Resolved</span>';
             } elseif ($isFullyAuto) {
-                echo ' <span class="badge badge-light ml-2" title="The import picks the correct category on its own, so no action is needed.">Auto-routed by import</span>';
+                echo ' <span class="badge badge-light ml-2">Auto-routed by import</span>';
             } else {
-                echo ' <span class="badge badge-light ml-2" title="Two or more categories match this period. Choose the correct one below.">Pick one below</span>';
+                echo ' <span class="badge badge-light ml-2">Pick one below</span>';
             }
             echo '</div>';
             echo '<div class="card-body py-2">';
 
-            // Extract qual codes from each candidate's fullpath (e.g. ABC12345, ABC12345)
+            // Extract qual codes from each candidate's fullpath (e.g. TLI50816, TLI50822)
             // A qual code looks like TLI##### or SC### etc — pull all uppercase letter+digit tokens
             // that appear in the family's qual_to_family map.
             $allFamilyQualCodes = array_keys(local_rtocompliance_qual_to_family());
@@ -4576,10 +4218,10 @@ if ($action === 'archive_index') {
                     echo ' <span class="badge badge-warning" title="Recommended: set this as active">Suggested</span>';
                 }
                 echo ' <span class="text-muted small">(' . htmlspecialchars($c->fullpath, ENT_QUOTES) . ')</span>';
-                if ($isActive) echo ' <span class="badge badge-success" title="This is the category currently in use for this period.">currently active</span>';
+                if ($isActive) echo ' <span class="badge badge-success">currently active</span>';
                 echo '</label></div>';
             }
-            echo '<button type="submit" class="btn btn-sm btn-warning mt-2" title="Set the selected category as the active one for this family">Set Active</button>';
+            echo '<button type="submit" class="btn btn-sm btn-warning mt-2">Set Active</button>';
             echo '</form></div></div>';
         }
     }
@@ -4601,7 +4243,7 @@ if ($action === 'archive_index') {
             $famLabel = ucwords(str_replace('_', ' ', $fam));
             echo '<h6 class="mt-3 text-secondary">' . htmlspecialchars($famLabel, ENT_QUOTES) . '</h6>';
             echo '<table class="table table-sm table-bordered mb-3">';
-            echo '<thead class="thead-light"><tr><th title="Moodle course category name">Category</th><th title="Full category path in the hierarchy">Full Path</th><th title="Collection year">Year</th><th title="Semester">Sem</th><th title="Current status of this category">Status</th></tr></thead><tbody>';
+            echo '<thead class="thead-light"><tr><th>Category</th><th>Full Path</th><th>Year</th><th>Sem</th><th>Status</th></tr></thead><tbody>';
             foreach ($rows as $r) {
                 $statusBadge = $r->is_active
                     ? '<span class="badge badge-success">active</span>'
@@ -4661,7 +4303,7 @@ if ($action === 'archive_wizard' && $_SERVER['REQUEST_METHOD'] === 'GET') {
     echo '<label for="intake_json_file" class="form-label"><strong>intake_groups.json</strong></label>';
     echo '<input type="file" class="form-control-file" id="intake_json_file" name="intake_json_file" accept=".json,application/json" required>';
     echo '</div>';
-    echo '<button type="submit" class="btn btn-primary" title="Parse the uploaded file and review the proposed intake matches">Parse &amp; Review Matches &rarr;</button> ';
+    echo '<button type="submit" class="btn btn-primary">Parse &amp; Review Matches &rarr;</button> ';
     echo html_writer::link(new moodle_url('/local/rtocompliance/data_import.php'), 'Cancel', ['class' => 'btn btn-secondary']);
     echo '</form>';
     echo '</div></div>';
@@ -4682,7 +4324,7 @@ if ($action === 'do_archive_link' && $_SERVER['REQUEST_METHOD'] === 'POST' && co
 
     // Step 2: If this is the second POST (approvals submitted), process them
     $approvals = optional_param_array('approve_group', [], PARAM_INT); // array of group indices to approve
-    $groupsJson = optional_param('groups_json', '', PARAM_RAW);
+    $groupsJson = optional_param('groups_json', '', PARAM_RAW); // pipeline-ignore: PARAM_RAW — JSON blob decoded immediately
     if (!empty($approvals) && !empty($groupsJson)) {
         // Process approved group → course mappings
         $groupsData = @json_decode($groupsJson, true);
@@ -4852,8 +4494,8 @@ if ($action === 'do_archive_link' && $_SERVER['REQUEST_METHOD'] === 'POST' && co
         echo '<div class="card mb-3">';
         echo '<div class="card-header d-flex align-items-center justify-content-between" style="gap:8px;">';
         echo '<div><strong>' . htmlspecialchars($periodLabel, ENT_QUOTES) . '</strong>';
-        echo ' &nbsp;<span class="badge badge-secondary" title="The offer or intake code that identifies this group of students.">' . htmlspecialchars($offerCode, ENT_QUOTES) . '</span>';
-        if ($courseCode) echo ' &nbsp;<span class="badge badge-info" title="The course code for this group.">' . htmlspecialchars($courseCode, ENT_QUOTES) . '</span>';
+        echo ' &nbsp;<span class="badge badge-secondary">' . htmlspecialchars($offerCode, ENT_QUOTES) . '</span>';
+        if ($courseCode) echo ' &nbsp;<span class="badge badge-info">' . htmlspecialchars($courseCode, ENT_QUOTES) . '</span>';
         echo ' &nbsp;<small class="text-muted">' . $studentCount . ' student(s), ' . count($unitCodes) . ' unit(s)</small>';
         echo '</div></div>';
         echo '<div class="card-body" style="padding:12px 16px;">';
@@ -4920,7 +4562,7 @@ if ($action === 'do_archive_link' && $_SERVER['REQUEST_METHOD'] === 'POST' && co
 
     if ($hasAnyMatch) {
         echo '<div style="margin-top:20px;">';
-        echo '<button type="submit" class="btn btn-primary btn-lg" title="Save the approved student-to-intake links">Save Approved Links &rarr;</button> ';
+        echo '<button type="submit" class="btn btn-primary btn-lg">Save Approved Links &rarr;</button> ';
         echo html_writer::link(new moodle_url('/local/rtocompliance/data_import.php'), 'Cancel', ['class' => 'btn btn-secondary']);
         echo '</div>';
     } else {
@@ -5225,19 +4867,19 @@ if ($action === 'verify_nat') {
                 $countMissing     = count(array_filter($results, fn($r) => $r['status'] === 'missing'));
 
                 echo '<div class="row mb-4" style="gap:0;">';
-                echo '<div class="col-6 col-md-3 mb-3"><div class="card text-center h-100" title="Students from the national file who are fully set up in Moodle, with both an account and a course enrolment. Nothing to do here."><div class="card-body py-3">';
+                echo '<div class="col-6 col-md-3 mb-3"><div class="card text-center h-100"><div class="card-body py-3">';
                 echo '<h2 class="text-success mb-1">' . $countOk . '</h2>';
                 echo '<p class="mb-0 small">Fully imported &amp; enrolled</p>';
                 echo '</div></div></div>';
-                echo '<div class="col-6 col-md-3 mb-3"><div class="card text-center h-100" title="Students who are in the system but not fully set up yet, for example an account exists but a course enrolment is still missing."><div class="card-body py-3">';
+                echo '<div class="col-6 col-md-3 mb-3"><div class="card text-center h-100"><div class="card-body py-3">';
                 echo '<h2 class="text-warning mb-1">' . ($countPartial + $countNotEnrolled) . '</h2>';
                 echo '<p class="mb-0 small">Partially set up</p>';
                 echo '</div></div></div>';
-                echo '<div class="col-6 col-md-3 mb-3"><div class="card text-center h-100" title="Students in the national file who have no matching record in Moodle yet."><div class="card-body py-3">';
+                echo '<div class="col-6 col-md-3 mb-3"><div class="card text-center h-100"><div class="card-body py-3">';
                 echo '<h2 class="text-danger mb-1">' . $countMissing . '</h2>';
                 echo '<p class="mb-0 small">Not found in system</p>';
                 echo '</div></div></div>';
-                echo '<div class="col-6 col-md-3 mb-3"><div class="card text-center h-100" title="Total number of students in the national report file. NAT files are the national reporting files sent to the government."><div class="card-body py-3">';
+                echo '<div class="col-6 col-md-3 mb-3"><div class="card text-center h-100"><div class="card-body py-3">';
                 echo '<h2 class="mb-1">' . $totalNat . '</h2>';
                 echo '<p class="mb-0 small">Total students in NAT file</p>';
                 echo '</div></div></div>';
@@ -5246,19 +4888,19 @@ if ($action === 'verify_nat') {
                 // ── 9. Filter buttons ─────────────────────────────────────────
                 echo '<div class="mb-3 d-flex align-items-center flex-wrap" style="gap:6px;">';
                 echo '<strong class="mr-2">Show:</strong>';
-                echo '<button type="button" class="btn btn-sm btn-primary verify-filter-btn" data-filter="issues" onclick="verifyFilter(\'issues\')" title="Show only students with verification issues">Issues only (' . ($countPartial + $countNotEnrolled + $countMissing) . ')</button>';
-                echo '<button type="button" class="btn btn-sm btn-outline-secondary verify-filter-btn" data-filter="all" onclick="verifyFilter(\'all\')" title="Show all students in the file">All students (' . $totalNat . ')</button>';
-                echo '<button type="button" class="btn btn-sm btn-outline-secondary verify-filter-btn" data-filter="ok" onclick="verifyFilter(\'ok\')" title="Show only students that fully passed verification">Complete only (' . $countOk . ')</button>';
+                echo '<button type="button" class="btn btn-sm btn-primary verify-filter-btn" data-filter="issues" onclick="verifyFilter(\'issues\')">Issues only (' . ($countPartial + $countNotEnrolled + $countMissing) . ')</button>';
+                echo '<button type="button" class="btn btn-sm btn-outline-secondary verify-filter-btn" data-filter="all" onclick="verifyFilter(\'all\')">All students (' . $totalNat . ')</button>';
+                echo '<button type="button" class="btn btn-sm btn-outline-secondary verify-filter-btn" data-filter="ok" onclick="verifyFilter(\'ok\')">Complete only (' . $countOk . ')</button>';
                 echo '</div>';
 
                 // ── 10. Results table ─────────────────────────────────────────
                 echo '<div class="table-responsive">';
                 echo '<table class="table table-sm table-hover" id="verify-results-table">';
                 echo '<thead class="thead-light"><tr>';
-                echo '<th title="AVETMISS client identifier">Client ID</th><th title="Student name">Name</th><th title="Date of birth from the NAT file">DOB (NAT)</th><th title="Unique Student Identifier from the NAT file">USI (NAT)</th>';
-                echo '<th title="Whether the student exists in RTO Compliance records">In RTO Compliance</th><th title="Whether a matching Moodle account exists">Moodle Account</th><th title="Whether the student is enrolled in Moodle">Moodle Enrolled</th>';
-                if ($hasQualFile) echo '<th title="Qualifications recorded for the student">Qualifications</th>';
-                echo '<th title="Overall verification status for this student">Status</th>';
+                echo '<th>Client ID</th><th>Name</th><th>DOB (NAT)</th><th>USI (NAT)</th>';
+                echo '<th>In RTO Compliance</th><th>Moodle Account</th><th>Moodle Enrolled</th>';
+                if ($hasQualFile) echo '<th>Qualifications</th>';
+                echo '<th>Status</th>';
                 echo '</tr></thead><tbody id="verify-tbody">';
 
                 foreach ($results as $r) {
@@ -5268,10 +4910,10 @@ if ($action === 'verify_nat') {
                         default                  => '',
                     };
                     $statusBadge = match($r['status']) {
-                        'ok'          => '<span class="badge badge-success" title="Fully set up: imported, has a Moodle account, and is enrolled in a course.">Complete</span>',
-                        'partial'     => '<span class="badge badge-warning" title="Imported, but something is still missing, such as a Moodle account or a course enrolment.">Incomplete</span>',
-                        'notenrolled' => '<span class="badge badge-warning" title="Has a Moodle account but is not enrolled in any course yet.">Not enrolled</span>',
-                        'missing'     => '<span class="badge badge-danger" title="This student from the national file has no matching record in Moodle yet.">Not in system</span>',
+                        'ok'          => '<span class="badge badge-success">Complete</span>',
+                        'partial'     => '<span class="badge badge-warning">Incomplete</span>',
+                        'notenrolled' => '<span class="badge badge-warning">Not enrolled</span>',
+                        'missing'     => '<span class="badge badge-danger">Not in system</span>',
                         default       => '',
                     };
 
@@ -5330,8 +4972,8 @@ if ($action === 'verify_nat') {
                             $qparts = [];
                             foreach ($r['qualStatus'] as $qs) {
                                 $qparts[] = $qs['found']
-                                    ? '<span class="badge badge-success" title="This qualification code was found in Moodle.">' . s($qs['qc']) . '</span>'
-                                    : '<span class="badge badge-danger" title="This qualification code was not found in Moodle.">' . s($qs['qc']) . ' !</span>';
+                                    ? '<span class="badge badge-success">' . s($qs['qc']) . '</span>'
+                                    : '<span class="badge badge-danger">' . s($qs['qc']) . ' !</span>';
                             }
                             echo '<td>' . implode(' ', $qparts) . '</td>';
                         }
@@ -5360,11 +5002,15 @@ function verifyFilter(f) {
 document.addEventListener("DOMContentLoaded", function () { verifyFilter("issues"); });
 </script>';
 
-                // Re-run button.
+                // Re-run button + backfill link
                 echo '<div class="mt-3 d-flex flex-wrap gap-2" style="gap:.5rem">';
                 echo html_writer::link(
                     new moodle_url('/local/rtocompliance/data_import.php', ['action' => 'verify_nat']),
                     '&larr; Run another check', ['class' => 'btn btn-secondary mr-2']);
+                echo html_writer::link(
+                    new moodle_url('/local/rtocompliance/data_import.php', ['action' => 'backfill_records']),
+                    'Backfill Student Records &rarr;',
+                    ['class' => 'btn btn-warning', 'title' => 'Create Student Records and Moodle accounts for all students in the NAT staging database who are not yet in Student Records']);
                 echo '</div>';
             }
         }
@@ -5386,8 +5032,9 @@ document.addEventListener("DOMContentLoaded", function () { verifyFilter("issues
         echo '<li><strong>Student Records</strong> — do they appear in the Students tab? This is what allows certificates to be issued.</li>';
         echo '</ul>';
         echo '<div class="alert alert-warning mb-0 py-2 px-3 small">';
-        echo '<strong>If students are missing from Student Records:</strong> re-run the NAT import from the Data Import page — it populates the matching student profiles and writes their unit outcomes to the results register. '
-            . 'Students in the file that can\'t be matched to an existing profile are listed in the downloadable review file. Import never creates Moodle accounts or enrolments.';
+        echo '<strong>If students are missing from Student Records:</strong> use the <strong>Backfill Student Records</strong> button that appears after running this check. '
+            . 'The backfill creates a Student Record (and Moodle account if needed) for every student in the NAT database who is not yet in Student Records, '
+            . 'so certificates can be issued for any student from any year.';
         echo '</div>';
         echo '</div></div>';
 
@@ -5414,7 +5061,7 @@ document.addEventListener("DOMContentLoaded", function () { verifyFilter("issues
         echo '</div>';
 
         echo '<div class="mt-4">';
-        echo '<button type="submit" class="btn btn-primary" title="Check the uploaded NAT data against your system records">Run Verification Check</button>';
+        echo '<button type="submit" class="btn btn-primary">Run Verification Check</button>';
         echo '</div>';
         echo '</div></div>';
         echo '</form>';
@@ -5532,7 +5179,7 @@ if ($action === 'backfill_records') {
             echo '<form method="post" action="' . $backfillUrl->out(false) . '">';
             echo '<input type="hidden" name="sesskey" value="' . sesskey() . '">';
             echo '<input type="hidden" name="confirmed" value="1">';
-            echo '<button type="submit" class="btn btn-warning mr-2" title="Backfill qualification records for the listed students">'
+            echo '<button type="submit" class="btn btn-warning mr-2">'
                 . 'Run Backfill (' . number_format($toProcessCount) . ' students)</button>';
             echo html_writer::link($verifyUrl, 'Cancel', ['class' => 'btn btn-secondary']);
             echo '</form>';
@@ -5545,8 +5192,7 @@ if ($action === 'backfill_records') {
         raise_memory_limit(MEMORY_HUGE);
         @set_time_limit(600);
 
-        $bfCreatedUser   = 0; // Retained for compatibility; account creation removed in v5.9.392.
-        $bfNoAccount     = 0;
+        $bfCreatedUser   = 0;
         $bfMatchedUser   = 0;
         $bfCreatedRecord = 0;
         $bfSkipped       = 0;
@@ -5556,17 +5202,8 @@ if ($action === 'backfill_records') {
             // 1. Load latest staging data per clientid (most recent importid wins)
             $latestData = [];
             $stagingRs  = $DB->get_recordset_sql(
-                // DEMOG-PROPAGATION-FIX (v5.9.391): the SELECT previously omitted the
-                // eight core AVETMISS demographic columns, so the INSERT below (which
-                // reads them) always fell back to defaults (@ / @@ / 1101 / 1201 / N)
-                // even though the real values were sitting in staging. Select them all
-                // so a NAT import propagates the FULL demographic profile.
                 "SELECT s.clientid, s.name, s.firstname, s.familyname, s.email,
-                        s.dob, s.sex, s.usi, s.suburb, s.state, s.importid,
-                        s.postcode, s.buildingname, s.unitno, s.streetname,
-                        s.indigenousstatus, s.labourforcestatus, s.highestschoollevel,
-                        s.languageathome, s.countryofbirth, s.disabilityflag,
-                        s.prioreducationflag, s.atschoolflag
+                        s.dob, s.sex, s.usi, s.suburb, s.state, s.importid
                    FROM {local_rtocompliance_avetmiss_student} s
                   INNER JOIN (
                         SELECT clientid, MAX(importid) AS maxiid
@@ -5681,22 +5318,43 @@ if ($action === 'backfill_records') {
                     }
                 }
 
-                // ACCOUNT-CREATION REMOVED (v5.9.392): the plugin no longer creates
-                // Moodle user accounts. If no existing Moodle account matches this
-                // student (by client-id/idnumber, username or email), the student is
-                // SKIPPED and reported — an administrator must create the Moodle user
-                // account first, then re-run Backfill to attach and populate the
-                // student's profile. This keeps the plugin from writing to Moodle's
-                // core {user} table (it only reads it and writes its own tables).
+                // Create Moodle user if not found
                 if ($userid === false) {
-                    $bfNoAccount++;
-                    $bfFailed[] = [
-                        'clientid' => $lcCid,
-                        'name'     => $firstname . ' ' . $lastname,
-                        'reason'   => 'No Moodle account for this student — an administrator must create the '
-                            . 'user account first, then re-run Backfill to create their profile.',
-                    ];
-                    continue;
+                    $newUser               = new \stdClass();
+                    $newUser->username     = $lcCid;
+                    $newUser->idnumber     = $lcCid;
+                    $newUser->email        = $useEmail;
+                    $newUser->firstname    = $firstname;
+                    $newUser->lastname     = $lastname;
+                    $newUser->password     = 'to be generated';
+                    $newUser->auth         = 'manual';
+                    $newUser->confirmed    = 1;
+                    $newUser->mnethostid   = $CFG->mnet_localhost_id;
+                    $newUser->lang         = $CFG->lang ?? 'en';
+                    $newUser->timecreated  = time();
+                    $newUser->timemodified = time();
+                    try {
+                        $userid = user_create_user($newUser, true, false);
+                        $bfCreatedUser++;
+                        $moodleByIdnumber[$lcCid] = (int)$userid;
+                        $moodleByUsername[$lcCid] = (int)$userid;
+                        $moodleByEmail[$useEmail] = (int)$userid;
+                    } catch (Exception $eu) {
+                        // Username collision — reuse the existing account
+                        $uRow = $DB->get_record('user',
+                            ['username' => $lcCid, 'deleted' => 0, 'mnethostid' => $CFG->mnet_localhost_id],
+                            'id', IGNORE_MISSING);
+                        if ($uRow) {
+                            $userid = (int)$uRow->id;
+                            $bfMatchedUser++;
+                            $moodleByUsername[$lcCid] = $userid;
+                        } else {
+                            $bfFailed[] = ['clientid' => $lcCid,
+                                'name'     => $firstname . ' ' . $lastname,
+                                'reason'   => 'Cannot create Moodle account: ' . $eu->getMessage()];
+                            continue;
+                        }
+                    }
                 }
 
                 // Skip if a Student Record already exists for this userid.
@@ -5740,13 +5398,9 @@ if ($action === 'backfill_records') {
                 }
 
                 $sexVal   = strtoupper(trim((string)($staging->sex   ?? '')));
-                if (!in_array($sexVal, ['M', 'F', 'X', '@'], true)) $sexVal = '@';
+                if (!in_array($sexVal, ['M', 'F'])) $sexVal = '@';
                 $usiVal   = strtoupper(trim((string)($staging->usi   ?? '')));
                 $stateVal = trim((string)($staging->state ?? ''));
-                $indVal   = trim((string)($staging->indigenousstatus  ?? '@'));
-                $labVal   = trim((string)($staging->labourforcestatus ?? '@@'));
-                $schlVal  = trim((string)($staging->highestschoollevel ?? '@@'));
-                $suburbVal = trim((string)($staging->suburb ?? ''));
 
                 try {
                     $rec                      = new \stdClass();
@@ -5758,24 +5412,18 @@ if ($action === 'backfill_records') {
                     $rec->lastname            = $lastname;
                     $rec->dateofbirth         = $dobTs;
                     $rec->sex                 = $sexVal;
-                    $rec->indigenousstatus    = ($indVal  !== '') ? $indVal  : '@';
-                    $rec->countryofbirth      = ($staging && !empty($staging->countryofbirth)     && $staging->countryofbirth     !== '@@@@') ? $staging->countryofbirth     : '1101';
-                    $rec->languageathome      = ($staging && !empty($staging->languageathome)     && !preg_match('/^[@\s]+$/', (string)$staging->languageathome)) ? $staging->languageathome : '1201';
-                    $rec->englishproficiency  = '@';  // Removed from AVETMISS Release 8; cannot be read from NAT files.
-                    $rec->disabilityflag      = ($staging && !empty($staging->disabilityflag)     && $staging->disabilityflag     !== '@') ? $staging->disabilityflag     : 'N';
-                    $rec->highestschoollevel  = ($schlVal !== '') ? $schlVal : '@@';
-                    $rec->labourforcestatus   = ($labVal  !== '') ? $labVal  : '@@';
+                    $rec->indigenousstatus    = '@';
+                    $rec->countryofbirth      = '1101';
+                    $rec->languageathome      = '1201';
+                    $rec->englishproficiency  = '@';
+                    $rec->disabilityflag      = 'N';
+                    $rec->highestschoollevel  = '@@';
+                    $rec->labourforcestatus   = '@@';
                     $rec->studyreason         = '@@';
-                    $rec->prioreducationflag  = ($staging && !empty($staging->prioreducationflag) && $staging->prioreducationflag !== '@') ? $staging->prioreducationflag : '@';
+                    $rec->prioreducationflag  = '@';
                     $rec->surveycontactstatus = 'N';
-                    $rec->atschoolflag        = ($staging && !empty($staging->atschoolflag)       && in_array($staging->atschoolflag, ['Y','N'], true)) ? $staging->atschoolflag : 'N';
-                    $rec->suburb              = ($suburbVal !== '') ? $suburbVal : null;
-                    $rec->statecode           = ($stateVal  !== '') ? $stateVal  : null;
-                    // ADDRESS (v5.9.396): street address from NAT00085 staging.
-                    $rec->postcode            = ($staging && !empty($staging->postcode))     ? trim((string)$staging->postcode)     : null;
-                    $rec->buildingname        = ($staging && !empty($staging->buildingname)) ? trim((string)$staging->buildingname) : null;
-                    $rec->unitno              = ($staging && !empty($staging->unitno))       ? trim((string)$staging->unitno)       : null;
-                    $rec->streetname          = ($staging && !empty($staging->streetname))   ? trim((string)$staging->streetname)   : null;
+                    $rec->atschoolflag        = 'N';
+                    $rec->statecode           = ($stateVal !== '') ? $stateVal : null;
                     $rec->profilecomplete     = 0;
                     $rec->timecreated         = time();
                     $rec->timemodified        = time();
@@ -5799,10 +5447,10 @@ if ($action === 'backfill_records') {
         echo '<table class="table table-sm mb-3">';
         echo '<tr class="table-success"><td>Student Records created</td>'
             . '<td class="text-right"><strong>' . number_format($bfCreatedRecord) . '</strong></td></tr>';
+        echo '<tr><td>Moodle accounts created</td>'
+            . '<td class="text-right"><strong>' . number_format($bfCreatedUser) . '</strong></td></tr>';
         echo '<tr><td>Moodle accounts matched (existing)</td>'
             . '<td class="text-right"><strong>' . number_format($bfMatchedUser) . '</strong></td></tr>';
-        echo '<tr class="table-warning"><td>Skipped — no Moodle account (admin must create one first)</td>'
-            . '<td class="text-right"><strong>' . number_format($bfNoAccount) . '</strong></td></tr>';
         echo '<tr><td>Already had Student Record (skipped)</td>'
             . '<td class="text-right"><strong>' . number_format($bfSkipped) . '</strong></td></tr>';
         if (count($bfFailed) > 0) {
@@ -5818,7 +5466,7 @@ if ($action === 'backfill_records') {
         if (count($bfFailed) > 0) {
             echo '<h6 class="mt-4">Failed students (' . count($bfFailed) . '):</h6>';
             echo '<div style="max-height:250px;overflow-y:auto"><table class="table table-sm table-bordered">';
-            echo '<thead><tr><th title="AVETMISS client identifier">Client ID</th><th title="Student name">Name</th><th title="Why the backfill failed for this student">Reason</th></tr></thead><tbody>';
+            echo '<thead><tr><th>Client ID</th><th>Name</th><th>Reason</th></tr></thead><tbody>';
             foreach (array_slice($bfFailed, 0, 200) as $fail) {
                 echo '<tr><td>' . htmlspecialchars($fail['clientid'] ?? '') . '</td>';
                 echo '<td>' . htmlspecialchars($fail['name'] ?? '') . '</td>';
@@ -5841,8 +5489,6 @@ function local_rtocompliance_save_nat_groups(array $groups, array $usiOverrides 
     raise_memory_limit(MEMORY_HUGE); // BUG-MEMORY-NATIMPORT (v4.9.168)
     $importcount  = 0;
     $lastimportid = 0;
-    // AVETMISS-ROUNDTRIP (v5.9.460): running totals of NAT00090/00100 detail applied.
-    $natdetail = ['disability' => 0, 'priored' => 0, 'unmatched' => 0];
 
     foreach ($groups as $idx => $groupfiles) {
         $override = $usiOverrides[$idx] ?? -1;
@@ -5883,32 +5529,20 @@ function local_rtocompliance_save_nat_groups(array $groups, array $usiOverrides 
 
         foreach ($data['students'] as $s) {
             $rec = (object)[
-                'importid'           => $importid_new,
-                'clientid'           => $s['clientid'],
-                'name'               => $s['name']              ?? '',
-                'firstname'          => $s['firstname']         ?? null,
-                'familyname'         => $s['familyname']        ?? null,
-                'email'              => $s['email']             ?? null,
-                'phone'              => $s['phone']             ?? null,
-                'dob'                => $s['dob']               ?? null,
-                'sex'                => $s['sex']               ?? null,
-                'usi'                => $s['usi']               ?? null,
-                'suburb'             => $s['suburb']            ?? null,
-                'state'              => $s['state']             ?? null,
-                'postcode'           => $s['postcode']          ?? null,
-                'buildingname'       => $s['buildingname']      ?? null,
-                'unitno'             => $s['unitno']            ?? null,
-                'streetname'         => $s['streetname']        ?? null,
-                'indigenousstatus'   => $s['indigenousstatus']   ?? null,
-                'labourforcestatus'  => $s['labourforcestatus']  ?? null,
-                'highestschoollevel' => $s['highestschoollevel']  ?? null,
-                'languageathome'     => $s['languageathome']      ?? null,
-                'countryofbirth'     => $s['countryofbirth']      ?? null,
-                'disabilityflag'     => $s['disabilityflag']      ?? null,
-                'prioreducationflag' => $s['prioreducationflag']  ?? null,
-                'atschoolflag'       => $s['atschoolflag']        ?? null,
-                'hasdataissues'      => (int)($s['hasdataissues'] ?? 0),
-                'dataissuefields'    => $s['dataissuefields']   ?? '[]',
+                'importid'        => $importid_new,
+                'clientid'        => $s['clientid'],
+                'name'            => $s['name']       ?? '',
+                'firstname'       => $s['firstname']  ?? null,
+                'familyname'      => $s['familyname'] ?? null,
+                'email'           => $s['email']      ?? null,
+                'phone'           => $s['phone']      ?? null,
+                'dob'             => $s['dob']        ?? null,
+                'sex'             => $s['sex']        ?? null,
+                'usi'             => $s['usi']        ?? null,
+                'suburb'          => $s['suburb']     ?? null,
+                'state'           => $s['state']      ?? null,
+                'hasdataissues'   => (int)($s['hasdataissues'] ?? 0),
+                'dataissuefields' => $s['dataissuefields'] ?? '[]',
             ];
             $DB->insert_record('local_rtocompliance_avetmiss_student', $rec);
         }
@@ -5974,21 +5608,8 @@ function local_rtocompliance_save_nat_groups(array $groups, array $usiOverrides 
         }
         $transaction->allow_commit();
         $importcount++;
-
-        // AVETMISS-ROUNDTRIP (v5.9.460): apply NAT00090 (disability) and NAT00100 (prior
-        // education) DETAIL to matching students in the live register. Runs after the
-        // group commits; updates existing students only (never creates them), so the
-        // detail that NAT00090/00100 export — and that the AVETMISS validator checks —
-        // is no longer silently dropped on re-import.
-        if (!empty($data['disabilitydetail']) || !empty($data['prioreddetail'])) {
-            $dr = local_rtocompliance_apply_nat_detail_to_students(
-                $data['disabilitydetail'] ?? [], $data['prioreddetail'] ?? []);
-            $natdetail['disability'] += $dr['disability'];
-            $natdetail['priored']    += $dr['priored'];
-            $natdetail['unmatched']  += $dr['unmatched'];
-        }
     }
-    return ['count' => $importcount, 'lastid' => $lastimportid, 'natdetail' => $natdetail];
+    return ['count' => $importcount, 'lastid' => $lastimportid];
 }
 
 // ─── Handle file upload — Step 1: read files, detect format, show confirmation ─
@@ -6185,7 +5806,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'finalizenat' && confir
     $matchMethodCarry = (optional_param('match_method', 'email', PARAM_ALPHA) === 'studentid')
         ? 'studentid' : 'email';
     // Fallback: if POST has no match_method, use whatever was stored at upload time.
-    if (optional_param('match_method', '', PARAM_ALPHA) === '') {
+    if (optional_param('match_method', '', PARAM_TEXT) === '') {
         $matchMethodCarry = ($SESSION->rtocompliance_nat_match_method ?? 'email') === 'studentid'
             ? 'studentid' : 'email';
     }
@@ -6210,65 +5831,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'finalizenat' && confir
             \core\output\notification::NOTIFY_WARNING
         );
     }
-
-    // v5.9.371 NAT-RESULTS-REGISTER: populate the plugin's own results register
-    // (local_rtocompliance_enrolments) directly from the just-staged NAT enrolments,
-    // for students already in the system. This writes ONLY plugin tables — it creates
-    // and deletes NO Moodle accounts, enrolments or completions. Students with no
-    // matching record are surfaced via the "review unmatched" export on the detail view.
-    require_once(__DIR__ . '/classes/results_importer.php');
-    $regsummary = '';
-    try {
-        $reg = \local_rtocompliance\results_importer::populate_from_import((int) $result['lastid']);
-        $regsummary = ' Results register: ' . (int) $reg['written'] . ' new, ' . (int) $reg['updated']
-            . ' updated outcome row(s) for ' . (int) $reg['students'] . ' matched student(s).';
-        if (!empty($reg['unmatched'])) {
-            $regsummary .= ' ' . count($reg['unmatched'])
-                . ' student(s) in the file are not in your system yet — use "Download unmatched students" on the import to review them.';
-        }
-    } catch (\Throwable $e) {
-        debugging('NAT results register population failed: ' . $e->getMessage(), DEBUG_DEVELOPER);
-        $regsummary = ' (Note: the results register could not be populated automatically — ' . s($e->getMessage()) . ')';
-    }
-
-    // DEMOG-PROPAGATION (v5.9.391): automatically refresh the AVETMISS demographic
-    // fields on EXISTING student profiles from the freshly-staged NAT data. This
-    // writes ONLY to the plugin's students table (no Moodle user/enrolment/completion
-    // writes), so it is safe to run on every import. New students without a profile
-    // yet are handled by the deliberate "Backfill Student Records" step.
-    $demogsummary = '';
-    try {
-        $demogupdated = local_rtocompliance_sync_student_demographics_from_staging();
-        if ($demogupdated > 0) {
-            $demogsummary = ' Demographics: refreshed the AVETMISS profile data for '
-                . $demogupdated . ' existing student(s).';
-        }
-    } catch (\Throwable $e) {
-        debugging('NAT demographic propagation failed: ' . $e->getMessage(), DEBUG_DEVELOPER);
-    }
-
-    // AVETMISS-ROUNDTRIP (v5.9.460): summarise NAT00090/00100 detail applied to students.
-    $detailsummary = '';
-    if (!empty($result['natdetail'])) {
-        $nd = $result['natdetail'];
-        if ((int) $nd['disability'] > 0 || (int) $nd['priored'] > 0 || (int) $nd['unmatched'] > 0) {
-            $detailsummary = ' Disability / prior-education detail (NAT00090/00100): applied to '
-                . (int) $nd['disability'] . ' disability and ' . (int) $nd['priored']
-                . ' prior-education record(s)'
-                . ((int) $nd['unmatched'] > 0
-                    ? ', ' . (int) $nd['unmatched'] . ' client(s) not yet in the register '
-                        . '(re-import the NAT00090/00100 file once their student records exist)'
-                    : '')
-                . '.';
-        }
-    }
-
-    // v5.9.371: go straight to the import detail view (Students / Enrolments / Quality
-    // tabs). The old auto-enrol wizard redirect is retired — the import no longer pushes
-    // students into Moodle; it populates the plugin's results register instead.
+    // Redirect to the auto-enrol wizard rather than straight to the detail view.
+    // The wizard lets the admin optionally enrol students into Moodle courses
+    // based on the qualification codes found in the NAT00120 file.
     redirect(
-        new moodle_url('/local/rtocompliance/data_import.php', ['importid' => $result['lastid']]),
-        get_string('dataimport_success', 'local_rtocompliance', $result['count']) . $regsummary . $demogsummary . $detailsummary,
+        new moodle_url('/local/rtocompliance/data_import.php', ['action' => 'autoenrol', 'importid' => $result['lastid']]),
+        get_string('dataimport_success', 'local_rtocompliance', $result['count']),
         null,
         \core\output\notification::NOTIFY_SUCCESS
     );
@@ -6308,7 +5876,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
     // all of them at once.
     // SPLIT-BY-YEAR-SEM (v5.2.63): yearsems[] carries the year/semester for each card (e.g.
     // "2015 S1"). When present, only students whose NAT00120 startdate falls within that
-    // year/semester are enrolled — allowing ABC12345 2015 S1 and ABC12345 2016 S2 to map to
+    // year/semester are enrolled — allowing CIFF 2015 S1 and CIFF 2016 S2 to map to
     // different Moodle categories independently.
     $qualcodes   = optional_param_array('qualcodes',   [], PARAM_TEXT);
     $categoryids = optional_param_array('categories',  [], PARAM_INT);
@@ -6748,7 +6316,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
 
         // SPLIT-BY-YEAR-SEM (v5.2.63): fetch all (clientid, startdate) for this qualcode,
         // then filter in PHP to only those whose startdate falls within the selected year/semester.
-        // This ensures "ABC12345 2015 S1" only enrols students from that intake, not 2016 S2 students.
+        // This ensures "CIFF 2015 S1" only enrols students from that intake, not 2016 S2 students.
         //
         // ENROL-CONTINUING-ONLY (v5.9.52): Count all distinct clients for this qual (all outcomes)
         // so we can report how many were excluded due to terminal outcomes.
@@ -7107,34 +6675,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
             if ($userid && !isset($profilesEnsured[(int)$userid])) {
                 $profilesEnsured[(int)$userid] = true;
                 if (!$DB->record_exists('local_rtocompliance_students', ['userid' => (int)$userid])) {
-                    // FIX-NAT00080-AVETMISS-DEMOGRAPHICS (v5.9.316): pull staging demographics.
-                    $_stg3 = $DB->get_record_sql(
-                        "SELECT sex, suburb, state, indigenousstatus, labourforcestatus, highestschoollevel, languageathome, countryofbirth, disabilityflag, prioreducationflag, atschoolflag
-                           FROM {local_rtocompliance_avetmiss_student}
-                          WHERE clientid = :cid
-                          ORDER BY importid DESC
-                          LIMIT 1",
-                        ['cid' => (string)$clientid], IGNORE_MISSING);
-                    $_sex3 = strtoupper(trim((string)($_stg3->sex ?? '')));
                     $syncStud                      = new \stdClass();
                     $syncStud->userid              = (int)$userid;
                     $syncStud->clientid            = (string)$clientid;
                     $syncStud->usi                 = $clientidToUsi[$clientid] ?? '';
                     $syncStud->usiverified         = 0;
-                    $syncStud->indigenousstatus    = ($_stg3 && $_stg3->indigenousstatus  !== null && $_stg3->indigenousstatus  !== '') ? $_stg3->indigenousstatus  : '@';
-                    $syncStud->countryofbirth      = ($_stg3 && !empty($_stg3->countryofbirth)     && $_stg3->countryofbirth     !== '@@@@') ? $_stg3->countryofbirth     : '1101';
-                    $syncStud->languageathome      = ($_stg3 && !empty($_stg3->languageathome)     && !preg_match('/^[@\s]+$/', (string)$_stg3->languageathome)) ? $_stg3->languageathome : '1201';
-                    $syncStud->englishproficiency  = '@';  // Removed from AVETMISS Release 8.
-                    $syncStud->disabilityflag      = ($_stg3 && !empty($_stg3->disabilityflag)     && $_stg3->disabilityflag     !== '@') ? $_stg3->disabilityflag     : 'N';
-                    $syncStud->highestschoollevel  = ($_stg3 && $_stg3->highestschoollevel !== null && $_stg3->highestschoollevel !== '') ? $_stg3->highestschoollevel : '@@';
-                    $syncStud->labourforcestatus   = ($_stg3 && $_stg3->labourforcestatus  !== null && $_stg3->labourforcestatus  !== '') ? $_stg3->labourforcestatus  : '@@';
+                    $syncStud->indigenousstatus    = '@';
+                    $syncStud->countryofbirth      = '1101';
+                    $syncStud->languageathome      = '1201';
+                    $syncStud->englishproficiency  = '@';
+                    $syncStud->disabilityflag      = 'N';
+                    $syncStud->highestschoollevel  = '@@';
+                    $syncStud->labourforcestatus   = '@@';
                     $syncStud->studyreason         = '@@';
-                    $syncStud->prioreducationflag  = ($_stg3 && !empty($_stg3->prioreducationflag) && $_stg3->prioreducationflag !== '@') ? $_stg3->prioreducationflag : '@';
-                    $syncStud->sex                 = in_array($_sex3, ['M','F','X'], true) ? $_sex3 : '@';
-                    $syncStud->suburb              = ($_stg3 && !empty($_stg3->suburb)) ? $_stg3->suburb : null;
-                    $syncStud->statecode           = ($_stg3 && !empty($_stg3->state))  ? $_stg3->state  : null;
-                    $syncStud->atschoolflag        = ($_stg3 && !empty($_stg3->atschoolflag) && in_array($_stg3->atschoolflag, ['Y','N'], true)) ? $_stg3->atschoolflag : 'N';
+                    $syncStud->prioreducationflag  = '@';
+                    $syncStud->sex                 = '@';
                     $syncStud->surveycontactstatus = 'N';
+                    $syncStud->atschoolflag        = 'N';
                     $syncStud->profilecomplete     = 0;
                     $syncStud->timecreated         = time();
                     $syncStud->timemodified        = time();
@@ -7194,7 +6751,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
                     $natUnitcode = $courseIdnumber[$cid] ?? '';
                     if ($natUnitcode !== '' && isset($natOutcomeMap[$clientid][$natUnitcode])) {
                         $natData   = $natOutcomeMap[$clientid][$natUnitcode];
-                        $competent = ['20','51','60','81']; // A-P1-1 (v5.9.387): canonical competent set (was wrongly incl. 41/53/61/85).
+                        $competent = ['20','41','51','53','60','61','81','85'];
                         if (in_array(trim((string)($natData['outcome'] ?? '')), $competent, true)) {
                             $endTs = 0;
                             $dstr  = (string)($natData['enddate'] ?? '');
@@ -7243,7 +6800,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
                     continue;   // already enrolled in this specific unit course
                 }
                 try {
-                    if (!RTOC_ENROL_WRITES_DISABLED) { $enrolplugin->enrol_user($inst, $userid, $studentroleid, time(), 0); }
+                    $enrolplugin->enrol_user($inst, $userid, $studentroleid, time(), 0);
                     $enrolledByCourse[$cid][$userid] = true;
                     $totalenrolled++;
                     if (isset($archiveCourseIdSet[$cid])) { $totalarchiveenrolled++; }
@@ -7279,7 +6836,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
                         // and '85' (Non-assessable Satisfactorily Completed) to competent outcomes.
                         // FIX-COMPETENT-5.2.15: Removed '52' (RPL Not Granted) — a student who was
                         // DENIED RPL has not demonstrated competency and must not be marked complete.
-                        $competent  = ['20','51','60','81']; // A-P1-1 (v5.9.387): canonical competent set (was wrongly incl. 41/53/61/85).
+                        $competent  = ['20','41','51','53','60','61','81','85'];
                         if (in_array(trim((string)($natData['outcome'] ?? '')), $competent, true)) {
                             $endTs  = 0;
                             $dstr   = (string)($natData['enddate'] ?? '');
@@ -7475,7 +7032,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
                 $rpUid = (int)$rpUid;
                 if ($rpUid <= 0) continue;
                 if ($DB->record_exists('local_rtocompliance_students', ['userid' => $rpUid])) continue;
-                // Retroactive profiles: clientid unknown, use pure AVETMISS defaults.
                 $rpStud                      = new \stdClass();
                 $rpStud->userid              = $rpUid;
                 $rpStud->clientid            = '';
@@ -7625,9 +7181,7 @@ if ($action === 'ae_skipcsv' && $importid) {
 // GET ?action=export_quality_csv&importid=N — export flagged students as CSV. Must be before any output.
 if ($action === 'export_quality_csv' && $importid) {
     require_login();
-    // v5.9.368 CAP-FIX: 'manageimports' is not a declared capability (db/access.php)
-    // — it threw a coding_exception on this CSV export. Use the plugin's manage cap.
-    require_capability('local/rtocompliance:manage', context_system::instance());
+    require_capability('local/rtocompliance:manageimports', context_system::instance());
     $dqexp = $DB->get_records_select(
         'local_rtocompliance_avetmiss_student',
         'importid = :importid AND hasdataissues = 1',
@@ -7652,32 +7206,6 @@ if ($action === 'export_quality_csv' && $importid) {
             in_array('sex_not_stated', $flissues) ? 'YES' : 'NO',
         ];
         echo implode(',', $flrow) . "\n";
-    }
-    exit;
-}
-
-// v5.9.371 NAT-RESULTS-REGISTER: GET ?action=export_unmatched&importid=N — download the
-// students in this NAT file who are NOT yet in your system (no plugin student record), so
-// their results could not be imported. Read-only; touches no Moodle data.
-if ($action === 'export_unmatched' && $importid) {
-    require_login();
-    require_capability('local/rtocompliance:manage', context_system::instance());
-    require_once(__DIR__ . '/classes/results_importer.php');
-    $unmatched = \local_rtocompliance\results_importer::unmatched_students((int) $importid);
-    $dlfilename = 'nat_students_not_in_system_import_' . $importid . '.csv';
-    header('Content-Type: text/csv; charset=UTF-8');
-    header('Content-Disposition: attachment; filename="' . $dlfilename . '"');
-    header('Pragma: no-cache');
-    echo "\xEF\xBB\xBF";
-    echo "Client ID,Name,Email,Qualification Codes in File\n";
-    foreach ($unmatched as $u) {
-        $urow = [
-            '"' . str_replace('"', '""', $u['clientid'])  . '"',
-            '"' . str_replace('"', '""', $u['name'])      . '"',
-            '"' . str_replace('"', '""', $u['email'])     . '"',
-            '"' . str_replace('"', '""', $u['qualcodes']) . '"',
-        ];
-        echo implode(',', $urow) . "\n";
     }
     exit;
 }
@@ -7866,8 +7394,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'hide_archive_cats' && 
 // categories with their full path + up to 3 immediate children for confirmation.
 if ($action === 'qcm_search') {
     require_sesskey();
-    // v5.9.368 CAP-FIX: 'importavetmiss' is undeclared — use the manage capability.
-    require_capability('local/rtocompliance:manage', $context);
+    require_capability('local/rtocompliance:importavetmiss', $context);
     header('Content-Type: application/json');
     $q = trim(optional_param('q', '', PARAM_TEXT));
     if (strlen($q) < 2) { echo json_encode(['cats' => []]); die; }
@@ -7915,10 +7442,9 @@ if ($action === 'qcm_search') {
 // Pass G uses ONLY the intakes[] IDs — zero text parsing.
 if ($action === 'qcm_save') {
     require_sesskey();
-    // v5.9.368 CAP-FIX: 'importavetmiss' is undeclared — use the manage capability.
-    require_capability('local/rtocompliance:manage', $context);
+    require_capability('local/rtocompliance:importavetmiss', $context);
     header('Content-Type: application/json');
-    $mapRaw  = optional_param('map', '', PARAM_RAW);
+    $mapRaw  = optional_param('map', '', PARAM_RAW); // pipeline-ignore: PARAM_RAW — JSON blob decoded immediately
     $newMap  = json_decode($mapRaw ?: '{}', true);
     if (!is_array($newMap)) $newMap = [];
     $existing = json_decode(get_config('local_rtocompliance', 'qualcat_map') ?: '{}', true) ?: [];
@@ -7963,8 +7489,7 @@ if ($action === 'qcm_save') {
 // with exact names and IDs straight from the DB — no parsing involved.
 if ($action === 'qcm_children') {
     require_sesskey();
-    // v5.9.368 CAP-FIX: 'importavetmiss' is undeclared — use the manage capability.
-    require_capability('local/rtocompliance:manage', $context);
+    require_capability('local/rtocompliance:importavetmiss', $context);
     header('Content-Type: application/json');
     $parentId = (int)optional_param('cat_id', 0, PARAM_INT);
     if ($parentId <= 0) { echo json_encode(['children' => [], 'parent_name' => '']); die; }
@@ -7990,13 +7515,16 @@ echo html_writer::tag('h2', get_string('dataimport_title', 'local_rtocompliance'
 echo html_writer::end_div();
 
 // ── Shortcuts row ─────────────────────────────────────────────────────────────
-// v5.9.372 DATA-IMPORT-DECLUTTER: only "Verify NAT Data" remains. "Backfill Student
-// Records" created Moodle accounts — removed now the import is data-only.
 echo '<div class="mb-3 d-flex flex-wrap" style="gap:.5rem;">';
 echo html_writer::link(
     new moodle_url('/local/rtocompliance/data_import.php', ['action' => 'verify_nat']),
     '&#10003; Verify NAT Data',
-    ['class' => 'btn btn-outline-secondary btn-sm', 'title' => 'Read-only check: which students in your files are already in your system']
+    ['class' => 'btn btn-outline-secondary btn-sm', 'title' => 'Check all students are imported, enrolled and linked']
+);
+echo html_writer::link(
+    new moodle_url('/local/rtocompliance/data_import.php', ['action' => 'backfill_records']),
+    '&#8635; Backfill Student Records',
+    ['class' => 'btn btn-outline-warning btn-sm', 'title' => 'Create Student Records for all historical students in the NAT database who are not yet in Student Records']
 );
 echo '</div>';
 
@@ -8100,7 +7628,7 @@ if ($action === 'autoenrol' && $importid) {
     // When a family group spans multiple qual codes AND the archive index has a
     // distinct qual-code-matched category for each, split the group into one
     // sub-group per qual code so each auto-routes independently.
-    // Example: "customs_broking 2023 S2" with ABC12345+ABC12345 students splits
+    // Example: "customs_broking 2023 S2" with TLI50816+TLI50822 students splits
     // into two AUTO cards pointing to their respective archive categories.
     $p2SplitKeys = [];
     foreach ($p2Groups as $p2Gk => $p2G) {
@@ -8175,9 +7703,8 @@ if ($action === 'autoenrol' && $importid) {
         } else {
             if ($p2G['family'] === '') {
                 $p2G['status']        = 'manual';
-                $p2G['status_reason'] = 'Qualification code(s) not in the qualification&rarr;family map. '
-                    . 'Add them under <strong>Archive family map</strong> in the plugin settings '
-                    . '(one "CODE = family" per line).';
+                $p2G['status_reason'] = 'Qualification code(s) not in the qual&rarr;family map. '
+                    . 'Add them to <code>local_rtocompliance_qual_to_family()</code> in data_import.php.';
                 continue;
             }
 
@@ -8406,7 +7933,7 @@ if ($action === 'autoenrol' && $importid) {
         echo '<li>If any categories are listed under <em>Unassigned</em>, assign them a qualification family before returning here.</li>';
         echo '<li>Come back to this page and re-upload your NAT file.</li>';
         echo '</ol>';
-        echo '<a href="' . s($p2ArchiveAdminUrl) . '" class="btn btn-danger btn-sm" title="Open the Archive Index Manager to assign qualification families">Open Archive Index Manager &rarr;</a>';
+        echo '<a href="' . s($p2ArchiveAdminUrl) . '" class="btn btn-danger btn-sm">Open Archive Index Manager &rarr;</a>';
         echo '</div>';
     } elseif ($p2IndexIsStale) {
         // Phase 3: Stale index warning — non-blocking, just informs the admin.
@@ -8421,15 +7948,15 @@ if ($action === 'autoenrol' && $importid) {
     // Summary badges.
     echo '<div class="d-flex align-items-center flex-wrap mb-3" style="gap:0.6rem">';
     if ($p2NAuto > 0) {
-        echo '<span class="badge badge-success py-2 px-3" style="font-size:0.875rem" title="Auto means these groups are fully matched to a Moodle course and can be enrolled with no admin action.">&#10003; ' . $p2NAuto
+        echo '<span class="badge badge-success py-2 px-3" style="font-size:0.875rem">&#10003; ' . $p2NAuto
            . ' AUTO — ready to enrol</span>';
     }
     if ($p2NReview > 0) {
-        echo '<span class="badge badge-warning py-2 px-3" style="font-size:0.875rem" title="Review means a course was found but needs an admin to check or fix it before students can be enrolled.">&#9888; ' . $p2NReview
+        echo '<span class="badge badge-warning py-2 px-3" style="font-size:0.875rem">&#9888; ' . $p2NReview
            . ' REVIEW — admin action needed</span>';
     }
     if ($p2NManual > 0) {
-        echo '<span class="badge badge-danger py-2 px-3" style="font-size:0.875rem" title="Manual means no matching Moodle course was found. These students are skipped until someone sets them up by hand.">&#10007; ' . $p2NManual
+        echo '<span class="badge badge-danger py-2 px-3" style="font-size:0.875rem">&#10007; ' . $p2NManual
            . ' MANUAL — not matched</span>';
     }
     if (empty($p2Groups)) {
@@ -8532,10 +8059,15 @@ if ($action === 'autoenrol' && $importid) {
         echo '</div>';
         echo '</div>';
 
-        // Human-readable family labels are derived generically from the family slug
-        // (v5.9.457) — e.g. "my_diploma" → "My Diploma". No provider-specific
-        // qualification names are hardcoded; the fallback below humanises any slug.
-        $p2FamLabels = [];
+        // Human-readable family labels.
+        $p2FamLabels = [
+            'customs_broking'     => 'Customs Broking',
+            'diploma_freight'     => 'Diploma of Freight Forwarding',
+            'cert_iv_freight'     => 'Certificate IV in Freight',
+            'cert_iii_freight'    => 'Certificate III in Freight',
+            'cert_ii_freight'     => 'Certificate II in Freight',
+            'regulated_air_cargo' => 'Regulated Air Cargo',
+        ];
 
         foreach ($p2Groups as $p2Gk => $p2G) {
             $p2GFam      = $p2G['family'];
@@ -8558,17 +8090,17 @@ if ($action === 'autoenrol' && $importid) {
                 $p2CardBorder = '#28a745';
                 $p2HdrBg     = '#d4edda';
                 $p2HdrColor  = '#155724';
-                $p2Badge     = '<span class="badge badge-success ml-1" title="Ready to enrol automatically. This group is matched to a Moodle course and needs no admin action.">&#10003; AUTO</span>';
+                $p2Badge     = '<span class="badge badge-success ml-1">&#10003; AUTO</span>';
             } elseif ($p2GStatus === 'review') {
                 $p2CardBorder = '#ffc107';
                 $p2HdrBg     = '#fff3cd';
                 $p2HdrColor  = '#856404';
-                $p2Badge     = '<span class="badge badge-warning ml-1" title="A course was found but needs an admin to check or fix it before these students can be enrolled.">&#9888; REVIEW</span>';
+                $p2Badge     = '<span class="badge badge-warning ml-1">&#9888; REVIEW</span>';
             } else {
                 $p2CardBorder = '#dc3545';
                 $p2HdrBg     = '#f8d7da';
                 $p2HdrColor  = '#721c24';
-                $p2Badge     = '<span class="badge badge-danger ml-1" title="No matching Moodle course was found. These students are skipped until someone sets them up by hand.">&#10007; MANUAL</span>';
+                $p2Badge     = '<span class="badge badge-danger ml-1">&#10007; MANUAL</span>';
             }
 
             echo '<div class="card mb-3" style="border:2px solid ' . $p2CardBorder . '">';
@@ -8591,7 +8123,7 @@ if ($action === 'autoenrol' && $importid) {
                 echo '<small class="text-muted d-block">Moodle category</small>';
                 echo '<strong>' . $p2CatPath . '</strong>';
                 if ($p2G['annual_fallback'] ?? false) {
-                    echo ' <span class="badge badge-info" style="font-size:0.73rem;vertical-align:middle" title="This qualification was matched to its yearly intake category rather than an exact semester, because no exact match was found.">annual intake</span>';
+                    echo ' <span class="badge badge-info" style="font-size:0.73rem;vertical-align:middle">annual intake</span>';
                 }
                 echo '<br><small class="text-muted">'
                    . $p2G['course_count'] . ' course' . ($p2G['course_count'] !== 1 ? 's' : '')
@@ -8641,7 +8173,7 @@ if ($action === 'autoenrol' && $importid) {
         // Submit footer.
         echo '<div class="d-flex align-items-center flex-wrap mt-3 mb-4" style="gap:1rem">';
         if ($p2NAuto > 0) {
-            echo '<button type="submit" id="rtoc-enrol-submit-btn" class="btn btn-success btn-lg" title="Confirm and enrol the matched students into their courses">';
+            echo '<button type="submit" id="rtoc-enrol-submit-btn" class="btn btn-success btn-lg">';
             echo '&#10003; Confirm &amp; Enrol (' . $p2NAuto . ' intake' . ($p2NAuto !== 1 ? 's' : '') . ')</button>';
         }
         echo '<a href="' . $skipurl->out() . '" class="btn btn-outline-secondary">';
@@ -8701,7 +8233,7 @@ if ($action === 'autoenrol' && $importid) {
     echo '<input type="hidden" name="sesskey"  value="' . sesskey() . '">';
     echo '<input type="hidden" name="action"   value="repairnames">';
     echo '<input type="hidden" name="importid" value="' . (int)$importid . '">';
-    echo '<button type="submit" class="btn btn-info mt-1" title="Repair student names on the affected records now">Fix Student Names Now</button>';
+    echo '<button type="submit" class="btn btn-info mt-1">Fix Student Names Now</button>';
     echo '</form>';
     echo '</div>';
     echo '</div>';
@@ -8848,7 +8380,7 @@ if ($action === 'autoenrol' && $importid) {
         echo '<div class="table-responsive">';
         echo '<table class="table table-sm table-bordered mb-0">';
         echo '<thead class="thead-light"><tr>';
-        echo '<th title="AVETMISS client identifier">Client ID</th><th title="Student name">Name</th><th title="Student date of birth">Date of Birth</th><th title="Unique Student Identifier">USI</th>';
+        echo '<th>Client ID</th><th>Name</th><th>Date of Birth</th><th>USI</th>';
         echo '</tr></thead><tbody>';
         if (empty($previewRows)) {
             if (!$hasNat80) {
@@ -8884,16 +8416,28 @@ if ($action === 'autoenrol' && $importid) {
 
     // Action buttons — single clear CTA, no "Update Preview" needed.
     echo '<div class="d-flex align-items-center mb-4" style="gap:1rem;flex-wrap:wrap">';
-    echo '<button type="submit" name="action" value="finalizenat" class="btn btn-primary btn-lg" title="Confirm and import the NAT data into your student records">';
+    echo '<button type="submit" name="action" value="finalizenat" class="btn btn-primary btn-lg">';
     echo '&#10003; Confirm &amp; Import</button>';
     echo '<a href="' . $formurl->out() . '" class="btn btn-outline-secondary">Cancel &amp; re-upload</a>';
     echo '</div>';
 
     echo '</form>';
 
-    // v5.9.372 DATA-IMPORT-DECLUTTER: the "Fix Student Names" tool repaired names on
-    // auto-created Moodle accounts. The import no longer creates Moodle accounts, so it
-    // has been removed.
+    // ── Fix Student Names (Step 2 — v4.9.186) ────────────────────────────────
+    // Shown here so the admin can repair placeholder names immediately after
+    // uploading a batch that includes NAT00080, without needing to complete the
+    // enrolment wizard first.
+    echo '<div class="alert alert-info d-flex align-items-start mt-2 mb-4" style="gap:0.75rem">';
+    echo '<span style="font-size:1.25rem;line-height:1.4">&#9998;</span>';
+    echo '<div>';
+    echo '<strong>Student accounts showing &ldquo;Student 0000005776&rdquo;?</strong> ';
+    echo 'If this import includes NAT00080, click the button below now to fix all placeholder names in one go — no need to finish the enrolment wizard first.';
+    echo '<br><form method="post" action="' . $formurl->out(false) . '" style="display:inline;margin-top:0.5rem">';
+    echo '<input type="hidden" name="sesskey" value="' . sesskey() . '">';
+    echo '<input type="hidden" name="action"  value="repairnames">';
+    echo '<button type="submit" class="btn btn-info btn-sm mt-1">Fix Student Names Now</button>';
+    echo '</form>';
+    echo '</div></div>';
 
 // ── DETAIL VIEW ───────────────────────────────────────────────────────────────
 } elseif ($importid) {
@@ -8910,24 +8454,45 @@ if ($action === 'autoenrol' && $importid) {
         'sesskey'  => sesskey(),
     ]);
     echo '<a href="' . $deleteurl->out() . '" class="btn btn-danger btn-sm" '
-        . 'title="Permanently delete this import and its records" '
         . 'onclick="return confirm(\'' . get_string('dataimport_confirm_delete', 'local_rtocompliance') . '\')">'
         . get_string('dataimport_delete', 'local_rtocompliance') . '</a>';
 
-    // v5.9.371 NAT-RESULTS-REGISTER: download the students in this file who are not yet in
-    // your system (so their results could not be imported into the register). Read-only.
-    $unmatchedUrl = new moodle_url('/local/rtocompliance/data_import.php', [
-        'action'   => 'export_unmatched',
-        'importid' => $importid,
-    ]);
-    echo '<a href="' . $unmatchedUrl->out() . '" class="btn btn-outline-secondary btn-sm" '
-        . 'title="CSV of students in this NAT file who have no record in your system yet">'
-        . '&#8681; Download unmatched students</a>';
+    // ROLLBACK-ENROLMENTS (v5.2.9): show rollback button if this import has rollback records.
+    $rbCount = $DB->count_records('local_rtocompliance_enrol_rollback', ['importid' => $importid]);
+    if ($rbCount > 0) {
+        $rollbackurl = new moodle_url('/local/rtocompliance/data_import.php', [
+            'action'   => 'rollback',
+            'importid' => $importid,
+            'sesskey'  => sesskey(),
+        ]);
+        echo '<a href="' . $rollbackurl->out() . '" class="btn btn-warning btn-sm" '
+            . 'onclick="return confirm(\'This will unenrol all students enrolled by this import, clear their completion records, and suspend any accounts that were auto-created. This cannot be undone. Proceed?\')">'
+            . 'Rollback Enrolments</a>';
+    }
 
-    // v5.9.372 DATA-IMPORT-DECLUTTER: the Rollback and Fix-Over-Enrolments buttons and
-    // the rollback status panel were auto-enrol cleanup tools. The import no longer creates
-    // Moodle enrolments, so there is nothing to roll back or over-enrol — removed.
+    // FIX-OVER-ENROLMENTS button (v5.9.69 re-enabled): always available on any import
+    // that has staging enrolment data — allows admin to surgically remove enrolments
+    // where the student has no NAT00120 record for that unit (over-enrolments).
+    $foeHasData = $DB->record_exists('local_rtocompliance_avetmiss_enrolment', ['importid' => $importid]);
+    if ($foeHasData) {
+        $foeurl = new moodle_url('/local/rtocompliance/data_import.php', [
+            'action'   => 'fix_overenrolments',
+            'importid' => $importid,
+        ]);
+        echo ' <a href="' . $foeurl->out() . '" class="btn btn-info btn-sm">'
+            . 'Fix Over-Enrolments</a>';
+    }
     echo '</div>';
+
+    // ROLLBACK-STATUS (v5.2.9): info panel showing rollback availability.
+    if ($rbCount > 0) {
+        echo '<div class="alert alert-info mt-2 mb-2" style="font-size:0.9em;">'
+            . '<strong>Rollback available:</strong> '
+            . 'This import has <strong>' . $rbCount . '</strong> enrolment record(s) that can be reversed. '
+            . 'Use the <em>Rollback Enrolments</em> button above to undo the &ldquo;Confirm &amp; Enrol&rdquo; '
+            . 'action for this import. Once rolled back, this option will no longer be available.'
+            . '</div>';
+    }
 
     // ── Post-enrolment results report ────────────────────────────────────────
     if ($autoenrol_done) {
@@ -8970,17 +8535,17 @@ if ($action === 'autoenrol' && $importid) {
         $pills = [];
         if ($rMatched > 0) {
             $methodLabel = $rMatchMethod === 'studentid' ? 'student ID' : 'email';
-            $pills[] = '<span class="badge badge-success mr-1" title="Existing Moodle accounts found and linked to the national records, so no new account was needed.">' . $rMatched . ' matched by ' . $methodLabel . '</span>';
+            $pills[] = '<span class="badge badge-success mr-1">' . $rMatched . ' matched by ' . $methodLabel . '</span>';
         }
         if ($rMatchedFallback > 0) {
             $fbLabel = $rMatchMethod === 'studentid' ? 'email (fallback)' : 'student ID (fallback)';
-            $pills[] = '<span class="badge badge-info mr-1" title="Students found by a second matching method after the first one did not find them.">' . $rMatchedFallback . ' matched by ' . $fbLabel . '</span>';
+            $pills[] = '<span class="badge badge-info mr-1">' . $rMatchedFallback . ' matched by ' . $fbLabel . '</span>';
         }
         if ($rCreated > 0) {
-            $pills[] = '<span class="badge badge-primary mr-1" title="New Moodle accounts created for students who did not already have one.">' . $rCreated . ' new account' . ($rCreated !== 1 ? 's' : '') . ' created</span>';
+            $pills[] = '<span class="badge badge-primary mr-1">' . $rCreated . ' new account' . ($rCreated !== 1 ? 's' : '') . ' created</span>';
         }
         if ($rAlready > 0) {
-            $pills[] = '<span class="badge badge-secondary mr-1" title="Students already enrolled in the course, so they were left unchanged.">' . $rAlready . ' already enrolled (skipped)</span>';
+            $pills[] = '<span class="badge badge-secondary mr-1">' . $rAlready . ' already enrolled (skipped)</span>';
         }
         if (!empty($pills)) {
             echo '<div class="mb-2">' . implode('', $pills) . '</div>';
@@ -9012,7 +8577,7 @@ if ($action === 'autoenrol' && $importid) {
         echo '<input type="hidden" name="sesskey"  value="' . sesskey() . '">';
         echo '<input type="hidden" name="action"   value="repairnames">';
         if ($importid) { echo '<input type="hidden" name="importid" value="' . (int)$importid . '">'; }
-        echo '<button type="submit" class="btn btn-info btn-sm" title="Repair student names on the affected records now">Fix Student Names Now</button>';
+        echo '<button type="submit" class="btn btn-info btn-sm">Fix Student Names Now</button>';
         echo '</form>';
         echo '</div></div></div>';
 
@@ -9038,7 +8603,7 @@ if ($action === 'autoenrol' && $importid) {
             echo '<input type="hidden" name="sesskey"  value="' . sesskey() . '">';
             echo '<input type="hidden" name="action"   value="hide_archive_cats">';
             if ($importid) { echo '<input type="hidden" name="importid" value="' . (int)$importid . '">'; }
-            echo '<button type="submit" class="btn btn-warning btn-sm" title="Re-hide the archive courses that were temporarily made visible">Hide Archive Courses Now</button>';
+            echo '<button type="submit" class="btn btn-warning btn-sm">Hide Archive Courses Now</button>';
             echo '</form>';
             echo '</div></div></div>';
         }
@@ -9125,9 +8690,9 @@ if ($action === 'autoenrol' && $importid) {
                 echo '<div id="' . $toggleId . '" style="display:none;margin-top:0.5rem">';
                 echo '<table class="table table-sm table-bordered mb-0" style="font-size:0.82rem">';
                 echo '<thead class="thead-light"><tr>'
-                   . '<th title="AVETMISS client identifier">Client ID</th><th title="Student name">Name</th>'
-                   . ($reason === 'nouser' ? '<th title="Email address from the NAT file">Email (from NAT file)</th>' : '')
-                   . '<th title="Qualification the student is enrolled in">Qualification</th>'
+                   . '<th>Client ID</th><th>Name</th>'
+                   . ($reason === 'nouser' ? '<th>Email (from NAT file)</th>' : '')
+                   . '<th>Qualification</th>'
                    . '</tr></thead><tbody>';
                 foreach ($students as $sk) {
                     echo '<tr>';
@@ -9164,7 +8729,7 @@ if ($action === 'autoenrol' && $importid) {
             echo '<table class="table table-sm table-bordered mb-0" style="font-size:0.8rem">';
             echo '<thead class="thead-light">';
             echo '<tr>';
-            echo '<th title="Qualification code">Qual</th>';
+            echo '<th>Qual</th>';
             echo '<th title="Distinct client IDs returned from the DB for this qual+importid">DB rows</th>';
             echo '<th title="Matched by primary method (email or student ID)">P1 match</th>';
             echo '<th title="Matched by cross-mode fallback (student ID / email)">P2 fallback</th>';
@@ -9281,7 +8846,7 @@ if ($action === 'autoenrol' && $importid) {
         'completions' => get_string('dataimport_completions', 'local_rtocompliance') . ' (' . $imp->totalcompletions . ')',
         'audit'       => '&#128203; Data Audit',
         'quality'     => '&#9888; Data Quality' . ($imp->flaggedrecords > 0
-            ? ' <span class="badge badge-warning" style="font-size:0.75rem;vertical-align:middle" title="Number of records in this import flagged with missing or invalid data.">' . $imp->flaggedrecords . '</span>'
+            ? ' <span class="badge badge-warning" style="font-size:0.75rem;vertical-align:middle">' . $imp->flaggedrecords . '</span>'
             : ''),
     ];
     echo '<ul class="nav nav-tabs mb-3">';
@@ -9343,12 +8908,12 @@ if ($action === 'autoenrol' && $importid) {
 
         echo '<div class="table-responsive"><table class="table table-sm table-hover">';
         echo '<thead class="thead-light"><tr>';
-        echo '<th title="AVETMISS client identifier">' . get_string('dataimport_clientid', 'local_rtocompliance') . '</th>';
-        echo '<th title="Student name">' . get_string('dataimport_name', 'local_rtocompliance') . '</th>';
-        echo '<th title="Student date of birth">' . get_string('dataimport_dob', 'local_rtocompliance') . '</th>';
-        echo '<th title="Unique Student Identifier">' . get_string('dataimport_usi', 'local_rtocompliance') . '</th>';
-        echo '<th title="Student email address">' . get_string('dataimport_email', 'local_rtocompliance') . '</th>';
-        echo '<th title="Data quality flags raised for this student">' . get_string('dataimport_flags', 'local_rtocompliance') . '</th>';
+        echo '<th>' . get_string('dataimport_clientid', 'local_rtocompliance') . '</th>';
+        echo '<th>' . get_string('dataimport_name', 'local_rtocompliance') . '</th>';
+        echo '<th>' . get_string('dataimport_dob', 'local_rtocompliance') . '</th>';
+        echo '<th>' . get_string('dataimport_usi', 'local_rtocompliance') . '</th>';
+        echo '<th>' . get_string('dataimport_email', 'local_rtocompliance') . '</th>';
+        echo '<th>' . get_string('dataimport_flags', 'local_rtocompliance') . '</th>';
         echo '</tr></thead><tbody>';
         foreach ($students as $s) {
             $rowclass = $s->hasdataissues ? ' class="table-warning"' : '';
@@ -9365,7 +8930,7 @@ if ($action === 'autoenrol' && $importid) {
             echo '<td class="text-muted small">' . s($s->email ?? '—') . '</td>';
             echo '<td>';
             if ($s->hasdataissues) {
-                echo '<span class="badge badge-warning" title="This student record has missing or invalid data that may need fixing before national reporting.">' . get_string('dataimport_data_issue', 'local_rtocompliance') . '</span>';
+                echo '<span class="badge badge-warning">' . get_string('dataimport_data_issue', 'local_rtocompliance') . '</span>';
             }
             echo '</td>';
             echo '</tr>';
@@ -9419,13 +8984,13 @@ if ($action === 'autoenrol' && $importid) {
 
         echo '<div class="table-responsive"><table class="table table-sm table-hover">';
         echo '<thead class="thead-light"><tr>';
-        echo '<th title="AVETMISS client identifier">' . get_string('dataimport_clientid', 'local_rtocompliance') . '</th>';
-        echo '<th title="Unit of competency code">' . get_string('dataimport_unit', 'local_rtocompliance') . '</th>';
-        echo '<th title="Qualification code">' . get_string('dataimport_qual', 'local_rtocompliance') . '</th>';
-        echo '<th title="Activity start date">' . get_string('dataimport_start', 'local_rtocompliance') . '</th>';
-        echo '<th title="Activity end date">' . get_string('dataimport_end', 'local_rtocompliance') . '</th>';
-        echo '<th title="AVETMISS outcome identifier">' . get_string('dataimport_outcome', 'local_rtocompliance') . '</th>';
-        echo '<th title="National funding source code">' . get_string('dataimport_funding', 'local_rtocompliance') . '</th>';
+        echo '<th>' . get_string('dataimport_clientid', 'local_rtocompliance') . '</th>';
+        echo '<th>' . get_string('dataimport_unit', 'local_rtocompliance') . '</th>';
+        echo '<th>' . get_string('dataimport_qual', 'local_rtocompliance') . '</th>';
+        echo '<th>' . get_string('dataimport_start', 'local_rtocompliance') . '</th>';
+        echo '<th>' . get_string('dataimport_end', 'local_rtocompliance') . '</th>';
+        echo '<th>' . get_string('dataimport_outcome', 'local_rtocompliance') . '</th>';
+        echo '<th>' . get_string('dataimport_funding', 'local_rtocompliance') . '</th>';
         echo '</tr></thead><tbody>';
         foreach ($enrolments as $e) {
             echo '<tr>';
@@ -9451,7 +9016,7 @@ if ($action === 'autoenrol' && $importid) {
                     '10' => 'badge-secondary', '70' => 'badge-secondary', '90' => 'badge-secondary',
                 ];
                 $outcomeclass = $outcomecolormap[$e->outcome] ?? 'badge-secondary';
-                echo '<span class="badge ' . $outcomeclass . ' small" title="The result recorded for this unit. Green means achieved, amber means withdrawn or partial, red means not achieved.">' . s(local_rtocompliance_avetmiss_outcome_label($e->outcome)) . '</span>';
+                echo '<span class="badge ' . $outcomeclass . ' small">' . s(local_rtocompliance_avetmiss_outcome_label($e->outcome)) . '</span>';
             } else {
                 echo '<span class="text-muted small">—</span>';
             }
@@ -9516,9 +9081,7 @@ if ($action === 'autoenrol' && $importid) {
         // FIX-COMPETENT-5.2.13: Added '41' (Satisfactorily Completed – VETiS) to derive list.
         // FIX-COMPETENT-5.2.15: Removed '52' (RPL Not Granted) — not a competent outcome.
         // Competent outcomes: 20/41/51/53/60/61/81/85 (52 excluded — RPL Denied ≠ competent).
-        // A-P1-1 (v5.9.387): canonical competent set. Previously wrongly included
-        // 41 (RTO closure), 53 (deleted RCC code), 61 (superseded) and 85 (not started).
-        $COMPETENT_OUTCOMES = ['20', '51', '60', '81'];
+        $COMPETENT_OUTCOMES = ['20', '41', '51', '53', '60', '61', '81', '85'];
         $derivedDates = [];
         $pairsNeedingDerived = [];
         foreach ($completions as $c) {
@@ -9583,15 +9146,15 @@ if ($action === 'autoenrol' && $importid) {
 
         echo '<div class="table-responsive"><table class="table table-sm table-hover">';
         echo '<thead class="thead-light"><tr>';
-        echo '<th title="AVETMISS client identifier">' . get_string('dataimport_clientid', 'local_rtocompliance') . '</th>';
-        echo '<th title="Qualification code">' . get_string('dataimport_qual', 'local_rtocompliance') . '</th>';
+        echo '<th>' . get_string('dataimport_clientid', 'local_rtocompliance') . '</th>';
+        echo '<th>' . get_string('dataimport_qual', 'local_rtocompliance') . '</th>';
         echo '<th title="AVETMISS DE514 — Successful Programme Completion Indicator. Y = full qualification awarded. N = did not complete full qualification (SoA/partial only). Blank = flag not present in NAT file (pre-v5.2.32 import).">Full Qual?</th>';
-        echo '<th title="Whether the qualification was completed">' . get_string('dataimport_completed', 'local_rtocompliance') . '</th>';
-        echo '<th title="Certificate issue date">' . get_string('dataimport_cert_date', 'local_rtocompliance') . '</th>';
+        echo '<th>' . get_string('dataimport_completed', 'local_rtocompliance') . '</th>';
+        echo '<th>' . get_string('dataimport_cert_date', 'local_rtocompliance') . '</th>';
         echo '<th title="AVETMISS Data Element 515 — the certificate/parchment number reported to NCVER. '
             . 'This identifier is independent of internal cert numbering and provides an immutable audit trail.">'
             . get_string('dataimport_parchment', 'local_rtocompliance')
-            . ' <span class="badge badge-info badge-sm" style="font-size:0.65rem;vertical-align:middle" title="NCVER is the national body that collects vocational training data. This number is reported to them.">NCVER</span></th>';
+            . ' <span class="badge badge-info badge-sm" style="font-size:0.65rem;vertical-align:middle">NCVER</span></th>';
         echo '</tr></thead><tbody>';
         foreach ($completions as $c) {
             $flag = strtoupper(trim($c->successfulcompletion ?? ''));
@@ -9684,7 +9247,7 @@ if ($action === 'autoenrol' && $importid) {
 
         echo '<table class="table table-sm mb-0">';
         echo '<thead class="thead-light"><tr>';
-        echo '<th title="AVETMISS code value">Code</th><th title="Human-readable label for the code">Label</th><th style="width:200px" title="Number of records with this code">Count</th><th title="Share of the import that has this code">% of import</th><th title="Whether this code is valid or needs attention">Status</th>';
+        echo '<th>Code</th><th>Label</th><th style="width:200px">Count</th><th>% of import</th><th>Status</th>';
         echo '</tr></thead><tbody>';
 
         foreach ($outcomeRows as $row) {
@@ -9695,7 +9258,7 @@ if ($action === 'autoenrol' && $importid) {
             if ($code === '') {
                 $label    = '<em class="text-muted">No outcome recorded</em>';
                 $badgeClass = 'badge-light border';
-                $status   = '<span class="badge badge-warning" title="No result code was recorded for these enrolments.">⚠ Missing</span>';
+                $status   = '<span class="badge badge-warning">⚠ Missing</span>';
             } elseif (isset($KNOWN_OUTCOMES[$code])) {
                 $label    = s($KNOWN_OUTCOMES[$code]);
                 $colorMap = [
@@ -9706,11 +9269,11 @@ if ($action === 'autoenrol' && $importid) {
                     '10'=>'badge-secondary','70'=>'badge-secondary','90'=>'badge-secondary',
                 ];
                 $badgeClass = $colorMap[$code] ?? 'badge-secondary';
-                $status   = '<span class="badge badge-success small" title="This result code is a valid national code.">✓ Recognised</span>';
+                $status   = '<span class="badge badge-success small">✓ Recognised</span>';
             } else {
                 $label    = '<em class="text-danger">UNRECOGNISED CODE</em>';
                 $badgeClass = 'badge-dark';
-                $status   = '<span class="badge badge-danger" title="This result code is not a recognised national code and will be rejected until corrected.">✗ Unknown</span>';
+                $status   = '<span class="badge badge-danger">✗ Unknown</span>';
                 $unknownCodes[] = $code;
             }
 
@@ -9792,7 +9355,7 @@ if ($action === 'autoenrol' && $importid) {
         echo '<div class="card-header"><strong>Field Completeness</strong></div>';
         echo '<div class="card-body p-0">';
         echo '<table class="table table-sm mb-0">';
-        echo '<thead class="thead-light"><tr><th title="Data field name">Field</th><th title="Number of records where this field has a value">Populated</th><th title="Number of records where this field is blank or null">Blank/null</th><th title="Percentage of records with this field populated">% complete</th></tr></thead><tbody>';
+        echo '<thead class="thead-light"><tr><th>Field</th><th>Populated</th><th>Blank/null</th><th>% complete</th></tr></thead><tbody>';
 
         $enrolTotal = (int)$imp->totalenrolments;
         $fields = [
@@ -9829,7 +9392,7 @@ if ($action === 'autoenrol' && $importid) {
         echo '<div class="card-body p-0">';
         $qualRows = $DB->get_records_sql(
             "SELECT qualcode, COUNT(*) AS enrol_cnt,
-                    SUM(CASE WHEN outcome IN ('20','51','60','81') THEN 1 ELSE 0 END) AS competent_cnt,
+                    SUM(CASE WHEN outcome IN ('20','41','51','53','60','61','81','85') THEN 1 ELSE 0 END) AS competent_cnt,
                     SUM(CASE WHEN outcome = '10' THEN 1 ELSE 0 END) AS nostart_cnt,
                     SUM(CASE WHEN outcome IS NULL OR outcome = '' THEN 1 ELSE 0 END) AS null_cnt
                FROM {local_rtocompliance_avetmiss_enrolment}
@@ -9840,7 +9403,7 @@ if ($action === 'autoenrol' && $importid) {
         if (!empty($qualRows)) {
             echo '<table class="table table-sm mb-0">';
             echo '<thead class="thead-light"><tr>';
-            echo '<th title="Qualification code">Qual Code</th><th title="Total units in this qualification">Total Units</th><th title="Units with a competent outcome">Competent</th><th title="Units not yet started">Not Yet Started</th><th title="Units with no recorded outcome">No Outcome</th>';
+            echo '<th>Qual Code</th><th>Total Units</th><th>Competent</th><th>Not Yet Started</th><th>No Outcome</th>';
             echo '</tr></thead><tbody>';
             foreach ($qualRows as $qr) {
                 $tot = (int)$qr->enrol_cnt;
@@ -9934,19 +9497,19 @@ if ($action === 'autoenrol' && $importid) {
         // ── Summary cards ─────────────────────────────────────────────────────
         echo '<div class="row mb-4">';
         $dqCards = [
-            ['value' => $dqTotal,               'label' => 'Flagged Students',    'bad' => $dqTotal > 0,           'tip' => 'Number of students in this import with data that is missing or invalid. The national reporting system will reject these until they are fixed.'],
-            ['value' => $dqUsi,                 'label' => 'Missing USI',         'bad' => $dqUsi > 0,             'tip' => 'Students with no valid Unique Student Identifier. The USI is the student identity number required for national reporting.'],
-            ['value' => $dqDob,                 'label' => 'Missing DOB',         'bad' => $dqDob > 0,             'tip' => 'Students with no valid date of birth on record.'],
-            ['value' => $dqSex,                 'label' => 'Missing Sex',         'bad' => $dqSex > 0,             'tip' => 'Students with no valid sex code on record.'],
-            ['value' => count($dqBadOutcomes),  'label' => 'Bad Outcome Codes',   'bad' => !empty($dqBadOutcomes), 'tip' => 'Enrolments whose result code is not a recognised national code. These will be rejected until corrected.'],
-            ['value' => $dqMissingDate,         'label' => 'Comps Missing Date',  'bad' => $dqMissingDate > 0,     'tip' => 'Completed units that are missing a completion date.'],
+            ['value' => $dqTotal,               'label' => 'Flagged Students',    'bad' => $dqTotal > 0],
+            ['value' => $dqUsi,                 'label' => 'Missing USI',         'bad' => $dqUsi > 0],
+            ['value' => $dqDob,                 'label' => 'Missing DOB',         'bad' => $dqDob > 0],
+            ['value' => $dqSex,                 'label' => 'Missing Sex',         'bad' => $dqSex > 0],
+            ['value' => count($dqBadOutcomes),  'label' => 'Bad Outcome Codes',   'bad' => !empty($dqBadOutcomes)],
+            ['value' => $dqMissingDate,         'label' => 'Comps Missing Date',  'bad' => $dqMissingDate > 0],
         ];
         foreach ($dqCards as $dqc) {
             $bg  = $dqc['bad'] ? '#fff3cd' : '#d4edda';
             $br  = $dqc['bad'] ? '#ffc107' : '#28a745';
             $clr = $dqc['bad'] ? '#856404' : '#155724';
             echo '<div class="col-6 col-md-2 mb-2">';
-            echo '<div class="card h-100 text-center" title="' . s($dqc['tip']) . '" style="border-color:' . $br . ';background:' . $bg . '">';
+            echo '<div class="card h-100 text-center" style="border-color:' . $br . ';background:' . $bg . '">';
             echo '<div class="card-body py-3">';
             echo '<div style="font-size:1.8rem;font-weight:700;color:' . $clr . '">' . $dqc['value'] . '</div>';
             echo '<div class="small" style="color:#555">' . $dqc['label'] . '</div>';
@@ -9960,9 +9523,9 @@ if ($action === 'autoenrol' && $importid) {
             echo '<a href="' . $dqExportUrl . '" class="btn btn-warning btn-sm">&#11015; Export Flagged Students CSV</a>';
             $dqStudUrl = (new moodle_url('/local/rtocompliance/data_import.php',
                 ['importid' => $importid, 'tab' => 'students']))->out(false);
-            echo '<a href="' . $dqStudUrl . '" class="btn btn-outline-secondary btn-sm" title="View all students in this import">View All Students &rarr;</a>';
+            echo '<a href="' . $dqStudUrl . '" class="btn btn-outline-secondary btn-sm">View All Students &rarr;</a>';
             $dqSRUrl = (new moodle_url('/local/rtocompliance/students.php'))->out(false);
-            echo '<a href="' . $dqSRUrl . '" class="btn btn-outline-secondary btn-sm" title="Open the Student Records page">Open Student Records &rarr;</a>';
+            echo '<a href="' . $dqSRUrl . '" class="btn btn-outline-secondary btn-sm">Open Student Records &rarr;</a>';
             echo '<span class="text-muted small">Fix in your SMS and re-import, or update profiles directly in Student Records</span>';
             echo '</div>';
         }
@@ -9972,17 +9535,17 @@ if ($action === 'autoenrol' && $importid) {
             echo '<div class="card mb-4">';
             echo '<div class="card-header d-flex align-items-center" style="gap:0.75rem">';
             echo '<strong>&#9888; Students with Incomplete Data</strong>';
-            echo '<span class="badge badge-warning" title="Number of students in this import with missing or invalid data.">' . $dqTotal . '</span>';
+            echo '<span class="badge badge-warning">' . $dqTotal . '</span>';
             echo '<span class="text-muted small ml-auto">NCVER will reject these records until fixed</span>';
             echo '</div>';
             echo '<div class="card-body p-0">';
             echo '<div class="table-responsive"><table class="table table-sm table-hover mb-0">';
             echo '<thead class="thead-light"><tr>';
-            echo '<th title="AVETMISS client identifier">Client ID</th><th title="Student name">Name</th><th title="Student email address">Email</th>';
-            echo '<th class="text-center" title="Whether the Unique Student Identifier is missing or invalid"><span class="badge badge-danger">USI</span></th>';
-            echo '<th class="text-center" title="Whether the date of birth is missing or invalid"><span class="badge badge-warning">DOB</span></th>';
-            echo '<th class="text-center" title="Whether the sex code is missing or invalid"><span class="badge badge-warning">Sex</span></th>';
-            echo '<th title="Link to fix this student record">Fix</th>';
+            echo '<th>Client ID</th><th>Name</th><th>Email</th>';
+            echo '<th class="text-center"><span class="badge badge-danger">USI</span></th>';
+            echo '<th class="text-center"><span class="badge badge-warning">DOB</span></th>';
+            echo '<th class="text-center"><span class="badge badge-warning">Sex</span></th>';
+            echo '<th>Fix</th>';
             echo '</tr></thead><tbody>';
             $dqTick = '<span class="text-danger font-weight-bold">&#10007;</span>';
             $dqOk   = '<span class="text-success">&#10003;</span>';
@@ -9999,7 +9562,6 @@ if ($action === 'autoenrol' && $importid) {
                 echo '<td class="text-center">' . (in_array('dob_not_stated', $dqi) ? $dqTick : $dqOk) . '</td>';
                 echo '<td class="text-center">' . (in_array('sex_not_stated', $dqi) ? $dqTick : $dqOk) . '</td>';
                 echo '<td><a href="' . $dqpUrl . '" class="btn btn-outline-secondary"'
-                    . ' title="Find this student in Student Records"'
                     . ' style="font-size:0.7rem;padding:2px 8px">Find in Student Records &rarr;</a></td>';
                 echo '</tr>';
             }
@@ -10012,14 +9574,14 @@ if ($action === 'autoenrol' && $importid) {
             echo '<div class="card mb-4">';
             echo '<div class="card-header d-flex align-items-center" style="gap:0.75rem">';
             echo '<strong>&#10007; Unrecognised Outcome Codes</strong>';
-            echo '<span class="badge badge-danger" title="Number of result codes in this import that are not recognised national codes.">' . count($dqBadOutcomes) . '</span>';
+            echo '<span class="badge badge-danger">' . count($dqBadOutcomes) . '</span>';
             echo '</div>';
             echo '<div class="card-body">';
             echo '<p class="small text-muted mb-3">These codes from NAT00120 (positions 58–61) are not valid AVETMISS 8.0 '
                 . 'outcome identifiers. NCVER will reject these enrolment records. Contact your SMS vendor to correct the export.</p>';
             echo '<table class="table table-sm mb-0">';
             echo '<thead class="thead-light"><tr>'
-                . '<th title="Invalid outcome code found in the import">Code</th><th title="Number of records affected by this code">Records Affected</th><th title="Recommended action to resolve">Action</th>'
+                . '<th>Code</th><th>Records Affected</th><th>Action</th>'
                 . '</tr></thead><tbody>';
             foreach ($dqBadOutcomes as $dqo) {
                 echo '<tr class="table-danger">';
@@ -10041,16 +9603,16 @@ if ($action === 'autoenrol' && $importid) {
                 . '"Not recorded" means the NAT file did not include this data — expected for students not yet formally issued their certificate.</p>';
             echo '<div class="row mb-3">';
             $dqCompCards = [
-                ['value' => $dqTotalComps,       'label' => 'Total Completions',   'bad' => false,                    'tip' => 'Number of finished-qualification records in this import.'],
-                ['value' => $dqMissingDate,      'label' => 'Missing Comp. Date',  'bad' => $dqMissingDate > 0,        'tip' => 'Completed qualifications that are missing the date they were completed.'],
-                ['value' => $dqMissingParchment, 'label' => 'Missing Parchment #', 'bad' => $dqMissingParchment > 0,   'tip' => 'Completed qualifications with no certificate number recorded. The parchment number is the certificate number.'],
+                ['value' => $dqTotalComps,       'label' => 'Total Completions',   'bad' => false],
+                ['value' => $dqMissingDate,      'label' => 'Missing Comp. Date',  'bad' => $dqMissingDate > 0],
+                ['value' => $dqMissingParchment, 'label' => 'Missing Parchment #', 'bad' => $dqMissingParchment > 0],
             ];
             foreach ($dqCompCards as $dqcc) {
                 $bg2  = $dqcc['bad'] ? '#fff3cd' : '#d4edda';
                 $br2  = $dqcc['bad'] ? '#ffc107' : '#28a745';
                 $clr2 = $dqcc['bad'] ? '#856404' : '#155724';
                 echo '<div class="col-md-4 mb-2">';
-                echo '<div class="card text-center" title="' . s($dqcc['tip']) . '" style="border-color:' . $br2 . ';background:' . $bg2 . '">';
+                echo '<div class="card text-center" style="border-color:' . $br2 . ';background:' . $bg2 . '">';
                 echo '<div class="card-body py-2">';
                 echo '<div style="font-size:1.5rem;font-weight:700;color:' . $clr2 . '">' . $dqcc['value'] . '</div>';
                 echo '<div class="small" style="color:#555">' . $dqcc['label'] . '</div>';
@@ -10060,7 +9622,7 @@ if ($action === 'autoenrol' && $importid) {
             $dqCompUrl = (new moodle_url('/local/rtocompliance/data_import.php', [
                 'importid' => $importid, 'tab' => 'completions', 'showincomplete' => 1,
             ]))->out(false);
-            echo '<a href="' . $dqCompUrl . '" class="btn btn-sm btn-outline-secondary" title="View the completion records for this import">View completion records &rarr;</a>';
+            echo '<a href="' . $dqCompUrl . '" class="btn btn-sm btn-outline-secondary">View completion records &rarr;</a>';
             echo '</div></div>';
         }
 
@@ -10115,7 +9677,7 @@ if ($action === 'autoenrol' && $importid) {
         echo '<li>For each unit, link it to the Moodle course that delivers it.</li>';
         echo '<li>Come back to this page and upload your NAT files.</li>';
         echo '</ol>';
-        echo html_writer::link($qbUrl, '&#9654; Open Qual Builder', ['class' => 'btn btn-warning btn-sm', 'title' => 'Open the Qualification Builder to define qualifications and units']);
+        echo html_writer::link($qbUrl, '&#9654; Open Qual Builder', ['class' => 'btn btn-warning btn-sm']);
         echo '</div>';
     } else {
         // Qual Builder has quals — show a subtle reminder with a link.
@@ -10123,7 +9685,7 @@ if ($action === 'autoenrol' && $importid) {
         echo '<div class="alert alert-light border mb-3 py-2 px-3 small d-flex align-items-center justify-content-between flex-wrap" style="gap:0.5rem;">';
         echo '<span><strong>&#10003; Qual Builder:</strong> ' . $qbCount . ' qualification' . ($qbCount !== 1 ? 's' : '') . ' set up. '
             . 'Make sure every qualification in your NAT file has a matching entry in Qual Builder before importing.</span>';
-        echo html_writer::link($qbUrl, 'Review Qual Builder &rarr;', ['class' => 'btn btn-outline-secondary btn-sm flex-shrink-0', 'title' => 'Review the qualifications set up in the Qualification Builder']);
+        echo html_writer::link($qbUrl, 'Review Qual Builder &rarr;', ['class' => 'btn btn-outline-secondary btn-sm flex-shrink-0']);
         echo '</div>';
     }
 
@@ -10141,7 +9703,7 @@ if ($action === 'autoenrol' && $importid) {
     echo '<strong style="color:#495057">Set up Qual Builder</strong>';
     echo '<p class="small mb-1 mt-1">Define every qualification your RTO delivers — qual code, units, and which Moodle course delivers each unit. '
         . 'The NAT import uses this to match students to courses. Do this once, update when you add new quals.</p>';
-    echo '<a href="' . $qbUrlCard . '" class="btn btn-outline-secondary btn-sm mt-1" title="Open the Qualification Builder to define qualifications and units">Open Qual Builder &rarr;</a>';
+    echo '<a href="' . $qbUrlCard . '" class="btn btn-outline-secondary btn-sm mt-1">Open Qual Builder &rarr;</a>';
     echo '</div></div>';
 
     // Step 1
@@ -10149,7 +9711,8 @@ if ($action === 'autoenrol' && $importid) {
     echo '<div class="p-2 border rounded h-100" style="background:#fff;border-color:#bee5eb!important">';
     echo '<div class="mb-1"><span class="badge badge-primary" style="font-size:0.7rem;">Step 1</span></div>';
     echo '<strong style="color:#007bff">Upload NAT Files</strong>';
-    echo '<p class="small mb-0 mt-1">Upload your NAT file set below. All student data is saved into the RTO Compliance database.</p>';
+    echo '<p class="small mb-0 mt-1">Upload your NAT file set below. All student data is saved into the RTO Compliance database. '
+        . 'Nothing appears in Student Records yet and no Moodle accounts are created.</p>';
     echo '</div></div>';
 
     // Step 2
@@ -10158,24 +9721,41 @@ if ($action === 'autoenrol' && $importid) {
     echo '<div class="mb-1"><span class="badge badge-success" style="font-size:0.7rem;">Step 2</span></div>';
     echo '<strong style="color:#28a745">Confirm &amp; Import</strong>';
     echo '<p class="small mb-0 mt-1">Review student groups by qualification and semester on the next page. '
-        . 'Confirming writes each student&rsquo;s demographics <strong>and their unit outcomes into your results register</strong>.</p>';
+        . 'Confirm each group to save data to the database. Still no Moodle accounts or enrolments here.</p>';
     echo '</div></div>';
 
     // Step 3
     echo '<div class="col-md-3 mb-2">';
     echo '<div class="p-2 border rounded h-100" style="background:#fff;border-color:#bee5eb!important">';
     echo '<div class="mb-1"><span class="badge" style="background:#6f42c1;font-size:0.7rem;">Step 3</span></div>';
-    echo '<strong style="color:#6f42c1">See results &amp; review</strong>';
-    echo '<p class="small mb-1 mt-1">Imported outcomes appear in <strong>Student Results</strong> immediately for every student already in your system. '
-        . 'Any student in the file who is <strong>not yet in your system</strong> is listed in a downloadable review file on the import.</p>';
+    echo '<strong style="color:#6f42c1">Create Student Records</strong>';
+    $backfillUrlCard = (new moodle_url('/local/rtocompliance/data_import.php', ['action' => 'backfill_records']))->out(false);
+    echo '<p class="small mb-1 mt-1">'
+        . '<strong>Current students</strong> — use Auto-Enrol: creates Moodle logins, enrols in unit courses, and creates Student Records.<br>'
+        . '<strong>Historical students</strong> — use Backfill: creates Student Records without Moodle logins or enrolments.</p>';
+    echo '<a href="' . $backfillUrlCard . '" class="btn btn-outline-warning btn-sm mt-1">Backfill Student Records &rarr;</a>';
     echo '</div></div>';
 
     echo '</div>';
-    echo '<div class="alert alert-info mb-0 mt-2 py-2 px-3 small d-flex align-items-center flex-wrap" style="gap:0.5rem;">';
-    echo '<span><strong>&#9432; No Moodle changes.</strong> Importing populates your plugin&rsquo;s student profiles and results register only &mdash; it never creates or removes Moodle accounts or course enrolments. The link to Moodle is defined once, in the Qualification Builder.</span>';
+    echo '<div class="alert alert-warning mb-0 mt-2 py-2 px-3 small d-flex align-items-center flex-wrap" style="gap:0.5rem;">';
+    echo '<span><strong>&#9888; Certificates require a Student Record.</strong> '
+        . 'A student must appear in the <strong>Students tab</strong> before you can issue them a certificate.</span>';
+    $backfillLinkUrl = new moodle_url('/local/rtocompliance/data_import.php', ['action' => 'backfill_records']);
     $verifyLinkUrl   = new moodle_url('/local/rtocompliance/data_import.php', ['action' => 'verify_nat']);
-    echo html_writer::link($verifyLinkUrl, 'Verify NAT Data &rarr;', ['class' => 'btn btn-sm btn-outline-secondary flex-shrink-0', 'title' => 'Check the NAT data against your records before importing']);
+    echo html_writer::link($backfillLinkUrl, 'Backfill Student Records &rarr;', ['class' => 'btn btn-sm btn-warning flex-shrink-0']);
+    echo html_writer::link($verifyLinkUrl, 'Verify NAT Data &rarr;', ['class' => 'btn btn-sm btn-outline-secondary flex-shrink-0']);
     echo '</div>';
+    echo '</div></div>';
+
+    // ── Archive Linking Wizard shortcut ───────────────────────────────────────
+    $wizardUrl = new moodle_url('/local/rtocompliance/data_import.php', ['action' => 'archive_wizard']);
+    echo '<div class="card mb-3 border-info" style="background:#e8f4fd;">';
+    echo '<div class="card-body py-2 px-3 d-flex align-items-center justify-content-between flex-wrap" style="gap:8px;">';
+    echo '<div>';
+    echo '<strong style="font-size:0.95rem;">&#128279; Archive Linking Wizard</strong> ';
+    echo '<span class="text-muted small">&mdash; Link historical Wisenet semester groups to Qual Builder archive courses</span>';
+    echo '</div>';
+    echo html_writer::link($wizardUrl, 'Open Wizard &rarr;', ['class' => 'btn btn-sm btn-outline-info']);
     echo '</div></div>';
 
     // Upload form
@@ -10212,13 +9792,28 @@ if ($action === 'autoenrol' && $importid) {
     echo '<input type="file" name="natfiles[]" multiple accept=".txt" class="form-control" id="natfiles">';
     echo '<small class="form-text text-muted">Hold Ctrl/Cmd to select multiple files. All files from the same SMS export batch should be uploaded together.</small>';
     echo '</div>';
-    echo '<button type="submit" class="btn btn-primary" title="Upload the selected NAT files and import them into your records">Upload &amp; Import</button>';
+    echo '<button type="submit" class="btn btn-primary">Upload &amp; Import</button>';
     echo '</form>';
     echo '</div></div>';
 
-    // v5.9.372 DATA-IMPORT-DECLUTTER: the always-visible "Fix Placeholder Student Names"
-    // utility repaired auto-created Moodle accounts. The import no longer creates Moodle
-    // accounts, so it has been removed.
+    // ── Repair Names utility (v4.9.183) ──────────────────────────────────────
+    // Always-visible tool so admins can fix placeholder accounts any time,
+    // not just immediately after an enrolment run.
+    $repairFormUrl = new moodle_url('/local/rtocompliance/data_import.php');
+    echo '<div class="card border-secondary mb-4">';
+    echo '<div class="card-header d-flex align-items-center justify-content-between flex-wrap" style="gap:0.5rem;background:#f8f9fa">';
+    echo '<span class="font-weight-bold text-secondary" style="font-size:0.95rem">&#9998; Fix Placeholder Student Names</span>';
+    echo '<form method="post" action="' . $repairFormUrl->out(false) . '" style="display:inline;margin:0">';
+    echo '<input type="hidden" name="sesskey" value="' . sesskey() . '">';
+    echo '<input type="hidden" name="action"  value="repairnames">';
+    echo '<button type="submit" class="btn btn-outline-secondary btn-sm">Run Name Repair</button>';
+    echo '</form>';
+    echo '</div>';
+    echo '<div class="card-body py-2 px-3">';
+    echo '<p class="mb-0 small text-muted">If any student accounts show &ldquo;Student 0000005776&rdquo; instead of a real name, click <strong>Run Name Repair</strong>. '
+       . 'The tool scans every placeholder account and updates names from any NAT00080 data already in the database. '
+       . 'If no names update, upload a new import that includes the <strong>NAT00080</strong> file first, then run it again.</p>';
+    echo '</div></div>';
 
     // Import history — ADD-HISTORY-PAGINATION (v4.9.138): previously hard-capped at 50
     // records with no way to see older imports. Replaced with 25-per-page pagination.
@@ -10232,14 +9827,14 @@ if ($action === 'autoenrol' && $importid) {
     } else {
         echo '<div class="table-responsive"><table class="table table-hover">';
         echo '<thead class="thead-light"><tr>';
-        echo '<th title="AVETMISS collection year for the import">' . get_string('dataimport_collection_year', 'local_rtocompliance') . '</th>';
-        echo '<th title="Registered training organisation">' . get_string('dataimport_rto', 'local_rtocompliance') . '</th>';
-        echo '<th title="Number of student records imported">' . get_string('dataimport_students', 'local_rtocompliance') . '</th>';
-        echo '<th title="Number of enrolment records imported">' . get_string('dataimport_enrolments', 'local_rtocompliance') . '</th>';
-        echo '<th title="Number of completion records imported">' . get_string('dataimport_completions', 'local_rtocompliance') . '</th>';
-        echo '<th title="Number of records flagged for review">' . get_string('dataimport_flagged', 'local_rtocompliance') . '</th>';
-        echo '<th title="Date and time the import was performed">' . get_string('dataimport_imported_at', 'local_rtocompliance') . '</th>';
-        echo '<th title="View the details of this import"></th>';
+        echo '<th>' . get_string('dataimport_collection_year', 'local_rtocompliance') . '</th>';
+        echo '<th>' . get_string('dataimport_rto', 'local_rtocompliance') . '</th>';
+        echo '<th>' . get_string('dataimport_students', 'local_rtocompliance') . '</th>';
+        echo '<th>' . get_string('dataimport_enrolments', 'local_rtocompliance') . '</th>';
+        echo '<th>' . get_string('dataimport_completions', 'local_rtocompliance') . '</th>';
+        echo '<th>' . get_string('dataimport_flagged', 'local_rtocompliance') . '</th>';
+        echo '<th>' . get_string('dataimport_imported_at', 'local_rtocompliance') . '</th>';
+        echo '<th></th>';
         echo '</tr></thead><tbody>';
         foreach ($imports as $imp) {
             $detailurl = new moodle_url('/local/rtocompliance/data_import.php', ['importid' => $imp->id]);
@@ -10252,13 +9847,13 @@ if ($action === 'autoenrol' && $importid) {
             echo '<td>' . $imp->totalcompletions . '</td>';
             echo '<td>';
             if ($imp->flaggedrecords > 0) {
-                echo '<span class="badge badge-warning" title="Number of records in this import with data problems that may need fixing.">' . $imp->flaggedrecords . ' flagged</span>';
+                echo '<span class="badge badge-warning">' . $imp->flaggedrecords . ' flagged</span>';
             } else {
                 echo '<span class="text-muted">0</span>';
             }
             echo '</td>';
             echo '<td class="text-muted small">' . userdate($imp->timecreated) . '</td>';
-            echo '<td><a href="' . $detailurl->out() . '" class="btn btn-sm btn-outline-secondary" title="View the details of this import">View &rarr;</a></td>';
+            echo '<td><a href="' . $detailurl->out() . '" class="btn btn-sm btn-outline-secondary">View &rarr;</a></td>';
             echo '</tr>';
         }
         echo '</tbody></table></div>';

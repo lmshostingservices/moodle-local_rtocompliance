@@ -13,6 +13,7 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
 /**
  * ASYNC-EMAIL (v4.4.52): Adhoc task that delivers the admin notification email
  * for a completed Student Eligibility Checklist submission.
@@ -23,7 +24,7 @@
  * for each site admin in the background.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS Labs
+ * @copyright  2026 Essay Grader AI
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 

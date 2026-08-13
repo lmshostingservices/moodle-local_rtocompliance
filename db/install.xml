@@ -37,7 +37,6 @@
         <FIELD NAME="priorachevement3" TYPE="char" LENGTH="3" NOTNULL="false"/>
         <FIELD NAME="priorachevement4" TYPE="char" LENGTH="3" NOTNULL="false"/>
         <FIELD NAME="atschoolflag" TYPE="char" LENGTH="1" NOTNULL="true" DEFAULT="N" COMMENT="Y=At school, N=Not at school"/>
-        <FIELD NAME="residentialcountry" TYPE="char" LENGTH="4" NOTNULL="false" COMMENT="Residential country SACC code for NAT00085 address country field (1101=Australia)"/>
         <!-- NAT00080 Employment and Study fields (AVETMISS 2.3) -->
         <FIELD NAME="labourforcestatus" TYPE="char" LENGTH="2" NOTNULL="true" DEFAULT="@@" COMMENT="01-08 employment status, @@=Not stated"/>
         <FIELD NAME="studyreason" TYPE="char" LENGTH="2" NOTNULL="true" DEFAULT="@@" COMMENT="01-12 study reason, @@=Not stated"/>
@@ -186,8 +185,6 @@
         <FIELD NAME="taedateachieved" TYPE="int" LENGTH="10" NOTNULL="false"/>
         <FIELD NAME="taeexpirydate" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="TAE expiry date - NULL means no expiry (Current forever)"/>
         <FIELD NAME="taeevidence" TYPE="char" LENGTH="255" NOTNULL="false" COMMENT="Path to TAE certificate file"/>
-        <FIELD NAME="wtstartdate" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Std 3.2: date a Working Towards trainer commenced their TAE credential (starts the 2-year clock)"/>
-        <FIELD NAME="wtdeadline" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Std 3.2: date by which a Working Towards trainer must complete their TAE credential (wtstartdate + 2 years)"/>
         <!-- Vocational Qualifications -->
         <FIELD NAME="vocationalqualifications" TYPE="text" NOTNULL="false" COMMENT="JSON array of vocational qualifications"/>
         <!-- Industry Currency -->
@@ -198,7 +195,6 @@
         <FIELD NAME="vocationalcompetency" TYPE="text" NOTNULL="false" COMMENT="Description of vocational competency"/>
         <FIELD NAME="vocationalcompetencydate" TYPE="int" LENGTH="10" NOTNULL="false"/>
         <FIELD NAME="vocationalcompetencyevidence" TYPE="char" LENGTH="255" NOTNULL="false" COMMENT="Path to vocational competency evidence"/>
-        <FIELD NAME="vocationalevidence" TYPE="text" NOTNULL="false" COMMENT="Selected vocational-competency evidence types (comma-separated). SCHEMA-PARITY (v5.9.415): added to install.xml to match db/upgrade.php so fresh installs have the column that trainer_edit.php writes."/>
         <!-- CPD -->
         <FIELD NAME="cpdhours" TYPE="int" LENGTH="5" NOTNULL="true" DEFAULT="0" COMMENT="CPD hours current year"/>
         <FIELD NAME="cpdlog" TYPE="text" NOTNULL="false" COMMENT="JSON array of CPD activities"/>
@@ -323,8 +319,6 @@
         <FIELD NAME="reissued_at" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Set on the ORIGINAL cert when it has been superseded by a reissue. NULL means this cert is current."/>
         <FIELD NAME="certtmplid" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="v4.3.0: Saved cert template id used at issue time. Reissues use this exact template; NULL means re-pick at render time (legacy certs)."/>
         <FIELD NAME="usi" TYPE="char" LENGTH="15" NOTNULL="false" COMMENT="C2: USI snapshotted at issuance time. Forensic audit trail — re-rendering a cert must show the USI that was current when the cert was issued, not the student's current USI (which may have been corrected)."/>
-        <FIELD NAME="timecompleted" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="v5.9.368: Unix timestamp the student completed the course/qualification (earliest completion, immune to grade re-saves). Drives Clause 9 (30-day-from-completion) reporting. NULL when unknown."/>
-        <FIELD NAME="issuesnapshot" TYPE="text" NOTNULL="false" COMMENT="v5.9.389: JSON snapshot of the RTO identity settings (rtoname, rtocode, signatoryname, signatorytitle, aqfstatement) AS THEY WERE at issue time, so re-rendering a historical certificate is not rewritten by later settings changes (as-issued integrity, like the usi snapshot)."/>
         <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
         <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
       </FIELDS>
@@ -883,9 +877,6 @@
         <FIELD NAME="linkedimprovementid" TYPE="int" LENGTH="10" NOTNULL="false"/>
         <FIELD NAME="evidence" TYPE="text" NOTNULL="false" COMMENT="JSON array of evidence file paths"/>
         <FIELD NAME="notes" TYPE="text" NOTNULL="false"/>
-        <FIELD NAME="respondentname" TYPE="char" LENGTH="255" NOTNULL="false" COMMENT="Std 2.7: the person/third party the complaint is against (procedural fairness)"/>
-        <FIELD NAME="respondentresponse" TYPE="text" NOTNULL="false" COMMENT="Std 2.7: the respondent's opportunity-to-respond record (procedural fairness)"/>
-        <FIELD NAME="dateoutcomecommunicated" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Std 2.7: date the outcome was communicated to all parties"/>
         <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
         <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
         <FIELD NAME="createdby" TYPE="int" LENGTH="10" NOTNULL="true"/>
@@ -935,9 +926,6 @@
         <FIELD NAME="externalreviewbody" TYPE="char" LENGTH="100" NOTNULL="false"/>
         <FIELD NAME="evidence" TYPE="text" NOTNULL="false"/>
         <FIELD NAME="notes" TYPE="text" NOTNULL="false"/>
-        <FIELD NAME="originaldecisionmaker" TYPE="char" LENGTH="255" NOTNULL="false" COMMENT="Std 2.8: who made the ORIGINAL decision being appealed (for independence checking against the reviewer)"/>
-        <FIELD NAME="independenceconfirmed" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="Std 2.8: reviewer confirmed independent of the original decision-maker"/>
-        <FIELD NAME="resultcorrected" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="Std 2.8: when upheld, the underlying record (e.g. assessment outcome) has been corrected"/>
         <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
         <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
         <FIELD NAME="createdby" TYPE="int" LENGTH="10" NOTNULL="true"/>
@@ -1297,9 +1285,6 @@
         <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
         <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
         <FIELD NAME="createdby" TYPE="int" LENGTH="10" NOTNULL="true"/>
-        <FIELD NAME="nextduedate" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Std 1.5: computed next-due date (actualdate + 5 years, sooner for high risk) for the validation cycle"/>
-        <FIELD NAME="independenceconfirmed" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="Std 1.5: validator independence declared — the outcome was not solely determined by a person who designed/delivered the assessment"/>
-        <FIELD NAME="independencedeclaration" TYPE="text" NOTNULL="false" COMMENT="Std 1.5: how validator independence was assured; who made the final judgement"/>
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
@@ -1312,31 +1297,6 @@
         <INDEX NAME="scheduleddate" UNIQUE="false" FIELDS="scheduleddate"/>
         <INDEX NAME="risklevel" UNIQUE="false" FIELDS="risklevel"/>
         <INDEX NAME="outcome" UNIQUE="false" FIELDS="outcome"/>
-        <INDEX NAME="nextduedate" UNIQUE="false" FIELDS="nextduedate"/>
-      </INDEXES>
-    </TABLE>
-    <TABLE NAME="local_rtocompliance_supportnotes" COMMENT="Per-student support / reasonable-adjustment / wellbeing evidence (Std 2.3/2.4/2.6). Replaces the browser-localStorage store so records are retained, shared and auditable.">
-      <FIELDS>
-        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
-        <FIELD NAME="studentid" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="FK to local_rtocompliance_students.id"/>
-        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Moodle user id of the student, if known"/>
-        <FIELD NAME="notetype" TYPE="char" LENGTH="30" NOTNULL="true" DEFAULT="support" COMMENT="lln / reasonable_adjustment / wellbeing / referral / at_risk / diversity / support / other"/>
-        <FIELD NAME="category" TYPE="char" LENGTH="80" NOTNULL="false" COMMENT="Optional sub-category / label"/>
-        <FIELD NAME="detail" TYPE="text" NOTNULL="true" COMMENT="The support observation / adjustment / wellbeing note"/>
-        <FIELD NAME="actiontaken" TYPE="text" NOTNULL="false" COMMENT="Action taken / support provided"/>
-        <FIELD NAME="outcomestatus" TYPE="char" LENGTH="30" NOTNULL="false" DEFAULT="open" COMMENT="open / inprogress / closed"/>
-        <FIELD NAME="confidential" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="1" COMMENT="Sensitive (e.g. disability/wellbeing) — access-restricted"/>
-        <FIELD NAME="recordedby" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="Moodle user id of the staff member who recorded it"/>
-        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
-        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
-      </FIELDS>
-      <KEYS>
-        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
-        <KEY NAME="studentid" TYPE="foreign" FIELDS="studentid" REFTABLE="local_rtocompliance_students" REFFIELDS="id"/>
-        <KEY NAME="recordedby" TYPE="foreign" FIELDS="recordedby" REFTABLE="user" REFFIELDS="id"/>
-      </KEYS>
-      <INDEXES>
-        <INDEX NAME="studentid_notetype" UNIQUE="false" FIELDS="studentid,notetype"/>
       </INDEXES>
     </TABLE>
 
@@ -1436,11 +1396,6 @@
         <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
         <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
         <FIELD NAME="createdby" TYPE="int" LENGTH="10" NOTNULL="true"/>
-        <FIELD NAME="identityverification" TYPE="text" NOTNULL="false" COMMENT="How learner identity is verified (online/blended authenticity, Standard 1.4)"/>
-        <FIELD NAME="academicintegrity" TYPE="text" NOTNULL="false" COMMENT="How evidence authenticity is assured (anti-plagiarism / anti-AI, Standard 1.4)"/>
-        <FIELD NAME="aireviewedby" TYPE="char" LENGTH="255" NOTNULL="false" COMMENT="Name of the person who reviewed AI-assisted TAS content (responsible-AI attestation)"/>
-        <FIELD NAME="rplpathway" TYPE="text" NOTNULL="false" COMMENT="Documented RPL pathway/process for this qualification (Standards 1.4/1.6)"/>
-        <FIELD NAME="trainerunitmapping" TYPE="text" NOTNULL="false" COMMENT="Mapping of each trainer/assessor to the units they deliver + credential/currency (Standards 3.1-3.3)"/>
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
@@ -1696,28 +1651,6 @@
         <INDEX NAME="qualbuilderid_courseid" UNIQUE="false" FIELDS="qualbuilderid,courseid"/>
       </INDEXES>
     </TABLE>
-    <!-- Junction table linking a Qual Builder unit to multiple Moodle courses (primary + archive/variant
-         semester copies). Added to install.xml in v5.9.341 — previously created ONLY in db/upgrade.php
-         (savepoint 2026052700037), so fresh installs never built it and qualbuilder / cert-hub / course-map
-         features failed with "table does not exist". Definition mirrors upgrade.php exactly. -->
-    <TABLE NAME="local_rtocompliance_qualunit_courses" COMMENT="Links a qual unit to its primary and archive/variant delivery courses">
-      <FIELDS>
-        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
-        <FIELD NAME="qualunitid" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="FK to local_rtocompliance_qualunits"/>
-        <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="FK to course"/>
-        <FIELD NAME="semester_label" TYPE="char" LENGTH="100" NOTNULL="false" COMMENT="Human-readable semester/intake label"/>
-        <FIELD NAME="is_archive" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="1" COMMENT="1 = archive/variant semester course, 0 = primary QB course"/>
-        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
-      </FIELDS>
-      <KEYS>
-        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
-        <KEY NAME="fk_qualunitid" TYPE="foreign" FIELDS="qualunitid" REFTABLE="local_rtocompliance_qualunits" REFFIELDS="id"/>
-        <KEY NAME="fk_courseid" TYPE="foreign" FIELDS="courseid" REFTABLE="course" REFFIELDS="id"/>
-      </KEYS>
-      <INDEXES>
-        <INDEX NAME="idx_quc_uniq" UNIQUE="true" FIELDS="qualunitid,courseid"/>
-      </INDEXES>
-    </TABLE>
 
     <!-- Auto-Certificate Queue: Track automatic certificate issuance -->
     <TABLE NAME="local_rtocompliance_autocerts" COMMENT="Auto-certificate issuance queue">
@@ -1744,7 +1677,7 @@
       </KEYS>
       <INDEXES>
         <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
-        <INDEX NAME="studentid_qualbuilderid" UNIQUE="true" FIELDS="studentid,qualbuilderid"/>
+        <INDEX NAME="studentid_qualbuilderid" UNIQUE="false" FIELDS="studentid,qualbuilderid"/>
         <INDEX NAME="completiondate" UNIQUE="false" FIELDS="completiondate"/>
       </INDEXES>
     </TABLE>
@@ -1838,12 +1771,6 @@
         <FIELD NAME="sourcequalcode" TYPE="char" LENGTH="20" NOTNULL="false" COMMENT="Credit transfer: source qualification code"/>
         <FIELD NAME="sourcertoid" TYPE="char" LENGTH="10" NOTNULL="false" COMMENT="Credit transfer: source RTO identifier"/>
         <FIELD NAME="usitranscriptverified" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="Credit transfer: USI transcript verified"/>
-        <FIELD NAME="outcomecommunicated" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="RPL-P2 (v5.9.421): the decision outcome has been communicated to the student (procedural fairness, Std 1.6)"/>
-        <FIELD NAME="outcomecommunicateddate" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="RPL-P2 (v5.9.421): date the outcome was communicated to the student"/>
-        <FIELD NAME="outcomecommunicatedmethod" TYPE="char" LENGTH="100" NOTNULL="false" COMMENT="RPL-P2 (v5.9.421): how the outcome was communicated (email/letter/interview/portal)"/>
-        <FIELD NAME="supersededunitcode" TYPE="char" LENGTH="20" NOTNULL="false" COMMENT="RPL-P1 (v5.9.424): the superseded/prior unit code the student actually holds, mapped to the current unitcode being granted"/>
-        <FIELD NAME="unitequivalence" TYPE="char" LENGTH="20" NOTNULL="false" COMMENT="RPL-P1 (v5.9.424): TGA equivalence of the superseded unit to the current one: equivalent/not_equivalent/not_applicable"/>
-        <FIELD NAME="evidencematrix" TYPE="text" NOTNULL="false" COMMENT="RPL-P1 (v5.9.424): JSON array mapping each evidence item to the unit assessment criterion it satisfies and the assessor judgement"/>
         <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
         <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
       </FIELDS>
@@ -2048,19 +1975,6 @@
         <FIELD NAME="usi" TYPE="char" LENGTH="15" NOTNULL="false" COMMENT="USI (10 chars) extracted from NAT00080"/>
         <FIELD NAME="suburb" TYPE="char" LENGTH="60" NOTNULL="false"/>
         <FIELD NAME="state" TYPE="char" LENGTH="5" NOTNULL="false" COMMENT="State code e.g. 02=VIC from NAT00085"/>
-        <FIELD NAME="postcode" TYPE="char" LENGTH="4" NOTNULL="false" COMMENT="Postcode from NAT00085"/>
-        <FIELD NAME="buildingname" TYPE="char" LENGTH="50" NOTNULL="false" COMMENT="Address building/property name from NAT00085"/>
-        <FIELD NAME="unitno" TYPE="char" LENGTH="30" NOTNULL="false" COMMENT="Address flat/unit details from NAT00085"/>
-        <FIELD NAME="streetname" TYPE="char" LENGTH="70" NOTNULL="false" COMMENT="Street number + name (combined) from NAT00085"/>
-        <FIELD NAME="indigenousstatus" TYPE="char" LENGTH="2" NOTNULL="false" COMMENT="Indigenous status identifier from NAT00080 (1-4 or @)"/>
-        <FIELD NAME="labourforcestatus" TYPE="char" LENGTH="2" NOTNULL="false" COMMENT="Labour force status identifier from NAT00080 (01-08 or @@)"/>
-        <FIELD NAME="highestschoollevel" TYPE="char" LENGTH="2" NOTNULL="false" COMMENT="Highest school level completed from NAT00080 (02-12 or @@)"/>
-        <FIELD NAME="languageathome" TYPE="char" LENGTH="4" NOTNULL="false" COMMENT="Language at home identifier from NAT00080 Field 8 (ASCL code e.g. 1201=English)"/>
-        <FIELD NAME="countryofbirth" TYPE="char" LENGTH="4" NOTNULL="false" COMMENT="Country of birth identifier from NAT00080 Field 10 (SACC code e.g. 1101=Australia)"/>
-        <FIELD NAME="disabilityflag" TYPE="char" LENGTH="1" NOTNULL="false" COMMENT="Disability flag from NAT00080 Field 11 (Y/N/@)"/>
-        <FIELD NAME="prioreducationflag" TYPE="char" LENGTH="1" NOTNULL="false" COMMENT="Prior educational achievement flag from NAT00080 Field 12 (Y/N/@)"/>
-        <FIELD NAME="atschoolflag" TYPE="char" LENGTH="1" NOTNULL="false" COMMENT="At school flag from NAT00080 Field 13 (Y/N)"/>
-        <FIELD NAME="residentialcountry" TYPE="char" LENGTH="4" NOTNULL="false" COMMENT="Residential country SACC code for NAT00085 (defaults to 1101=Australia when blank)"/>
         <FIELD NAME="hasdataissues" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="1 if missing USI, DOB, sex or contains @@ markers"/>
         <FIELD NAME="dataissuefields" TYPE="text" NOTNULL="false" COMMENT="JSON array of issue field names"/>
       </FIELDS>
@@ -2433,51 +2347,6 @@
       </KEYS>
       <INDEXES>
         <INDEX NAME="importid" UNIQUE="false" FIELDS="importid"/>
-      </INDEXES>
-    </TABLE>
-
-    <TABLE NAME="local_rtocompliance_course_map" COMMENT="Admin-managed mapping of Moodle courses to AVETMISS qualification and unit codes. Seeded once from the Moodle Course Map admin page (via QB links + category-tree detection); every runtime completion and cert-generation path reads from this table instead of parsing course or category names. One row per course — unique constraint on courseid enforces a single qual+unit mapping per delivery course.">
-      <FIELDS>
-        <FIELD NAME="id"           TYPE="int"  LENGTH="10" NOTNULL="true"  SEQUENCE="true"/>
-        <FIELD NAME="courseid"     TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"    COMMENT="FK to mdl_course.id"/>
-        <FIELD NAME="categoryid"   TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"    COMMENT="FK to mdl_course_categories.id at time of seed"/>
-        <FIELD NAME="qualcode"     TYPE="char" LENGTH="20" NOTNULL="true"                 COMMENT="AVETMISS qualification code e.g. TLI50321 (upper-cased on save)"/>
-        <FIELD NAME="unitcode"     TYPE="char" LENGTH="20" NOTNULL="true"                 COMMENT="AVETMISS unit code e.g. TLIX0036 (upper-cased on save)"/>
-        <FIELD NAME="source"       TYPE="char" LENGTH="10" NOTNULL="true"  DEFAULT="auto" COMMENT="How the mapping was created: qb (Qual Builder link), auto (regex detection), manual (admin)"/>
-        <FIELD NAME="confirmed"    TYPE="int"  LENGTH="1"  NOTNULL="true"  DEFAULT="0"    COMMENT="1 = admin has reviewed and confirmed; 0 = auto-detected, pending review"/>
-        <FIELD NAME="timecreated"  TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
-        <FIELD NAME="timemodified" TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
-        <FIELD NAME="usermodified" TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
-      </FIELDS>
-      <KEYS>
-        <KEY NAME="primary"  TYPE="primary" FIELDS="id"/>
-        <KEY NAME="courseid" TYPE="unique"  FIELDS="courseid" COMMENT="Each Moodle course maps to exactly one qual+unit pair"/>
-      </KEYS>
-      <INDEXES>
-        <INDEX NAME="qualcode_unitcode" UNIQUE="false" FIELDS="qualcode,unitcode" COMMENT="Fast lookup: given qual+unit return all delivery courses"/>
-      </INDEXES>
-    </TABLE>
-
-    <TABLE NAME="local_rtocompliance_nominalhours" COMMENT="NOMINAL-HOURS (v5.9.418): authoritative per-unit nominal hours by jurisdiction. Nominal hours are set per state/territory (with an NCVER nationally-agreed set for national reporting), so the same unit can carry different hours per state. Seeds the qualunits.nominalhours value and the enrolment scheduled hours reported to AVETMISS NAT00120.">
-      <FIELDS>
-        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
-        <FIELD NAME="unitcode" TYPE="char" LENGTH="20" NOTNULL="true" COMMENT="Unit/module code, uppercased"/>
-        <FIELD NAME="state" TYPE="char" LENGTH="3" NOTNULL="true" DEFAULT="NAT" COMMENT="NAT (NCVER nationally-agreed) or VIC/QLD/NSW/SA/WA/TAS/NT/ACT"/>
-        <FIELD NAME="nominalhours" TYPE="int" LENGTH="5" NOTNULL="true" DEFAULT="0"/>
-        <FIELD NAME="trainingpackage" TYPE="char" LENGTH="20" NOTNULL="false"/>
-        <FIELD NAME="tprelease" TYPE="char" LENGTH="20" NOTNULL="false" COMMENT="Training-package release the value applies to"/>
-        <FIELD NAME="sourceref" TYPE="char" LENGTH="255" NOTNULL="false" COMMENT="Provenance, e.g. 'NCVER Nationally-agreed 2026Q2' or 'VIC VPG BSB R8'"/>
-        <FIELD NAME="effectivefrom" TYPE="int" LENGTH="10" NOTNULL="false"/>
-        <FIELD NAME="effectiveto" TYPE="int" LENGTH="10" NOTNULL="false"/>
-        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
-        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
-      </FIELDS>
-      <KEYS>
-        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
-      </KEYS>
-      <INDEXES>
-        <INDEX NAME="unitcode_state" UNIQUE="true" FIELDS="unitcode,state" COMMENT="One nominal-hours value per unit per jurisdiction (upsert key)"/>
-        <INDEX NAME="unitcode_idx" UNIQUE="false" FIELDS="unitcode"/>
       </INDEXES>
     </TABLE>
 

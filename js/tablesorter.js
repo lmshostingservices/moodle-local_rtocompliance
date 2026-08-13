@@ -2,10 +2,10 @@
    Previously this was an inline <script> block injected by the
    before_footer_html_generation hook. Moving it here allows it to be served as
    a same-origin script, which is permitted by Moodle's CSP 'self' directive. */
-(function () {
+(function() {
     'use strict';
 
-    document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', function() {
         initRtocTableSorting();
     });
 
@@ -16,18 +16,18 @@
 
         var tables = document.querySelectorAll('.data-table, .trainers-table, table.table, table.generaltable');
 
-        tables.forEach(function (table) {
+        tables.forEach(function(table) {
             var headers = table.querySelectorAll('thead th');
             if (headers.length === 0) return;
 
-            headers.forEach(function (th, colIndex) {
+            headers.forEach(function(th, colIndex) {
                 var headerText = th.textContent.trim().toLowerCase();
                 if (headerText === 'actions' || headerText === 'action' || headerText === '') return;
 
                 th.classList.add('rtoc-sortable');
                 th.setAttribute('data-col-index', colIndex);
 
-                th.addEventListener('click', function () {
+                th.addEventListener('click', function() {
                     sortTable(table, colIndex, th);
                 });
             });
@@ -44,7 +44,7 @@
         var isAsc = clickedTh.classList.contains('rtoc-sort-asc');
         var isDesc = clickedTh.classList.contains('rtoc-sort-desc');
 
-        table.querySelectorAll('th.rtoc-sortable').forEach(function (th) {
+        table.querySelectorAll('th.rtoc-sortable').forEach(function(th) {
             th.classList.remove('rtoc-sort-asc', 'rtoc-sort-desc');
         });
 
@@ -57,7 +57,7 @@
 
         clickedTh.classList.add('rtoc-sort-' + newDir);
 
-        rows.sort(function (a, b) {
+        rows.sort(function(a, b) {
             var aCell = a.cells[colIndex];
             var bCell = b.cells[colIndex];
             if (!aCell || !bCell) return 0;
@@ -82,7 +82,7 @@
             return newDir === 'asc' ? cmp : -cmp;
         });
 
-        rows.forEach(function (row) {
+        rows.forEach(function(row) {
             tbody.appendChild(row);
         });
     }
@@ -93,7 +93,7 @@
         }
         var clone = cell.cloneNode(true);
         var buttons = clone.querySelectorAll('a, button, .btn');
-        buttons.forEach(function (btn) { btn.remove(); });
+        buttons.forEach(function(btn) { btn.remove(); });
         return clone.textContent.trim();
     }
 

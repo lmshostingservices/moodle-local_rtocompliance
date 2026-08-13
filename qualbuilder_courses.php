@@ -15,13 +15,15 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * RTO Compliance plugin — qualbuilder_courses.php.
+ * local_rtocompliance file.
  *
  * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
+
 require_once(__DIR__ . '/../../config.php');
+require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 require_once(__DIR__ . '/classes/audit_logger.php');
@@ -29,10 +31,9 @@ require_once(__DIR__ . '/classes/audit_logger.php');
 use local_rtocompliance\audit_logger;
 
 $id = required_param('id', PARAM_INT);
-$action = optional_param('action', '', PARAM_ALPHANUMEXT); // PARAM_ALPHA stripped underscores, so add_archive / remove_archive never matched.
+$action = optional_param('action', '', PARAM_ALPHA);
 
 admin_externalpage_setup('local_rtocompliance_qualbuilder');
-require_login();
 $context = context_system::instance();
 
 $product = $DB->get_record('local_rtocompliance_qualbuilder', ['id' => $id], '*', MUST_EXIST);

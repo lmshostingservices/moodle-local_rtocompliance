@@ -15,13 +15,15 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * RTO Compliance plugin — qualbuilder_edit.php.
+ * local_rtocompliance file.
  *
  * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
+
 require_once(__DIR__ . '/../../config.php');
+require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 require_once(__DIR__ . '/classes/audit_logger.php');
@@ -31,7 +33,6 @@ use local_rtocompliance\audit_logger;
 $id = optional_param('id', 0, PARAM_INT);
 
 admin_externalpage_setup('local_rtocompliance_qualbuilder');
-require_login();
 $context = context_system::instance();
 
 $PAGE->set_url(new moodle_url('/local/rtocompliance/qualbuilder_edit.php', ['id' => $id]));
@@ -184,10 +185,6 @@ $jsPayload = json_encode([
     'existingGroupRules' => $existingGroupRules,
     'wwwroot'          => $CFG->wwwroot,
     'sesskey'          => sesskey(),
-    // NOMINAL HOURS PHASE 2 (v5.9.421): batch endpoint used to populate authoritative
-    // nominal hours for every unit at once (TGA does not publish them), so the
-    // qualification total rolls up from the plugin's own reference table.
-    'nominalHoursEndpoint' => (new moodle_url('/local/rtocompliance/nominalhours_lookup.php'))->out(false),
     // Full category tree for the two-level picker (qual root → semester child).
     // Available immediately on page load — no TGA call required.
     'categoryTree'     => $catTree,
@@ -202,7 +199,6 @@ echo local_rtocompliance_render_nav_header(
     '/local/rtocompliance/qualbuilder.php',
     'qualbuilder'
 );
-echo local_rtocompliance_page_banner($id ? get_string('edit_product', 'local_rtocompliance') : get_string('add_product', 'local_rtocompliance'));
 ?>
 
 <style>

@@ -15,13 +15,15 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * RTO Compliance plugin — trainer_dashboard.php.
+ * local_rtocompliance file.
  *
  * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
 
+// This file is part of Moodle - http://moodle.org/
+//
 // RTO Compliance — Trainer Dashboard (v4.2.30, 30 Apr 2026)
 //
 // ROLE-SPLIT companion page: scoped read-only view for users holding
@@ -70,10 +72,8 @@ $PAGE->set_pagelayout('standard');
 $PAGE->set_title(get_string('trainerdashboard', 'local_rtocompliance'));
 $PAGE->set_heading(get_string('trainerdashboard', 'local_rtocompliance'));
 
-$PAGE->add_body_class('path-local-rtocompliance'); // v5.9.445: scoped CSS needs this on admin_externalpage pages.
 echo $OUTPUT->header();
 echo local_rtocompliance_render_nav_header(get_string('trainerdashboard', 'local_rtocompliance'), null, null, 'trainers');
-echo local_rtocompliance_page_banner(get_string('trainerdashboard', 'local_rtocompliance'));
 
 // ─── Header bar ───────────────────────────────────────────────────────────
 echo '<div style="background:linear-gradient(135deg,#0ea5e9 0%,#0284c7 100%);color:white;padding:20px 24px;border-radius:8px;margin-bottom:24px;">';
@@ -116,10 +116,10 @@ if (empty($mycourses)) {
 } else {
     echo '<table class="generaltable" style="width:100%;margin:0;">';
     echo '<thead><tr>';
-    echo '<th title="Course short name or code">' . get_string('shortnamecourse') . '</th>';
-    echo '<th title="Full course name">' . get_string('fullnamecourse') . '</th>';
-    echo '<th style="text-align:right;" title="Number of students enrolled in this class">' . get_string('students') . '</th>';
-    echo '<th style="text-align:right;" title="Available actions for this class">' . get_string('actions') . '</th>';
+    echo '<th>' . get_string('shortnamecourse') . '</th>';
+    echo '<th>' . get_string('fullnamecourse') . '</th>';
+    echo '<th style="text-align:right;">' . get_string('students') . '</th>';
+    echo '<th style="text-align:right;">' . get_string('actions') . '</th>';
     echo '</tr></thead><tbody>';
     foreach ($mycourses as $course) {
         $enrolled = 0;
@@ -132,7 +132,7 @@ if (empty($mycourses)) {
         echo '<td><strong>' . s($course->shortname) . '</strong></td>';
         echo '<td>' . s($course->fullname) . '</td>';
         echo '<td style="text-align:right;">' . (int) $enrolled . '</td>';
-        echo '<td style="text-align:right;"><a href="' . $courseurl->out() . '" class="btn btn-sm btn-outline-primary" title="Open this course in Moodle">' . get_string('view') . '</a></td>';
+        echo '<td style="text-align:right;"><a href="' . $courseurl->out() . '" class="btn btn-sm btn-outline-primary">' . get_string('view') . '</a></td>';
         echo '</tr>';
     }
     echo '</tbody></table>';
@@ -187,10 +187,10 @@ if (empty($mycourses)) {
         $dashNameLink = '<a href="' . htmlspecialchars($dashNameSortUrl, ENT_QUOTES) . '" style="white-space:nowrap;text-decoration:none;color:inherit;font-weight:bold">'
             . get_string('fullname') . $dashNameArrow . '</a>';
         echo '<thead><tr>';
-        echo '<th title="Student name — click to sort">' . $dashNameLink . '</th>';
-        echo '<th title="Student email address">' . get_string('email') . '</th>';
-        echo '<th title="Unique Student Identifier (USI)">USI</th>';
-        echo '<th title="Student ID number">' . get_string('idnumber') . '</th>';
+        echo '<th>' . $dashNameLink . '</th>';
+        echo '<th>' . get_string('email') . '</th>';
+        echo '<th>USI</th>';
+        echo '<th>' . get_string('idnumber') . '</th>';
         echo '</tr></thead><tbody>';
         foreach ($students as $stu) {
             // Look up USI from local_rtocompliance_students if present
@@ -214,21 +214,14 @@ if (empty($mycourses)) {
 echo '</div>';
 
 // ─── C. My currency profile ──────────────────────────────────────────────
-// v5.9.380: record_management.php was renamed to trainer_currency.php (keyed by
-// trainerid). Look up this user's trainer record; hide the button if none.
-$mytrainer = $DB->get_record('local_rtocompliance_trainers', ['userid' => $USER->id], 'id', IGNORE_MULTIPLE);
+$recordurl = new moodle_url('/local/rtocompliance/record_management.php', ['userid' => $USER->id]);
 echo '<div style="background:white;border:1px solid #e5e7eb;border-radius:8px;padding:20px;margin-bottom:20px;">';
 echo '<h3 style="margin:0 0 14px 0;font-size:17px;display:flex;align-items:center;gap:8px;">';
 echo '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>';
 echo get_string('trainer_currency', 'local_rtocompliance');
 echo '</h3>';
 echo '<p style="color:#6b7280;font-size:14px;margin:0 0 12px 0;">' . get_string('trainer_currency_intro', 'local_rtocompliance') . '</p>';
-if ($mytrainer) {
-    $recordurl = new moodle_url('/local/rtocompliance/trainer_currency.php', ['trainerid' => $mytrainer->id]);
-    echo '<a href="' . $recordurl->out() . '" class="btn btn-primary" title="Open your industry currency and credential record">' . get_string('trainer_currency_open', 'local_rtocompliance') . '</a>';
-} else {
-    echo '<p style="color:#9ca3af;font-size:13px;margin:0;">No trainer record is linked to your account yet.</p>';
-}
+echo '<a href="' . $recordurl->out() . '" class="btn btn-primary">' . get_string('trainer_currency_open', 'local_rtocompliance') . '</a>';
 echo '</div>';
 
 // ─── D. Validation events I'm assigned to (read-only) ───────────────────
@@ -238,8 +231,8 @@ echo '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 
 echo get_string('trainer_validation', 'local_rtocompliance');
 echo '</h3>';
 echo '<p style="color:#6b7280;font-size:14px;margin:0 0 12px 0;">' . get_string('trainer_validation_intro', 'local_rtocompliance') . '</p>';
-$valurl = new moodle_url('/local/rtocompliance/validation.php');
-echo '<a href="' . $valurl->out() . '" class="btn btn-outline-primary" title="Open the validation events you are assigned to">' . get_string('trainer_validation_open', 'local_rtocompliance') . '</a>';
+$valurl = new moodle_url('/local/rtocompliance/validation_schedule.php');
+echo '<a href="' . $valurl->out() . '" class="btn btn-outline-primary">' . get_string('trainer_validation_open', 'local_rtocompliance') . '</a>';
 echo '</div>';
 
 echo $OUTPUT->footer();

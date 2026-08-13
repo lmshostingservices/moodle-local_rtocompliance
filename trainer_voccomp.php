@@ -15,19 +15,20 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * RTO Compliance plugin — trainer_voccomp.php.
+ * local_rtocompliance file.
  *
  * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
+
 require_once(__DIR__ . '/../../config.php');
+require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once($CFG->libdir . '/formslib.php');
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_trainers');
-require_login();
 $context = context_system::instance();
 require_capability('local/rtocompliance:managetrainers', $context);
 
@@ -190,7 +191,7 @@ class trainer_voccomp_form extends moodleform {
             // hollow/ghost button that appeared visually broken inside the rtoc-ai-box
             // div when the form was loaded in edit mode.  Changed to btn-primary to
             // match the solid AI buttons used throughout the rest of the plugin.
-            '<button type="button" id="rtoc-ai-voccomp-desc" class="btn btn-sm btn-primary" title="Draft the description with AI from the activity title, qualification, organisation and dates above">' .
+            '<button type="button" id="rtoc-ai-voccomp-desc" class="btn btn-sm btn-primary">' .
             '<i class="fa fa-magic" aria-hidden="true"></i> AI Generate Description' .
             '</button>' .
             '<span id="rtoc-ai-voccomp-desc-status" class="rtoc-ai-status"></span>' .
@@ -310,17 +311,6 @@ if ($form->is_cancelled()) {
         $logaction = 'create';
     }
 
-    // EVIDENCE-PERSIST (v5.9.415): persist the uploaded evidence from the transient
-    // draft area into the permanent, pluginfile-served 'trainer_voccomp_evidence'
-    // filearea (its own area, so its record ids can't collide with trainer_currency's
-    // in a shared area). file_save_draft_area_files() was previously never called, so
-    // the file was lost on draft cleanup.
-    if (!empty($evidenceitemid)) {
-        file_save_draft_area_files($evidenceitemid, context_system::instance()->id,
-            'local_rtocompliance', 'trainer_voccomp_evidence', $record->id, ['maxfiles' => 1]);
-        $DB->set_field($tablename, 'evidencefileid', $record->id, ['id' => $record->id]);
-    }
-
     $log = new stdClass();
     $log->action = $logaction;
     $log->component = 'trainer_voccomp';
@@ -350,7 +340,6 @@ if ($form->is_cancelled()) {
 $PAGE->add_body_class("path-local-rtocompliance");
 echo $OUTPUT->header();
 echo local_rtocompliance_render_nav_header('Vocational Competency Register', 'Edit Trainer', '/local/rtocompliance/trainer_edit.php?id=' . $trainerid, 'trainers');
-echo local_rtocompliance_page_banner('Vocational Competency Register');
 
 echo html_writer::start_div('', ['style' => 'max-width: 1000px; margin: 0 auto; padding: 20px;']);
 
@@ -378,7 +367,7 @@ if ($action === 'add' || $id) {
     echo html_writer::link(
         new moodle_url('/local/rtocompliance/trainer_voccomp.php', ['trainerid' => $trainerid, 'action' => 'add']),
         'Add Vocational Competency Activity',
-        ['class' => 'btn btn-primary', 'title' => 'Record a new vocational competency activity for this trainer']
+        ['class' => 'btn btn-primary']
     );
     echo html_writer::end_div();
     
@@ -419,12 +408,12 @@ if ($action === 'add' || $id) {
             $editLink = html_writer::link(
                 new moodle_url('/local/rtocompliance/trainer_voccomp.php', ['trainerid' => $trainerid, 'id' => $act->id]),
                 'Edit',
-                ['class' => 'btn btn-sm btn-outline-secondary', 'title' => 'Edit this vocational competency activity']
+                ['class' => 'btn btn-sm btn-outline-secondary']
             );
             $deleteLink = html_writer::link(
                 new moodle_url('/local/rtocompliance/trainer_voccomp.php', ['trainerid' => $trainerid, 'id' => $act->id, 'delete' => 1, 'sesskey' => sesskey()]),
                 'Delete',
-                ['class' => 'btn btn-sm btn-outline-danger', 'title' => 'Delete this vocational competency activity', 'onclick' => "return confirm('Delete this vocational competency activity?');"]
+                ['class' => 'btn btn-sm btn-outline-danger', 'onclick' => "return confirm('Delete this vocational competency activity?');"]
             );
 
             echo '<li class="rtoc-vc-list-item">';

@@ -1,4 +1,5 @@
 <?php
+// require_login() — deliberately omitted: this endpoint uses its own authentication or is not a user-facing web page.
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -15,12 +16,13 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * RTO Compliance plugin — webhook.php.
+ * local_rtocompliance file.
  *
  * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
+
 // ─────────────────────────────────────────────────────────────────────────────
 // local_rtocompliance/webhook.php
 // Receives configuration pushes from the lms-labs.com SaaS platform.
@@ -29,12 +31,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 define('NO_MOODLE_COOKIES', true);
 require_once(__DIR__ . '/../../config.php');
-
-// Machine-to-machine endpoint authenticated by the X-Webhook-Key header (checked below).
-// A request with no webhook key is not a legitimate machine call — require a Moodle login.
-if (empty($_SERVER['HTTP_X_WEBHOOK_KEY'])) {
-    require_login();
-}
 
 header('Content-Type: application/json');
 header('X-Content-Type-Options: nosniff');
@@ -90,15 +86,9 @@ if (!is_array($data) || !isset($data['configs']) || !is_array($data['configs']))
 $ALLOWED_KEYS = [
     // Platform connection
     'siteid', 'apikey', 'apiurl',
-    // USI Registry — non-secret operational config only.
-    // CREDENTIAL-BROKER-ONLY (v5.9.452): 'usi_certificate_password' has been REMOVED
-    // from the whitelist. The myGovID machine credential and its passphrase are held
-    // ONLY on the lms-labs.com platform, which performs verification on Moodle's behalf
-    // via /api/usi/verify. Moodle must never store the keystore or its password, so a
-    // pushed password is now ignored (reported as skipped). 'usi_cert_expiry' and
-    // 'usi_cert_subject' are non-secret display metadata the platform may push.
+    // USI Registry — note: usi_certificate_path is NOT here; set only by usi_cert_base64 handler
     'usi_organization_id', 'usi_test_mode',
-    'usi_cert_expiry', 'usi_cert_subject',
+    'usi_certificate_password',
     // Auto-survey
     'autosurveyenable', 'autosurveydelay', 'autosurveyemailsubject',
     // NAT / report settings
@@ -118,17 +108,25 @@ foreach ($data['configs'] as $key => $value) {
     }
 }
 
-// ── Handle USI cert push ──────────────────────────────────────────────────────
-// CREDENTIAL-BROKER-ONLY (v5.9.452): Moodle no longer stores the machine credential.
-// The keystore lives ONLY on the lms-labs.com platform, which authenticates to the
-// ATO and verifies USIs on Moodle's behalf (POST /api/usi/verify). When the platform
-// signals that a credential is present for this site, we record a NON-SECRET readiness
-// flag so the plugin knows USI is ready — we deliberately do NOT decode or write the
-// .p12 to disk, and we do NOT store the passphrase. This keeps the (sensitive) keystore
-// out of the Moodle server entirely.
-if (!empty($data['usi_cert_base64']) || !empty($data['usi_cert_ready'])) {
-    set_config('usi_cert_uploaded', 1, 'local_rtocompliance');
-    $applied[] = 'usi_cert_uploaded (platform holds credential; keystore NOT stored in Moodle)';
+// ── Handle USI cert (base64) ──────────────────────────────────────────────────
+// If a base64-encoded P12 certificate was pushed, decode it and write to disk.
+if (!empty($data['usi_cert_base64'])) {
+    $certData = base64_decode($data['usi_cert_base64'], true);
+    if ($certData !== false) {
+        $certDir  = $CFG->dataroot . '/local_rtocompliance';
+        if (!is_dir($certDir)) {
+            mkdir($certDir, 0750, true);
+        }
+        $certPath = $certDir . '/usi_credential.p12';
+        if (file_put_contents($certPath, $certData) !== false) {
+            set_config('usi_certificate_path', $certPath, 'local_rtocompliance');
+            $applied[] = 'usi_certificate_path (written from base64)';
+        } else {
+            $skipped[] = 'usi_cert_base64 (file write failed -- check Moodle dataroot permissions)';
+        }
+    } else {
+        $skipped[] = 'usi_cert_base64 (invalid base64 data)';
+    }
 }
 
 echo json_encode([

@@ -15,12 +15,13 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * RTO Compliance plugin — my_profile.php.
+ * local_rtocompliance file.
  *
  * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
+
 require_once(__DIR__ . '/../../config.php');
 require_once($CFG->libdir . '/formslib.php');
 require_once(__DIR__ . '/lib.php');
@@ -198,7 +199,6 @@ if ($form->is_cancelled()) {
 $PAGE->add_body_class("path-local-rtocompliance");
 echo $OUTPUT->header();
 echo local_rtocompliance_render_nav_header(get_string('myavetmissprofile', 'local_rtocompliance'));
-echo local_rtocompliance_page_banner(get_string('myavetmissprofile', 'local_rtocompliance'));
 
 echo html_writer::start_div('compliance-container');
 
@@ -219,23 +219,7 @@ if (!empty($nrcourses)) {
     echo html_writer::end_div();
 }
 
-$isprompt = optional_param('prompt', 0, PARAM_INT);
-
-if ($isprompt && !$student->profilecomplete) {
-    // Arrived here via the login-time redirect — show an action-required banner
-    // that explains WHY the profile is needed, not just that it's incomplete.
-    echo html_writer::start_div('alert alert-danger', ['style' => 'margin-bottom: 24px;', 'role' => 'alert']);
-    echo html_writer::tag('h4',
-        html_writer::tag('span', '&#9888; ', []) .
-        get_string('avetmiss_profile_prompt_title', 'local_rtocompliance'),
-        ['style' => 'margin: 0 0 10px 0; font-size: 1.1em;']
-    );
-    echo html_writer::tag('p',
-        get_string('avetmiss_profile_prompt_body', 'local_rtocompliance'),
-        ['style' => 'margin: 0;']
-    );
-    echo html_writer::end_div();
-} else if (!$student->profilecomplete) {
+if (!$student->profilecomplete) {
     echo html_writer::div(
         html_writer::tag('strong', get_string('profile_incomplete_warning', 'local_rtocompliance')),
         'alert alert-warning',

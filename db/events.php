@@ -15,12 +15,13 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * RTO Compliance plugin — events.php.
+ * local_rtocompliance file.
  *
  * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
+
 defined('MOODLE_INTERNAL') || die();
 
 $observers = [
@@ -65,17 +66,5 @@ $observers = [
         'includefile' => '/local/rtocompliance/classes/observer.php',
         'priority' => 0,
         'internal' => true,
-    ],
-    [
-        // LOGIN-PROFILE-PROMPT: set a session flag when a student with an
-        // incomplete AVETMISS profile logs in. The flag is consumed by
-        // local_rtocompliance_extend_navigation() in lib.php, which fires
-        // after require_login() on the destination page and can safely call
-        // redirect() before any output is written.
-        'eventname' => '\core\event\user_loggedin',
-        'callback' => 'local_rtocompliance_observer::user_loggedin',
-        'includefile' => '/local/rtocompliance/classes/observer.php',
-        'priority' => 0,
-        'internal' => false,
     ],
 ];

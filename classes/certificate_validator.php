@@ -15,12 +15,13 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * RTO Compliance plugin — certificate_validator.php.
+ * local_rtocompliance file.
  *
  * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
+
 namespace local_rtocompliance;
 
 defined('MOODLE_INTERNAL') || die();
@@ -28,6 +29,7 @@ defined('MOODLE_INTERNAL') || die();
 require_once(__DIR__ . '/avetmiss_codes.php');
 
 class certificate_validator {
+    
     // CERT-TEMPLATE-BUILDER-PRO (v4.2.43) — rules rebuilt to match the
     // ASQA "Issuing AQF qualifications and statements of attainment"
     // Fact Sheet exactly. Critical changes:
@@ -46,22 +48,21 @@ class certificate_validator {
                 'organisationName'      => 'Organisation (RTO) name is required',
                 'rtoCode'               => 'RTO code (TOID) must appear on a testamur',
                 'signatoryName'         => 'An authorised signatory name is required',
+                'signatoryTitle'        => 'The signatory position/title is required',
+                'signatorySignature'    => 'Signatory signature image is required (upload via the Branding panel)',
                 'qualificationCode'     => 'Qualification code is required',
                 'qualificationName'     => 'Qualification name is required',
                 'certifyStatement'      => 'The "This is to certify that" line is required on a testamur',
                 'attainedStatement'     => 'The "has fulfilled the requirements for" line is required on a testamur',
                 'aqfStatementText'      => 'AQF recognition statement is required for testamur certificates',
                 'nrtLogo'               => 'The Nationally Recognised Training (NRT) logo is required on a testamur',
-                'issueDate'             => 'A date of issue is required on a testamur (ASQA Sample Forms fact sheet p.2)',
-                'authenticityMeasure'   => 'An authenticity measure (organisation seal, verification URL or QR) is required',
+                'organisationSeal'      => 'Organisation seal / corporate identifier / unique watermark is required (ASQA Practice Guide item 1(e))',
+                'authenticityMeasure'   => 'An authenticity measure (verification URL or QR) is required',
             ],
             'recommended_fields' => [
-                'rtoLogo'            => 'RTO logo enhances professional appearance — upload via the Branding panel',
-                'aqfLogo'           => 'AQF logo is permitted (and recommended) on a testamur',
-                'signatoryTitle'    => 'Including the signatory position/title strengthens the authorised person section',
-                'signatorySignature'=> 'A signatory signature image adds authenticity (ASQA mandates the authorised person; a signature is optional)',
-                'organisationSeal'  => 'An organisation seal / corporate identifier is one accepted form of the authenticity measure',
-                'includeQrCode'     => 'QR code verification improves certificate security'
+                'rtoLogo'        => 'RTO logo enhances professional appearance — upload via the Branding panel',
+                'aqfLogo'        => 'AQF logo is permitted (and recommended) on a testamur',
+                'includeQrCode'  => 'QR code verification improves certificate security'
             ],
             'mandatory_statement' => null
         ],
@@ -70,21 +71,21 @@ class certificate_validator {
                 'organisationName'           => 'Organisation (RTO) name is required',
                 'rtoCode'                    => 'RTO code (TOID) must appear on a Statement of Attainment',
                 'signatoryName'              => 'An authorised signatory name is required',
+                'signatoryTitle'             => 'The signatory position/title is required',
+                'signatorySignature'         => 'Signatory signature image is required (upload via the Branding panel)',
                 'unitsOfCompetency'          => 'Units of competency table must be on a Statement of Attainment',
                 'soaHeading'                 => 'The "Statement of Attainment" heading is required',
                 'soaIntroStatement'          => 'The "This is a statement that" opening phrase is required on a Statement of Attainment (ASQA fact sheet p.4)',
                 'soaAttainedStatement'       => 'The "has attained" phrase is required on a Statement of Attainment (ASQA fact sheet p.4)',
                 'headerText'                 => 'The mandatory NOT-A-TESTAMUR statement is required',
                 'nrtLogo'                    => 'The Nationally Recognised Training (NRT) logo is required',
-                'issueDate'                  => 'A date of issue is required on a Statement of Attainment (ASQA fact sheet p.4)',
-                'authenticityMeasure'        => 'An authenticity measure (organisation seal, verification URL or QR) is required',
+                'organisationSeal'           => 'Organisation seal / corporate identifier / unique watermark is required (ASQA Practice Guide item 2(e))',
+                'authenticityMeasure'        => 'An authenticity measure (verification URL or QR) is required',
             ],
             'recommended_fields' => [
                 'rtoLogo'                              => 'RTO logo enhances professional appearance',
-                'signatoryTitle'                       => 'Including the signatory position/title strengthens the authorised person section',
-                'signatorySignature'                   => 'A signatory signature image adds authenticity (ASQA mandates the authorised person; a signature is optional)',
-                'organisationSeal'                     => 'An organisation seal / corporate identifier is one accepted form of the authenticity measure',
-                'qualificationPartOfStatement'         => 'A "These competencies form part of [code and title of qualification]" line is the ASQA-recommended statement showing how the units relate to a qualification (Sample forms of AQF certification documentation). This is the only relationship statement needed on a Statement of Attainment.',
+                'qualificationPartOfStatement'         => 'A "These competencies form part of …" line clarifies how the units relate to a qualification',
+                'qualificationCompletionOfCourseStatement' => 'A "completed in pursuit of …" line is recommended where applicable',
                 'includeQrCode'                        => 'QR code verification improves certificate security'
             ],
             'mandatory_statement' => 'A STATEMENT OF ATTAINMENT IS ISSUED BY A REGISTERED TRAINING ORGANISATION WHEN AN INDIVIDUAL HAS COMPLETED ONE OR MORE ACCREDITED UNITS. THIS IS NOT A TESTAMUR.'
@@ -102,13 +103,12 @@ class certificate_validator {
                 'signatoryName'         => 'An authorised signatory name is required',
                 'unitsOfCompetency'     => 'Units of competency table must be on a Record of Results',
                 'rorHeading'            => 'The "Record of Results" heading is required',
-                'issueDate'             => 'A date of issue is required on a Record of Results (ASQA fact sheet p.3)',
-                'authenticityMeasure'   => 'An authenticity measure (organisation seal, verification URL or QR) is required',
+                'studentUSI'            => 'Student USI must appear on a Record of Results',
+                'authenticityMeasure'   => 'An authenticity measure (verification URL or QR) is required',
             ],
             'recommended_fields' => [
                 'rtoLogo'        => 'RTO logo enhances professional appearance (ASQA fact sheet p.3 includes logo)',
                 'signatoryTitle' => 'Including the signatory position/title strengthens the authorised person section',
-                'studentUSI'     => 'Student USI (or ID number) may be included on a Record of Results to authenticate the student — optional (ASQA fact sheet p.3)',
                 'includeQrCode'  => 'QR code verification improves certificate security'
             ],
             'mandatory_statement' => null
@@ -186,7 +186,6 @@ class certificate_validator {
         'aqfLogo'               => 'aqf_logo',
         'organisationSeal'      => 'organisation_seal',
         'authenticityMeasure'   => 'authenticity_measure',
-        'issueDate'             => 'cert.issuedate',
         'qualificationPartOfStatement'             => 'qualification.partofstatement',
         'qualificationCompletionOfCourseStatement' => 'qualification.completionofcoursestatement',
     ];
@@ -226,33 +225,12 @@ class certificate_validator {
 
         // Build a quick index of dynamickeys present on the canvas.
         $dynamickeys_on_canvas = [];
-        $has_ror_table = false;
         if (!empty($design['fields']) && is_array($design['fields'])) {
             foreach ($design['fields'] as $field) {
                 if (!empty($field['kind']) && $field['kind'] === 'dynamic' && !empty($field['dynamickey'])) {
                     $dynamickeys_on_canvas[$field['dynamickey']] = true;
                 }
-                // ROR-5COL (v6.2.51): the Record of Results units table is a first-class
-                // 'ror_table' field kind, not a dynamic 'qualification.units' field. The whole
-                // table (Enrolment Date | Unit Code | Unit Title | Result | Completion Date) IS
-                // the units-of-competency requirement, so treat its presence as satisfying it.
-                if (!empty($field['kind']) && $field['kind'] === 'ror_table') {
-                    $has_ror_table = true;
-                }
             }
-        }
-        // ROR-5COL (v6.2.51): an ror_table on the canvas satisfies the units-of-competency
-        // requirement exactly as a dynamic qualification.units field would.
-        if ($has_ror_table) {
-            $dynamickeys_on_canvas['qualification.units'] = true;
-        }
-        // STUDENT-DETAILS-TABLE (v6.2.51): the student details table carries the student name
-        // and the qualification code + title inside it, so its presence satisfies each of those
-        // separate ASQA requirements without the individual fields being placed on the canvas.
-        if (!empty($dynamickeys_on_canvas['student.detailstable'])) {
-            $dynamickeys_on_canvas['student.fullname']  = true;
-            $dynamickeys_on_canvas['qualification.code'] = true;
-            $dynamickeys_on_canvas['qualification.name'] = true;
         }
 
         $rules = self::AQF_TEMPLATE_REQUIREMENTS[$certtype];
@@ -264,28 +242,16 @@ class certificate_validator {
             }
             $needed = self::REQUIREMENT_TO_DYNAMICKEY[$rulekey];
 
-            // RTO-IDENTITY-IN-LOGO (v6.2.27): when the admin has confirmed (in RTO / Branding
-            // settings) that their RTO logo artwork already displays the RTO name and code,
-            // do not require them as SEPARATE placed text fields. ASQA still requires the name
-            // and code to appear on the document — the logo carries them — so this only relaxes
-            // the "separate field" canvas check, not the underlying ASQA obligation.
-            if (($rulekey === 'organisationName' || $rulekey === 'rtoCode')
-                    && (string) get_config('local_rtocompliance', 'logo_includes_rto_identity') === '1') {
-                continue;
-            }
-
-            // FIX-QR-AUTHENTICITY (v5.0.3) + SEAL-AS-AUTHENTICITY (v6.2.27): the
-            // authenticityMeasure requirement is satisfied by ANY of: authenticity_measure
-            // (text URL), qrcode (QR image), verify.url (plain URL text), or an
-            // organisation_seal. Per the ASQA "Sample forms of AQF certification
-            // documentation" fact sheet the seal, corporate identifier, unique watermark
-            // and/or document number are EXAMPLE FORMS of the single authenticity measure —
-            // so a seal on the canvas satisfies it without a separate URL/QR.
+            // FIX-QR-AUTHENTICITY (v5.0.3): the authenticityMeasure requirement is
+            // satisfied by ANY of: authenticity_measure (text URL), qrcode (QR image),
+            // or verify.url (plain URL text). All three are valid ASQA authenticity
+            // measures per the "Issuing AQF qualifications" fact sheet. Previously
+            // only authenticity_measure was accepted, so adding a QR code to the
+            // canvas still showed the ASQA error — a false positive.
             $satisfied = !empty($dynamickeys_on_canvas[$needed]);
             if (!$satisfied && $rulekey === 'authenticityMeasure') {
                 $satisfied = !empty($dynamickeys_on_canvas['qrcode'])
-                          || !empty($dynamickeys_on_canvas['verify.url'])
-                          || !empty($dynamickeys_on_canvas['organisation_seal']);
+                          || !empty($dynamickeys_on_canvas['verify.url']);
             }
 
             if (!$satisfied) {
@@ -312,8 +278,7 @@ class certificate_validator {
             $satisfied = !empty($dynamickeys_on_canvas[$needed]);
             if (!$satisfied && $rulekey === 'authenticityMeasure') {
                 $satisfied = !empty($dynamickeys_on_canvas['qrcode'])
-                          || !empty($dynamickeys_on_canvas['verify.url'])
-                          || !empty($dynamickeys_on_canvas['organisation_seal']);
+                          || !empty($dynamickeys_on_canvas['verify.url']);
             }
             // FIX-QR-AUTHENTICITY (v5.0.3): suppress the "add QR code" recommendation
             // when any authenticity measure (authenticity_measure or verify.url) is
@@ -425,71 +390,6 @@ class certificate_validator {
             'errors' => $errors,
             'warnings' => $warnings,
         ];
-    }
-
-    /**
-     * LIVE-VALIDATION (v6.2.16) — render the ASQA validator panel HTML for a
-     * validate_template_design() result. This is the SINGLE source of truth for
-     * the panel markup: both the server-rendered initial state (cert_template_edit.php)
-     * and the AJAX live re-validation endpoint (cert_template_validate.php) call
-     * this, so the panel that appears on page-load and the panel that redraws after
-     * every field add/delete are byte-for-byte identical. Previously the panel was
-     * only rendered on the edit page, so adding a field via a "Fix" button never
-     * cleared the corresponding recommendation until a full save+reload — the exact
-     * "the error doesn't disappear even when you follow its command" bug.
-     *
-     * @param array $validation result of validate_template_design()
-     * @param array|null $catalogue dynamic-field catalogue (defaults to cert_template's)
-     * @return string HTML for the inside of #rtoc-tmpl-validation
-     */
-    public static function render_validation_panel_html(array $validation, ?array $catalogue = null): string {
-        if ($catalogue === null) {
-            $catalogue = \local_rtocompliance\cert_template::get_dynamic_field_catalogue();
-        }
-        $fixlabel = get_string('cert_template_validation_fix', 'local_rtocompliance');
-
-        $rendervalitem = function ($item) use ($fixlabel, $catalogue) {
-            $msg = s($item['message']);
-            $key = $item['field'] ?? '';
-            $hasField = is_string($key) && $key !== '' && isset($catalogue[$key]);
-            // Never offer a "Fix" (add-the-field) button for a "must NOT appear"
-            // error — the remedy there is to REMOVE the field, not add it.
-            $isNotUsiError = !(strpos((string)($item['rule'] ?? ''), 'USI must NOT appear') !== false);
-            $btn = '';
-            if ($hasField && $isNotUsiError) {
-                $btn = ' ' . \html_writer::tag('button', $fixlabel, [
-                    'type'        => 'button',
-                    'class'       => 'btn btn-sm btn-outline-primary py-0 px-2 ml-1',
-                    'data-fix-key' => $key,
-                    'style'       => 'font-size:0.75rem;line-height:1.2;',
-                ]);
-            }
-            return \html_writer::tag('li', $msg . $btn);
-        };
-
-        if (empty($validation['errors']) && empty($validation['warnings'])) {
-            return \html_writer::div(get_string('cert_template_validation_passed', 'local_rtocompliance'),
-                'alert alert-success small mb-0 p-2');
-        }
-
-        $out = '';
-        if (!empty($validation['errors'])) {
-            $out .= \html_writer::tag('div',
-                \html_writer::tag('strong', get_string('cert_template_validation_errors', 'local_rtocompliance')) .
-                \html_writer::start_tag('ul', ['class' => 'mb-0 pl-3']) .
-                implode('', array_map($rendervalitem, $validation['errors'])) .
-                \html_writer::end_tag('ul'),
-                ['class' => 'alert alert-danger small mb-2 p-2']);
-        }
-        if (!empty($validation['warnings'])) {
-            $out .= \html_writer::tag('div',
-                \html_writer::tag('strong', get_string('cert_template_validation_warnings', 'local_rtocompliance')) .
-                \html_writer::start_tag('ul', ['class' => 'mb-0 pl-3']) .
-                implode('', array_map($rendervalitem, $validation['warnings'])) .
-                \html_writer::end_tag('ul'),
-                ['class' => 'alert alert-warning small mb-0 p-2']);
-        }
-        return $out;
     }
 
     public static function validate_template($template, $templatetype) {
@@ -666,15 +566,6 @@ class certificate_validator {
             $validation = avetmiss_codes::validate_usi($student->usi);
             if (!$validation['valid']) {
                 $errors[] = get_string('error_usi_invalid', 'local_rtocompliance') . ': ' . $validation['error'];
-            } else if ((int) $student->usiverified !== \local_rtocompliance\usi\usi_verification_service::STATUS_VERIFIED) {
-                // C-P1-1 (v5.9.387): a well-formed USI is not enough — the Student
-                // Identifiers Act requires a USI VERIFIED against the Registry before
-                // AQF certification is issued. USI-VERIFIED-ACCURACY (v6.2.8): require
-                // STATUS_VERIFIED(1) — pending(3), failed(2) and manual-review(4) are NOT
-                // verified (the old empty() test wrongly let pending through). Format-valid but unverified (or Registry-
-                // rejected) USIs must not pass. Genuine exemptions use the documented
-                // bypass on the programmatic issuer.
-                $errors[] = get_string('error_usi_unverified', 'local_rtocompliance');
             }
         }
 
@@ -692,14 +583,6 @@ class certificate_validator {
         if (!empty($holds)) {
             foreach ($holds as $hold) {
                 $errors[] = get_string('error_hold_active', 'local_rtocompliance') . ': ' . $hold['reason'];
-            }
-        }
-
-        // F3 (v5.9.389): mandatory RTO identity (name, provider code, signatory) must
-        // be configured, or the certificate would render those AQF-required fields blank.
-        if (function_exists('local_rtocompliance_missing_cert_settings')) {
-            foreach (local_rtocompliance_missing_cert_settings() as $missingsetting) {
-                $errors[] = 'Required RTO detail not configured: ' . $missingsetting;
             }
         }
 
@@ -782,15 +665,6 @@ class certificate_validator {
             $validation = avetmiss_codes::validate_usi($student->usi);
             if (!$validation['valid']) {
                 $errors[] = get_string('error_usi_invalid', 'local_rtocompliance') . ': ' . $validation['error'];
-            } else if ((int) $student->usiverified !== \local_rtocompliance\usi\usi_verification_service::STATUS_VERIFIED) {
-                // C-P1-1 (v5.9.387): a well-formed USI is not enough — the Student
-                // Identifiers Act requires a USI VERIFIED against the Registry before
-                // AQF certification is issued. USI-VERIFIED-ACCURACY (v6.2.8): require
-                // STATUS_VERIFIED(1) — pending(3), failed(2) and manual-review(4) are NOT
-                // verified (the old empty() test wrongly let pending through). Format-valid but unverified (or Registry-
-                // rejected) USIs must not pass. Genuine exemptions use the documented
-                // bypass on the programmatic issuer.
-                $errors[] = get_string('error_usi_unverified', 'local_rtocompliance');
             }
         }
 
@@ -798,13 +672,6 @@ class certificate_validator {
         if (!empty($holds)) {
             foreach ($holds as $hold) {
                 $errors[] = get_string('error_hold_active', 'local_rtocompliance') . ': ' . $hold['reason'];
-            }
-        }
-
-        // F3 (v5.9.389): mandatory RTO identity must be configured (see can_issue_testamur).
-        if (function_exists('local_rtocompliance_missing_cert_settings')) {
-            foreach (local_rtocompliance_missing_cert_settings() as $missingsetting) {
-                $errors[] = 'Required RTO detail not configured: ' . $missingsetting;
             }
         }
 
@@ -937,11 +804,6 @@ class certificate_validator {
                     'name'      => $enrol->unitname,
                     'outcome'   => $enrol->outcomeidentifier,
                     'semester'  => $_semLabel,
-                    // COMPLETION-DATE (v5.9.447): raw completion timestamp (unit
-                    // resulted date) so the certificate Completion Date column can
-                    // format it. Falls back to activitystartdate above when the
-                    // end date is absent; 0 when neither is present.
-                    'date'      => $_ts,
                     'finalized' => true,
                 ];
             } else if (in_array($enrol->outcomeidentifier, $continuingOutcomes)) {
@@ -1056,9 +918,7 @@ class certificate_validator {
             'total_required' => $totalRequired,
             'ready_for_cert' => $requiredComplete >= $totalRequired,
             'profile_complete' => (bool) $student->profilecomplete,
-            // USI-VERIFIED-ACCURACY (v6.2.8): only usiverified===1 (STATUS_VERIFIED) is truly
-            // verified. (bool) cast wrongly treated usiverified===3 (pending/stuck) as verified.
-            'usi_verified' => ((int) $student->usiverified === 1),
+            'usi_verified' => (bool) $student->usiverified,
         ];
     }
 

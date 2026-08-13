@@ -15,17 +15,18 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * RTO Compliance plugin — tas_export.php.
+ * local_rtocompliance file.
  *
  * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
+
 require_once(__DIR__ . '/../../config.php');
+require_login();
 require_once($CFG->libdir . '/adminlib.php');
 
 admin_externalpage_setup('local_rtocompliance_tas');
-require_login();
 $context = context_system::instance();
 
 $id = required_param('id', PARAM_INT);
@@ -440,7 +441,7 @@ ob_start();
 
     <div class="header">
         <h1>Training and Assessment Strategy</h1>
-        <p class="subtitle"><?php echo htmlspecialchars($tas->qualificationcode . ' ' . $tas->qualificationname); ?></p>
+        <p class="subtitle"><?php echo htmlspecialchars($tas->qualificationcode . ' - ' . $tas->qualificationname); ?></p>
     </div>
 
     <div class="meta-info">

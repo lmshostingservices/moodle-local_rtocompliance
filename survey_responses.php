@@ -15,18 +15,19 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * RTO Compliance plugin — survey_responses.php.
+ * local_rtocompliance file.
  *
  * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
+
 require_once(__DIR__ . '/../../config.php');
+require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_surveys');
-require_login();
 $context = context_system::instance();
 require_capability('local/rtocompliance:managesurveys', $context);
 
@@ -66,17 +67,14 @@ $completed = $DB->get_records('local_rtocompliance_surveys', [
     'status' => 'completed',
 ], 'timecompleted DESC');
 
-// RESPONSE-RATE-FIX (v5.9.381): "outstanding" is every invited survey that is
-// not yet completed — regardless of whether its status is 'sent' (manual send),
-// 'pending' (auto-task) or anything else. Counting only 'pending' made the rate
-// read ~100% for manually-sent batches. Denominator = all invited for type+year.
-$totalsurveys   = $DB->count_records('local_rtocompliance_surveys', [
+$pending = $DB->count_records('local_rtocompliance_surveys', [
     'surveytype' => $type,
     'year' => $year,
+    'status' => 'pending',
 ]);
+
 $totalresponses = count($completed);
-$pending        = max(0, $totalsurveys - $totalresponses);
-$responserate   = $totalsurveys > 0 ? round(($totalresponses / $totalsurveys) * 100) : 0;
+$responserate = ($totalresponses + $pending) > 0 ? round(($totalresponses / ($totalresponses + $pending)) * 100) : 0;
 
 $avgsatisfaction = 0;
 if ($completed) {
@@ -113,15 +111,14 @@ echo html_writer::end_div();
 if ($completed) {
     echo html_writer::tag('h3', 'Individual Responses', ['class' => 'section-title']);
 
-    echo '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px 18px;margin-bottom:16px;"><div style="font-weight:700;color:#1e3a8a;margin-bottom:6px;font-size:15px;">Understanding this table</div><div style="font-size:14.5px;color:#334155;line-height:1.55;">Each row is one completed survey response for the selected year. Satisfaction shows the overall rating the respondent gave on a 1 to 5 scale, colour-coded green for high, amber for moderate and red for low. Use the year selector above to view other periods.</div></div>';
-
     echo html_writer::start_tag('table', ['class' => 'data-table']);
     echo html_writer::start_tag('thead');
     echo html_writer::start_tag('tr');
-    echo html_writer::tag('th', 'Respondent', ['title' => 'Name of the person who completed the survey (Anonymous if not supplied)']);
-    echo html_writer::tag('th', 'Email', ['title' => 'Email address of the respondent, if provided']);
-    echo html_writer::tag('th', 'Satisfaction', ['title' => 'Overall satisfaction rating on a 1 to 5 scale']);
-    echo html_writer::tag('th', 'Completed', ['title' => 'Date the respondent completed the survey']);
+    echo html_writer::tag('th', 'Respondent');
+    echo html_writer::tag('th', 'Email');
+    echo html_writer::tag('th', 'Satisfaction');
+    echo html_writer::tag('th', 'Completed');
+    echo html_writer::tag('th', 'Actions');
     echo html_writer::end_tag('tr');
     echo html_writer::end_tag('thead');
     echo html_writer::start_tag('tbody');
@@ -141,6 +138,13 @@ if ($completed) {
             html_writer::tag('span', $survey->overallsatisfaction . '/5', ['class' => 'badge ' . $satclass])
         );
         echo html_writer::tag('td', userdate($survey->timecompleted, '%d %b %Y'));
+        echo html_writer::tag('td',
+            html_writer::link(
+                new moodle_url('/local/rtocompliance/survey_view.php', ['id' => $survey->id]),
+                'View Details',
+                ['class' => 'btn btn-sm btn-secondary']
+            )
+        );
         echo html_writer::end_tag('tr');
     }
 
@@ -154,7 +158,7 @@ if ($completed) {
     echo html_writer::link(
         new moodle_url('/local/rtocompliance/survey_send.php', ['type' => $type]),
         'Send Survey Invitations',
-        ['class' => 'btn btn-primary', 'title' => 'Send survey invitation emails to learners or employers']
+        ['class' => 'btn btn-primary']
     );
     echo html_writer::end_div();
 }
@@ -166,9 +170,14 @@ echo html_writer::link(
     ['class' => 'btn btn-secondary']
 );
 echo html_writer::link(
+    new moodle_url('/local/rtocompliance/survey_export.php', ['type' => $type, 'year' => $year]),
+    'Export to CSV',
+    ['class' => 'btn btn-outline-primary']
+);
+echo html_writer::link(
     new moodle_url('/local/rtocompliance/ai_analysis.php', ['type' => $type, 'year' => $year]),
     'Analyse with AI',
-    ['class' => 'btn btn-primary', 'style' => 'background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border: none;', 'title' => 'Run AI analysis on these survey responses']
+    ['class' => 'btn btn-primary', 'style' => 'background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border: none;']
 );
 echo html_writer::end_div();
 

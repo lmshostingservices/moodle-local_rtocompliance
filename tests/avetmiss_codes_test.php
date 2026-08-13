@@ -13,11 +13,12 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
 /**
  * PHPUnit tests for AVETMISS Codes class
  *
  * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
+ * @copyright  2025 AI Grader
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -29,6 +30,7 @@ global $CFG;
 require_once($CFG->dirroot . '/local/rtocompliance/classes/avetmiss_codes.php');
 
 class avetmiss_codes_test extends \advanced_testcase {
+    
     protected function setUp(): void {
         parent::setUp();
         $this->resetAfterTest(true);

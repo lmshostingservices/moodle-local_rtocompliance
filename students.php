@@ -15,13 +15,15 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * RTO Compliance plugin — students.php.
+ * local_rtocompliance file.
  *
  * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
+
 require_once(__DIR__ . '/../../config.php');
+require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 require_once($CFG->libdir . '/tablelib.php');
@@ -43,7 +45,6 @@ if (!in_array($sort, ['name'], true)) { $sort = 'name'; }
 if (!in_array($sortdir, ['asc', 'desc'], true)) { $sortdir = 'asc'; }
 
 admin_externalpage_setup('local_rtocompliance_students');
-require_login();
 
 // FIX-SUSPENDED-UNSUSPEND (v5.2.38): Handle unsuspend action before any output.
 if ($action === 'unsuspend' && $actionuserid > 0 && confirm_sesskey()) {
@@ -119,26 +120,19 @@ if ($action === 'sync_dobs_from_nat' && confirm_sesskey()) {
     }
     $dobRs->close();
 
-    // Helper: DDMMYYYY -> validated noon-UTC Unix timestamp (0 if invalid).
-    $dobToTs = function ($dobStr) {
-        if (strlen((string)$dobStr) !== 8 || !ctype_digit((string)$dobStr)) return 0;
+    // Step 2: Build clientid → timestamp map (validate + convert DDMMYYYY → Unix).
+    $clientToTs = [];
+    foreach ($clientToDob as $clientid => $dobStr) {
         $dd = (int)substr($dobStr, 0, 2);
         $mm = (int)substr($dobStr, 2, 2);
         $yy = (int)substr($dobStr, 4, 4);
-        if ($dd < 1 || $dd > 31 || $mm < 1 || $mm > 12 || $yy < 1900 || $yy > 2100) return 0;
+        if ($dd < 1 || $dd > 31 || $mm < 1 || $mm > 12 || $yy < 1900 || $yy > 2100) continue;
         $ts = gmmktime(12, 0, 0, $mm, $dd, $yy);
-        return ($ts === false || $ts <= 0) ? 0 : (int)$ts;
-    };
-
-    // Step 2: Build clientid -> timestamp map (validate + convert DDMMYYYY -> Unix).
-    $clientToTs = [];
-    foreach ($clientToDob as $clientid => $dobStr) {
-        $ts = $dobToTs($dobStr);
-        if ($ts > 0) $clientToTs[$clientid] = $ts;
+        if ($ts === false || $ts <= 0) continue;
+        $clientToTs[$clientid] = (int)$ts;
     }
 
-    $filledById = 0;        // Path A: local_rtocompliance_students.clientid
-    $filledByIdnumber = 0;  // Path B: mdl_user.idnumber
+    $updated = 0;
     if (!empty($clientToTs)) {
         $clientids = array_values(array_keys($clientToTs));
         $chunks    = array_chunk($clientids, 200); // keep IN() params well under DB limits
@@ -161,7 +155,7 @@ if ($action === 'sync_dobs_from_nat' && confirm_sesskey()) {
                     'dateofbirth'  => $ts,
                     'timemodified' => time(),
                 ]);
-                $filledById++;
+                $updated++;
             }
 
             // Path B: match via mdl_user.idnumber = clientid.
@@ -189,105 +183,14 @@ if ($action === 'sync_dobs_from_nat' && confirm_sesskey()) {
                     $upd->clientid = trim($ur->idnumber);
                 }
                 $DB->update_record('local_rtocompliance_students', $upd);
-                $filledByIdnumber++;
+                $updated++;
             }
         }
     }
 
-    // Path C (v6.2.22): validated full-name match. The NAT client-identifier numbering
-    // does not line up with newer students (5-digit clientid / blank idnumber), so the
-    // ID paths alone miss most of them. Match mdl_user first+last name to the NAT
-    // firstname+familyname, case- and word-order-insensitive. ONLY accept a name that
-    // maps to exactly ONE date of birth in the NAT data; if a name has conflicting DOBs,
-    // skip it and never guess. Also skip when two students share the same name.
-    $normName = function ($first, $last) {
-        $toks = preg_split('/[^a-z]+/', strtolower(trim((string)$first . ' ' . (string)$last)), -1, PREG_SPLIT_NO_EMPTY);
-        if (empty($toks)) return '';
-        sort($toks);
-        return implode(' ', $toks);
-    };
-
-    // Build normalized-name -> set of distinct DOB timestamps from the NAT staging data.
-    $nameRs = $DB->get_recordset_select(
-        'local_rtocompliance_avetmiss_student',
-        $DB->sql_isnotempty('local_rtocompliance_avetmiss_student', 'dob', false, false),
-        [], '', 'firstname, familyname, name, dob'
-    );
-    $nameToTsSet = [];
-    foreach ($nameRs as $nr) {
-        $ts = $dobToTs($nr->dob);
-        if ($ts <= 0) continue;
-        $first = (string)($nr->firstname ?? '');
-        $last  = (string)($nr->familyname ?? '');
-        if (trim($first . $last) === '' && !empty($nr->name)) {
-            // NAT "name" is stored as one string; word-order-insensitive norm handles it.
-            $last  = (string)$nr->name;
-            $first = '';
-        }
-        $key = $normName($first, $last);
-        if ($key === '') continue;
-        if (!isset($nameToTsSet[$key])) $nameToTsSet[$key] = [];
-        $nameToTsSet[$key][$ts] = true;
-    }
-    $nameRs->close();
-
-    // Reduce to unambiguous name -> single timestamp; remember ambiguous names.
-    $nameToTs = [];
-    $ambiguousNames = [];
-    foreach ($nameToTsSet as $key => $tsset) {
-        if (count($tsset) === 1) {
-            $nameToTs[$key] = (int)array_key_first($tsset);
-        } else {
-            $ambiguousNames[$key] = true;
-        }
-    }
-    unset($nameToTsSet);
-
-    // Students still missing a DOB after the two ID paths.
-    $missing = $DB->get_records_sql(
-        "SELECT s.id, u.firstname, u.lastname
-           FROM {local_rtocompliance_students} s
-           JOIN {user} u ON u.id = s.userid
-          WHERE (s.dateofbirth IS NULL OR s.dateofbirth = 0)
-            AND u.deleted = 0"
-    );
-    // Guard against student-side name collisions: if two students share a normalized
-    // name, we cannot safely assign either, so skip both.
-    $missingNameCount = [];
-    foreach ($missing as $ms) {
-        $k = $normName($ms->firstname ?? '', $ms->lastname ?? '');
-        if ($k === '') continue;
-        $missingNameCount[$k] = ($missingNameCount[$k] ?? 0) + 1;
-    }
-
-    $filledByName = 0;
-    $skippedAmbiguous = 0;
-    $stillUnmatched = 0;
-    foreach ($missing as $ms) {
-        $key = $normName($ms->firstname ?? '', $ms->lastname ?? '');
-        if ($key !== '' && isset($nameToTs[$key]) && ($missingNameCount[$key] ?? 0) === 1) {
-            $DB->update_record('local_rtocompliance_students', (object)[
-                'id'           => $ms->id,
-                'dateofbirth'  => $nameToTs[$key],
-                'timemodified' => time(),
-            ]);
-            $filledByName++;
-        } else if ($key !== '' && (isset($ambiguousNames[$key]) || ($missingNameCount[$key] ?? 0) > 1)) {
-            $skippedAmbiguous++;
-        } else {
-            $stillUnmatched++;
-        }
-    }
-
-    $totalFilled = $filledById + $filledByIdnumber + $filledByName;
-    $msg = 'DOB backfill complete: ' . $totalFilled . ' student record(s) updated. '
-         . 'Matched by client ID: ' . $filledById . '; by ID number: ' . $filledByIdnumber
-         . '; by unique name: ' . $filledByName . '. '
-         . 'Skipped (name maps to conflicting DOBs, or shared by two students): ' . $skippedAmbiguous . '. '
-         . 'Still unmatched (no DOB found in NAT data): ' . $stillUnmatched . '.';
     redirect(
         new moodle_url('/local/rtocompliance/students.php', ['filter' => 'usimissingdob']),
-        $msg,
+        'DOB backfill complete: ' . $updated . ' student record(s) updated from NAT00080 data.',
         null,
         \core\output\notification::NOTIFY_SUCCESS
     );
@@ -326,6 +229,9 @@ if ($action === 'upload_nat_dobs' && confirm_sesskey()) {
     $parsedRows  = 0;
     $skippedRows = 0;
     $clientToDob = [];
+    // LOG-UNREADABLE: collect (clientid → raw DOB string) for rows that fail the
+    // parse check so admins can see exactly which identifiers had bad dates.
+    $unreadableRows = []; // ['clientid' => 'XXXXXXX', 'raw_dob' => '...', 'reason' => '...']
 
     if ($lines === false || count($lines) === 0) {
         redirect(new moodle_url('/local/rtocompliance/students.php'),
@@ -336,12 +242,16 @@ if ($action === 'upload_nat_dobs' && confirm_sesskey()) {
         // Need at least 81 chars to read the DOB field (positions 73-80 inclusive).
         if (strlen($line) < 81) {
             $skippedRows++;
+            // Can't reliably extract clientid from a truncated line.
+            $unreadableRows[] = ['clientid' => '(line too short: ' . strlen($line) . ' chars)', 'raw_dob' => '', 'reason' => 'line_too_short'];
             continue;
         }
         $clientid = trim(substr($line, 0, 10));
         $dobStr   = trim(substr($line, 73, 8));
         if ($clientid === '' || strlen($dobStr) !== 8 || !ctype_digit($dobStr)) {
             $skippedRows++;
+            $reason = $clientid === '' ? 'empty_clientid' : (strlen($dobStr) !== 8 ? 'dob_wrong_length' : 'dob_non_digit');
+            $unreadableRows[] = ['clientid' => $clientid ?: '(empty)', 'raw_dob' => $dobStr, 'reason' => $reason];
             continue;
         }
         // First DOB seen for this client ID wins (same policy as sync_dobs_from_nat).
@@ -352,10 +262,16 @@ if ($action === 'upload_nat_dobs' && confirm_sesskey()) {
     }
 
     if (empty($clientToDob)) {
+        $unreadableDetail = '';
+        if (!empty($unreadableRows)) {
+            $sample = array_slice($unreadableRows, 0, 20);
+            $lines2 = array_map(fn($r) => $r['clientid'] . ' raw_dob=' . (strlen($r['raw_dob']) ? $r['raw_dob'] : '(blank)') . ' (' . $r['reason'] . ')', $sample);
+            $unreadableDetail = ' First ' . count($sample) . ' unreadable: ' . implode('; ', $lines2) . (count($unreadableRows) > 20 ? ' ...' : '');
+        }
         redirect(new moodle_url('/local/rtocompliance/students.php'),
             "No valid DOB records found in the uploaded file ($parsedRows rows parsed, $skippedRows skipped). "
             . "This parser expects a standard fixed-width NAT00080 file (AVETMISS 8.0). "
-            . "For tab-delimited or variant formats, use the Data Import page.",
+            . "For tab-delimited or variant formats, use the Data Import page.$unreadableDetail",
             null, \core\output\notification::NOTIFY_WARNING);
     }
 
@@ -365,11 +281,22 @@ if ($action === 'upload_nat_dobs' && confirm_sesskey()) {
         $dd = (int)substr($dobStr, 0, 2);
         $mm = (int)substr($dobStr, 2, 2);
         $yy = (int)substr($dobStr, 4, 4);
-        if ($dd < 1 || $dd > 31 || $mm < 1 || $mm > 12 || $yy < 1900 || $yy > 2100) continue;
+        if ($dd < 1 || $dd > 31 || $mm < 1 || $mm > 12 || $yy < 1900 || $yy > 2100) {
+            // Calendar values are out of range — classify as unreadable.
+            $unreadableRows[] = ['clientid' => $clientid, 'raw_dob' => $dobStr, 'reason' => 'calendar_out_of_range'];
+            continue;
+        }
         $ts = gmmktime(12, 0, 0, $mm, $dd, $yy);
-        if ($ts === false || $ts <= 0) continue;
+        if ($ts === false || $ts <= 0) {
+            $unreadableRows[] = ['clientid' => $clientid, 'raw_dob' => $dobStr, 'reason' => 'gmmktime_failed'];
+            continue;
+        }
         $clientToTs[$clientid] = (int)$ts;
     }
+
+    // LOG-UNMATCHED: track which clientids were successfully parsed but not matched
+    // to any student in either Path A or Path B.
+    $matchedClientids = []; // clientids that were actually updated
 
     $updated = 0;
     if (!empty($clientToTs)) {
@@ -388,6 +315,7 @@ if ($action === 'upload_nat_dobs' && confirm_sesskey()) {
                 $DB->update_record('local_rtocompliance_students', (object)[
                     'id' => $row->id, 'dateofbirth' => $ts, 'timemodified' => time(),
                 ]);
+                $matchedClientids[$row->clientid] = true;
                 $updated++;
             }
             // Path B: match via mdl_user.idnumber = clientid (catches students whose
@@ -409,354 +337,46 @@ if ($action === 'upload_nat_dobs' && confirm_sesskey()) {
                     $upd->clientid = trim($ur->idnumber); // backfill clientid for future Path A
                 }
                 $DB->update_record('local_rtocompliance_students', $upd);
+                $matchedClientids[trim($ur->idnumber)] = true;
                 $updated++;
             }
         }
     }
 
+    // Build the unmatched list: parsed-and-valid clientids that never hit Path A or B.
+    $unmatchedClientids = array_values(array_diff(array_keys($clientToTs), array_keys($matchedClientids)));
+
+    // Log full detail to Moodle debugging so it's queryable without cluttering the UI.
     $fname = s(basename($upload['name']));
+    $unreadableCount = count($unreadableRows);
+    $unmatchedCount  = count($unmatchedClientids);
+
+    if ($unreadableCount > 0) {
+        $detail = array_map(
+            fn($r) => $r['clientid'] . ' raw_dob=' . (strlen($r['raw_dob']) ? $r['raw_dob'] : '(blank)') . ' (' . $r['reason'] . ')',
+            $unreadableRows
+        );
+        debugging('[DOB upload] ' . $unreadableCount . ' unreadable row(s) in ' . $fname . ': ' . implode('; ', $detail), DEBUG_DEVELOPER);
+    }
+    if ($unmatchedCount > 0) {
+        debugging('[DOB upload] ' . $unmatchedCount . ' unmatched clientid(s) in ' . $fname . ' (no student in Path A or B): ' . implode(', ', $unmatchedClientids), DEBUG_DEVELOPER);
+    }
+
+    // Build the admin-visible notification message.
+    $msg = "DOB sync complete: $updated student record(s) updated from $parsedRows NAT00080 rows in '$fname'.";
+    if ($unreadableCount > 0) {
+        $sampleUnread = array_slice($unreadableRows, 0, 10);
+        $unreadList   = implode(', ', array_map(fn($r) => $r['clientid'] . ' (' . $r['raw_dob'] . ')', $sampleUnread));
+        $msg .= " $unreadableCount unreadable date(s) — clientid (raw DOB): $unreadList" . ($unreadableCount > 10 ? ' …' : '') . '.';
+    }
+    if ($unmatchedCount > 0) {
+        $sampleUnmatch = array_slice($unmatchedClientids, 0, 10);
+        $msg .= " $unmatchedCount not matched to any student — clientid(s): " . implode(', ', $sampleUnmatch) . ($unmatchedCount > 10 ? ' …' : '') . '.';
+    }
+
     redirect(
         new moodle_url('/local/rtocompliance/students.php', ['filter' => 'usimissingdob']),
-        "DOB sync complete: $updated student record(s) updated from $parsedRows NAT00080 rows in '$fname'.",
-        null,
-        $updated > 0 ? \core\output\notification::NOTIFY_SUCCESS : \core\output\notification::NOTIFY_WARNING
-    );
-}
-
-// ── EXPORT: CSV of students who have a USI but no date of birth (v6.2.21) ──────
-// A simple, editable template: the admin fills the "Date of birth" column and
-// re-uploads it via the "Upload DOB CSV" action below.
-if ($action === 'export_dob_csv' && confirm_sesskey()) {
-    require_capability('moodle/site:config', context_system::instance());
-    $rs = $DB->get_recordset_sql(
-        "SELECT u.firstname, u.lastname, u.email, s.clientid, s.usi
-           FROM {user} u
-           JOIN {local_rtocompliance_students} s ON s.userid = u.id
-          WHERE u.deleted = 0 AND s.usi IS NOT NULL AND s.usi <> ''
-            AND (s.dateofbirth IS NULL OR s.dateofbirth = 0)
-          ORDER BY u.lastname ASC, u.firstname ASC"
-    );
-    $filename = 'italc-students-missing-dob-' . date('Ymd-His') . '.csv';
-    header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename="' . $filename . '"');
-    $out = fopen('php://output', 'w');
-    fprintf($out, "\xEF\xBB\xBF"); // UTF-8 BOM for Excel
-    fputcsv($out, ['Family name', 'Given name', 'Email', 'Client identifier', 'USI', 'Date of birth']);
-    foreach ($rs as $r) {
-        fputcsv($out, [$r->lastname, $r->firstname, $r->email, (string) $r->clientid, (string) $r->usi, '']);
-    }
-    $rs->close();
-    fclose($out);
-    exit;
-}
-
-// ── UPLOAD: CSV of dates of birth to backfill the missing ones (v6.2.21) ───────
-// Round-trips with the export above. Matches each row to a student by Client
-// identifier first, then USI, then email; only writes where DOB is blank.
-// Accepts DD/MM/YYYY, YYYY-MM-DD, DD-MM-YYYY and DDMMYYYY date formats.
-if ($action === 'upload_dob_csv' && confirm_sesskey()) {
-    require_capability('moodle/site:config', context_system::instance());
-    $redirurl = new moodle_url('/local/rtocompliance/students.php', ['filter' => 'usimissingdob']);
-
-    $upload = $_FILES['dobcsv'] ?? null;
-    if (!$upload || (int) ($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || empty($upload['tmp_name'])) {
-        redirect($redirurl, 'No CSV file was received. Please choose a file and try again.',
-            null, \core\output\notification::NOTIFY_ERROR);
-    }
-    if ((int) ($upload['size'] ?? 0) > 10 * 1024 * 1024) {
-        redirect($redirurl, 'File too large (max 10 MB).', null, \core\output\notification::NOTIFY_ERROR);
-    }
-
-    $parsedob = function ($raw) {
-        $raw = trim((string) $raw);
-        if ($raw === '') { return 0; }
-        $d = $m = $y = 0;
-        if (preg_match('#^(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})$#', $raw, $mm)) {
-            $d = (int) $mm[1]; $m = (int) $mm[2]; $y = (int) $mm[3];
-        } else if (preg_match('#^(\d{4})[/\-](\d{1,2})[/\-](\d{1,2})$#', $raw, $mm)) {
-            $y = (int) $mm[1]; $m = (int) $mm[2]; $d = (int) $mm[3];
-        } else if (preg_match('#^(\d{2})(\d{2})(\d{4})$#', $raw, $mm)) {
-            $d = (int) $mm[1]; $m = (int) $mm[2]; $y = (int) $mm[3];
-        } else {
-            return 0;
-        }
-        if ($d < 1 || $d > 31 || $m < 1 || $m > 12 || $y < 1900 || $y > 2100) { return 0; }
-        $ts = gmmktime(12, 0, 0, $m, $d, $y);
-        return ($ts === false || $ts <= 0) ? 0 : (int) $ts;
-    };
-
-    $handle = @fopen($upload['tmp_name'], 'r');
-    if ($handle === false) {
-        redirect($redirurl, 'Could not read the uploaded file.', null, \core\output\notification::NOTIFY_ERROR);
-    }
-    $header = fgetcsv($handle);
-    if ($header === false) {
-        fclose($handle);
-        redirect($redirurl, 'The CSV appears to be empty.', null, \core\output\notification::NOTIFY_ERROR);
-    }
-    if (isset($header[0])) { $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', $header[0]); }
-    $idx = [];
-    foreach ($header as $i => $col) { $idx[strtolower(trim((string) $col))] = $i; }
-    $col_client = $idx['client identifier'] ?? $idx['clientid'] ?? $idx['client id'] ?? null;
-    $col_usi    = $idx['usi'] ?? null;
-    $col_email  = $idx['email'] ?? null;
-    $col_dob    = $idx['date of birth'] ?? $idx['dob'] ?? $idx['dateofbirth'] ?? null;
-
-    if ($col_dob === null || ($col_client === null && $col_usi === null && $col_email === null)) {
-        fclose($handle);
-        redirect($redirurl,
-            'CSV must have a "Date of birth" column and at least one of "Client identifier", "USI" or "Email". '
-            . 'Tip: use "Download DOB template (CSV)", fill in the Date of birth column, then re-upload.',
-            null, \core\output\notification::NOTIFY_ERROR);
-    }
-
-    $updated = 0; $skipped = 0; $nomatch = 0; $baddate = 0;
-    while (($row = fgetcsv($handle)) !== false) {
-        if (count(array_filter($row, fn($v) => trim((string) $v) !== '')) === 0) { continue; }
-        $ts = $parsedob($col_dob !== null ? ($row[$col_dob] ?? '') : '');
-        if ($ts <= 0) { $baddate++; continue; }
-
-        $stud = null;
-        if ($col_client !== null && trim((string) ($row[$col_client] ?? '')) !== '') {
-            $stud = $DB->get_record('local_rtocompliance_students',
-                ['clientid' => trim((string) $row[$col_client])], 'id, dateofbirth', IGNORE_MULTIPLE);
-        }
-        if (!$stud && $col_usi !== null && trim((string) ($row[$col_usi] ?? '')) !== '') {
-            $stud = $DB->get_record('local_rtocompliance_students',
-                ['usi' => trim((string) $row[$col_usi])], 'id, dateofbirth', IGNORE_MULTIPLE);
-        }
-        if (!$stud && $col_email !== null && trim((string) ($row[$col_email] ?? '')) !== '') {
-            $u = $DB->get_record('user', ['email' => trim((string) $row[$col_email]), 'deleted' => 0], 'id', IGNORE_MULTIPLE);
-            if ($u) {
-                $stud = $DB->get_record('local_rtocompliance_students',
-                    ['userid' => (int) $u->id], 'id, dateofbirth', IGNORE_MULTIPLE);
-            }
-        }
-        if (!$stud) { $nomatch++; continue; }
-        if (!empty($stud->dateofbirth) && (int) $stud->dateofbirth > 0) { $skipped++; continue; }
-
-        $DB->update_record('local_rtocompliance_students',
-            (object) ['id' => $stud->id, 'dateofbirth' => $ts, 'timemodified' => time()]);
-        $updated++;
-    }
-    fclose($handle);
-
-    $msg = "DOB CSV upload complete: {$updated} updated.";
-    $extra = [];
-    if ($skipped > 0) { $extra[] = "{$skipped} already had a DOB"; }
-    if ($nomatch > 0) { $extra[] = "{$nomatch} not matched to a student"; }
-    if ($baddate > 0) { $extra[] = "{$baddate} had an unreadable date"; }
-    if ($extra) { $msg .= ' (' . implode(', ', $extra) . ').'; }
-    redirect($redirurl, $msg, null,
-        $updated > 0 ? \core\output\notification::NOTIFY_SUCCESS : \core\output\notification::NOTIFY_WARNING);
-}
-
-// SYNC-AVETMISS-FIELDS (v5.9.316): Back-fill sex, indigenousstatus, labourforcestatus,
-// highestschoollevel, suburb, statecode from the avetmiss_student staging table into
-// local_rtocompliance_students for every student whose profile fields are still at the
-// hardcoded '@'/'@@' defaults (i.e. they were enrolled before this fix shipped).
-// Matches by clientid — only overwrites fields that are still at "not stated" defaults.
-if ($action === 'sync_avetmiss_fields' && confirm_sesskey()) {
-    require_capability('moodle/site:config', context_system::instance());
-
-    // Load the most-recent staging row per clientid (latest importid wins).
-    $stagingRs = $DB->get_recordset_sql(
-        "SELECT s.clientid, s.sex, s.suburb, s.state,
-                s.indigenousstatus, s.labourforcestatus, s.highestschoollevel,
-                s.languageathome, s.countryofbirth, s.disabilityflag, s.prioreducationflag, s.atschoolflag
-           FROM {local_rtocompliance_avetmiss_student} s
-           JOIN (
-                 SELECT clientid, MAX(importid) AS maxid
-                   FROM {local_rtocompliance_avetmiss_student}
-                  WHERE clientid IS NOT NULL AND clientid <> ''
-                  GROUP BY clientid
-                ) mx ON mx.clientid = s.clientid AND mx.maxid = s.importid
-          WHERE s.clientid IS NOT NULL AND s.clientid <> ''"
-    );
-
-    $updated = 0;
-    foreach ($stagingRs as $stg) {
-        // Find the matching student record.
-        $stud = $DB->get_record('local_rtocompliance_students',
-            ['clientid' => trim((string)$stg->clientid)],
-            'id, sex, indigenousstatus, labourforcestatus, highestschoollevel, suburb, statecode, languageathome, countryofbirth, disabilityflag, prioreducationflag, atschoolflag',
-            IGNORE_MISSING);
-        if (!$stud) continue;
-
-        $upd = (object)['id' => $stud->id];
-        $changed = false;
-
-        // Sex: update only if currently '@' (not stated) and staging has M/F/X.
-        $sexRaw = strtoupper(trim((string)($stg->sex ?? '')));
-        if (in_array($sexRaw, ['M','F','X'], true) && (empty($stud->sex) || $stud->sex === '@')) {
-            $upd->sex = $sexRaw;
-            $changed  = true;
-        }
-        // Indigenous status: update if currently '@' and staging has a real code.
-        $indRaw = trim((string)($stg->indigenousstatus ?? ''));
-        if ($indRaw !== '' && $indRaw !== '@' && (empty($stud->indigenousstatus) || $stud->indigenousstatus === '@')) {
-            $upd->indigenousstatus = $indRaw;
-            $changed = true;
-        }
-        // Labour force: update if currently '@@' and staging has a real code.
-        $labRaw = trim((string)($stg->labourforcestatus ?? ''));
-        if ($labRaw !== '' && $labRaw !== '@@' && (empty($stud->labourforcestatus) || $stud->labourforcestatus === '@@')) {
-            $upd->labourforcestatus = $labRaw;
-            $changed = true;
-        }
-        // Highest school level: update if currently '@@' and staging has a real code.
-        $schlRaw = trim((string)($stg->highestschoollevel ?? ''));
-        if ($schlRaw !== '' && $schlRaw !== '@@' && (empty($stud->highestschoollevel) || $stud->highestschoollevel === '@@')) {
-            $upd->highestschoollevel = $schlRaw;
-            $changed = true;
-        }
-        // Suburb: update if currently blank and staging has a value.
-        $suburbRaw = trim((string)($stg->suburb ?? ''));
-        if ($suburbRaw !== '' && empty($stud->suburb)) {
-            $upd->suburb = $suburbRaw;
-            $changed = true;
-        }
-        // State code: update if currently blank and staging has a value.
-        $stateRaw = trim((string)($stg->state ?? ''));
-        if ($stateRaw !== '' && empty($stud->statecode)) {
-            $upd->statecode = $stateRaw;
-            $changed = true;
-        }
-        // Language at home: update if currently '1201' (default English) and staging has a different real code.
-        $langRaw = trim((string)($stg->languageathome ?? ''));
-        if ($langRaw !== '' && !preg_match('/^[@\s]+$/', $langRaw) && (empty($stud->languageathome) || $stud->languageathome === '1201')) {
-            $upd->languageathome = $langRaw;
-            $changed = true;
-        }
-        // Country of birth: update if currently '1101' (default Australia) and staging has a different real code.
-        $cntryRaw = trim((string)($stg->countryofbirth ?? ''));
-        if ($cntryRaw !== '' && $cntryRaw !== '@@@@' && !preg_match('/^[@\s]+$/', $cntryRaw) && (empty($stud->countryofbirth) || $stud->countryofbirth === '1101')) {
-            $upd->countryofbirth = $cntryRaw;
-            $changed = true;
-        }
-        // Disability flag: update if currently 'N' (default) and staging has 'Y'.
-        $disRaw = trim((string)($stg->disabilityflag ?? ''));
-        if ($disRaw === 'Y' && (empty($stud->disabilityflag) || $stud->disabilityflag === 'N')) {
-            $upd->disabilityflag = 'Y';
-            $changed = true;
-        }
-        // Prior educational achievement flag: update if currently '@' and staging has a real value.
-        $priorRaw = trim((string)($stg->prioreducationflag ?? ''));
-        if ($priorRaw !== '' && $priorRaw !== '@' && (empty($stud->prioreducationflag) || $stud->prioreducationflag === '@')) {
-            $upd->prioreducationflag = $priorRaw;
-            $changed = true;
-        }
-        // At school flag: update only if staging says 'Y' (default is 'N', no reason to overwrite a real 'N').
-        $atschRaw = trim((string)($stg->atschoolflag ?? ''));
-        if ($atschRaw === 'Y' && (empty($stud->atschoolflag) || $stud->atschoolflag !== 'Y')) {
-            $upd->atschoolflag = 'Y';
-            $changed = true;
-        }
-
-        if ($changed) {
-            $upd->timemodified = time();
-            $DB->update_record('local_rtocompliance_students', $upd);
-            $updated++;
-        }
-    }
-    $stagingRs->close();
-
-    redirect(
-        new moodle_url('/local/rtocompliance/students.php'),
-        "AVETMISS profile sync complete: $updated student record(s) updated from imported NAT data.",
-        null,
-        $updated > 0 ? \core\output\notification::NOTIFY_SUCCESS : \core\output\notification::NOTIFY_WARNING
-    );
-}
-
-// SYNC-PROGRAMCODES (v5.9.329): Back-fill programcode on enrolment records where it is
-// blank, by walking the Moodle category ancestor chain for each course.
-// The RTO's top-level Moodle category name contains the qualification code
-// (e.g. "ABC12345 — a Diploma qualification") — any course nested anywhere under
-// that category inherits that qualification code. This replaces all previous fallbacks.
-if ($action === 'rebuild_course_map' && confirm_sesskey()) {
-    require_capability('moodle/site:config', context_system::instance());
-    $result = local_rtocompliance_seed_course_map();
-    $notice = 'Course map rebuilt: ' . $result['inserted'] . ' new mapping(s) added, '
-            . $result['skipped'] . ' already existed across '
-            . count($result['quals_scanned']) . ' qualification(s). '
-            . 'View and confirm mappings at: <a href="/local/rtocompliance/course_map.php">Moodle Course Map</a>';
-    \core\notification::success(html_entity_decode($notice));
-    redirect(new moodle_url('/local/rtocompliance/students.php'));
-}
-
-if ($action === 'sync_programcodes' && confirm_sesskey()) {
-    require_capability('moodle/site:config', context_system::instance());
-
-    // Load every category once — avoids per-row DB queries during the walk.
-    $allcats = $DB->get_records('course_categories', null, '', 'id, name, parent');
-
-    // AVETMISS qual code at start of category name.
-    $pcRx = '/^([A-Z]{2,8}[0-9]{3,6}[A-Z]{0,2})(?:\s|$|-|—|:)/u';
-
-    $detectQualcode = function (int $courseid) use ($DB, $allcats, $pcRx): string {
-        $course = $DB->get_record('course', ['id' => $courseid], 'category');
-        if (!$course) {
-            return '';
-        }
-        $catid   = (int)$course->category;
-        $visited = [];
-        while ($catid > 0 && !isset($visited[$catid])) {
-            $visited[$catid] = true;
-            if (!isset($allcats[$catid])) {
-                break;
-            }
-            $cat = $allcats[$catid];
-            if (preg_match($pcRx, strtoupper(trim((string)$cat->name)), $m)) {
-                return $m[1];
-            }
-            $catid = (int)$cat->parent;
-        }
-        return '';
-    };
-
-    // Stream all enrolments with blank programcode — use recordset to avoid OOM on large sites.
-    $blankRs = $DB->get_recordset_sql(
-        "SELECT id, courseid
-           FROM {local_rtocompliance_enrolments}
-          WHERE programcode IS NULL OR programcode = ''
-          ORDER BY courseid ASC"
-    );
-
-    $updated     = 0;
-    $skipped     = 0;
-    $courseCache = [];   // courseid → detected qual code (avoid duplicate walks)
-
-    foreach ($blankRs as $row) {
-        $cid = (int)$row->courseid;
-        if (!array_key_exists($cid, $courseCache)) {
-            $courseCache[$cid] = $detectQualcode($cid);
-        }
-        $qualcode = $courseCache[$cid];
-        if ($qualcode === '') {
-            $skipped++;
-            continue;
-        }
-        $DB->set_field('local_rtocompliance_enrolments', 'programcode', $qualcode, ['id' => $row->id]);
-        $updated++;
-    }
-    $blankRs->close();
-
-    // TASK-46 (v5.9.346): When records were skipped, redirect to the detailed
-    // skipped-programcodes report so admins can see which students/courses were
-    // affected and take corrective action (Link to QB or Mark as non-VET).
-    if ($skipped > 0) {
-        redirect(
-            new moodle_url('/local/rtocompliance/skipped_programcodes.php', ['updated' => $updated]),
-            "Sync complete: $updated record(s) updated. $skipped record(s) could not be resolved automatically — see below.",
-            null,
-            \core\output\notification::NOTIFY_WARNING
-        );
-    }
-
-    redirect(
-        new moodle_url('/local/rtocompliance/students.php'),
-        "Qualification code sync complete: $updated enrolment record(s) updated from Moodle category tree. All records now have a qualification code.",
+        $msg,
         null,
         $updated > 0 ? \core\output\notification::NOTIFY_SUCCESS : \core\output\notification::NOTIFY_WARNING
     );
@@ -806,18 +426,11 @@ if ($_usi_api_configured) {
     curl_close($curl);
     if ($code === 200 && $resp) {
         $decoded = json_decode($resp, true);
-        // Platform returns 'certReady' (not 'hasCert' — hasCert was a typo that
-        // caused the banner to show as "not uploaded" even after a successful
-        // credential upload). Fixed v5.9.315.
-        if (is_array($decoded) && !empty($decoded['certReady'])) {
+        // certUploaded = file is present; certReady = file is present, valid, and non-expired.
+        // The server has never returned 'hasCert' — use the actual keys from /api/usi/status.
+        if (is_array($decoded) && (!empty($decoded['certUploaded']) || !empty($decoded['certReady']))) {
             $_usi_cert_ok = true;
-            // Cache locally so a transient ping timeout doesn't re-show the banner.
-            set_config('usi_cert_uploaded', 1, 'local_rtocompliance');
         }
-    }
-    // Fallback: trust the locally-cached flag set on last successful upload or ping.
-    if (!$_usi_cert_ok && get_config('local_rtocompliance', 'usi_cert_uploaded')) {
-        $_usi_cert_ok = true;
     }
 }
 
@@ -829,19 +442,55 @@ echo local_rtocompliance_render_nav_header(get_string('student_records', 'local_
 // ── USI setup popup / banner ──────────────────────────────────────────────────
 if (!$_usi_api_configured) {
     // Hard gate: API not connected at all — show auto-opening modal.
-    // DECLUTTER (v5.9.419): converted the auto-opening full-screen USI modal into an
-    // inline banner (matching the softer one below). The modal popped up on every
-    // Students-page load, blocking the roster and duplicating the dashboard USI CTA —
-    // the same actionable message now sits inline without interrupting the workflow.
     echo '
-<div style="background:#fee2e2;border:1px solid #ef4444;border-radius:8px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
-  <svg style="flex-shrink:0;width:20px;height:20px" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-  <div style="flex:1;min-width:200px;">
-    <strong style="font-size:14px;color:#991b1b;">USI verification not configured</strong>
-    <span style="font-size:13px;color:#7f1d1d;margin-left:8px;">Your site isn\'t connected yet, so USI verification will fail. Connect the site + upload your machine credential.</span>
+<div id="rtoc-usi-modal-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:10px;max-width:520px;width:90%;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.3);position:relative;">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
+      <div style="flex-shrink:0;width:44px;height:44px;border-radius:50%;background:#fef3c7;display:flex;align-items:center;justify-content:center;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+      </div>
+      <div>
+        <h3 style="margin:0;font-size:17px;font-weight:700;color:#1e293b;">USI Verification Not Configured</h3>
+        <p style="margin:4px 0 0;font-size:13px;color:#64748b;">USI verification requires a one-time setup before it will work.</p>
+      </div>
+    </div>
+    <p style="margin:0 0 12px;font-size:14px;color:#374151;line-height:1.6;">
+      Your site has <strong>not yet been connected</strong> to the AI Grader platform, so USI verification calls will fail for every student.
+    </p>
+    <p style="margin:0 0 20px;font-size:14px;color:#374151;line-height:1.6;">
+      To fix this, go to <strong>USI Verification Settings</strong> and:
+    </p>
+    <ol style="margin:0 0 20px;padding-left:20px;font-size:14px;color:#374151;line-height:1.8;">
+      <li>Connect your site (API URL, Site ID and API Key)</li>
+      <li>Upload your myID Machine Credential (.xml or .pfx)</li>
+      <li>Enter your RTO TOID and certificate password</li>
+    </ol>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <a href="' . s($_usi_settings_url) . '" class="btn btn-primary" style="font-size:14px;">
+        <svg style="width:14px;height:14px;vertical-align:middle;margin-right:6px;margin-top:-2px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        Set Up USI Verification
+      </a>
+      <button type="button" onclick="rtocDismissUsiModal()" style="background:none;border:none;color:#6b7280;font-size:13px;cursor:pointer;padding:6px 10px;">Dismiss</button>
+    </div>
   </div>
-  <a href="' . s($_usi_settings_url) . '" class="btn btn-primary btn-sm" style="white-space:nowrap;flex-shrink:0;" title="Open USI verification settings to connect your site and upload your machine credential">Set Up USI Verification</a>
-</div>';
+</div>
+<script>
+(function () {
+    var dismissed = sessionStorage.getItem("rtoc_usi_modal_dismissed");
+    if (!dismissed) {
+        var overlay = document.getElementById("rtoc-usi-modal-overlay");
+        if (overlay) { overlay.style.display = "flex"; }
+    }
+})();
+function rtocDismissUsiModal() {
+    sessionStorage.setItem("rtoc_usi_modal_dismissed", "1");
+    var overlay = document.getElementById("rtoc-usi-modal-overlay");
+    if (overlay) { overlay.style.display = "none"; }
+}
+document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") { rtocDismissUsiModal(); }
+});
+</script>';
 } else if (!$_usi_cert_ok) {
     // API connected but no cert uploaded — show a softer inline banner.
     echo '
@@ -851,7 +500,7 @@ if (!$_usi_api_configured) {
     <strong style="font-size:14px;color:#92400e;">USI Machine Credential not uploaded</strong>
     <span style="font-size:13px;color:#78350f;margin-left:8px;">USI verification will fail until you upload your myID certificate.</span>
   </div>
-  <a href="' . s($_usi_settings_url) . '" class="btn btn-warning btn-sm" style="white-space:nowrap;flex-shrink:0;" title="Open USI verification settings to upload your myID machine credential">
+  <a href="' . s($_usi_settings_url) . '" class="btn btn-warning btn-sm" style="white-space:nowrap;flex-shrink:0;">
     <svg style="width:13px;height:13px;vertical-align:middle;margin-right:5px;margin-top:-2px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
     Set Up USI Verification
   </a>
@@ -863,20 +512,6 @@ echo html_writer::start_div('students-container');
 echo html_writer::start_div('students-header');
 echo html_writer::tag('h2', get_string('student_records', 'local_rtocompliance'));
 echo html_writer::end_div();
-
-// Plain-English explainer card for the student roster table.
-echo '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px 18px;margin-bottom:16px;">'
-    . '<div style="font-weight:700;color:#1e3a8a;margin-bottom:6px;font-size:15px;">About this student list</div>'
-    . '<div style="font-size:14.5px;color:#334155;line-height:1.55;margin-bottom:8px;">Every row is one learner known to the RTO. Use the filters and search above to narrow the list, then use the Actions menu on a row to edit a profile, manage enrolments or view certificates. Here is what each column means:</div>'
-    . '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px 22px;font-size:14.5px;color:#334155;line-height:1.5;">'
-    . '<div><strong>Name</strong> &mdash; the learner shown surname-first; click it to open the full profile.</div>'
-    . '<div><strong>Email</strong> &mdash; the email address on the Moodle account.</div>'
-    . '<div><strong>USI</strong> &mdash; the Unique Student Identifier and its verification status against usi.gov.au.</div>'
-    . '<div><strong>Residential State</strong> &mdash; the state or territory recorded for the learner.</div>'
-    . '<div><strong>Profile Status</strong> &mdash; whether the AVETMISS profile is complete, incomplete or missing.</div>'
-    . '<div><strong>Suitability</strong> &mdash; the pre-enrolment suitability check and its outcome.</div>'
-    . '<div><strong>Actions</strong> &mdash; per-row menu to edit, enrol, or view results and certificates.</div>'
-    . '</div></div>';
 
 // ── Site admin exclusion list (used by stats AND the main query below) ────────
 // In Moodle, site admins are stored in $CFG->siteadmins (comma-separated IDs),
@@ -926,7 +561,7 @@ $stats['withprofile']     = $DB->count_records_sql(
 );
 $stats['complete']        = $DB->count_records('local_rtocompliance_students', ['profilecomplete' => 1]);
 $stats['withusi']         = $DB->count_records_sql("SELECT COUNT(*) FROM {local_rtocompliance_students} WHERE usi IS NOT NULL AND usi != ''");
-$stats['missing_usi']     = max(0, $stats['withprofile'] - $stats['withusi']); // v5.9.368: clamp (withprofile excludes trainers, withusi doesn't → could go negative)
+$stats['missing_usi']     = $stats['withprofile'] - $stats['withusi'];
 // DOB-MISSING-USI-FIX (v5.2.88): count of students who have a USI but are missing DOB
 // (verification cannot proceed without DOB).
 $stats['usi_missing_dob'] = $DB->count_records_sql(
@@ -944,11 +579,7 @@ $stats['usi_pending_retry'] = $DB->count_records_select(
 );
 $stats['enrolments']      = $DB->count_records('local_rtocompliance_enrolments');
 $stats['certs_issued']    = $DB->count_records('local_rtocompliance_certs', ['status' => 'issued']);
-// RPL-CT-COMPETENT-COUNT (v5.9.410): count ALL competent AVETMISS outcomes, not just 20 —
-// RPL (51), Credit Transfer (60) and non-assessable-satisfactory (81) are competent too, so
-// the "Competency Achieved (Units)" card no longer under-counts RTOs that use RPL/CT.
-$stats['competent_units'] = $DB->count_records_sql(
-    "SELECT COUNT(*) FROM {local_rtocompliance_enrolments} WHERE outcomeidentifier IN ('20','51','60','81')");
+$stats['competent_units'] = $DB->count_records_sql("SELECT COUNT(*) FROM {local_rtocompliance_enrolments} WHERE outcomeidentifier = '20'");
 
 $iconUsers   = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
 $iconDoc     = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
@@ -961,18 +592,18 @@ $iconBar     = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill
 
 echo html_writer::start_div('stats-cards');
 $summaryStats = [
-    ['label' => get_string('total_students', 'local_rtocompliance'),                      'value' => $stats['total'],           'color' => 'blue',   'icon' => $iconUsers, 'tip' => 'Every learner on record here, current and past.'],
-    ['label' => 'Students with AVETMISS Profile',                                        'value' => $stats['withprofile'],     'color' => 'purple', 'icon' => $iconDoc, 'tip' => 'Learners who have a national VET data profile started. AVETMISS is the student data every training organisation must report to government.'],
-    ['label' => get_string('complete', 'local_rtocompliance') . ' Profiles',              'value' => $stats['complete'],        'color' => 'green',  'icon' => $iconCheck, 'tip' => 'Profiles with every mandatory reporting field filled in. Only these can go into your national data submission.'],
-    ['label' => get_string('usi', 'local_rtocompliance') . ' Recorded',                   'value' => $stats['withusi'],         'color' => 'amber',  'icon' => $iconKey, 'tip' => 'Learners who have a USI on file. The USI is the national student ID number needed before a certificate can be issued.'],
-    ['label' => 'USI Missing',                                                             'value' => $stats['missing_usi'],     'color' => $stats['missing_usi'] > 0 ? 'rose' : 'green', 'icon' => $iconAlert, 'tip' => 'Learners with a profile but no USI yet. Collect their USI so results can be reported and certificates issued.'],
-    ['label' => 'USI Has No DOB (can\'t verify)',                                          'value' => $stats['usi_missing_dob'], 'color' => $stats['usi_missing_dob'] > 0 ? 'rose' : 'green', 'icon' => $iconAlert, 'tip' => 'Learners who have a USI but no date of birth, so it cannot be checked against usi.gov.au. Add their date of birth to verify.'],
-    ['label' => 'Total Enrolments',                                                        'value' => $stats['enrolments'],      'color' => 'blue',   'icon' => $iconBook, 'tip' => 'Count of every enrolment record (one learner in one course). A single learner can have several.'],
-    ['label' => 'Certificates Issued',                                                     'value' => $stats['certs_issued'],    'color' => 'green',  'icon' => $iconAward, 'tip' => 'Testamurs and statements already issued to learners.'],
-    ['label' => 'Competency Achieved (Units)',                                             'value' => $stats['competent_units'], 'color' => 'amber',  'icon' => $iconBar, 'tip' => 'Number of individual units learners have been marked competent in, including recognition of prior learning.'],
+    ['label' => get_string('total_students', 'local_rtocompliance'),                      'value' => $stats['total'],           'color' => 'blue',   'icon' => $iconUsers],
+    ['label' => 'Students with AVETMISS Profile',                                        'value' => $stats['withprofile'],     'color' => 'purple', 'icon' => $iconDoc],
+    ['label' => get_string('complete', 'local_rtocompliance') . ' Profiles',              'value' => $stats['complete'],        'color' => 'green',  'icon' => $iconCheck],
+    ['label' => get_string('usi', 'local_rtocompliance') . ' Recorded',                   'value' => $stats['withusi'],         'color' => 'amber',  'icon' => $iconKey],
+    ['label' => 'USI Missing',                                                             'value' => $stats['missing_usi'],     'color' => $stats['missing_usi'] > 0 ? 'rose' : 'green', 'icon' => $iconAlert],
+    ['label' => 'USI Has No DOB (can\'t verify)',                                          'value' => $stats['usi_missing_dob'], 'color' => $stats['usi_missing_dob'] > 0 ? 'rose' : 'green', 'icon' => $iconAlert],
+    ['label' => 'Total Enrolments',                                                        'value' => $stats['enrolments'],      'color' => 'blue',   'icon' => $iconBook],
+    ['label' => 'Certificates Issued',                                                     'value' => $stats['certs_issued'],    'color' => 'green',  'icon' => $iconAward],
+    ['label' => 'Competency Achieved (Units)',                                             'value' => $stats['competent_units'], 'color' => 'amber',  'icon' => $iconBar],
 ];
 foreach ($summaryStats as $s) {
-    echo html_writer::start_div('stat-card stat-' . $s['color'], ['title' => $s['tip']]);
+    echo html_writer::start_div('stat-card stat-' . $s['color']);
     echo '<div class="stat-icon-wrap">' . $s['icon'] . '</div>';
     echo html_writer::start_div('stat-info');
     echo html_writer::tag('span', $s['value'], ['class' => 'stat-number']);
@@ -1081,7 +712,7 @@ if ($stats['usi_missing_dob'] > 0) {
         .           'document.getElementById(\'rtoc-nat-file-label\').textContent=n;'
         .           'document.getElementById(\'rtoc-nat-submit\').style.display=\'inline-block\';'
         .         '">'
-        .   '<button type="submit" id="rtoc-nat-submit" class="btn btn-warning btn-sm rtoc-dob-sync-btn" style="display:none" title="Upload the chosen NAT00080 file and fill in missing dates of birth from it">'
+        .   '<button type="submit" id="rtoc-nat-submit" class="btn btn-warning btn-sm rtoc-dob-sync-btn" style="display:none">'
         .     $svgSync . 'Upload &amp; Sync DOBs'
         .   '</button>'
         . '</form>'
@@ -1092,162 +723,6 @@ if ($stats['usi_missing_dob'] > 0) {
                 . $svgSync . 'Sync from imported data'
               . '</a>'
             : '')
-        // ── SIMPLE DOB CSV round-trip (v6.2.21): download a template of the
-        // missing-DOB students, fill the Date of birth column, re-upload it. ──
-        . '<span style="flex-basis:100%;height:0"></span>'
-        . '<span style="font-size:12px;color:#78350f;align-self:center;">Or use a simple CSV:</span>'
-        . '<a href="' . htmlspecialchars(
-                (new moodle_url('/local/rtocompliance/students.php',
-                    ['action' => 'export_dob_csv', 'sesskey' => sesskey()]))->out(false), ENT_QUOTES) . '"'
-            . ' class="btn btn-outline-secondary btn-sm rtoc-dob-sync-btn"'
-            . ' title="Download a CSV of the students missing a DOB, ready to fill in and re-upload">'
-            . 'Download DOB template (CSV)</a>'
-        . '<form method="post" action="' . htmlspecialchars($uploadActionUrl, ENT_QUOTES) . '"'
-            . ' enctype="multipart/form-data" style="display:inline-flex;align-items:center;gap:6px;margin:0">'
-            . '<input type="hidden" name="action" value="upload_dob_csv">'
-            . '<input type="hidden" name="sesskey" value="' . sesskey() . '">'
-            . '<label for="rtoc-dobcsv-file" class="btn btn-secondary btn-sm rtoc-dob-sync-btn mb-0" style="cursor:pointer;margin:0" title="Choose a CSV with a Date of birth column and a Client identifier, USI or Email column">'
-            .   'Choose DOB CSV…</label>'
-            . '<input type="file" id="rtoc-dobcsv-file" name="dobcsv" accept=".csv,text/csv"'
-            .   ' style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none"'
-            .   ' onchange="document.getElementById(\'rtoc-dobcsv-submit\').style.display=\'inline-block\';">'
-            . '<button type="submit" id="rtoc-dobcsv-submit" class="btn btn-warning btn-sm rtoc-dob-sync-btn" style="display:none" title="Upload the CSV and fill in missing dates of birth">'
-            .   $svgSync . 'Upload DOB CSV</button>'
-          . '</form>'
-        . '</div>';
-}
-
-// SYNC-AVETMISS-FIELDS (v5.9.316): Show a "Sync AVETMISS Fields" button when NAT data
-// has been imported but student profiles still have the hardcoded '@'/'@@' defaults
-// for sex, indigenous status, labour force, school level, suburb or state code.
-//
-// AVETMISS-COLUMN-GUARD (v5.9.328): indigenousstatus / labourforcestatus /
-// highestschoollevel were added to local_rtocompliance_avetmiss_student in
-// v5.9.316.  On sites where Moodle's upgrade notification has not yet been
-// triggered the columns don't exist yet, which threw "Error reading from
-// database" and crashed the entire students.php page.  Wrap both queries in
-// a try-catch so the page degrades gracefully — the sync banner is simply
-// hidden until after the admin visits Site Administration → Notifications.
-$_hasNatWithDemo   = false;
-$_needsAvetmissSync = false;
-try {
-    $_hasNatWithDemo = $DB->record_exists_sql(
-        "SELECT 1 FROM {local_rtocompliance_avetmiss_student}
-          WHERE (indigenousstatus IS NOT NULL AND indigenousstatus <> '')
-             OR (labourforcestatus IS NOT NULL AND labourforcestatus <> '')
-             OR (highestschoollevel IS NOT NULL AND highestschoollevel <> '')
-             OR (sex IS NOT NULL AND sex <> '' AND sex <> '@')
-         LIMIT 1"
-    );
-    if ($_hasNatWithDemo) {
-        $_needsAvetmissSync = $DB->record_exists_sql(
-            "SELECT 1 FROM {local_rtocompliance_students}
-              WHERE (indigenousstatus = '@' OR indigenousstatus IS NULL)
-                AND clientid IS NOT NULL AND clientid <> ''
-             LIMIT 1"
-        );
-    }
-} catch (\dml_exception $e) {
-    // Columns not yet added (upgrade pending) — skip the sync banner silently.
-    $_hasNatWithDemo   = false;
-    $_needsAvetmissSync = false;
-}
-if ($_needsAvetmissSync) {
-    $_syncAvetmissUrl = new moodle_url('/local/rtocompliance/students.php', [
-        'action'  => 'sync_avetmiss_fields',
-        'sesskey' => sesskey(),
-    ]);
-    $_svgSync = '<svg style="width:13px;height:13px;vertical-align:middle;margin-right:4px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    echo '<div class="rtoc-dob-sync-bar" style="border-left-color:#8b5cf6;">'
-        . '<span class="rtoc-dob-sync-msg">'
-        . '<svg style="width:15px;height:15px;vertical-align:middle;margin-right:5px;color:#8b5cf6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="2"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-        . 'Student AVETMISS profiles have blank fields (sex, indigenous status, labour force, school level) even though NAT data has been imported. '
-        . 'Click <strong>Sync AVETMISS Fields</strong> to back-fill these from your imported NAT00080 data.'
-        . '</span>'
-        . ' <a href="' . htmlspecialchars($_syncAvetmissUrl->out(false), ENT_QUOTES) . '"'
-        .   ' class="btn btn-sm rtoc-dob-sync-btn" style="background:#7c3aed;color:#fff !important;border:none"'
-        .   ' title="Read staged NAT00080 data and fill in blank AVETMISS fields for all matched students">'
-        . $_svgSync . 'Sync AVETMISS Fields'
-        . '</a>'
-        . '</div>';
-}
-
-// COURSE-MAP-TABLE (v5.9.335): Show a banner prompting the admin to seed the course map
-// if the table is empty. When the table is not seeded, completion detection falls back
-// to the old runtime regex walk — correct but slower. Once seeded, all paths are fast.
-try {
-    $_courseMapEmpty = $DB->get_manager()->table_exists('local_rtocompliance_course_map')
-        && !$DB->record_exists('local_rtocompliance_course_map', []);
-} catch (\Throwable $e) {
-    $_courseMapEmpty = false;
-}
-if ($_courseMapEmpty) {
-    $_rebuildUrl = new moodle_url('/local/rtocompliance/students.php', [
-        'action'  => 'rebuild_course_map',
-        'sesskey' => sesskey(),
-    ]);
-    echo '<div class="rtoc-dob-sync-bar" style="border-left-color:#6366f1;">'
-        . '<span class="rtoc-dob-sync-msg">'
-        . '<svg style="width:15px;height:15px;vertical-align:middle;margin-right:5px;color:#6366f1" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/><rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/><rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/><rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/></svg>'
-        . '<strong>Moodle Course Map is empty.</strong> The course → qual/unit mapping table has not yet been seeded. '
-        . 'Completion detection is currently using the slower regex fallback. '
-        . 'Click <strong>Seed Course Map</strong> to build the permanent mapping from your Qual Builder records and Moodle category tree — takes seconds, runs once.'
-        . '</span>'
-        . ' <a href="' . htmlspecialchars($_rebuildUrl->out(false), ENT_QUOTES) . '"'
-        .   ' class="btn btn-sm rtoc-dob-sync-btn" style="background:#4f46e5;color:#fff !important;border:none">'
-        . '<svg style="width:13px;height:13px;vertical-align:middle;margin-right:4px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-        . 'Seed Course Map</a>'
-        . ' <a href="/local/rtocompliance/course_map.php" class="btn btn-sm btn-outline-secondary" style="margin-left:4px">View Map</a>'
-        . '</div>';
-}
-
-// SYNC-PROGRAMCODES (v5.9.329 / updated v5.9.346): Show a banner when enrolment records
-// have a blank programcode — these students will not appear as completers in
-// generate_qual_certs.php SOURCE 2, so certificates cannot be generated for them.
-// TASK-46 (v5.9.346): exclude vetflag='N' enrolments — those have been explicitly
-// marked non-VET by the admin via the skipped-programcodes report and do not need
-// a qualification code.
-$_hasBlankProgramcodes = false;
-try {
-    $_hasBlankProgramcodes = $DB->record_exists_sql(
-        "SELECT 1 FROM {local_rtocompliance_enrolments}
-          WHERE (programcode IS NULL OR programcode = '')
-            AND courseid IS NOT NULL AND courseid > 0
-            AND (vetflag IS NULL OR vetflag != 'N')
-         LIMIT 1"
-    );
-} catch (\dml_exception $e) {
-    $_hasBlankProgramcodes = false;
-}
-if ($_hasBlankProgramcodes) {
-    $_syncPcUrl     = new moodle_url('/local/rtocompliance/students.php', [
-        'action'  => 'sync_programcodes',
-        'sesskey' => sesskey(),
-    ]);
-    $_skippedRptUrl = new moodle_url('/local/rtocompliance/skipped_programcodes.php');
-    echo '<div class="rtoc-dob-sync-bar" style="border-left-color:#f59e0b;">'
-        . '<span class="rtoc-dob-sync-msg">'
-        . '<svg style="width:15px;height:15px;vertical-align:middle;margin-right:5px;color:#f59e0b" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="9" x2="12" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="17" x2="12.01" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
-        . 'Some enrolment records have no qualification code — these students will <strong>not appear as completers</strong> when generating certificates. '
-        . 'Click <strong>Sync Qualification Codes</strong> to auto-detect from the Moodle category tree, '
-        . 'or <strong>View report</strong> to see which courses are affected and why.'
-        . '</span>'
-        . ' <a href="' . htmlspecialchars($_syncPcUrl->out(false), ENT_QUOTES) . '"'
-        .   ' class="btn btn-sm rtoc-dob-sync-btn" style="background:#b45309;color:#fff !important;border:none"'
-        .   ' title="Walk the Moodle category ancestor tree to fill in the blank qualification code on enrolment records">'
-        . '<svg style="width:13px;height:13px;vertical-align:middle;margin-right:4px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-        . 'Sync Qualification Codes'
-        . '</a>'
-        . ' <a href="' . htmlspecialchars($_skippedRptUrl->out(false), ENT_QUOTES) . '"'
-        .   ' class="btn btn-sm btn-outline-secondary" style="margin-left:4px">'
-        . 'View report</a>'
-        . ' <a href="' . htmlspecialchars(
-                (new moodle_url('/local/rtocompliance/repair_programcodes.php'))->out(false),
-                ENT_QUOTES
-            ) . '"'
-        .   ' class="btn btn-sm btn-outline-warning" style="margin-left:4px"'
-        .   ' title="Bulk-apply the correct qualification code to all enrolment rows that are still missing one">'
-        . 'Repair codes →</a>'
         . '</div>';
 }
 
@@ -1404,19 +879,19 @@ if (!empty($tasoptions_bulk)) {
         echo '<option value="' . $tid . '">' . $tlabel . '</option>';
     }
     echo '</select>';
-    echo '<button id="bulk-send-btn" type="button" class="btn btn-sm btn-primary mr-3" disabled title="Send the suitability checklist to all selected learners for the chosen training product">'
+    echo '<button id="bulk-send-btn" type="button" class="btn btn-sm btn-primary mr-3" disabled>'
         . get_string('suitability_bulk_send_selected', 'local_rtocompliance') . '</button>';
 }
 
 echo html_writer::link(
     $fillgapsurl,
     get_string('suitability_fill_gaps_btn_short', 'local_rtocompliance'),
-    ['class' => 'btn btn-sm btn-warning', 'title' => 'Send suitability checklists to learners who have not yet received one']
+    ['class' => 'btn btn-sm btn-warning']
 );
 
 // BULK-UNSUSPEND (v5.2.72): Show "Activate Selected" button when viewing suspended accounts.
 if ($filter === 'suspended') {
-    echo ' <button id="bulk-unsuspend-btn" type="button" class="btn btn-sm btn-success ml-2" disabled title="Re-activate the selected suspended Moodle accounts">'
+    echo ' <button id="bulk-unsuspend-btn" type="button" class="btn btn-sm btn-success ml-2" disabled>'
         . 'Activate Selected Accounts</button>';
 }
 
@@ -1458,12 +933,12 @@ $table = new html_table();
 $table->head = [
     html_writer::checkbox('selectall', '1', false, '', ['id' => 'selectall-cb', 'title' => get_string('suitability_selectall', 'local_rtocompliance')]),
     $nameHeader,
-    html_writer::tag('span', get_string('email'), ['title' => 'Email address on the learner Moodle account']),
-    html_writer::tag('span', get_string('usi', 'local_rtocompliance'), ['title' => 'Unique Student Identifier and its verification status against usi.gov.au']),
-    html_writer::tag('span', get_string('residentialstate', 'local_rtocompliance'), ['title' => 'State or territory recorded as the learner residential address']),
-    html_writer::tag('span', get_string('profilestatus', 'local_rtocompliance'), ['title' => 'Whether the AVETMISS profile is complete, incomplete or missing']),
-    html_writer::tag('span', get_string('suitability_col', 'local_rtocompliance'), ['title' => 'Pre-enrolment suitability check and its outcome']),
-    html_writer::tag('span', get_string('actions'), ['title' => 'Per-row actions such as edit, enrolments, results and certificates']),
+    get_string('email'),
+    get_string('usi', 'local_rtocompliance'),
+    get_string('residentialstate', 'local_rtocompliance'),
+    get_string('profilestatus', 'local_rtocompliance'),
+    get_string('suitability_col', 'local_rtocompliance'),
+    get_string('actions'),
 ];
 $table->attributes['class'] = 'generaltable';
 
@@ -1474,15 +949,6 @@ foreach ($students as $student) {
 
     // Pre-build URLs here so the USI cell (DOB-missing branch) can use $editurl.
     $editurl_pre  = new moodle_url('/local/rtocompliance/student_profile.php', ['userid' => $student->id]);
-
-    // WORLD-CLASS-PROFILE: the student name is now a one-click link straight to the
-    // full student profile page. Keeps the "Surname, Firstname" text; any future
-    // badges can be appended to $namecell after the link.
-    $namecell = html_writer::link(
-        $editurl_pre,
-        $fullname,
-        ['class' => 'rtoc-student-name-link', 'title' => get_string('studentprofile', 'local_rtocompliance')]
-    );
 
     // ── USI cell: rich verification status display ──────────────────────────
     // Pattern: USI code in monospace + status badge referencing usi.gov.au
@@ -1500,31 +966,31 @@ foreach ($students as $student) {
 
         if ($vstat === 1) {
             // Verified against usi.gov.au — green shield
-            $usicell .= '<span class="rtoc-usi-badge rtoc-usi-verified" title="This USI has been checked and confirmed against the national USI registry at usi.gov.au. Nothing more to do.">'
+            $usicell .= '<span class="rtoc-usi-badge rtoc-usi-verified">'
                 . '<svg class="rtoc-usi-icon-svg" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 1L2 3.5V8c0 3.3 2.5 5.8 6 6.9 3.5-1.1 6-3.6 6-6.9V3.5L8 1z" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M5.5 8l1.8 1.8 3.2-3.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'
                 . ' Verified via <strong>usi.gov.au</strong>'
                 . ($vdate ? '<span class="rtoc-usi-date"> &mdash; ' . $vdate . '</span>' : '')
                 . '</span>';
         } else if ($vstat === 2) {
             // Verification failed — red badge + retry
-            $usicell .= '<span class="rtoc-usi-badge rtoc-usi-failed" title="The USI could not be confirmed against usi.gov.au. Check the number and the learner name and date of birth, then retry.">'
+            $usicell .= '<span class="rtoc-usi-badge rtoc-usi-failed">'
                 . '<svg class="rtoc-usi-icon-svg" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>'
                 . ' Verification failed'
                 . '</span>'
-                . ($student->profileid ? ' <button type="button" class="rtoc-usi-verify-btn" data-profileid="' . $student->profileid . '" title="Retry USI verification against usi.gov.au for this learner">Retry &#x21BB;</button>' : '');
+                . ($student->profileid ? ' <button type="button" class="rtoc-usi-verify-btn" data-profileid="' . $student->profileid . '">Retry &#x21BB;</button>' : '');
         } else if ($vstat === 3) {
             // Pending
-            $usicell .= '<span class="rtoc-usi-badge rtoc-usi-pending" title="The USI check has been sent to usi.gov.au and is waiting for a result. No action needed right now.">'
+            $usicell .= '<span class="rtoc-usi-badge rtoc-usi-pending">'
                 . '<svg class="rtoc-usi-icon-svg" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v3.5l2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>'
                 . ' Verification pending'
                 . '</span>';
         } else if ($vstat === 4) {
             // Manual review needed
-            $usicell .= '<span class="rtoc-usi-badge rtoc-usi-review" title="The automatic USI check was inconclusive and needs a person to look at it before it can be confirmed.">'
+            $usicell .= '<span class="rtoc-usi-badge rtoc-usi-review">'
                 . '<svg class="rtoc-usi-icon-svg" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 2l1.3 2.6 2.9.4-2.1 2.1.5 2.9L8 8.6 5.4 10l.5-2.9L3.8 5l2.9-.4L8 2z" stroke="currentColor" stroke-width="1.2"/></svg>'
                 . ' Needs manual review'
                 . '</span>'
-                . ($student->profileid ? ' <button type="button" class="rtoc-usi-verify-btn" data-profileid="' . $student->profileid . '" title="Run USI verification against usi.gov.au for this learner">Verify</button>' : '');
+                . ($student->profileid ? ' <button type="button" class="rtoc-usi-verify-btn" data-profileid="' . $student->profileid . '">Verify</button>' : '');
         } else {
             // Not yet verified (status=0).
             // DOB-MISSING-USI-FIX (v5.2.88): if DOB is absent, USI verification will
@@ -1532,30 +998,25 @@ foreach ($students as $student) {
             // instead of the misleading "Verify" button that does nothing.
             $hasdob = !empty($student->dateofbirth) && (int)$student->dateofbirth > 0;
             if (!$hasdob) {
-                $usicell .= '<span class="rtoc-usi-badge rtoc-usi-nodob" title="A date of birth is needed before this USI can be checked against usi.gov.au. Add one to the learner profile.">'
+                $usicell .= '<span class="rtoc-usi-badge rtoc-usi-nodob">'
                     . '<svg class="rtoc-usi-icon-svg" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v3.5M8 10h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>'
                     . ' DOB required to verify'
                     . '</span>';
             } else {
                 // DOB present — normal unverified state with Verify button.
-                $usicell .= '<span class="rtoc-usi-badge rtoc-usi-unverified" title="This USI has not been checked against usi.gov.au yet. Run a check to confirm it before issuing a certificate.">'
+                $usicell .= '<span class="rtoc-usi-badge rtoc-usi-unverified">'
                     . '<svg class="rtoc-usi-icon-svg" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 1L2 3.5V8c0 3.3 2.5 5.8 6 6.9 3.5-1.1 6-3.6 6-6.9V3.5L8 1z" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M8 6v3M8 10.5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>'
                     . ' Not yet verified'
                     . '</span>'
-                    . ($student->profileid ? ' <button type="button" class="rtoc-usi-verify-btn" data-profileid="' . $student->profileid . '" title="Run USI verification against usi.gov.au for this learner">Verify via usi.gov.au &#x2192;</button>' : '');
+                    . ($student->profileid ? ' <button type="button" class="rtoc-usi-verify-btn" data-profileid="' . $student->profileid . '">Verify via usi.gov.au &#x2192;</button>' : '');
             }
         }
     } else {
-        $usicell = '<span class="rtoc-usi-missing" title="No USI on file for this learner. Collect their USI number before issuing any certificate.">'
+        $usicell = '<span class="rtoc-usi-missing">'
             . '<svg style="width:11px;height:11px;vertical-align:middle;margin-right:3px" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 2C4.7 2 2 4.7 2 8s2.7 6 6 6 6-2.7 6-6-2.7-6-6-6zm0 3v3.5M8 11h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>'
             . 'Missing'
             . '</span>';
     }
-
-    // USI-CELL-STACK (v6.2.37): stack the USI code, status badge and verify button
-    // vertically so the pill + button no longer sit side-by-side and force the column wide.
-    // Layout is handled by the .rtoc-usi-cell CSS (flex column).
-    $usicell = '<div class="rtoc-usi-cell">' . $usicell . '</div>';
 
     $statename = '';
     if (!empty($student->statecode)) {
@@ -1566,11 +1027,11 @@ foreach ($students as $student) {
     if (!empty($student->suspended)) {
         $statuscell = '<span class="badge badge-danger" title="This account is suspended in Moodle">SUSPENDED</span>';
     } else if ($student->profileid && $student->profilecomplete) {
-        $statuscell = '<span class="badge badge-success" title="This learner profile has every mandatory national reporting field filled in and is ready to submit.">' . get_string('complete', 'local_rtocompliance') . '</span>';
+        $statuscell = '<span class="badge badge-success">' . get_string('complete', 'local_rtocompliance') . '</span>';
     } else if ($student->profileid) {
-        $statuscell = '<span class="badge badge-warning" title="Some mandatory national reporting fields are still missing. Open the profile to finish it.">' . get_string('incomplete', 'local_rtocompliance') . '</span>';
+        $statuscell = '<span class="badge badge-warning">' . get_string('incomplete', 'local_rtocompliance') . '</span>';
     } else {
-        $statuscell = '<span class="badge badge-secondary" title="No national reporting (AVETMISS) profile has been created for this learner yet.">' . get_string('noprofile', 'local_rtocompliance') . '</span>';
+        $statuscell = '<span class="badge badge-secondary">' . get_string('noprofile', 'local_rtocompliance') . '</span>';
     }
 
     // NOTE: $editurl/$enrolurl are also used in the USI cell above (DOB-missing link), so they
@@ -1578,10 +1039,6 @@ foreach ($students as $student) {
     // the USI cell code above and the Actions cell below reference these variables.
     $editurl  = new moodle_url('/local/rtocompliance/student_profile.php', ['userid' => $student->id]);
     $enrolurl = new moodle_url('/local/rtocompliance/student_enrolments.php', ['userid' => $student->id]);
-    // WORLD-CLASS-PROFILE: quick jumps to this student's certificates and their
-    // results/enrolments, surfaced directly in the row Actions menu.
-    $certsurl   = new moodle_url('/local/rtocompliance/mycerts.php', ['userid' => $student->id]);
-    $resultsurl = new moodle_url('/local/rtocompliance/student_enrolments.php', ['userid' => $student->id]);
 
     // FIX-SUSPENDED-UNSUSPEND (v5.2.38): for suspended accounts show an Unsuspend button
     // instead of the normal Actions menu (suspended users can't be enrolled/edited anyway).
@@ -1598,15 +1055,11 @@ foreach ($students as $student) {
         );
     } else {
     // Body-appended custom menu — no Bootstrap dropdown, escapes overflow/transform clipping.
-    $actions  = '<button class="btn btn-sm btn-outline-secondary rtoc-act-btn" type="button" title="Open the actions menu for this learner (edit profile, enrolments, results, certificates)"'
+    $actions  = '<button class="btn btn-sm btn-outline-secondary rtoc-act-btn" type="button"'
         . ' data-edit-url="'  . htmlspecialchars($editurl->out(false),  ENT_QUOTES) . '"'
         . ' data-enrol-url="' . htmlspecialchars($enrolurl->out(false), ENT_QUOTES) . '"'
         . ' data-edit-label="'  . htmlspecialchars(get_string('editprofile', 'local_rtocompliance'), ENT_QUOTES) . '"'
-        . ' data-enrol-label="' . htmlspecialchars(get_string('enrolments',  'local_rtocompliance'), ENT_QUOTES) . '"'
-        . ' data-certs-url="'    . htmlspecialchars($certsurl->out(false),   ENT_QUOTES) . '"'
-        . ' data-certs-label="Certificates"'
-        . ' data-results-url="'  . htmlspecialchars($resultsurl->out(false), ENT_QUOTES) . '"'
-        . ' data-results-label="Results / Enrolments">'
+        . ' data-enrol-label="' . htmlspecialchars(get_string('enrolments',  'local_rtocompliance'), ENT_QUOTES) . '">'
         . 'Actions &#9660;'
         . '</button>';
     }
@@ -1631,33 +1084,33 @@ foreach ($students as $student) {
         $suitcell = '<span class="badge badge-secondary" title="No valid email address">No email</span>';
     } else if (empty($student->suitabilityid)) {
         $sendurl  = new moodle_url('/local/rtocompliance/suitability_send.php', ['userid' => $student->id]);
-        $suitcell = html_writer::link($sendurl, get_string('suitability_send_btn_short', 'local_rtocompliance'), ['class' => 'btn btn-sm btn-outline-secondary', 'title' => 'Send the pre-enrolment suitability checklist to this learner']);
+        $suitcell = html_writer::link($sendurl, get_string('suitability_send_btn_short', 'local_rtocompliance'), ['class' => 'btn btn-sm btn-outline-secondary']);
     } else {
         $viewurl  = new moodle_url('/local/rtocompliance/suitability_view.php', ['id' => $student->suitabilityid]);
         $sendurl  = new moodle_url('/local/rtocompliance/suitability_send.php', ['userid' => $student->id]);
         $ststatus = $student->suitabilitystatus;
 
         if ($ststatus === 'pending') {
-            $suitcell  = '<span class="badge badge-info" title="The suitability checklist has been sent and is waiting for the learner to complete it.">' . get_string('suitability_status_pending', 'local_rtocompliance') . '</span><br>';
+            $suitcell  = '<span class="badge badge-info">' . get_string('suitability_status_pending', 'local_rtocompliance') . '</span><br>';
             $resendurl = new moodle_url('/local/rtocompliance/suitability_send.php', [
                 'userid'   => $student->id,
                 'resendid' => $student->suitabilityid,
                 'sesskey'  => sesskey(),
             ]);
-            $suitcell .= html_writer::link($resendurl, get_string('suitability_resend', 'local_rtocompliance'), ['class' => 'btn btn-sm btn-outline-secondary mt-1', 'title' => 'Resend the suitability checklist to this learner']);
+            $suitcell .= html_writer::link($resendurl, get_string('suitability_resend', 'local_rtocompliance'), ['class' => 'btn btn-sm btn-outline-secondary mt-1']);
         } else if ($ststatus === 'suitable') {
             $cbDisabled = true;
-            $suitcell   = '<span class="badge badge-success" title="The learner completed the pre-enrolment check and was found suitable for the course.">' . get_string('suitability_status_suitable', 'local_rtocompliance') . '</span><br>';
-            $suitcell  .= html_writer::link($viewurl, get_string('view'), ['class' => 'btn btn-sm btn-outline-success mt-1', 'title' => 'View this completed suitability check']);
+            $suitcell   = '<span class="badge badge-success">' . get_string('suitability_status_suitable', 'local_rtocompliance') . '</span><br>';
+            $suitcell  .= html_writer::link($viewurl, get_string('view'), ['class' => 'btn btn-sm btn-outline-success mt-1']);
         } else if ($ststatus === 'not_suitable') {
-            $suitcell  = '<span class="badge badge-danger" title="The pre-enrolment check flagged the learner as not suitable. Review the result and override it if appropriate.">' . get_string('suitability_status_not_suitable', 'local_rtocompliance') . '</span><br>';
-            $suitcell .= html_writer::link($viewurl, get_string('suitability_view_override', 'local_rtocompliance'), ['class' => 'btn btn-sm btn-outline-danger mt-1', 'title' => 'View the not-suitable result and override it if needed']);
+            $suitcell  = '<span class="badge badge-danger">' . get_string('suitability_status_not_suitable', 'local_rtocompliance') . '</span><br>';
+            $suitcell .= html_writer::link($viewurl, get_string('suitability_view_override', 'local_rtocompliance'), ['class' => 'btn btn-sm btn-outline-danger mt-1']);
         } else if ($ststatus === 'override_suitable') {
             $cbDisabled = true;
-            $suitcell   = '<span class="badge badge-warning" title="A staff member manually marked this learner suitable, overriding the checklist result.">' . get_string('suitability_status_override', 'local_rtocompliance') . '</span><br>';
-            $suitcell  .= html_writer::link($viewurl, get_string('view'), ['class' => 'btn btn-sm btn-outline-warning mt-1', 'title' => 'View this overridden suitability check']);
+            $suitcell   = '<span class="badge badge-warning">' . get_string('suitability_status_override', 'local_rtocompliance') . '</span><br>';
+            $suitcell  .= html_writer::link($viewurl, get_string('view'), ['class' => 'btn btn-sm btn-outline-warning mt-1']);
         } else {
-            $suitcell = html_writer::link($sendurl, get_string('suitability_send_btn_short', 'local_rtocompliance'), ['class' => 'btn btn-sm btn-outline-secondary', 'title' => 'Send the pre-enrolment suitability checklist to this learner']);
+            $suitcell = html_writer::link($sendurl, get_string('suitability_send_btn_short', 'local_rtocompliance'), ['class' => 'btn btn-sm btn-outline-secondary']);
         }
     }
 
@@ -1670,7 +1123,7 @@ foreach ($students as $student) {
 
     $table->data[] = [
         $checkbox,
-        $namecell,
+        $fullname,
         $student->email,
         $usicell,
         $statename,
@@ -1823,32 +1276,26 @@ echo html_writer::script('
 
     function rtocOpenMenu(btn) {
         rtocCloseMenu();
-        var editUrl    = btn.getAttribute("data-edit-url");
-        var enrolUrl   = btn.getAttribute("data-enrol-url");
-        var certsUrl   = btn.getAttribute("data-certs-url");
-        var resultsUrl = btn.getAttribute("data-results-url");
-        var editLabel  = btn.getAttribute("data-edit-label")    || "Edit Profile";
-        var enrolLabel = btn.getAttribute("data-enrol-label")   || "Enrolments";
-        var certsLabel = btn.getAttribute("data-certs-label")   || "Certificates";
-        var resultsLabel = btn.getAttribute("data-results-label") || "Results / Enrolments";
+        var editUrl   = btn.getAttribute("data-edit-url");
+        var enrolUrl  = btn.getAttribute("data-enrol-url");
+        var editLabel = btn.getAttribute("data-edit-label")  || "Edit Profile";
+        var enrolLabel= btn.getAttribute("data-enrol-label") || "Enrolments";
 
         var menu = document.createElement("div");
         menu.className = "dropdown-menu show rtoc-body-menu";
-        menu.style.cssText = "position:absolute;z-index:100001;min-width:10rem;";
+        menu.style.cssText = "position:absolute;z-index:99999;min-width:10rem;";
 
-        function rtocAddItem(url, label) {
-            if (!url) return;
-            var a = document.createElement("a");
-            a.className = "dropdown-item";
-            a.href = url;
-            a.textContent = label;
-            menu.appendChild(a);
-        }
+        var a1 = document.createElement("a");
+        a1.className = "dropdown-item";
+        a1.href = editUrl;
+        a1.textContent = editLabel;
+        menu.appendChild(a1);
 
-        rtocAddItem(editUrl, editLabel);
-        rtocAddItem(enrolUrl, enrolLabel);
-        rtocAddItem(certsUrl, certsLabel);
-        rtocAddItem(resultsUrl, resultsLabel);
+        var a2 = document.createElement("a");
+        a2.className = "dropdown-item";
+        a2.href = enrolUrl;
+        a2.textContent = enrolLabel;
+        menu.appendChild(a2);
 
         document.body.appendChild(menu);
         _openMenu = menu;

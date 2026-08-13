@@ -15,18 +15,19 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * RTO Compliance plugin — tas.php.
+ * local_rtocompliance file.
  *
  * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
+
 require_once(__DIR__ . '/../../config.php');
+require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_tas');
-require_login();
 
 // Handle TAS delete action (site:config required)
 $delete = optional_param('delete', 0, PARAM_INT);
@@ -59,7 +60,7 @@ echo html_writer::tag('h2', 'Training & Assessment Strategy Generator');
 echo html_writer::link(
     new moodle_url('/local/rtocompliance/tas_edit.php'),
     'Create New TAS',
-    ['class' => 'btn btn-primary', 'title' => 'Start a new Training and Assessment Strategy document']
+    ['class' => 'btn btn-primary']
 );
 echo html_writer::end_div();
 
@@ -114,12 +115,12 @@ if ($documents) {
     echo html_writer::start_tag('table', ['class' => 'data-table']);
     echo html_writer::start_tag('thead');
     echo html_writer::start_tag('tr');
-    echo html_writer::tag('th', 'Qualification', ['title' => 'Qualification code and title this TAS document covers']);
-    echo html_writer::tag('th', 'Version', ['title' => 'Version number of this TAS document']);
-    echo html_writer::tag('th', 'Completeness', ['title' => 'Percentage of the 9 required TAS sections that have been completed']);
-    echo html_writer::tag('th', 'Last Modified', ['title' => 'Date this TAS document was last edited']);
-    echo html_writer::tag('th', 'Status', ['title' => 'Workflow status of this TAS: draft, review or approved']);
-    echo html_writer::tag('th', 'Actions', ['title' => 'Actions available for this TAS document']);
+    echo html_writer::tag('th', 'Qualification');
+    echo html_writer::tag('th', 'Version');
+    echo html_writer::tag('th', 'Completeness');
+    echo html_writer::tag('th', 'Last Modified');
+    echo html_writer::tag('th', 'Status');
+    echo html_writer::tag('th', 'Actions');
     echo html_writer::end_tag('tr');
     echo html_writer::end_tag('thead');
     echo html_writer::start_tag('tbody');
@@ -129,16 +130,10 @@ if ($documents) {
         if ($doc->status == 'draft') $statusclass = 'badge-warning';
         if ($doc->status == 'review') $statusclass = 'badge-info';
 
-        $statustitle = 'Approved: this TAS (training and assessment strategy) has been checked and signed off for use.';
-        if ($doc->status == 'draft') $statustitle = 'Draft: this TAS (training and assessment strategy) is still being written and is not final.';
-        if ($doc->status == 'review') $statustitle = 'Review: this TAS (training and assessment strategy) is written and is being checked before sign-off.';
-
         $completeness = $doc->completeness ?? 0;
         $completenessclass = 'badge-danger';
         if ($completeness >= 80) $completenessclass = 'badge-success';
         elseif ($completeness >= 50) $completenessclass = 'badge-warning';
-
-        $completenesstitle = 'How much of the TAS (training and assessment strategy) is filled in &ndash; the share of the 9 required sections completed. Green is nearly done, amber is part way, red means only a little is done.';
 
         echo html_writer::start_tag('tr');
         echo html_writer::tag('td', 
@@ -146,17 +141,16 @@ if ($documents) {
             html_writer::tag('small', format_string($doc->qualificationname))
         );
         echo html_writer::tag('td', 'v' . $doc->version);
-        echo html_writer::tag('td', html_writer::tag('span', $completeness . '%', ['class' => 'badge ' . $completenessclass, 'title' => $completenesstitle]));
+        echo html_writer::tag('td', html_writer::tag('span', $completeness . '%', ['class' => 'badge ' . $completenessclass]));
         echo html_writer::tag('td', userdate($doc->timemodified, '%d %b %Y'));
-        echo html_writer::tag('td', html_writer::tag('span', ucfirst($doc->status), ['class' => 'badge ' . $statusclass, 'title' => $statustitle]));
+        echo html_writer::tag('td', html_writer::tag('span', ucfirst($doc->status), ['class' => 'badge ' . $statusclass]));
         $canDelete = has_capability('moodle/site:config', context_system::instance());
         $deleteUrl = new moodle_url('/local/rtocompliance/tas.php', ['delete' => $doc->id, 'sesskey' => sesskey()]);
         echo html_writer::tag('td',
-            html_writer::link(new moodle_url('/local/rtocompliance/tas_edit.php', ['id' => $doc->id]), 'Edit', ['class' => 'btn btn-sm btn-secondary', 'title' => 'Open this TAS to edit its sections']) . ' ' .
-            html_writer::link(new moodle_url('/local/rtocompliance/tas_export.php', ['id' => $doc->id]), 'Export', ['class' => 'btn btn-sm btn-outline-primary', 'title' => 'Export this TAS document to a file']) .
+            html_writer::link(new moodle_url('/local/rtocompliance/tas_edit.php', ['id' => $doc->id]), 'Edit', ['class' => 'btn btn-sm btn-secondary']) . ' ' .
+            html_writer::link(new moodle_url('/local/rtocompliance/tas_export.php', ['id' => $doc->id]), 'Export', ['class' => 'btn btn-sm btn-outline-primary']) .
             ($canDelete ? ' ' . html_writer::link($deleteUrl, 'Delete', [
                 'class'   => 'btn btn-sm btn-danger',
-                'title'   => 'Permanently delete this TAS document',
                 'onclick' => "return confirm('Delete this TAS document? This cannot be undone.')",
             ]) : '')
         );
@@ -173,7 +167,7 @@ if ($documents) {
     echo html_writer::link(
         new moodle_url('/local/rtocompliance/tas_edit.php'),
         'Create First TAS',
-        ['class' => 'btn btn-primary', 'title' => 'Start a new Training and Assessment Strategy document']
+        ['class' => 'btn btn-primary']
     );
     echo html_writer::end_div();
 }

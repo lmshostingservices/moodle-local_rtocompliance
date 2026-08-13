@@ -15,12 +15,13 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * RTO Compliance plugin — generate_course_certs.php.
+ * local_rtocompliance file.
  *
  * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
+
 // v4.8.106 ARCHIVE-COURSE-PICKER — Course picker now groups courses by Moodle category path
 // (shows archive courses organised under their Qualification > Archive label). A live search
 // input lets admins type to narrow down hundreds of courses instantly. The filter bar on the
@@ -46,6 +47,7 @@
 //   - Course IS nationally recognised + qualification + student completed SOME unit-courses only  → Statement of Attainment
 
 require_once(__DIR__ . '/../../config.php');
+require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 require_once(__DIR__ . '/classes/cert_template.php');
@@ -56,7 +58,6 @@ require_once(__DIR__ . '/classes/usi/usi_platform_client.php');
 use local_rtocompliance\usi\usi_platform_client;
 
 admin_externalpage_setup('local_rtocompliance_generate_course_certs');
-require_login();
 $context = context_system::instance();
 require_capability('local/rtocompliance:issuecerts', $context);
 
@@ -82,7 +83,6 @@ if (!$courseid) {
         new moodle_url('/local/rtocompliance/certificates.php'),
         'certificates'
     );
-    echo local_rtocompliance_page_banner(get_string('generate_course_certs', 'local_rtocompliance'));
 
     // ── Fetch courses with two-level category hierarchy (parent > child) ──────
     // This lets archive courses appear grouped under their qualification category.
@@ -258,18 +258,18 @@ if ($action === 'generate' && confirm_sesskey()) {
         redirect($PAGE->url, 'No students selected.', null, \core\output\notification::NOTIFY_WARNING);
     }
 
-    // NO-CORE-WRITES (v5.9.411): the plugin no longer unsuspends Moodle {user}
-    // accounts as a side-effect of certificate generation. Toggling core
-    // {user}.suspended coupled account activation to cert issuance and wrote to a
-    // core table; activating an account is an admin identity decision that must be
-    // made explicitly in Moodle's user management, not implicitly by issuing a
-    // certificate. Suspended students are still shown (badged) and can still be
-    // issued certificates — the account is simply left untouched.
-    unset($activate_userids);
+    // ACTIVATE-ON-GENERATE (v5.2.72): Unsuspend accounts the admin ticked before generating.
+    if (!empty($activate_userids)) {
+        require_capability('moodle/user:update', context_system::instance());
+        foreach ($activate_userids as $uid) {
+            if ($uid > 1) {
+                $DB->set_field('user', 'suspended', 0, ['id' => $uid]);
+            }
+        }
+    }
 
     $issued           = 0;
     $skipped          = 0;
-    $usiskipped       = 0; // v5.9.383: skipped because no USI recorded (Clause 12).
     $failed           = 0;
     $voided           = 0;
     $messages         = [];
@@ -290,26 +290,6 @@ if ($action === 'generate' && confirm_sesskey()) {
             $skipped++;
             continue;
         }
-
-        // v5.9.368 COMPLETION-DATE-FIX: the POST handler runs BEFORE the display-path
-        // $allcompleters map is built, so the old $allcompleters[$userid]->timecompleted
-        // read was always undefined (silently 0). Compute the earliest completion date
-        // for this user+course inline, from the same authoritative source
-        // (course_completion_crit_compl, immune to grade re-saves) so cert.timecompleted
-        // now actually stores it.
-        $usercompletion = (int) ($DB->get_field_sql(
-            "SELECT COALESCE(
-                (SELECT MIN(ccc.timecompleted)
-                   FROM {course_completion_crit_compl} ccc
-                  WHERE ccc.userid = :u1 AND ccc.course = :c1
-                    AND ccc.timecompleted IS NOT NULL AND ccc.timecompleted > 0),
-                (SELECT MIN(cc.timecompleted)
-                   FROM {course_completions} cc
-                  WHERE cc.userid = :u2 AND cc.course = :c2
-                    AND cc.timecompleted IS NOT NULL AND cc.timecompleted > 0)
-            )",
-            ['u1' => $userid, 'c1' => $courseid, 'u2' => $userid, 'c2' => $courseid]
-        ) ?? 0);
 
         foreach ($resolution['certtypes'] as $certtype) {
             $existingparams = ['userid' => $userid, 'certtype' => $certtype, 'status' => 'issued'];
@@ -352,7 +332,7 @@ if ($action === 'generate' && confirm_sesskey()) {
                 time(),
                 'default',
                 $sendemail,
-                $usercompletion
+                (int) ($allcompleters[$userid]->timecompleted ?? 0)
             );
 
             if ($result['ok']) {
@@ -373,11 +353,6 @@ if ($action === 'generate' && confirm_sesskey()) {
                 $failed++;
                 $creditsExhausted = true;
                 break; // exit inner certtype loop; outer loop will also exit via flag below
-            } elseif (!empty($result['skipped']) || ($result['error'] ?? '') === 'NO_USI') {
-                // v5.9.383: a Clause-12 USI skip is not a failure — count it separately.
-                $usiskipped++;
-                $messages[] = fullname($user) . ' — SKIPPED: '
-                    . ($result['reason'] ?? 'no USI recorded (Clause 12 requires a USI before issuing)');
             } else {
                 $messages[] = fullname($user) . ' — FAILED: ' . $result['error'];
                 $failed++;
@@ -395,8 +370,7 @@ if ($action === 'generate' && confirm_sesskey()) {
     }
 
     $modeLabel = $forceregen ? 'Force-regenerated' : 'Issued';
-    $usinote   = $usiskipped > 0 ? " Skipped (no USI): {$usiskipped}." : '';
-    $summary   = "{$modeLabel}: {$issued} certificate(s). Voided (superseded): {$voided}. Skipped: {$skipped}.{$usinote} Failed: {$failed}.";
+    $summary   = "{$modeLabel}: {$issued} certificate(s). Voided (superseded): {$voided}. Skipped: {$skipped}. Failed: {$failed}.";
     $notiftype = $failed > 0 ? \core\output\notification::NOTIFY_WARNING : \core\output\notification::NOTIFY_SUCCESS;
 
     // Redirect back preserving group/student filter.
@@ -424,7 +398,6 @@ echo local_rtocompliance_render_nav_header(
     new moodle_url('/local/rtocompliance/certificates.php'),
     'certificates'
 );
-echo local_rtocompliance_page_banner(get_string('generate_course_certs', 'local_rtocompliance'));
 
 // ── Course summary card ───────────────────────────────────────────────────────
 $dummyresolution = local_rtocompliance_resolve_cert_types_for_course($courseid, 0);
@@ -899,7 +872,7 @@ echo <<<HTML
         <h5 class="modal-title" id="rtocCertCostModalLabel" style="font-weight:700;display:flex;align-items:center;gap:8px;">
           <span style="font-size:1.2em;">&#128179;</span> Confirm Certificate Generation
         </h5>
-        <button type="button" class="close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close" style="color:#fff;opacity:0.8;">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color:#fff;opacity:0.8;">
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
@@ -907,7 +880,7 @@ echo <<<HTML
         <div id="rtocCertCostBody" style="font-size:0.95rem;"></div>
       </div>
       <div class="modal-footer" style="border-top:1px solid #e5e7eb;gap:8px;">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal" data-bs-dismiss="modal">Cancel — go back</button>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel — go back</button>
         <button type="button" class="btn btn-primary" id="rtocCertCostConfirmBtn" onclick="rtocBulkCertSubmit()">
           Confirm &amp; Generate
         </button>
@@ -971,11 +944,11 @@ function rtocBulkCertConfirm() {
     html += '</tr>';
     html += '<tr style="border-bottom:1px solid #e5e7eb;">';
     html += '<td style="padding:8px 4px;color:#374151;">Credit cost per certificate</td>';
-    html += '<td style="padding:8px 4px;text-align:right;">5 credits <span style="color:#6b7280;">(&#8776; A$0.50)</span></td>';
+    html += '<td style="padding:8px 4px;text-align:right;">5 credits</td>';
     html += '</tr>';
     html += '<tr style="background:#fef9ec;">';
     html += '<td style="padding:10px 4px;font-weight:700;font-size:1.05rem;">Total credit cost</td>';
-    html += '<td style="padding:10px 4px;text-align:right;font-weight:800;font-size:1.1rem;color:#b45309;">' + totalCost.toLocaleString() + ' credits <span style="font-weight:600;font-size:0.85rem;color:#92400e;">(&#8776; A$' + (totalCost * 0.10).toFixed(2) + ')</span></td>';
+    html += '<td style="padding:10px 4px;text-align:right;font-weight:800;font-size:1.1rem;color:#b45309;">' + totalCost.toLocaleString() + ' credits</td>';
     html += '</tr>';
     html += '</table>';
 
@@ -1020,35 +993,11 @@ function rtocBulkCertConfirm() {
     }
 
     document.getElementById('rtocCertCostBody').innerHTML = html;
-    rtocModalToggle('rtocCertCostModal', true);
-}
-
-// v5.9.368 BS5-MODAL-FIX: the jQuery \$('#..').modal() plugin API was removed in
-// Bootstrap 5, which broke the entire bulk-generate confirm flow on BS5 themes.
-// This helper drives the modal on Bootstrap 5, Bootstrap 4, or a plain fallback.
-function rtocModalToggle(id, show) {
-    var el = document.getElementById(id);
-    if (!el) { return; }
-    if (window.bootstrap && window.bootstrap.Modal) {
-        var m = window.bootstrap.Modal.getOrCreateInstance(el);
-        if (show) { m.show(); } else { m.hide(); }
-        return;
-    }
-    if (window.jQuery && typeof window.jQuery(el).modal === 'function') {
-        window.jQuery(el).modal(show ? 'show' : 'hide');
-        return;
-    }
-    if (show) {
-        el.classList.add('show'); el.style.display = 'block';
-        el.removeAttribute('aria-hidden'); document.body.classList.add('modal-open');
-    } else {
-        el.classList.remove('show'); el.style.display = 'none';
-        el.setAttribute('aria-hidden', 'true'); document.body.classList.remove('modal-open');
-    }
+    \$('#rtocCertCostModal').modal('show');
 }
 
 function rtocBulkCertSubmit() {
-    rtocModalToggle('rtocCertCostModal', false);
+    \$('#rtocCertCostModal').modal('hide');
     document.getElementById('rtoc-gencert-btn').closest('form').submit();
 }
 </script>
@@ -1118,17 +1067,16 @@ foreach ($completers as $comp) {
 
     $profileurl    = new moodle_url('/user/profile.php', ['id' => $comp->userid]);
     $namelink      = html_writer::link($profileurl, fullname($comp));
-    // FIX-SUSPENDED-CERTS (v5.2.72): Badge suspended accounts (read-only).
-    // NO-CORE-WRITES (v5.9.411): the per-row "Activate account" checkbox was removed
-    // — the plugin no longer unsuspends Moodle accounts. Suspended students can still
-    // be issued certificates; activate the account (if wanted) in Moodle user admin.
+    // FIX-SUSPENDED-CERTS (v5.2.72): Badge suspended accounts; show per-row activate checkbox.
     $isSuspended   = !empty($comp->suspended);
     $suspendBadge  = $isSuspended
         ? ' <span style="background:#fee2e2;color:#b91c1c;padding:1px 6px;border-radius:4px;font-size:0.75rem;font-weight:600;vertical-align:middle;">SUSPENDED</span>'
         : '';
     $activateCb    = $isSuspended
-        ? html_writer::tag('span', 'Account suspended — activate in Moodle user admin if required.',
-            ['style' => 'font-size:0.75rem;color:#9ca3af;display:block;margin-top:3px;font-weight:400;'])
+        ? html_writer::tag('label',
+            html_writer::empty_tag('input', ['type' => 'checkbox', 'name' => 'activate_userids[]', 'value' => $comp->userid, 'style' => 'margin-right:3px;'])
+            . ' Activate account',
+            ['style' => 'font-size:0.78rem;color:#6b7280;display:block;margin-top:3px;cursor:pointer;font-weight:400;'])
         : '';
 
     // Highlight rows with existing certs differently if we might regenerate them

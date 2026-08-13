@@ -15,12 +15,13 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * RTO Compliance plugin — process_enrolment_task.php.
+ * local_rtocompliance file.
  *
  * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
+
 namespace local_rtocompliance\task;
 
 defined('MOODLE_INTERNAL') || die();
@@ -51,8 +52,7 @@ class process_enrolment_task extends \core\task\adhoc_task {
         foreach ($records as $record) {
             $existingdata = @json_decode($record->customdata, true);
             if ($existingdata === null || $existingdata === false) {
-                // Hardened: never instantiate arbitrary objects from stored data.
-                $existingdata = @unserialize($record->customdata, ['allowed_classes' => false]);
+                $existingdata = @unserialize($record->customdata);
             }
 
             if (is_object($existingdata)) {
@@ -82,10 +82,7 @@ class process_enrolment_task extends \core\task\adhoc_task {
     }
 
     public function execute() {
-        global $DB, $CFG;
-        // Explicitly load lib.php — Moodle's task runner does not guarantee plugin
-        // lib files are auto-included before adhoc task execution.
-        require_once($CFG->dirroot . '/local/rtocompliance/lib.php');
+        global $DB;
 
         \core_php_time_limit::raise(300); // FIX-TIMEOUT-TASK: adhoc tasks processing large enrolment batches can exceed 30s default
 
@@ -192,66 +189,49 @@ class process_enrolment_task extends \core\task\adhoc_task {
         }
 
         // --- Fallback 1: legacy course_settings (nationallyrecognised flag) ---
-        // Keep course settings for delivery mode resolution only — programcode is now
-        // derived exclusively from the Qual Builder (primary) or the Moodle category
-        // tree (below). The old nationallyrecognised flag and idnumber fallbacks are removed.
         $coursesettings = \local_rtocompliance\cache_helper::get_course_settings($courseid);
+        $nationallyrecognised = $coursesettings && $coursesettings->nationallyrecognised;
 
-        // COURSE-MAP-TABLE (v5.9.335) + CATEGORY-TREE-DETECTION (v5.9.329)
-        //
-        // When a course has no Qual Builder link, resolve the qual/unit codes.
-        // Priority: (1) course_map table — single indexed lookup, admin-verified;
-        //           (2) BFS category ancestor walk — slower, fires only on map miss.
-        //
-        // The RTO organises Moodle like this:
-        //   "ABC12345 — a Diploma qualification"   ← top-level category
-        //       └── "2023 S1"
-        //             └── "ABC12345 CL1 2023 S1"       ← course
-        //       └── "2024 S2"
-        //             └── "ABC12345 CL1 2024 S2"
-        $catDetectedProgramcode = '';
-        $catDetectedUnitcode    = '';
-        if (empty($qualunits)) {
-            // Try course map table first (fast path).
-            if ($dbman->table_exists('local_rtocompliance_course_map')) {
-                $mapRec = $DB->get_record(
-                    'local_rtocompliance_course_map',
-                    ['courseid' => $courseid],
-                    'qualcode, unitcode',
-                    IGNORE_MISSING
-                );
-                if ($mapRec && !empty($mapRec->qualcode)) {
-                    $catDetectedProgramcode = (string)$mapRec->qualcode;
-                    $catDetectedUnitcode    = (string)($mapRec->unitcode ?? '');
-                }
-            }
-            // Fallback: BFS ancestor walk (map absent or no entry for this course).
-            if ($catDetectedProgramcode === '') {
-                $catDetectedProgramcode = $this->detect_qualcode_from_category_ancestors($courseid);
-                if ($catDetectedProgramcode !== '') {
-                    $courseNameRow = $DB->get_record('course', ['id' => $courseid], 'fullname, shortname');
-                    if ($courseNameRow) {
-                        $catDetectedUnitcode =
-                            $this->extract_avetmiss_code_from_name($courseNameRow->fullname)
-                            ?: $this->extract_avetmiss_code_from_name($courseNameRow->shortname);
-                    }
-                    // ON-THE-FLY SEED (v5.9.337): BFS found a qual for this course but
-                    // it wasn't in the map. Seed it now so the next completion event
-                    // (and the next cert generation for this qual) uses the fast path.
-                    // Scoped to the one qual — typically < 100ms.
-                    if ($dbman->table_exists('local_rtocompliance_course_map')) {
-                        local_rtocompliance_seed_course_map($catDetectedProgramcode);
-                    }
+        // --- Fallback 2: category.idnumber as programcode + course.idnumber as unitcode ---
+        // Covers RTOs that have set idnumber fields correctly (best practice) but have not
+        // yet configured Qual Builder records or a nationallyrecognised course_settings entry.
+        // Both codes must match the AVETMISS pattern (2-7 uppercase letters + 3-5 digits)
+        // to be trusted — prevents garbage data from unrelated idnumber fields.
+        $catFallbackProgramcode = '';
+        $catFallbackUnitcode    = '';
+        if (empty($qualunits) && !$nationallyrecognised) {
+            $courserow = $DB->get_record_sql(
+                "SELECT c.idnumber AS courseidnumber, cat.idnumber AS catidnumber
+                   FROM {course} c
+                   JOIN {course_categories} cat ON cat.id = c.category
+                  WHERE c.id = :courseid",
+                ['courseid' => $courseid]
+            );
+            if ($courserow) {
+                $_cfProg = strtoupper(trim((string)($courserow->catidnumber    ?? '')));
+                $_cfUnit = strtoupper(trim((string)($courserow->courseidnumber ?? '')));
+                // End-anchor ($) is critical: without it, slash-format idnumbers like
+                // "LIX0036125/LIX0036125" falsely match (regex stops after 5 digits).
+                // With $ the full string must be a clean AVETMISS code — nothing extra.
+                $_cfRx   = '/^[A-Z]{2,7}[0-9]{3,5}[A-Z]?$/';
+                if (preg_match($_cfRx, $_cfProg) && preg_match($_cfRx, $_cfUnit)) {
+                    $catFallbackProgramcode = $_cfProg;
+                    $catFallbackUnitcode    = $_cfUnit;
                 }
             }
         }
 
-        // No QB link AND category tree found no qualification → genuinely unlinked course.
-        if (empty($qualunits) && $catDetectedProgramcode === '') {
+        // If no Qual Builder link, no nationally-recognised flag, and no valid idnumber
+        // fallback, this course is genuinely unlinked from AVETMISS — skip it entirely.
+        // ENROLMENT-SKIP-LOG (v5.9.304): previously a completely silent return with no
+        // log entry. Admins had no way to know why enrolment events fired but produced
+        // no RTO compliance record. Added debugging log so it shows in cron output and
+        // developer debug logs when the site has debug enabled.
+        if (empty($qualunits) && !$nationallyrecognised && $catFallbackProgramcode === '') {
             debugging(
                 'rtocompliance process_enrolment_task: skipping courseid=' . $courseid
-                . ' userid=' . $userid . ' — not linked to any Qual Builder unit and no '
-                . 'AVETMISS qualification code found in Moodle category ancestors.',
+                . ' userid=' . $userid . ' — not linked to any Qual Builder unit, '
+                . 'not flagged nationallyrecognised, and no valid AVETMISS idnumber fallback.',
                 DEBUG_DEVELOPER
             );
             return;
@@ -391,15 +371,21 @@ class process_enrolment_task extends \core\task\adhoc_task {
             // BUG-REENROL-WITHDRAWN FIX (v4.9.167): exclude withdrawn rows so
             // re-enrolment after unenrolment creates a fresh active record.
 
-            // CATEGORY-TREE-DETECTION (v5.9.329): programcode from ancestor category name,
-            // unitcode from course name — both resolved by the tree walk above.
-            $programcode  = $catDetectedProgramcode;
-            $programname  = '';
-            $unitcode     = $catDetectedUnitcode;
-            $unitname     = '';
+            if ($nationallyrecognised) {
+                $programcode  = $coursesettings->qualificationcode ?? '';
+                $programname  = $coursesettings->qualificationname ?? '';
+                $unitcode     = '';
+                $unitname     = '';
+            } else {
+                // Category idnumber fallback — codes already validated in the guard above.
+                $programcode  = $catFallbackProgramcode;
+                $programname  = '';
+                $unitcode     = $catFallbackUnitcode;
+                $unitname     = '';
+            }
 
-            $deliverymode = ($coursesettings && !empty($coursesettings->deliverymode))
-                         ? $coursesettings->deliverymode : '10';
+            $deliverymode        = ($coursesettings && !empty($coursesettings->deliverymode))
+                                   ? $coursesettings->deliverymode : '10';
             $commencingprogramid = $this->resolve_commencing_id($student->id, $programcode);
 
             // Duplicate check includes unitcode so the same course can legitimately
@@ -444,58 +430,6 @@ class process_enrolment_task extends \core\task\adhoc_task {
                 }
             }
         }
-    }
-
-    /**
-     * CATEGORY-TREE-DETECTION (v5.9.329)
-     *
-     * Walk the full Moodle category ancestor chain for a course and return the first
-     * AVETMISS qualification code found at the START of any ancestor category's NAME.
-     *
-     * Handles structures like:
-     *   "ABC12345 — a Diploma qualification"  ← qual code at start of name
-     *       └── "2023 S1"                         ← semester sub-category (skipped)
-     *             └── "ABC12345 CL1 2023 S1"      ← the course
-     *
-     * Self-contained (no lib.php dependency) so it is safe in scheduled/adhoc task context.
-     */
-    private function detect_qualcode_from_category_ancestors(int $courseid): string {
-        global $DB;
-        $course = $DB->get_record('course', ['id' => $courseid], 'category');
-        if (!$course) {
-            return '';
-        }
-        $catid   = (int)$course->category;
-        $visited = [];
-        // AVETMISS qual code at start of name, followed by space/dash/em-dash/colon or EOL.
-        $rx = '/^([A-Z]{2,8}[0-9]{3,6}[A-Z]{0,2})(?:\s|$|-|—|:)/u';
-        while ($catid > 0 && !isset($visited[$catid])) {
-            $visited[$catid] = true;
-            $cat = $DB->get_record('course_categories', ['id' => $catid], 'id, name, parent');
-            if (!$cat) {
-                break;
-            }
-            if (preg_match($rx, strtoupper(trim((string)$cat->name)), $m)) {
-                return $m[1];
-            }
-            $catid = (int)$cat->parent;
-        }
-        return '';
-    }
-
-    /**
-     * CATEGORY-TREE-DETECTION (v5.9.329)
-     *
-     * Extract an AVETMISS unit or qualification code from the START of a string
-     * (course fullname or shortname). Returns '' if not found.
-     * Self-contained duplicate of local_rtocompliance_extract_unit_code_from_name()
-     * so it is safe in scheduled/adhoc task context without requiring lib.php.
-     */
-    private function extract_avetmiss_code_from_name(string $name): string {
-        if (preg_match('/^([A-Z]{2,8}[0-9]{3,6}[A-Z]{0,2})\b/i', trim($name), $m)) {
-            return strtoupper($m[1]);
-        }
-        return '';
     }
 
     /**
@@ -685,61 +619,21 @@ class process_enrolment_task extends \core\task\adhoc_task {
         // sets so qualification-completion detection fires for every QB that references
         // this course in either table.
         if ($dbman->table_exists('local_rtocompliance_qualunit_courses')) {
-            // v5.9.374: the v5.9.297 is_archive=0 guard is REMOVED here. Students
-            // legitimately complete units through archived / semester-copy intake
-            // courses, and those completions must count toward the qualification.
-            // So completing ANY variant course (archived or not) now triggers the
-            // qualification-completion / autocert check for its qualification. The
-            // check itself still reads the results register, so it only issues when
-            // the whole qualification is genuinely complete.
+            // TASK-VARIANT-ARCHIVE-FIX (v5.9.297): same is_archive=0 guard applied
+            // to the autocert qualbuilderid lookup so that completing a course that is
+            // archived in qualunit_courses does not trigger qualification-completion
+            // checks for stale/historical qualifier records.
             $variantQbids = $DB->get_fieldset_sql(
                 "SELECT DISTINCT qu.qualbuilderid
                    FROM {local_rtocompliance_qualunit_courses} quc
                    JOIN {local_rtocompliance_qualunits} qu ON qu.id = quc.qualunitid
-                  WHERE quc.courseid = :courseid",
+                  WHERE quc.courseid = :courseid
+                    AND (quc.is_archive IS NULL OR quc.is_archive = 0)",
                 ['courseid' => $courseid]
             );
             if ($variantQbids) {
                 $qualbuilderids = array_values(array_unique(
                     array_merge($qualbuilderids, $variantQbids)
-                ));
-            }
-        }
-
-        // COURSE-MAP-TABLE (v5.9.335): replaced the category-ancestor regex walk with a
-        // direct lookup in local_rtocompliance_course_map (the admin-managed source of
-        // truth). Completing "ABC12345 CL1 2023 S1" now fires the ABC12345 autocert
-        // check via a single indexed query — no ancestor chain walking required.
-        //
-        // Fallback: if the map table doesn't exist (pre-upgrade) or has no row for
-        // this course (not yet seeded), detect_qualcode_from_category_ancestors() is
-        // used so nothing breaks during the upgrade transition.
-        $mapQualcode = '';
-        if ($dbman->table_exists('local_rtocompliance_course_map')) {
-            $mapRec = $DB->get_record(
-                'local_rtocompliance_course_map',
-                ['courseid' => $courseid],
-                'qualcode',
-                IGNORE_MISSING
-            );
-            if ($mapRec && !empty($mapRec->qualcode)) {
-                $mapQualcode = (string)$mapRec->qualcode;
-            }
-        }
-        // Fallback to ancestor walk if map had no entry for this course.
-        $catQualcode = $mapQualcode !== '' ? $mapQualcode
-            : $this->detect_qualcode_from_category_ancestors($courseid);
-
-        if ($catQualcode !== '') {
-            $catQbids = $DB->get_fieldset_sql(
-                "SELECT id FROM {local_rtocompliance_qualbuilder}
-                  WHERE qualificationcode = :qcode
-                    AND status != 'superseded'",
-                ['qcode' => $catQualcode]
-            );
-            if ($catQbids) {
-                $qualbuilderids = array_values(array_unique(
-                    array_merge($qualbuilderids, array_map('intval', $catQbids))
                 ));
             }
         }
@@ -830,21 +724,7 @@ class process_enrolment_task extends \core\task\adhoc_task {
                 $autocert->certsissued    = 0;
                 $autocert->emailsent      = 0;
                 $autocert->timecreated    = time();
-                // TASK-47: Wrap insert in try/catch to silently absorb duplicate-key
-                // violations that arise when two concurrent completion events both pass
-                // the application-level guard above before either has committed its row.
-                // The UNIQUE index on (studentid, qualbuilderid) ensures at most one
-                // pending entry exists; the losing concurrent insert simply no-ops.
-                try {
-                    $DB->insert_record('local_rtocompliance_autocerts', $autocert);
-                } catch (\dml_exception $e) {
-                    if (strpos($e->getMessage(), 'duplicate') === false &&
-                        strpos($e->getMessage(), 'Duplicate') === false) {
-                        throw $e;
-                    }
-                    // Duplicate key — another concurrent insert won the race.
-                    // The queue entry already exists; nothing more to do.
-                }
+                $DB->insert_record('local_rtocompliance_autocerts', $autocert);
             }
 
             // Bug 1+2/15: Mark programoutcome='01' (AQF qualification completed) and

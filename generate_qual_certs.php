@@ -15,12 +15,13 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * RTO Compliance plugin — generate_qual_certs.php.
+ * local_rtocompliance file.
  *
  * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
+
 // GEN-BY-QUAL (v5.2.72) — Suspended students now appear in the completion list with a
 // SUSPENDED badge. Certificate generation works regardless of account status — completing
 // a qualification is a historical fact independent of current account state. Admins can
@@ -39,14 +40,13 @@
 // and always issues Testamur + Record of Results — never SoA or Completion Cert.
 
 require_once(__DIR__ . '/../../config.php');
+require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 require_once(__DIR__ . '/classes/cert_template.php');
-require_once(__DIR__ . '/classes/cert_template_renderer.php');
 require_once(__DIR__ . '/classes/usi/usi_platform_client.php');
 
 admin_externalpage_setup('local_rtocompliance_generate_qual_certs');
-require_login();
 $context = context_system::instance();
 require_capability('local/rtocompliance:issuecerts', $context);
 
@@ -70,7 +70,6 @@ if (!$qualid) {
         new moodle_url('/local/rtocompliance/certificates.php'),
         'certificates'
     );
-    echo local_rtocompliance_page_banner(get_string('generate_qual_certs', 'local_rtocompliance'));
 
     $quals = $DB->get_records_sql(
         "SELECT id, qualificationcode, qualificationname
@@ -91,7 +90,7 @@ if (!$qualid) {
             html_writer::link(
                 new moodle_url('/local/rtocompliance/qualbuilder.php'),
                 'Open Qualification Builder →',
-                ['class' => 'btn btn-primary mt-2', 'title' => 'Build qualifications and link their unit-of-competency courses']
+                ['class' => 'btn btn-primary mt-2']
             ),
             'no-deadlines'
         );
@@ -103,7 +102,7 @@ if (!$qualid) {
         ]);
         $options = [];
         foreach ($quals as $q) {
-            $options[$q->id] = $q->qualificationcode . ' ' . format_string($q->qualificationname);
+            $options[$q->id] = $q->qualificationcode . ' — ' . format_string($q->qualificationname);
         }
         echo '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">';
         echo html_writer::select($options, 'qualid', '', ['0' => 'Select a qualification...'], ['class' => 'custom-select', 'id' => 'gq-qual-picker', 'style' => 'min-width:320px;flex:1;']);
@@ -116,7 +115,7 @@ if (!$qualid) {
     $courseurl = (new moodle_url('/local/rtocompliance/generate_course_certs.php'))->out(false);
     echo '<div style="margin-top:24px;padding:16px 20px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">';
     echo '<div style="color:#374151;"><strong>Generating for a single unit of competency?</strong><br><span style="font-size:0.88rem;color:#6b7280;">Issue certificates for all students who completed one specific Moodle course.</span></div>';
-    echo '<a href="' . s($courseurl) . '" class="btn btn-outline-primary" title="Issue certificates for all students who completed one specific Moodle course">Generate by Unit &rarr;</a>';
+    echo '<a href="' . s($courseurl) . '" class="btn btn-outline-primary">Generate by Unit &rarr;</a>';
     echo '</div>';
 
     echo html_writer::end_div();
@@ -139,9 +138,9 @@ $PAGE->add_body_class('path-local-rtocompliance');
 // BUG-VARIANT-UNION-FIX (v5.9.293): also collect variant courses from qualunit_courses
 // so that SOURCE 1's completion timestamp lookup (course_completion_crit_compl) and the
 // {course_completions} fallback capture students who completed via a variant course.
-// NOTE: SOURCE 1's HAVING check uses $effectiveLinkedUnitCount (primary + variant + cat-tree
-// unit count) so that pure category-tree QBs (where $numlinkedcourses = 0) are not silently
-// skipped.  SOURCE 2 (enrolment-based) is always the authoritative completers fallback.
+// NOTE: SOURCE 1's HAVING check uses $numlinkedcourses (primary count only) because the
+// HAVING requires one completion per unit, not one per delivery variant.  SOURCE 2
+// (enrolment-based) is the authoritative completers list for variant-heavy qualifications.
 $dbman_gcq = $DB->get_manager();
 $linkedcourseids = $DB->get_fieldset_sql(
     "SELECT DISTINCT courseid
@@ -175,105 +174,6 @@ if ($dbman_gcq->table_exists('local_rtocompliance_qualunit_courses')) {
     }
 }
 
-// COURSE-MAP-TABLE (v5.9.335): replaced the runtime category-tree regex walk with a
-// single JOIN against local_rtocompliance_course_map (the admin-managed source of truth).
-// $catTreePairs still accumulates (qualunitid, courseid) tuples for SOURCE 1; the data
-// now comes from the table rather than regex-parsing category/course names on every page
-// load.
-//
-// Fallback: if the map table doesn't exist (pre-upgrade) OR has no rows for this qual
-// (not yet seeded), the legacy regex walk fires so nothing breaks during transition.
-$catTreePairs    = [];   // [['quid' => int, 'cid' => int], …]
-$gcq_mapExists   = $dbman_gcq->table_exists('local_rtocompliance_course_map');
-$gcq_qualcode    = strtoupper(trim((string)$qual->qualificationcode));
-
-// SYNC-BEFORE-CERT (v5.9.337): Run a targeted reseed for this specific qualification
-// before the map lookup so that any semester-copy courses added since the last nightly
-// sync are captured before this certificate is generated. Passing $gcq_qualcode scopes
-// the BFS walk to one qual's category tree — typically < 100ms even on large installs.
-// Existing confirmed/manual entries are never overwritten (INSERT-or-skip semantics).
-if ($gcq_mapExists && !empty($gcq_qualcode)) {
-    local_rtocompliance_seed_course_map($gcq_qualcode);
-}
-
-$gcq_mapHasRows  = $gcq_mapExists && !empty($gcq_qualcode)
-    && $DB->record_exists('local_rtocompliance_course_map', ['qualcode' => $gcq_qualcode]);
-
-if ($gcq_mapHasRows) {
-    // New path: one JOIN query, sub-millisecond on indexed table.
-    $mapRows = $DB->get_records_sql(
-        "SELECT cm.courseid, qu.id AS qualunitid
-           FROM {local_rtocompliance_course_map} cm
-           JOIN {local_rtocompliance_qualunits} qu
-             ON qu.qualbuilderid = :qbid
-            AND qu.unitcode      = cm.unitcode
-            AND qu.selected      = 1
-            AND qu.status        = 'active'
-          WHERE cm.qualcode = :qcode",
-        ['qbid' => $qualid, 'qcode' => $gcq_qualcode]
-    );
-    foreach ($mapRows as $mr) {
-        $cid = (int)$mr->courseid;
-        if (!in_array($cid, $alllinkedcourseids)) {
-            $alllinkedcourseids[] = $cid;
-        }
-        $catTreePairs[] = ['quid' => (int)$mr->qualunitid, 'cid' => $cid];
-    }
-} elseif (!empty($gcq_qualcode)) {
-    // Legacy fallback: runtime regex walk (used when map not yet seeded).
-    $gcq_rootcatid  = local_rtocompliance_get_qual_root_category_id($gcq_qualcode);
-    $gcq_subtreeids = $gcq_rootcatid > 0
-        ? local_rtocompliance_get_category_subtree_ids($gcq_rootcatid)
-        : [];
-    if ($gcq_subtreeids) {
-        $gcq_units = $DB->get_records_sql(
-            "SELECT id AS quid, unitcode FROM {local_rtocompliance_qualunits}
-              WHERE qualbuilderid = :qbid AND selected = 1 AND status = 'active'
-                AND unitcode IS NOT NULL AND unitcode != ''",
-            ['qbid' => $qualid]
-        );
-        foreach ($gcq_units as $gu) {
-            $catcourses = local_rtocompliance_get_category_tree_courseids_for_unit(
-                $gcq_rootcatid, $gu->unitcode, $gcq_subtreeids
-            );
-            foreach ($catcourses as $cid) {
-                if (!in_array($cid, $alllinkedcourseids)) {
-                    $alllinkedcourseids[] = (int)$cid;
-                }
-                $catTreePairs[] = ['quid' => (int)$gu->quid, 'cid' => (int)$cid];
-            }
-        }
-    }
-}
-
-// SOURCE-1-EFFECTIVE-UNIT-COUNT: units with at least one linked course (primary,
-// variant, OR course-map). $numlinkedcourses only counts QB primary links; for
-// map-only QBs it would be 0, silently skipping SOURCE 1.
-if ($dbman_gcq->table_exists('local_rtocompliance_qualunit_courses')) {
-    $effectiveLinkedUnitQids = $DB->get_fieldset_sql(
-        "SELECT DISTINCT qu.id
-           FROM {local_rtocompliance_qualunits} qu
-           LEFT JOIN {local_rtocompliance_qualunit_courses} quc ON quc.qualunitid = qu.id
-          WHERE qu.qualbuilderid = :qbid AND qu.selected = 1 AND qu.status = 'active'
-            AND (qu.courseid IS NOT NULL OR quc.courseid IS NOT NULL)",
-        ['qbid' => $qualid]
-    );
-} else {
-    $effectiveLinkedUnitQids = $DB->get_fieldset_sql(
-        "SELECT DISTINCT id FROM {local_rtocompliance_qualunits}
-          WHERE qualbuilderid = :qbid AND selected = 1 AND status = 'active'
-            AND courseid IS NOT NULL",
-        ['qbid' => $qualid]
-    );
-}
-if (!empty($catTreePairs)) {
-    $catTreeQids             = array_values(array_unique(array_column($catTreePairs, 'quid')));
-    $effectiveLinkedUnitQids = array_values(array_unique(
-        array_merge($effectiveLinkedUnitQids, array_map('intval', $catTreeQids))
-    ));
-}
-$effectiveLinkedUnitCount = count($effectiveLinkedUnitQids);
-
 // All units for the certificate Record of Results.
 $allunits = local_rtocompliance_get_qualbuilder_unit_list($qualid);
 
@@ -295,22 +195,22 @@ if ($action === 'generate' && confirm_sesskey()) {
         redirect($PAGE->url, 'No students selected.', null, \core\output\notification::NOTIFY_WARNING);
     }
 
-    // NO-CORE-WRITES (v5.9.411): removed the auto-unsuspend of Moodle {user}
-    // accounts on certificate generation. Activating an account is an explicit
-    // admin decision in Moodle user management, not a side-effect of issuing a
-    // certificate — the plugin no longer writes to the core {user} table.
-    unset($activate_userids);
+    // ACTIVATE-ON-GENERATE (v5.2.72): Unsuspend accounts the admin ticked before generating.
+    if (!empty($activate_userids)) {
+        require_capability('moodle/user:update', context_system::instance());
+        foreach ($activate_userids as $uid) {
+            if ($uid > 1) {
+                $DB->set_field('user', 'suspended', 0, ['id' => $uid]);
+            }
+        }
+    }
 
-    $issued              = 0;
-    $skipped             = 0;
-    $failed              = 0;
-    $voided              = 0;
-    $messages            = [];
-    $creditsExhausted    = false; // CERT-CREDITS-BREAK-FIX (v5.9.297)
-    // ROR-PAGE-ALERT (v5.9.350): count students whose Record of Results
-    // required continuation pages so we can surface a notice at the end.
-    $multiPageRorCount   = 0;
-    $multiPageRorNames   = [];
+    $issued           = 0;
+    $skipped          = 0;
+    $failed           = 0;
+    $voided           = 0;
+    $messages         = [];
+    $creditsExhausted = false; // CERT-CREDITS-BREAK-FIX (v5.9.297)
 
     foreach ($userids as $userid) {
         if ($creditsExhausted) {
@@ -430,29 +330,6 @@ if ($action === 'generate' && confirm_sesskey()) {
             if ($result['ok']) {
                 $issued++;
                 $messages[] = fullname($user) . ' — ' . $certtype . ' issued (' . $result['certnumber'] . ')';
-                // ROR-PAGE-ALERT (v5.9.350): after the 'record' cert is inserted,
-                // render it in-memory so cert_template_renderer::$last_ror_page_count
-                // is populated from this student's actual unit list.  programmatic_issue_cert()
-                // only writes a DB row — no PDF is produced until download time — so we
-                // must trigger an explicit render here to count continuation pages reliably.
-                // Memory and time limits are already raised by the block above (MEMORY_HUGE /
-                // 300 s), so the extra render is safe.  The returned bytes are discarded.
-                if ($certtype === 'record' && !empty($result['certid'])) {
-                    try {
-                        $rorCert = $DB->get_record('local_rtocompliance_certs', ['id' => $result['certid']]);
-                        if ($rorCert) {
-                            local_rtocompliance_render_certificate_pdf_string($rorCert, $user);
-                            $rorPages = \local_rtocompliance\cert_template_renderer::$last_ror_page_count;
-                            if ($rorPages > 1) {
-                                $multiPageRorCount++;
-                                $multiPageRorNames[] = fullname($user) . ' (' . $rorPages . ' pages)';
-                            }
-                        }
-                    } catch (\Throwable $rorEx) {
-                        // Non-fatal: page-count probe failed, skip the alert for this student.
-                        debugging('ROR-PAGE-ALERT render probe failed for cert ' . $result['certid'] . ': ' . $rorEx->getMessage(), DEBUG_DEVELOPER);
-                    }
-                }
                 if ($forceregen && $existingcert && !empty($result['certid'])) {
                     $DB->update_record('local_rtocompliance_certs', (object)[
                         'id'             => $result['certid'],
@@ -507,24 +384,6 @@ if ($action === 'generate' && confirm_sesskey()) {
         }
     }
     $notiftype = $failed > 0 ? \core\output\notification::NOTIFY_WARNING : \core\output\notification::NOTIFY_SUCCESS;
-
-    // ROR-PAGE-ALERT (v5.9.350): when at least one student's Record of Results
-    // required continuation pages, append a plain-English notice so admins can
-    // audit why a cert is multi-page and tune the ror_table field height or font
-    // size on the template.  The PDFs themselves are fully complete — this is
-    // informational only.  Single-page batches are completely unchanged.
-    if ($multiPageRorCount > 0) {
-        $rorNames = implode(', ', array_slice($multiPageRorNames, 0, 5));
-        if (count($multiPageRorNames) > 5) {
-            $rorNames .= ' … and ' . (count($multiPageRorNames) - 5) . ' more';
-        }
-        $summary .= ' ⚠ ' . $multiPageRorCount . ' student' . ($multiPageRorCount === 1 ? '' : 's') .
-            ' had Record of Results that required continuation pages: ' . $rorNames .
-            '. Consider increasing the ror_table field height or reducing the font size on the cert template.';
-        // Upgrade to WARNING so the notice stands out even when no certs failed.
-        $notiftype = \core\output\notification::NOTIFY_WARNING;
-    }
-
     redirect($PAGE->url, $summary, null, $notiftype);
 }
 
@@ -536,16 +395,8 @@ echo local_rtocompliance_render_nav_header(
     new moodle_url('/local/rtocompliance/certificates.php'),
     'certificates'
 );
-echo local_rtocompliance_page_banner('Generate Certificates by Qualification');
 
 echo html_writer::start_div('certificates-container');
-
-// HUB-LINK (v5.9.339): crosslink to Qual Cert Hub for the unified view.
-$hubDetailUrl = (new moodle_url('/local/rtocompliance/qual_cert_hub.php', ['qualid' => $qualid]))->out(false);
-echo '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">';
-echo '<span style="font-size:0.87rem;color:#374151;">🎓 <strong>New:</strong> View completion stats, issue all pending, and browse the autocert queue in the <strong>Qualification Certificate Hub</strong>.</span>';
-echo '<a href="' . s($hubDetailUrl) . '" class="btn btn-outline-success btn-sm" title="View completion stats, issue all pending, and browse the autocert queue">Open Hub for this Qual &rarr;</a>';
-echo '</div>';
 
 // ── Qualification summary banner ──────────────────────────────────────────────
 echo html_writer::start_div('', ['style' => 'background:#f0f7ff;border:1px solid #bfdbfe;border-radius:8px;padding:16px 20px;margin-bottom:20px;']);
@@ -563,17 +414,17 @@ echo html_writer::tag('p',
 echo html_writer::start_div('', ['style' => 'display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:8px;']);
 echo html_writer::tag('span', 'Certificate Types: Testamur + Record of Results',
     ['style' => 'background:#dbeafe;color:#1d4ed8;padding:4px 10px;border-radius:6px;font-size:0.85rem;font-weight:600;']);
-echo html_writer::tag('span', $effectiveLinkedUnitCount . ' linked unit-course(s)',
+echo html_writer::tag('span', $numlinkedcourses . ' linked unit-course(s)',
     ['style' => 'background:#dcfce7;color:#16a34a;padding:4px 10px;border-radius:6px;font-size:0.85rem;font-weight:600;']);
 echo html_writer::tag('span', count($allunits) . ' unit(s) of competency',
     ['style' => 'background:#fef9c3;color:#92400e;padding:4px 10px;border-radius:6px;font-size:0.85rem;font-weight:600;']);
 echo html_writer::end_div();
 
-if ($effectiveLinkedUnitCount === 0) {
+if ($numlinkedcourses === 0) {
     echo html_writer::tag('p',
-        'No Moodle courses are linked to any units in this qualification (via direct link, variant, or category tree). '
+        'No Moodle courses are linked to any units in this qualification. '
         . 'Open the Qualification Builder, select each unit, and link it to its Moodle course. '
-        . 'Completion is also detected automatically from the qualification\'s Moodle category tree.',
+        . 'Completion is determined by tracking which students have finished all linked courses.',
         ['style' => 'color:#dc2626;font-size:0.87rem;margin:0;']
     );
 }
@@ -596,13 +447,13 @@ $numunits = (int)$DB->count_records_sql(
 // Exit early only when BOTH methods have nothing to check.
 // If there are unit codes (even with no Moodle course links) we can still use
 // the plugin's outcome records to find completers (SOURCE 2).
-if ($effectiveLinkedUnitCount === 0 && $numunits === 0) {
+if ($numlinkedcourses === 0 && $numunits === 0) {
     echo html_writer::div(
         html_writer::tag('p', 'Cannot determine qualification completions: no Moodle courses are linked and no unit codes are set for this qualification\'s units.') .
         html_writer::link(
             new moodle_url('/local/rtocompliance/qualbuilder.php'),
             'Open Qualification Builder →',
-            ['class' => 'btn btn-primary mt-2', 'title' => 'Build qualifications and link their unit-of-competency courses']
+            ['class' => 'btn btn-primary mt-2']
         ),
         'no-deadlines'
     );
@@ -632,71 +483,25 @@ $allcompleters = [];
 // FIX-FULLNAME-DEBUG (v5.2.33): include phonetic/middle/alternate name fields so
 // fullname($comp) in the table below doesn't trigger Moodle debug warnings.
 // These fields must also appear in GROUP BY (MySQL ONLY_FULL_GROUP_BY compliance).
-//
-// SOURCE1-VARIANT-FIX (v5.9.331): Changed from counting primary-course completions to
-// counting per-UNIT completions. Previously used $linkedcourseids (primary courses only)
-// with HAVING COUNT(DISTINCT cc.course) = numlinkedcourses — a student who completed all
-// units via semester-variant courses (never primary) would never satisfy the HAVING.
-//
-// New approach: a derived subquery maps each courseid (primary OR variant) back to its
-// qualunit id, so HAVING COUNT(DISTINCT unitcourses.quid) counts ONE unit per student
-// regardless of which delivery course was used. Uses $alllinkedcourseids in the IN
-// clause so variant courses are visible to the WHERE filter.
-if ($effectiveLinkedUnitCount > 0) {
-    // If no primary-linked courses exist but category-tree courses were found, $alllinkedcourseids
-    // may only contain cat-tree courseids. get_in_or_equal handles a non-empty array fine.
-    if (empty($alllinkedcourseids)) {
-        $alllinkedcourseids = [0]; // safe sentinel — no real course has id=0
-    }
-    list($insql, $inparams) = $DB->get_in_or_equal($alllinkedcourseids, SQL_PARAMS_NAMED, 'cid');
-
-    // Build the unit↔course mapping subquery. UNION in variants only when the table exists.
-    $unitcoursesSubq = "SELECT qu.id AS quid, qu.courseid AS cid
-                          FROM {local_rtocompliance_qualunits} qu
-                         WHERE qu.qualbuilderid = :src1_qbid1
-                           AND qu.selected = 1 AND qu.status = 'active'
-                           AND qu.courseid IS NOT NULL";
-    $src1extra = ['src1_qbid1' => $qualid];
-    if ($dbman_gcq->table_exists('local_rtocompliance_qualunit_courses')) {
-        $unitcoursesSubq .= "
-             UNION
-             SELECT qu.id AS quid, quc.courseid AS cid
-               FROM {local_rtocompliance_qualunits} qu
-               JOIN {local_rtocompliance_qualunit_courses} quc ON quc.qualunitid = qu.id
-              WHERE qu.qualbuilderid = :src1_qbid2
-                AND qu.selected = 1 AND qu.status = 'active'
-                AND quc.courseid IS NOT NULL";
-        $src1extra['src1_qbid2'] = $qualid;
-    }
-    // CATEGORY-TREE-DETECTION (v5.9.332): append category-tree (quid, cid) pairs as
-    // additional UNION SELECT literals so SOURCE 1 counts semester-copy completions
-    // per unit. Values are always cast to int — no SQL injection risk.
-    foreach ($catTreePairs as $pairIdx => $pair) {
-        $qk = 'ctq' . $pairIdx;
-        $ck = 'ctc' . $pairIdx;
-        $unitcoursesSubq       .= "\n             UNION SELECT :$qk AS quid, :$ck AS cid";
-        $src1extra[$qk]         = $pair['quid'];
-        $src1extra[$ck]         = $pair['cid'];
-    }
-
+if ($numlinkedcourses > 0) {
+    list($insql, $inparams) = $DB->get_in_or_equal($linkedcourseids, SQL_PARAMS_NAMED, 'cid');
     // FIX-SUSPENDED-CERTS (v5.2.72): Removed u.suspended = 0. u.suspended added to SELECT/GROUP BY.
     $allcompleters = $DB->get_records_sql(
         "SELECT u.id, u.firstname, u.lastname, u.email,
                 u.firstnamephonetic, u.lastnamephonetic, u.middlename, u.alternatename,
                 u.suspended,
                 MIN(cc.timecompleted) AS timecompleted
-           FROM {user} u
-           JOIN {course_completions} cc ON cc.userid = u.id
-           JOIN ($unitcoursesSubq) unitcourses ON unitcourses.cid = cc.course
-          WHERE cc.course {$insql}
-            AND cc.timecompleted IS NOT NULL
-            AND cc.timecompleted > 0
-            AND u.deleted = 0
-          GROUP BY u.id, u.firstname, u.lastname, u.email,
-                   u.firstnamephonetic, u.lastnamephonetic, u.middlename, u.alternatename, u.suspended
-         HAVING COUNT(DISTINCT unitcourses.quid) >= :numcourses
-          ORDER BY u.lastname, u.firstname",
-        array_merge($inparams, $src1extra, ['numcourses' => $effectiveLinkedUnitCount])
+         FROM {user} u
+         JOIN {course_completions} cc ON cc.userid = u.id
+         WHERE cc.course {$insql}
+           AND cc.timecompleted IS NOT NULL
+           AND cc.timecompleted > 0
+           AND u.deleted = 0
+         GROUP BY u.id, u.firstname, u.lastname, u.email,
+                  u.firstnamephonetic, u.lastnamephonetic, u.middlename, u.alternatename, u.suspended
+         HAVING COUNT(DISTINCT cc.course) = :numcourses
+         ORDER BY u.lastname, u.firstname",
+        array_merge($inparams, ['numcourses' => $numlinkedcourses])
     );
 }
 
@@ -747,8 +552,8 @@ if ($numunits > 0
 }
 
 if (empty($allcompleters)) {
-    $hint = $effectiveLinkedUnitCount > 0
-        ? 'A student appears here once Moodle marks them complete in all linked unit-courses (' . $effectiveLinkedUnitCount . ' unit(s) required, including category-tree courses), OR once the plugin records a competent outcome (C/RPL/CT) for every unit.'
+    $hint = $numlinkedcourses > 0
+        ? 'A student appears here once Moodle marks them complete in every linked unit-course (' . $numlinkedcourses . ' course(s) required), OR once the plugin records a competent outcome (C/RPL/CT) for every unit.'
         : 'A student appears here once the plugin records a competent outcome (Competent / RPL / Credit Transfer) for every selected unit of the qualification.';
     echo html_writer::div(
         html_writer::tag('p', 'No students have completed all units of this qualification yet.') .
@@ -758,6 +563,25 @@ if (empty($allcompleters)) {
     echo html_writer::end_div();
     echo $OUTPUT->footer();
     exit;
+}
+
+// Task #132: Multi-page RoR notice — shown when the qualification's unit count
+// exceeds a single page's capacity (~25 units). Helps admins know in advance that
+// issued certificates will span more than one page, and links to the cert audit view.
+// The threshold is conservative; actual overflow depends on template field height.
+define('ROR_MULTIPAGE_UNIT_THRESHOLD', 25);
+$isMultiPage = count($allunits) >= ROR_MULTIPAGE_UNIT_THRESHOLD;
+if ($isMultiPage) {
+    $certHubUrl = (new moodle_url('/local/rtocompliance/certificates.php', [
+        'qualcode' => urlencode($qual->qualificationcode),
+    ]))->out(false);
+    echo '<div class="alert alert-info mt-2 mb-3" style="border-left:4px solid #2563eb;">'
+        . '<strong>Multi-page Record of Results:</strong> This qualification has '
+        . count($allunits) . ' units of competency — student certificates will span '
+        . ceil(count($allunits) / ROR_MULTIPAGE_UNIT_THRESHOLD) . ' or more pages. '
+        . 'The cert Preview button shows all pages. '
+        . '<a href="' . s($certHubUrl) . '" class="alert-link">View issued certificates →</a>'
+        . '</div>';
 }
 
 // ── Generation form ───────────────────────────────────────────────────────────
@@ -772,7 +596,7 @@ echo html_writer::start_tag('form', ['method' => 'post', 'action' => $formurl->o
 // Controls bar
 echo html_writer::start_div('', ['style' => 'display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin-bottom:16px;padding:12px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;']);
 echo html_writer::tag('span',
-    count($allcompleters) . ' student(s) completed all ' . $effectiveLinkedUnitCount . ' unit-course(s)',
+    count($allcompleters) . ' student(s) completed all ' . $numlinkedcourses . ' unit-course(s)',
     ['style' => 'font-weight:600;color:#1e3a5f;flex:1 1 auto;']
 );
 echo html_writer::tag('label',
@@ -796,21 +620,21 @@ echo html_writer::tag('a', 'None',
 );
 echo html_writer::end_div();
 
-// ── Explainer card (who is in this list) ──────────────────────────────────────
-echo '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px 18px;margin-bottom:16px;"><div style="font-weight:700;color:#1e3a8a;margin-bottom:6px;font-size:15px;">Eligible Students</div><div style="font-size:14.5px;color:#334155;line-height:1.55;">Every student listed below has completed all required units of this qualification and is ready to receive a <strong>Testamur</strong> and <strong>Record of Results</strong>. Tick the students you want, then use the Generate button at the bottom. Rows that already hold both certificates are shown with a green tick and are left unticked by default.</div></div>';
-
 // Students table
 echo html_writer::start_div('', ['style' => 'overflow-x:auto;']);
 echo '<table class="generaltable" style="width:100%;">';
 echo '<thead><tr style="background:#f1f5f9;">';
-echo '<th style="width:36px;padding:10px 8px;" title="Select students to generate certificates for">'
+echo '<th style="width:36px;padding:10px 8px;">'
     . '<input type="checkbox" id="gq-selectall" title="Select/deselect all"'
     . ' onchange="document.querySelectorAll(\'.gq-cbx\').forEach(function (cb){cb.checked=this.checked;}.bind(this));" checked>'
     . '</th>';
-echo '<th style="padding:10px 8px;" title="Student name and account status">Student</th>';
-echo '<th style="padding:10px 8px;" title="Student email address">Email</th>';
-echo '<th style="padding:10px 8px;" title="Date the student finished all required units">All Units Completed</th>';
-echo '<th style="padding:10px 8px;" title="Certificates already issued to this student for this qualification">Existing Certificates</th>';
+echo '<th style="padding:10px 8px;">Student</th>';
+echo '<th style="padding:10px 8px;">Email</th>';
+echo '<th style="padding:10px 8px;">All Units Completed</th>';
+echo '<th style="padding:10px 8px;">Existing Certificates</th>';
+if ($isMultiPage) {
+    echo '<th style="padding:10px 8px;">RoR Pages</th>';
+}
 echo '</tr></thead><tbody>';
 
 foreach ($allcompleters as $student) {
@@ -844,10 +668,10 @@ foreach ($allcompleters as $student) {
     $suspendBadge  = $isSuspended
         ? ' <span style="background:#fee2e2;color:#b91c1c;padding:2px 7px;border-radius:4px;font-size:0.75rem;font-weight:600;vertical-align:middle;">SUSPENDED</span>'
         : '';
-    // NO-CORE-WRITES (v5.9.411): activate-account checkbox removed; the plugin no
-    // longer unsuspends Moodle accounts. Certs still issue for suspended students.
     $activateCb    = $isSuspended
-        ? '<br><span style="font-size:0.75rem;color:#9ca3af;margin-top:4px;display:inline-block;">Account suspended — activate in Moodle user admin if required.</span>'
+        ? '<br><label style="font-size:0.78rem;color:#6b7280;margin-top:4px;display:inline-flex;align-items:center;gap:4px;cursor:pointer;">'
+            . '<input type="checkbox" name="activate_userids[]" value="' . $student->id . '" style="margin:0;">'
+            . ' Activate account</label>'
         : '';
 
     echo '<tr style="' . $rowstyle . ($isSuspended ? 'background:#fff7f7;' : '') . '">';
@@ -859,6 +683,13 @@ foreach ($allcompleters as $student) {
     echo '<td style="padding:8px;color:#6b7280;">' . htmlspecialchars($student->email) . '</td>';
     echo '<td style="padding:8px;color:#374151;">' . userdate($student->timecompleted, '%d %b %Y') . '</td>';
     echo '<td style="padding:8px;">' . $certbadge . '</td>';
+    if ($isMultiPage) {
+        $estimatedPages = (int) ceil(count($allunits) / ROR_MULTIPAGE_UNIT_THRESHOLD);
+        echo '<td style="padding:8px;">'
+            . '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:4px;font-size:0.78rem;font-weight:600;">~'
+            . $estimatedPages . ' page' . ($estimatedPages > 1 ? 's' : '') . '</span>'
+            . '</td>';
+    }
     echo '</tr>';
 }
 
@@ -867,20 +698,12 @@ echo html_writer::end_div(); // overflow-x:auto
 
 // Submit buttons
 echo html_writer::start_div('', ['style' => 'margin-top:20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;']);
-// CERT-COST-CONFIRM: state the credit/dollar cost before generating. Each student issued gets a
-// Testamur + Record of Results (2 certificates), and every certificate is charged 5 credits
-// (~A$0.50) through the central issuer — including nothing that generates for free.
 echo html_writer::empty_tag('input', [
     'type'    => 'submit',
     'value'   => 'Generate Testamur + Record of Results',
     'class'   => 'btn btn-success btn-lg',
-    'title'   => 'Issue a Testamur and Record of Results for each ticked student',
-    'onclick' => 'var n=document.querySelectorAll(".gq-cbx:checked").length;'
-        . 'if(!n){alert("Select at least one student first.");return false;}'
-        . 'var certs=n*2, cr=certs*5;'
-        . 'return confirm("Generate certificates for "+n+" student(s)?\\n\\nEach student receives a Testamur + Record of Results (2 certificates), and every certificate costs 5 credits (about A$0.50).\\n\\nThis will charge "+cr+" credits (about A$"+(cr*0.10).toFixed(2)+") in total.\\n\\nContinue?");',
+    'onclick' => 'return confirm(\'Issue Testamur + Record of Results for all selected students?\');',
 ]);
-echo '<span style="font-size:12.5px;color:#64748b;">Each certificate costs 5 credits (&#8776; A$0.50). Testamur + Record of Results = 2 per student.</span>';
 echo html_writer::link(
     $PAGE->url->out(false),
     'Refresh',

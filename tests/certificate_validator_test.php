@@ -13,11 +13,12 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
 /**
  * PHPUnit tests for Certificate Validator class
  *
  * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
+ * @copyright  2025 AI Grader
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -30,6 +31,7 @@ require_once($CFG->dirroot . '/local/rtocompliance/classes/certificate_validator
 require_once($CFG->dirroot . '/local/rtocompliance/classes/avetmiss_codes.php');
 
 class certificate_validator_test extends \advanced_testcase {
+    
     private $testuser;
     private $teststudent;
     private $testcourse;

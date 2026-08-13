@@ -14,13 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-/**
- * RTO Compliance plugin — webhook_adapter.php.
- *
- * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
 // LLN ADAPTER (v4.2.50) — generic HTTP webhook adapter.
 //
 // POSTs student + qualification context as JSON to a configured URL
@@ -57,7 +50,11 @@ namespace local_rtocompliance\lln;
 defined('MOODLE_INTERNAL') || die();
 
 class webhook_adapter implements adapter_interface {
-    /** @var int curl timeout in seconds. */
+    /** @var int curl timeout in seconds.
+ * @package    local_rtocompliance
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ */
     const TIMEOUT_SECONDS = 5;
 
     public function get_code(): string {

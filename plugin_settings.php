@@ -15,12 +15,13 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * RTO Compliance plugin — plugin_settings.php.
+ * local_rtocompliance file.
  *
  * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
+
 // PLUGIN-SETTINGS-WRAPPER (v5.2.87): Custom settings page that shows the RTO Compliance
 // sidebar nav. Renders Moodle admin settings using the existing admin_settingpage objects
 // so saves still go through admin_write_settings() — no duplicate config logic needed.
@@ -30,6 +31,7 @@
 // relevant admin_settingpage via output_html() on each setting.
 
 require_once(__DIR__ . '/../../config.php');
+require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
@@ -53,7 +55,6 @@ if (!in_array($section, $allowed_sections)) {
 
 // Auth: site admins only (same restriction as admin_settingpage entries in settings.php).
 admin_externalpage_setup('local_rtocompliance_plugin_settings');
-require_login();
 
 $thisurl = new moodle_url('/local/rtocompliance/plugin_settings.php', ['section' => $section]);
 $PAGE->set_url($thisurl);
@@ -95,7 +96,6 @@ echo local_rtocompliance_render_nav_header(
     null,
     'settings'
 );
-echo local_rtocompliance_page_banner('Plugin Settings');
 
 // Tab bar.
 echo '<div class="rtoc-stabs" role="tablist">';

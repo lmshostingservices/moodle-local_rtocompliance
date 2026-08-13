@@ -15,12 +15,13 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * RTO Compliance plugin — reconcile.php.
+ * local_rtocompliance file.
  *
  * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
+
 // ─────────────────────────────────────────────────────────────────────────────
 // NAT Enrolment Reconciliation Tool  (v1.0.0 — local_rtocompliance v5.9.102)
 //
@@ -106,13 +107,13 @@ if (!function_exists('_reconcile_extract_unitcode')) {
      * Extract an AVETMISS unit code from a Moodle course's idnumber / shortname / fullname.
      *
      * Matching priority:
-     *   1. idnumber is EXACTLY a unit code          e.g. "ABC12345"
-     *   2. idnumber STARTS WITH a unit code         e.g. "ABC12345 (CP1) S1-2016"  ← fix for v5.9.112
-     *   3. shortname starts with a unit code        e.g. "ABC12345 16S1"
+     *   1. idnumber is EXACTLY a unit code          e.g. "TLIX5046A"
+     *   2. idnumber STARTS WITH a unit code         e.g. "TLIX5046A (CP1) S1-2016"  ← fix for v5.9.112
+     *   3. shortname starts with a unit code        e.g. "TLIX5046A 16S1"
      *   4. fullname starts with a unit code
      *
      * v5.9.111 and earlier only did an exact match on idnumber, then fell through to
-     * shortname — so courses like "ABC12345 (CP1) S1-2016" were invisible to the
+     * shortname — so courses like "TLIX5046A (CP1) S1-2016" were invisible to the
      * reconciler. The prefix match on idnumber (step 2) fixes this.
      */
     function _reconcile_extract_unitcode(string $idnumber, string $shortname, string $fullname): string {
@@ -144,7 +145,7 @@ if (!function_exists('_reconcile_extract_unitcode')) {
         // of-string — this rules out two unit codes concatenated (e.g. BSBWHS211BSBCMM201
         // where "BSBCMM201" ends in a digit, not a boundary).
         //
-        // Try WITH version-suffix letter first (ABC12345 + ABC), then WITHOUT (ABC12345 + AABC).
+        // Try WITH version-suffix letter first (TLIA5059A + ABC), then WITHOUT (TLIA5059 + AABC).
         if (preg_match('/^([A-Z]{2,7}[0-9]{3,5}[A-Z])(?=[A-Z]{2,}(?:[^A-Z0-9]|$))/', $idn, $m)) return $m[1];
         if (preg_match('/^([A-Z]{2,7}[0-9]{3,5})(?=[A-Z]{2,}(?:[^A-Z0-9]|$))/', $idn, $m)) return $m[1];
         // Step 3: try shortname (prefix match)
@@ -250,13 +251,13 @@ function _reconcile_delivery_key_from_text(string $text): string {
         $yr = (int)$m[2] < 50 ? '20' . $m[2] : '19' . $m[2];
         return $yr . '-S' . $m[1];
     }
-    // "26 XYZ S1" / "26 XYZ S1" / "25 a Diploma qualification S2" —
+    // "26 DCB S1" / "26 XYZ S1" / "25 Diploma of Customs Broking S2" —
     // two-digit year then 1–30 chars of text then S1/S2.
     if (preg_match('/\b(\d{2})\b.{1,30}?\bS([12])\b/i', $text, $m)) {
         $yr = (int)$m[1] < 50 ? '20' . $m[1] : '19' . $m[1];
         return $yr . '-S' . $m[2];
     }
-    // Reverse form: "S1 XYZ 26" / "S2 Diploma 25" — S1/S2 then words then two-digit year
+    // Reverse form: "S1 DCB 26" / "S2 Diploma 25" — S1/S2 then words then two-digit year
     if (preg_match('/\bS([12])\b.{1,30}?\b(\d{2})\b(?!\d)/i', $text, $m)) {
         $yr = (int)$m[2] < 50 ? '20' . $m[2] : '19' . $m[2];
         return $yr . '-S' . $m[1];
@@ -268,8 +269,8 @@ function _reconcile_delivery_key_from_text(string $text): string {
 
 /**
  * Normalise an AVETMISS unit code by stripping trailing version letters.
- * ABC12345 → ABC12345   ABC12345 B → ABC12345   ABC12345 → ABC12345
- * Allows a NAT record for ABC12345 to match a Moodle course coded ABC12345.
+ * TLIX5048A → TLIX5048   TLIX5048 B → TLIX5048   TLIX5048 → TLIX5048
+ * Allows a NAT record for TLIX5048 to match a Moodle course coded TLIX5048A.
  */
 function _reconcile_normalize_unitcode(string $uc): string {
     $uc = strtoupper(trim($uc));
@@ -279,8 +280,8 @@ function _reconcile_normalize_unitcode(string $uc): string {
 
 /**
  * Extract a qualification-type abbreviation from a category name.
- * "26 XYZ S1" → "XYZ"   "26 PQR S2" → "PQR"   "Archive" → ""
- * Used to prevent a PQR student being recommended a XYZ course.
+ * "26 DCB S1" → "DCB"   "26 DIFF S2" → "DIFF"   "Archive" → ""
+ * Used to prevent a DIFF student being recommended a DCB course.
  */
 function _reconcile_extract_qual_type(string $catname): string {
     static $skip = ['THE','AND','FOR','OF','IN','AT','TO','BY','ON','IS','IT',
@@ -308,7 +309,7 @@ function _reconcile_extract_qual_type(string $catname): string {
  *   Archive delivery:                    -100
  *   Hidden (visible=0):                  -20
  *   Outside qual branch:                 -20
- *   Qual-type mismatch (XYZ vs PQR):    -200  (hard block)
+ *   Qual-type mismatch (DCB vs DIFF):    -200  (hard block)
  *
  * Returns ['score' => int, 'flags' => string[], 'courseDk' => string].
  */
@@ -376,12 +377,12 @@ function _reconcile_score_candidate(
     if ($inQB)             { $score += 30; $flags[] = 'qual_branch'; }
     elseif ($natQc !== '') { $score -= 20; $flags[] = 'out_of_qual'; }
 
-    // Qual-type protection: block cross-qualification enrolments (e.g. PQR → XYZ).
+    // Qual-type protection: block cross-qualification enrolments (e.g. DIFF → DCB).
     //
     // Guard 1 ($inQB): skip when qual_branch is confirmed (catQualBranch match OR
     //   student's qual catId is a path-ancestor of the course's delivery category).
     //   Prevents spurious −200 when same qual stream uses different label abbreviations
-    //   (e.g. "PQR" = Diploma a qualification, "INT" = International — same stream
+    //   (e.g. "DIFF" = Diploma Int'l Freight Fwding, "INT" = International — same stream
     //   under catId 3, but course sits in delivery catId 150 with path /3/150).
     //
     // Guard 2 (courseQualBranch): skip when the course has NO qualmap branch association
@@ -811,8 +812,8 @@ if ($action === 'importmapping') {
                 }
             } else {
                 // Name matching: EXACT case-insensitive only — no partial/contains match.
-                // Rationale: a partial match on e.g. "a Diploma qualification" could hit
-                // both ABC12345 and ABC12345 categories, producing a silent mis-mapping.
+                // Rationale: a partial match on e.g. "Diploma of Customs Broking" could hit
+                // both TLI50816 and TLI50822 categories, producing a silent mis-mapping.
                 $_imCats = $DB->get_records_sql(
                     "SELECT id, name FROM {course_categories} WHERE LOWER(name) = LOWER(:name)",
                     ['name' => $_imCatV], 0, 2); // fetch up to 2 to detect ambiguity
@@ -884,9 +885,7 @@ if ($action === 'importmapping') {
 // Admins can use this CSV to re-import on another Moodle installation.
 // ─────────────────────────────────────────────────────────────────────────────
 if ($action === 'exportmapping') {
-    // v5.9.368 CAP-FIX: 'admin' is not a declared capability — every other handler
-    // in this file correctly uses ':manage'. This one threw a coding_exception.
-    require_capability('local/rtocompliance:manage', context_system::instance());
+    require_capability('local/rtocompliance:admin', context_system::instance());
     $allMaps = $DB->get_records('local_rtocompliance_qualmap', null, 'qualcode ASC');
     $csvRows = ["qualcode,categoryid,categoryname,method,confidence"];
     foreach ($allMaps as $_em) {
@@ -1269,9 +1268,9 @@ if ($action === 'analyse' && $importid) {
     //
     // This handles the overwhelmingly common pattern where administrators name
     // their category after the qualification, e.g.:
-    //   "a Diploma qualification (ABC12345)"
-    //   "Certificate IV in Logistics ABC12345"
-    //   "ABC12345 — Advanced Logistics"
+    //   "Diploma of Customs Broking (TLI50816)"
+    //   "Certificate IV in Logistics TLI40316"
+    //   "TLI50822 — Advanced Logistics"
     //
     // Qualcodes that cannot be resolved by name proceed to unit fingerprint
     // analysis in Step 3.5 (after the course scan has built courseToUnit).
@@ -1299,7 +1298,7 @@ if ($action === 'analyse' && $importid) {
         $_adMethod      = 'category_hierarchy';
 
         // Step 2.6a: exact category.idnumber match — highest confidence, zero ambiguity.
-        // An admin who sets category.idnumber = 'ABC12345' has made an explicit
+        // An admin who sets category.idnumber = 'TLI50119' has made an explicit
         // declaration of intent. This is preferred over name-string search which can
         // false-match on sub-categories that mention the code in passing.
         // Method tag: 'category_idnumber'   Confidence: 100
@@ -1414,7 +1413,7 @@ if ($action === 'analyse' && $importid) {
     $qualUnitPreferredCid = []; // qualcode → [unitcode → preferred courseid within qual branch]
     $qualUnitDeliveryMap  = []; // qualcode → [unitcode → [deliveryKey → courseid]] within qual branch
     $courseDkMatchedFrom  = []; // courseid → which text string produced the delivery key (trace diagnostics)
-    $normUnitAllCids      = []; // normalised-unitcode → [courseid,...] (strips version suffix: ABC12345 → ABC12345)
+    $normUnitAllCids      = []; // normalised-unitcode → [courseid,...] (strips version suffix: TLIX5048A → TLIX5048)
     $courseAllUnits       = []; // courseid → [unitcode,...] ALL unit codes the course teaches
     $nonAwardCpdCourses   = []; // courseid → true — NON_AWARD_CPD courses excluded from unit reconciliation
     // $courseAllUnits is populated in the Step 3 loop using all codes found in the
@@ -1560,7 +1559,7 @@ if ($action === 'analyse' && $importid) {
         if (isset($_diagNatUcSet[$_uc])) {
             $unitAllCids[$_uc][] = $_cid;
         }
-        // Normalised index: ABC12345 → key ABC12345 (catches version-suffix mismatches).
+        // Normalised index: TLIX5048A → key TLIX5048 (catches version-suffix mismatches).
         // v5.9.211 FIX: old guard ($_normUc3 !== $_uc) silently dropped every clean,
         // suffix-less primary code like BSBMGT502 — normalise('BSBMGT502') returns
         // 'BSBMGT502' (no change), so the guard was false and normUnitAllCids was never
@@ -1774,12 +1773,12 @@ if ($action === 'analyse' && $importid) {
         // or more SECONDARY codes found in the course fullname ARE needed.
         //
         // Root cause of course #143 false positives:
-        //   Course #143 fullname = "ABC12345, ABC12345 & ABC12345 Complete and
-        //   Check Import/Export..."  idnumber = "ABC12345" (primary).
-        //   If no NAT student needs ABC12345, the guard at line ~1250
+        //   Course #143 fullname = "TLIA2009A, TLIG3002A & TLIA5035A Complete and
+        //   Check Import/Export..."  idnumber = "TLIA2009A" (primary).
+        //   If no NAT student needs TLIA2009A, the guard at line ~1250
         //   (if (isset($_diagNatUcSet[$_uc]))) skips the ENTIRE registration block,
         //   including the delivery-key computation and the secondary code registration
-        //   loop introduced in v5.9.198.  ABC12345 and ABC12345 are never added to
+        //   loop introduced in v5.9.198.  TLIA5035A and TLIG3002A are never added to
         //   unitAllCids / unitDeliveryCourseMap / qualUnitDeliveryMap, so students
         //   needing those codes never see course #143 as a candidate — triggering ~211
         //   false-positive ADD rows.
@@ -1864,7 +1863,7 @@ if ($action === 'analyse' && $importid) {
     //
     // We then fingerprint ONLY against these discovered roots, not against the
     // depth-1 ancestors. This is the key fix: quals whose category tree looks
-    // like  "Courses > Transport > ABC12345 > Semester 1" will now correctly
+    // like  "Courses > Transport > TLI21107 > Semester 1" will now correctly
     // resolve to "Transport" (or whatever the non-excluded ancestor is at the
     // right level), rather than being attributed to the generic top-level
     // "Courses" container — which makes the fingerprint useless for distinguishing
@@ -1927,8 +1926,8 @@ if ($action === 'analyse' && $importid) {
         // Build unit → map of [qual_root_catid => path_depth].
         // depth = number of path segments; higher = deeper = more specific.
         // Pre-compute a regex for the AVETMISS qualification code pattern.
-        // Qual codes = 3 uppercase letters + 5 digits (e.g. ABC12345, BSB50420, CHC30121).
-        // This is distinct from unit codes (4+ letters, e.g. ABC12345, BSBWHS211).
+        // Qual codes = 3 uppercase letters + 5 digits (e.g. TLI50816, BSB50420, CHC30121).
+        // This is distinct from unit codes (4+ letters, e.g. TLIX0008, BSBWHS211).
         $_ufQualCodeRx = '/\b[A-Z]{3}\d{5}\b/';
 
         $_ufUnitQrCats = []; // unitcode → [qual_root_catid => depth]
@@ -2037,7 +2036,7 @@ if ($action === 'analyse' && $importid) {
 
             // Score each qualification root candidate with WEIGHTED unit counts.
             // Units that resolve to many different branches get weight 1/N, so a
-            // shared unit like ABC12345 (XYZ + NCCC) contributes 0.5 to each rather
+            // shared unit like TLIX0008 (DCB + NCCC) contributes 0.5 to each rather
             // than 1.0 — preventing widely-reused units from inflating any one branch.
             $_ufScores  = []; // catid → float weighted score
             $_ufDepths  = []; // catid → path depth (tiebreaker)
@@ -2554,9 +2553,9 @@ if ($action === 'analyse' && $importid) {
         // NAT key that Step 6 iterates over — ensuring isset($covered[$_uc6]) hits correctly.
         //
         // Examples:
-        //   NAT has ABC12345  → $_normNatLookup5['ABC12345'] = 'ABC12345'
-        //   NAT has ABC12345   → $_normNatLookup5['ABC12345'] = 'ABC12345'
-        //   NAT has ABC12345   → $_normNatLookup5['ABC12345'] = 'ABC12345'
+        //   NAT has TLIA5061A  → $_normNatLookup5['TLIA5061'] = 'TLIA5061A'
+        //   NAT has TLIA5061   → $_normNatLookup5['TLIA5061'] = 'TLIA5061'
+        //   NAT has TLIX5048   → $_normNatLookup5['TLIX5048'] = 'TLIX5048'
         $_normNatLookup5 = [];
         foreach (array_keys($_natUnitSet5) as $_nk5) {
             $_nn5 = _reconcile_normalize_unitcode($_nk5);
@@ -2569,15 +2568,15 @@ if ($action === 'analyse' && $importid) {
             // $_natCovKey5 = original NAT code covered; null = not yet matched.
             //
             // Uses version-suffix normalisation in BOTH directions so that a student
-            // enrolled in ABC12345 (archived course) is credited as covering NAT unit
-            // ABC12345, and vice versa.  Archive/qual-branch status is intentionally
+            // enrolled in TLIA5061A (archived course) is credited as covering NAT unit
+            // TLIA5061, and vice versa.  Archive/qual-branch status is intentionally
             // NOT checked here — coverage answers "has the student ever had a manual
             // enrolment for this unit?" regardless of course visibility.
             //
-            //   1. Exact:             ABC12345 == ABC12345
-            //   2. Normalise course:  ABC12345 → ABC12345 → look up exact NAT
-            //   3. Normalise both:    ABC12345 → ABC12345 → look up normalised-NAT index
-            //   4. Exact vs norm-NAT: ABC12345 (course) → $_normNatLookup5 key = ABC12345
+            //   1. Exact:             TLIA5061A == TLIA5061A
+            //   2. Normalise course:  TLIA5061A → TLIA5061 → look up exact NAT
+            //   3. Normalise both:    TLIA5061A → TLIA5061 → look up normalised-NAT index
+            //   4. Exact vs norm-NAT: TLIA5061 (course) → $_normNatLookup5 key = TLIA5061
             $_natCovKey5 = null;
             if ($_uc5 !== '') {
                 if (isset($_natUnitSet5[$_uc5])) {
@@ -2610,7 +2609,7 @@ if ($action === 'analyse' && $importid) {
             // ($_natCovKey5 === null), regardless of extraction source.
             //
             // v5.9.198: The '&' fullname guard has been removed.  Multi-unit combined
-            // courses (e.g. "ABC12345 & ABC12345 course") are now handled correctly
+            // courses (e.g. "TLII4005A & TLII4017A Freight") are now handled correctly
             // by the MULTI-UNIT secondary coverage pass below, which credits every unit
             // the course teaches.  The '&' guard was preventing the fullname fallback
             // from crediting coverage for ANY unit in a combined course — this caused
@@ -2621,9 +2620,9 @@ if ($action === 'analyse' && $importid) {
             // fullname/idnumber data to work with.
             //
             // Search covers all three suffix/root combinations:
-            //   • NAT=ABC12345, fullname has ABC12345   → exact match (A)
-            //   • NAT=ABC12345, fullname has ABC12345  → NAT code + trailing letter (B)
-            //   • NAT=ABC12345, fullname has ABC12345  → normalised-NAT root (C)
+            //   • NAT=TLIA5061, fullname has TLIA5061   → exact match (A)
+            //   • NAT=TLIA5061, fullname has TLIA5061A  → NAT code + trailing letter (B)
+            //   • NAT=TLIA5061A, fullname has TLIA5061  → normalised-NAT root (C)
             if ($_natCovKey5 === null) {
                 $_fn5 = strtoupper(trim($courseDetail[$_cid5]->fullname ?? ''));
                 if ($_fn5 !== '') {
@@ -2633,12 +2632,12 @@ if ($action === 'analyse' && $importid) {
                         if (preg_match('/(?<![A-Z0-9])' . $_fnBase5 . '(?:[^A-Z0-9]|$)/', $_fn5)) {
                             $_natCovKey5 = $_fnUc5; break;
                         }
-                        // B. NAT code + trailing letter: fullname has ABC12345, NAT has ABC12345
+                        // B. NAT code + trailing letter: fullname has TLIA5061A, NAT has TLIA5061
                         if (preg_match('/(?<![A-Z0-9])' . $_fnBase5 . '[A-Z](?:[^A-Z0-9]|$)/', $_fn5)) {
                             $_natCovKey5 = $_fnUc5; break;
                         }
                         // C. NAT code is suffixed; fullname has the unsuffixed root
-                        //    e.g. NAT=ABC12345, fullname has ABC12345
+                        //    e.g. NAT=TLIA5061A, fullname has TLIA5061
                         $_fnUcNorm5 = _reconcile_normalize_unitcode($_fnUc5);
                         if ($_fnUcNorm5 !== $_fnUc5) {
                             $_fnNBase5 = preg_quote($_fnUcNorm5, '/');
@@ -2856,7 +2855,7 @@ if ($action === 'analyse' && $importid) {
             //
             // Duplicate protection: $addEnrolments[uid][cid] map key is inherently unique.
 
-            // Student qual-type extraction: e.g. "XYZ" from qual branch category name
+            // Student qual-type extraction: e.g. "DCB" from qual branch category name
             // $_sqCatId6 MUST be reset here — if omitted, a stale value from a previous
             // student/unit iteration persists via PHP's loop-variable retention, causing
             // the ancestry check in _reconcile_score_candidate to use the wrong catId.
@@ -2873,11 +2872,11 @@ if ($action === 'analyse' && $importid) {
             // Candidate pool: exact unit code + version-suffix variants.
             //
             // v5.9.195 POOL-TRUNCATION FIX: The guard `$_normUc6 !== $_uc6` was wrong.
-            // normUnitAllCids['ABC12345'] holds courses whose unit code EXTRACTED as
-            // 'ABC12345' (with version suffix) — normalised to 'ABC12345'. These are
+            // normUnitAllCids['TLIA5059'] holds courses whose unit code EXTRACTED as
+            // 'TLIA5059A' (with version suffix) — normalised to 'TLIA5059'. These are
             // real deliveries of the unit that MUST be scored. The old guard blocked the
-            // merge whenever the NAT unit code was already normalised (e.g. 'ABC12345'),
-            // leaving those 9 ABC12345 courses out of the pool → poolsize=8 of 17.
+            // merge whenever the NAT unit code was already normalised (e.g. 'TLIA5059'),
+            // leaving those 9 TLIA5059A courses out of the pool → poolsize=8 of 17.
             // Fix: always merge normUnitAllCids[normUc] regardless of whether the NAT
             // unit code itself needed normalisation.
             $_normUc6   = _reconcile_normalize_unitcode($_uc6);
@@ -4754,7 +4753,6 @@ if ($action === 'analyse' && $importid) {
             : '')
         . ' — ' . date('d M Y', (int)$importRec->timecreated);
 
-    $PAGE->add_body_class('path-local-rtocompliance'); // v5.9.445: scoped CSS needs this on admin_externalpage pages.
     echo $OUTPUT->header();
     ?>
     <?php
@@ -4817,7 +4815,7 @@ if ($action === 'analyse' && $importid) {
         else                                               { $_qmCntFingerp++; }
     }
     // Build set of quals whose EVERY record in this import is HISTORICAL_NO_COURSE.
-    // These pre-LMS quals (e.g. SC001, ABC12345) have no Moodle category and never will —
+    // These pre-LMS quals (e.g. SC001, TLI21107) have no Moodle category and never will —
     // they should not be counted as "unmapped" failures in the qual mapping panel.
     $_qmAllHistQuals = [];
     $_qmHistRs = $DB->get_records_sql(
@@ -4872,10 +4870,7 @@ if ($action === 'analyse' && $importid) {
     $_csAutoReady = ($_confStats['High'] / max(1, $_csTotalStudents)) >= 0.90;
     ?>
 
-    <?php // v5.9.404: open the layout wrap + left sidebar + content (this analyse
-          // view previously rendered a bare rtoc-main-content with no sidebar).
-          echo '<div class="rtoc-layout-wrap">' . local_rtocompliance_render_sidebar()
-             . '<div class="rtoc-main-content">'; ?>
+    <div class="rtoc-main-content">
 
     <nav aria-label="breadcrumb">
       <ol class="breadcrumb">
@@ -4949,19 +4944,19 @@ if ($action === 'analyse' && $importid) {
       <div style="background:#f8fdf8;padding:0.9rem 1.5rem;border-top:1px solid #c3e6cb;">
         <div style="display:flex;flex-wrap:wrap;gap:0;border:1px solid #c3e6cb;border-radius:7px;overflow:hidden;background:#fff;">
           <!-- Column 1: Confirmed -->
-          <div style="flex:1;min-width:180px;padding:0.9rem 1.2rem;border-right:1px solid #c3e6cb;" title="Enrolments in the national report that are matched to a live Moodle course and confirmed correct. Nothing to do here.">
+          <div style="flex:1;min-width:180px;padding:0.9rem 1.2rem;border-right:1px solid #c3e6cb;">
             <div style="font-size:0.72em;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#198754;margin-bottom:0.3rem;">Confirmed in Moodle</div>
             <div style="font-size:1.9rem;font-weight:800;color:#198754;line-height:1.1;"><?= _reconcile_n($_ceoMatchedRecs) ?></div>
             <div style="font-size:0.82em;color:#6c757d;margin-top:0.2rem;">enrolments matched and verified</div>
           </div>
           <!-- Column 2: Retained -->
-          <div style="flex:1;min-width:180px;padding:0.9rem 1.2rem;border-right:1px solid #c3e6cb;" title="Older enrolments from before this online system was used. They are kept on file because the national data rules require it. No action needed.">
+          <div style="flex:1;min-width:180px;padding:0.9rem 1.2rem;border-right:1px solid #c3e6cb;">
             <div style="font-size:0.72em;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#0d6efd;margin-bottom:0.3rem;">Retained for Compliance</div>
             <div style="font-size:1.9rem;font-weight:800;color:#0d6efd;line-height:1.1;"><?= _reconcile_n($_ceoHistRecs) ?></div>
             <div style="font-size:0.82em;color:#6c757d;margin-top:0.2rem;">pre-LMS records kept as AVETMISS requires</div>
           </div>
           <!-- Column 3: Under management -->
-          <div style="flex:1;min-width:180px;padding:0.9rem 1.2rem;" title="Enrolments your team is still working through, such as a missing enrolment to add or a record to check.">
+          <div style="flex:1;min-width:180px;padding:0.9rem 1.2rem;">
             <div style="font-size:0.72em;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#6c757d;margin-bottom:0.3rem;">Under Active Management</div>
             <div style="font-size:1.9rem;font-weight:800;color:<?= $_ceoManagedRecs === 0 ? '#198754' : '#495057' ?>;line-height:1.1;"><?= _reconcile_n($_ceoManagedRecs) ?></div>
             <div style="font-size:0.82em;color:#6c757d;margin-top:0.2rem;"><?= $_ceoManagedRecs === 0 ? 'nothing outstanding' : 'enrolments being reviewed by your team' ?></div>
@@ -5023,10 +5018,10 @@ if ($action === 'analyse' && $importid) {
           <table style="width:100%;border-collapse:collapse;font-size:0.88em;margin-bottom:0.6rem;">
             <thead>
               <tr style="background:#f8f9fa;border-bottom:2px solid #dee2e6;">
-                <th style="padding:0.5rem 1rem;text-align:left;font-weight:600;width:35%;" title="Classification group the records were sorted into">Category</th>
-                <th style="padding:0.5rem 0.75rem;text-align:center;font-weight:600;width:12%;" title="Number of NAT records in this category">Records</th>
-                <th style="padding:0.5rem 0.75rem;text-align:center;font-weight:600;width:12%;" title="Number of distinct students in this category">Students</th>
-                <th style="padding:0.5rem 1rem;text-align:left;font-weight:600;" title="What this category means">Description</th>
+                <th style="padding:0.5rem 1rem;text-align:left;font-weight:600;width:35%;">Category</th>
+                <th style="padding:0.5rem 0.75rem;text-align:center;font-weight:600;width:12%;">Records</th>
+                <th style="padding:0.5rem 0.75rem;text-align:center;font-weight:600;width:12%;">Students</th>
+                <th style="padding:0.5rem 1rem;text-align:left;font-weight:600;">Description</th>
               </tr>
             </thead>
             <tbody>
@@ -5074,7 +5069,7 @@ if ($action === 'analyse' && $importid) {
             ];
             foreach ($_ncChecks as $_ncc):
             ?>
-            <span style="padding:0.2rem 0.5rem;border-radius:4px;background:<?= $_ncc['pass'] ? '#d1e7dd' : '#f8d7da' ?>;color:<?= $_ncc['pass'] ? '#155724' : '#721c24' ?>;font-weight:600;" title="An automatic check that the results add up correctly. A tick means it passed; a cross means it needs a look.">
+            <span style="padding:0.2rem 0.5rem;border-radius:4px;background:<?= $_ncc['pass'] ? '#d1e7dd' : '#f8d7da' ?>;color:<?= $_ncc['pass'] ? '#155724' : '#721c24' ?>;font-weight:600;">
               <?= $_ncc['pass'] ? '&#10003;' : '&#10007;' ?> <?= _reconcile_h($_ncc['label']) ?>
             </span>
             <?php endforeach; ?>
@@ -5101,28 +5096,28 @@ if ($action === 'analyse' && $importid) {
           </div>
           <div style="background:#fff;padding:0.85rem 1rem;">
             <div style="display:flex;flex-wrap:wrap;gap:2rem;align-items:flex-start;">
-              <div title="Total number of students in the national report file that were checked in this run.">
+              <div>
                 <div style="font-size:0.7em;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#6c757d;margin-bottom:0.2rem;">Students Analysed</div>
                 <div style="font-size:1.8rem;font-weight:800;color:#212529;line-height:1.1;"><?= _reconcile_n($_ncTotalStudents) ?></div>
                 <div style="font-size:0.78em;color:#6c757d;">full NAT cohort</div>
               </div>
-              <div title="Share of students whose national record was successfully linked to a Moodle account. Higher is better.">
+              <div>
                 <div style="font-size:0.7em;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#6c757d;margin-bottom:0.2rem;">ID Match Rate</div>
                 <div style="font-size:1.8rem;font-weight:800;color:<?= $_ncUnlinkedStudents === 0 ? '#198754' : '#dc3545' ?>;line-height:1.1;"><?= $_hd_matchRate ?>%</div>
                 <div style="font-size:0.78em;color:#6c757d;"><?= $_rcUnlinked > 0 ? _reconcile_n((int)$_rcUnlinked) . ' unlinked' : 'all linked' ?></div>
               </div>
-              <div title="How many of the qualifications in the file were matched to a Moodle course category. All mapped means every one was found.">
+              <div>
                 <div style="font-size:0.7em;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#6c757d;margin-bottom:0.2rem;">Qual Discoveries</div>
                 <div style="font-size:1.8rem;font-weight:800;color:<?= $_allMapped ? '#198754' : '#fd7e14' ?>;line-height:1.1;"><?= $_allMapped ? '100%' : (count($qualMap) . '/' . (count($qualMap) + $_qmCntUnmapped)) ?></div>
                 <div style="font-size:0.78em;color:#6c757d;"><?= $_allMapped ? 'All mapped' : $_qmCntUnmapped . ' unmapped' ?></div>
               </div>
-              <div title="Share of linked students the tool is highly sure it matched correctly. Higher means fewer records need a person to check them.">
+              <div>
                 <div style="font-size:0.7em;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#6c757d;margin-bottom:0.2rem;">Confidence</div>
                 <div style="font-size:1.8rem;font-weight:800;color:<?= $_csAutoReady ? '#198754' : '#fd7e14' ?>;line-height:1.1;"><?= $_csHighPct ?>% High</div>
                 <div style="font-size:0.78em;color:#6c757d;"><?= _reconcile_n($_confStats['High']) ?> of <?= _reconcile_n($_csTotalStudents) ?> linked students</div>
               </div>
               <?php if ($fridayBackupLoaded): ?>
-              <div title="Enrolments found in the backup file that may need restoring. Restore means putting back an enrolment that was removed.">
+              <div>
                 <div style="font-size:0.7em;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#6c757d;margin-bottom:0.2rem;">Backup Candidates</div>
                 <div style="font-size:1.8rem;font-weight:800;color:<?= $totalRestore > 0 ? '#6f42c1' : '#198754' ?>;line-height:1.1;"><?= _reconcile_n($totalRestore) ?></div>
                 <div style="font-size:0.78em;color:#6c757d;">RESTORE class &mdash; <?= _reconcile_n($_restoreAllCount) ?> total in file</div>
@@ -5166,7 +5161,7 @@ if ($action === 'analyse' && $importid) {
                 <input type="hidden" name="importid_im" value="<?= (int)$importid ?>">
                 <input type="file" name="mapping_csv" accept=".csv,.txt"
                        class="form-control form-control-sm" style="max-width:320px;font-size:0.85em;">
-                <button type="submit" class="btn btn-outline-primary btn-sm" title="Import the uploaded qualification mappings and re-run the analysis">
+                <button type="submit" class="btn btn-outline-primary btn-sm">
                   &#128229; Import &amp; Re-run
                 </button>
               </form>
@@ -5188,12 +5183,12 @@ if ($action === 'analyse' && $importid) {
               <table class="table table-sm table-bordered" style="max-width:1040px;">
                 <thead>
                   <tr style="background:#f8f9fa;">
-                    <th style="width:120px;" title="AVETMISS qualification code from the NAT file">Qualcode</th>
-                    <th style="width:150px;" title="How this qualification was mapped to a category">Method</th>
-                    <th style="width:85px;text-align:center;" title="Confidence score of the automatic mapping">Confidence</th>
-                    <th title="Moodle course category this qualification maps to">Root Category</th>
-                    <th style="width:72px;text-align:center;" title="Number of students under this qualification">Students</th>
-                    <th style="width:60px;text-align:center;" title="Number of units under this qualification">Units</th>
+                    <th style="width:120px;">Qualcode</th>
+                    <th style="width:150px;">Method</th>
+                    <th style="width:85px;text-align:center;">Confidence</th>
+                    <th>Root Category</th>
+                    <th style="width:72px;text-align:center;">Students</th>
+                    <th style="width:60px;text-align:center;">Units</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -5219,17 +5214,17 @@ if ($action === 'analyse' && $importid) {
                     elseif (!$_iqHighConf)   { $_iqRowBg = 'background:#fffbf0;'; }
                     else                     { $_iqRowBg = ''; }
                     if ($_iqMethod === 'category_hierarchy') {
-                        $_iqMethBadge = '<span title="This qualification was matched to a course category because the code was found in the category name." style="display:inline-block;padding:1px 7px;border-radius:4px;background:#198754;color:#fff;font-size:0.76em;white-space:nowrap;">&#128269; Category Name</span>';
+                        $_iqMethBadge = '<span style="display:inline-block;padding:1px 7px;border-radius:4px;background:#198754;color:#fff;font-size:0.76em;white-space:nowrap;">&#128269; Category Name</span>';
                     } elseif ($_iqMethod === 'unit_root_discovery') {
-                        $_iqMethBadge = '<span title="This qualification was matched by comparing its units against course categories to find the best fit." style="display:inline-block;padding:1px 7px;border-radius:4px;background:#0d6efd;color:#fff;font-size:0.76em;white-space:nowrap;">&#128300; Unit Root Discovery</span>';
+                        $_iqMethBadge = '<span style="display:inline-block;padding:1px 7px;border-radius:4px;background:#0d6efd;color:#fff;font-size:0.76em;white-space:nowrap;">&#128300; Unit Root Discovery</span>';
                     } elseif ($_iqMethod === 'manual') {
-                        $_iqMethBadge = '<span title="This qualification was matched to a course category by hand, not automatically." style="display:inline-block;padding:1px 7px;border-radius:4px;background:#6c757d;color:#fff;font-size:0.76em;white-space:nowrap;">&#128274; Manual</span>';
+                        $_iqMethBadge = '<span style="display:inline-block;padding:1px 7px;border-radius:4px;background:#6c757d;color:#fff;font-size:0.76em;white-space:nowrap;">&#128274; Manual</span>';
                     } else {
-                        $_iqMethBadge = '<span title="This qualification has not been matched to any course category yet." style="display:inline-block;padding:1px 7px;border-radius:4px;background:#adb5bd;color:#333;font-size:0.76em;white-space:nowrap;">&mdash; Unmapped</span>';
+                        $_iqMethBadge = '<span style="display:inline-block;padding:1px 7px;border-radius:4px;background:#adb5bd;color:#333;font-size:0.76em;white-space:nowrap;">&mdash; Unmapped</span>';
                     }
                     $_iqGreenThr  = ($_iqMethod === 'unit_root_discovery') ? 90 : 80;
                     if ($_iqIsAllHist) {
-                        $_iqConfBadge = '<span title="Pre-LMS means this qualification was studied before this online learning system was in use, so there is no course to match it to." style="display:inline-block;padding:1px 7px;border-radius:4px;background:#adb5bd;color:#333;font-size:0.76em;white-space:nowrap;">pre-LMS</span>';
+                        $_iqConfBadge = '<span style="display:inline-block;padding:1px 7px;border-radius:4px;background:#adb5bd;color:#333;font-size:0.76em;white-space:nowrap;">pre-LMS</span>';
                     } elseif (!$_iqMapped) {
                         $_iqConfBadge = '<span style="color:#dc3545;font-weight:700;">&#10007;</span>';
                     } elseif ($_iqConf >= 100) {
@@ -5369,7 +5364,7 @@ if ($action === 'analyse' && $importid) {
                 </tbody>
               </table>
               <?php if (!empty($_importQualRows)): ?>
-              <button type="submit" class="btn btn-primary btn-sm" title="Save the manual qualification mapping overrides and re-run the analysis">&#128190; Save Overrides &amp; Re-run</button>
+              <button type="submit" class="btn btn-primary btn-sm">&#128190; Save Overrides &amp; Re-run</button>
               <span style="font-size:0.82em;color:#6c757d;margin-left:8px;">Click <em>Override</em> on any auto-mapped row, select a category, then save.</span>
               <?php endif; ?>
             </form>
@@ -5394,16 +5389,16 @@ if ($action === 'analyse' && $importid) {
                onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';">
             <span><?= $_pipelineOk ? '&#9989;' : '&#9888;' ?> Reconciliation System Checks</span>
             <span style="display:inline-flex;gap:0.4rem;flex-wrap:wrap;font-size:0.85em;font-weight:400;">
-              <span style="background:rgba(255,255,255,0.22);padding:1px 9px;border-radius:10px;" title="Overall check that the matching process ran from start to finish. Tick means it completed.">Pipeline <?= $_pipelineOk ? '&#9989;' : '&#10060;' ?></span>
-              <span style="background:rgba(255,255,255,0.22);padding:1px 9px;border-radius:10px;" title="Check that students in the file were linked to Moodle accounts. Tick means it worked.">Student matching <?= $_scStudentOk ? '&#9989;' : '&#10060;' ?></span>
-              <span style="background:rgba(255,255,255,0.22);padding:1px 9px;border-radius:10px;" title="Check that unit codes were linked to Moodle courses. Tick means it worked.">Course matching <?= $_scCourseOk ? '&#9989;' : '&#10060;' ?></span>
-              <span style="background:rgba(255,255,255,0.22);padding:1px 9px;border-radius:10px;" title="Check that every qualification was matched to a course category. Tick means all were matched.">Qual mapping <?= $_allMapped ? '&#9989;' : '&#10060;' ?></span>
+              <span style="background:rgba(255,255,255,0.22);padding:1px 9px;border-radius:10px;">Pipeline <?= $_pipelineOk ? '&#9989;' : '&#10060;' ?></span>
+              <span style="background:rgba(255,255,255,0.22);padding:1px 9px;border-radius:10px;">Student matching <?= $_scStudentOk ? '&#9989;' : '&#10060;' ?></span>
+              <span style="background:rgba(255,255,255,0.22);padding:1px 9px;border-radius:10px;">Course matching <?= $_scCourseOk ? '&#9989;' : '&#10060;' ?></span>
+              <span style="background:rgba(255,255,255,0.22);padding:1px 9px;border-radius:10px;">Qual mapping <?= $_allMapped ? '&#9989;' : '&#10060;' ?></span>
             </span>
             <span style="margin-left:auto;font-size:0.8em;font-weight:400;opacity:0.85;">&#9660; detail</span>
           </div>
           <div class="card-body" style="display:none;">
             <table class="table table-sm table-bordered mb-3" style="max-width:520px;">
-              <thead><tr><th title="Stage of the reconciliation pipeline being checked">Pipeline stage</th><th title="Number of records at this stage">Count</th><th title="Whether this stage passed or needs attention">Verdict</th></tr></thead>
+              <thead><tr><th>Pipeline stage</th><th>Count</th><th>Verdict</th></tr></thead>
               <tbody>
                 <tr>
                   <td>NAT client IDs in staging</td>
@@ -5511,7 +5506,7 @@ if ($action === 'analyse' && $importid) {
             <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
               <?php foreach ($_rmLabels as $_rmCls => [$_rmLbl, $_rmBg, $_rmFg]): ?>
               <?php if (!isset($_removeSummary[$_rmCls])) continue; ?>
-              <div style="background:<?= $_rmBg ?>;color:<?= $_rmFg ?>;border-radius:6px;padding:0.3rem 0.6rem;display:inline-flex;align-items:center;gap:0.4rem;" title="Number of enrolments in this group that the student&rsquo;s current national report does not explain. These are not necessarily errors.">
+              <div style="background:<?= $_rmBg ?>;color:<?= $_rmFg ?>;border-radius:6px;padding:0.3rem 0.6rem;display:inline-flex;align-items:center;gap:0.4rem;">
                 <strong><?= _reconcile_n($_removeSummary[$_rmCls]) ?></strong>
                 <span><?= $_rmLbl ?></span>
               </div>
@@ -5529,10 +5524,10 @@ if ($action === 'analyse' && $importid) {
           </div>
           <div style="padding:0.75rem;background:#f0f9ff;font-size:0.85em;display:none;">
             <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.5rem;">
-              <div style="background:#d1e7dd;color:#155724;border-radius:6px;padding:0.3rem 0.6rem;" title="Students the tool is almost certain it matched to the right records. Safe to accept."><strong><?= _reconcile_n($_confStats['High']) ?></strong> &#9989; High (95&ndash;100)</div>
-              <div style="background:#fff3cd;color:#856404;border-radius:6px;padding:0.3rem 0.6rem;" title="Students the tool is fairly sure about. Worth a quick look."><strong><?= _reconcile_n($_confStats['Medium']) ?></strong> &#9888; Medium (80&ndash;94)</div>
-              <div style="background:#f8d7da;color:#842029;border-radius:6px;padding:0.3rem 0.6rem;" title="Students the tool is unsure about. Please check these."><strong><?= _reconcile_n($_confStats['Low']) ?></strong> &#128308; Low (60&ndash;79)</div>
-              <div style="background:#e2e3e5;color:#343a40;border-radius:6px;padding:0.3rem 0.6rem;" title="Students the tool could not match with confidence. These need a person to review them."><strong><?= _reconcile_n($_confStats['Review']) ?></strong> &#10060; Review (&lt;60)</div>
+              <div style="background:#d1e7dd;color:#155724;border-radius:6px;padding:0.3rem 0.6rem;"><strong><?= _reconcile_n($_confStats['High']) ?></strong> &#9989; High (95&ndash;100)</div>
+              <div style="background:#fff3cd;color:#856404;border-radius:6px;padding:0.3rem 0.6rem;"><strong><?= _reconcile_n($_confStats['Medium']) ?></strong> &#9888; Medium (80&ndash;94)</div>
+              <div style="background:#f8d7da;color:#842029;border-radius:6px;padding:0.3rem 0.6rem;"><strong><?= _reconcile_n($_confStats['Low']) ?></strong> &#128308; Low (60&ndash;79)</div>
+              <div style="background:#e2e3e5;color:#343a40;border-radius:6px;padding:0.3rem 0.6rem;"><strong><?= _reconcile_n($_confStats['Review']) ?></strong> &#10060; Review (&lt;60)</div>
             </div>
             <?php if ($_csAutoReady): ?>
             <div style="background:#d1e7dd;color:#155724;border-radius:4px;padding:0.4rem 0.6rem;font-weight:600;">
@@ -5695,12 +5690,8 @@ $imports = $DB->get_records_sql(
 );
 
 echo $OUTPUT->header();
-// v5.9.404: render the plugin's left-hand sidebar (this page was missing it). This
-// opens rtoc-layout-wrap + sidebar + rtoc-main-content, replacing the bare
-// rtoc-main-content div that previously left the page with no sidebar.
-echo local_rtocompliance_render_nav_header('NAT Reconciliation');
-echo local_rtocompliance_page_banner('NAT Reconciliation');
 ?>
+<div class="rtoc-main-content">
 
 <h3>&#128202; NAT Enrolment Reconciliation Tool</h3>
 
@@ -5830,13 +5821,13 @@ echo local_rtocompliance_page_banner('NAT Reconciliation');
     <small class="form-text text-muted" style="margin-top:0.6rem;display:block;">
       <strong>Format:</strong> 2 columns — <strong>column 1</strong> = NAT qualcode, <strong>column 2</strong> = numeric Moodle category ID (recommended) or exact category name.<br>
       <strong>Matching:</strong> numeric IDs are preferred; category names are matched exactly (case-insensitive). No partial matching — if an exact name match cannot be found, that row is reported as an error.<br>
-      <strong>Examples:</strong> <code>ABC12345,25</code> &nbsp;or&nbsp; <code>ABC12345,a Diploma qualification (ABC12345)</code><br>
+      <strong>Examples:</strong> <code>TLI50816,25</code> &nbsp;or&nbsp; <code>TLI50816,Diploma of Customs Broking (TLI50816)</code><br>
       <strong>Existing mappings</strong> not in the CSV are left unchanged. Uploaded rows are saved as manual overrides and the auto-discovery engine will not overwrite them on future runs.<br>
       <strong>Important:</strong> map to the qualification <em>root</em> category only — not to semester, archive, RPL or delivery sub-folders.
     </small>
   </div>
 
-  <button type="submit" class="btn btn-primary" title="Run the reconciliation analysis for the selected import">
+  <button type="submit" class="btn btn-primary">
     &#128202; Run Reconciliation Analysis
   </button>
   <a href="<?= (new moodle_url('/local/rtocompliance/data_import.php'))->out() ?>"

@@ -15,12 +15,13 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * RTO Compliance plugin — suitability_send.php.
+ * local_rtocompliance file.
  *
  * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
+
 // Send (or resend) a pre-enrolment suitability review to a student.
 //
 // AUDIT-REWRITE (v4.2.47, BUG-MAY1-AUDIT-PASS4): full restructure to satisfy
@@ -38,6 +39,7 @@
 // backward-compat path in suitability_form.php.
 
 require_once(__DIR__ . '/../../config.php');
+require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
@@ -45,7 +47,6 @@ $userid   = required_param('userid', PARAM_INT);
 $resendid = optional_param('resendid', 0, PARAM_INT);
 
 admin_externalpage_setup('local_rtocompliance_students');
-require_login();
 
 $PAGE->set_url(new moodle_url('/local/rtocompliance/suitability_send.php', ['userid' => $userid]));
 $PAGE->set_title(get_string('suitability_send_title', 'local_rtocompliance'));
@@ -152,10 +153,10 @@ $llnIsManual     = ($llnAdapterCode === 'manual');
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && confirm_sesskey()) {
     $tasid       = required_param('tasid', PARAM_INT);
     $reqPrereq   = optional_param('req_prereq', 'none', PARAM_ALPHANUMEXT);
-    $reqLLNRaw   = optional_param('req_lln_level', '3', PARAM_RAW_TRIMMED);
-    // Manual override is implicit when adapter = manual; explicit checkbox otherwise.
+    $reqLLNRaw   = optional_param('req_lln_level', '3', PARAM_RAW_TRIMMED); // pipeline-ignore: PARAM_RAW -- trimmed text field; sanitised before use
+        // Manual override is implicit when adapter = manual; explicit checkbox otherwise.
     $manualOverride = (bool) optional_param('lln_manual_override', $llnIsManual ? 1 : 0, PARAM_BOOL);
-    $actLLNRaw   = $manualOverride ? optional_param('lln_actual_level', '', PARAM_RAW_TRIMMED) : '';
+    $actLLNRaw   = $manualOverride ? optional_param('lln_actual_level', '', PARAM_RAW_TRIMMED) : ''; // pipeline-ignore: PARAM_RAW -- text/JSON param; sanitised before use
 
     $reqLLN = in_array($reqLLNRaw, ['1', '2', '3', '4', '5'], true) ? $reqLLNRaw : '3';
     $actLLN = in_array($actLLNRaw, ['1', '2', '3', '4', '5'], true) ? $actLLNRaw : null;
@@ -254,7 +255,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && confirm_sesskey()) {
 // ─── GET: Show the send form ──────────────────────────────────────────────────
 echo $OUTPUT->header();
 echo local_rtocompliance_render_nav_header(get_string('students', 'local_rtocompliance'), null, null, 'students');
-echo local_rtocompliance_page_banner(get_string('students', 'local_rtocompliance'));
 echo $OUTPUT->heading(get_string('suitability_send_title', 'local_rtocompliance'), 2);
 
 // Audit context note for the admin.

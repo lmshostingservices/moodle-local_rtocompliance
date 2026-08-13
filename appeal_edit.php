@@ -15,23 +15,21 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * RTO Compliance plugin — appeal_edit.php.
+ * local_rtocompliance file.
  *
  * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
+
 require_once(__DIR__ . '/../../config.php');
+require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
-require_once(__DIR__ . '/classes/audit_logger.php');
 
 use local_rtocompliance\form\appeal_form;
-use local_rtocompliance\audit_logger;
 
 admin_externalpage_setup('local_rtocompliance_complaints');
-require_login();
-require_capability('local/rtocompliance:manage', context_system::instance());
 $context = context_system::instance();
 
 $id = optional_param('id', 0, PARAM_INT);
@@ -53,19 +51,6 @@ if ($id) {
 
 if ($delete && $id && confirm_sesskey()) {
     $DB->delete_records('local_rtocompliance_appeals', ['id' => $id]);
-    // ASQA compliance-evidence: record deletion of the appeals register entry.
-    try {
-        if (class_exists('\\local_rtocompliance\\audit_logger')) {
-            audit_logger::log_delete(
-                'appeal',
-                $id,
-                'Appeal #' . $id . ' deleted' . (!empty($appeal->reference) ? ': ' . $appeal->reference : ''),
-                $appeal ? (array) $appeal : null
-            );
-        }
-    } catch (\Throwable $e) {
-        debugging('Appeal audit log (delete) failed: ' . $e->getMessage(), DEBUG_DEVELOPER);
-    }
     redirect(
         new moodle_url('/local/rtocompliance/complaints.php'),
         get_string('appeal_deleted', 'local_rtocompliance'),
@@ -79,23 +64,6 @@ $form = new appeal_form(null, ['appeal' => $appeal]);
 if ($appeal) {
     $formdata = clone $appeal;
     $form->set_data($formdata);
-
-    // Standard 2.8 advisory checks (non-blocking reminders — no results are auto-changed).
-    // Outcome value 'upheld' (and 'partially_upheld') indicate the appeal was upheld;
-    // appealtype 'assessment_decision' indicates an assessment-decision appeal.
-    $upheld = in_array($appeal->outcome ?? '', ['upheld', 'partially_upheld'], true);
-    if ($upheld && ($appeal->appealtype ?? '') === 'assessment_decision' && empty($appeal->resultcorrected)) {
-        \core\notification::add(
-            'This assessment appeal was upheld. Please correct the underlying assessment record and tick "Underlying record corrected".',
-            \core\output\notification::NOTIFY_WARNING
-        );
-    }
-    if (!empty($appeal->outcome) && empty($appeal->independenceconfirmed)) {
-        \core\notification::add(
-            'An outcome has been recorded but reviewer/panel independence has not been confirmed. Independence must be confirmed for procedural fairness.',
-            \core\output\notification::NOTIFY_WARNING
-        );
-    }
 }
 
 if ($form->is_cancelled()) {
@@ -110,24 +78,9 @@ if ($form->is_cancelled()) {
     $record->appellantname = $data->appellantname;
     $record->appellantemail = $data->appellantemail ?? '';
     $record->appellantphone = $data->appellantphone ?? '';
-    // Audit P2-9: populate appellantuserid so the privacy provider can export/erase
-    // this record against the person's Moodle account. Resolve from the email when the
-    // id is not already set.
-    $record->appellantuserid = (!empty($data->appellantuserid)) ? (int)$data->appellantuserid : null;
-    if (empty($record->appellantuserid) && !empty($record->appellantemail)) {
-        $appellantuser = $DB->get_record('user',
-            ['email' => $record->appellantemail, 'deleted' => 0], 'id', IGNORE_MULTIPLE);
-        if ($appellantuser) {
-            $record->appellantuserid = $appellantuser->id;
-        }
-    }
     $record->groundsforappeal = $data->groundsforappeal;
     $record->originaldecision = $data->originaldecision ?? '';
     $record->originaldecisiondate = $data->originaldecisiondate ?? null;
-    // Standard 2.8 independence and record-correction fields.
-    $record->originaldecisionmaker = $data->originaldecisionmaker ?? '';
-    $record->independenceconfirmed = !empty($data->independenceconfirmed) ? 1 : 0;
-    $record->resultcorrected = !empty($data->resultcorrected) ? 1 : 0;
     $record->status = $data->status;
     $record->datelodged = $data->datelodged;
     $record->dateacknowledged = $data->dateacknowledged ?? null;
@@ -145,38 +98,11 @@ if ($form->is_cancelled()) {
     if (!empty($data->id)) {
         $record->id = $data->id;
         $DB->update_record('local_rtocompliance_appeals', $record);
-        // ASQA compliance-evidence: record update of the appeals register entry.
-        try {
-            if (class_exists('\\local_rtocompliance\\audit_logger')) {
-                audit_logger::log_update(
-                    'appeal',
-                    $record->id,
-                    'Appeal #' . $record->id . ' updated: ' . $record->reference . ' (' . $record->status . ')',
-                    null,
-                    ['reference' => $record->reference, 'appealtype' => $record->appealtype, 'status' => $record->status]
-                );
-            }
-        } catch (\Throwable $e) {
-            debugging('Appeal audit log (update) failed: ' . $e->getMessage(), DEBUG_DEVELOPER);
-        }
         $message = get_string('appeal_updated', 'local_rtocompliance');
     } else {
         $record->timecreated = $now;
         $record->createdby = $USER->id;
         $record->id = $DB->insert_record('local_rtocompliance_appeals', $record);
-        // ASQA compliance-evidence: record creation of the appeals register entry.
-        try {
-            if (class_exists('\\local_rtocompliance\\audit_logger')) {
-                audit_logger::log_create(
-                    'appeal',
-                    $record->id,
-                    'Appeal #' . $record->id . ' created: ' . $record->reference . ' (' . $record->status . ')',
-                    ['reference' => $record->reference, 'appealtype' => $record->appealtype, 'status' => $record->status]
-                );
-            }
-        } catch (\Throwable $e) {
-            debugging('Appeal audit log (create) failed: ' . $e->getMessage(), DEBUG_DEVELOPER);
-        }
         $message = get_string('appeal_created', 'local_rtocompliance');
     }
 
@@ -191,7 +117,7 @@ if ($form->is_cancelled()) {
 $PAGE->add_body_class("path-local-rtocompliance");
 echo $OUTPUT->header();
 echo local_rtocompliance_render_nav_header($id ? get_string('edit_appeal', 'local_rtocompliance') : get_string('new_appeal', 'local_rtocompliance'), get_string('complaints_appeals', 'local_rtocompliance'), '/local/rtocompliance/complaints.php', 'complaints');
-echo local_rtocompliance_page_banner($id ? get_string('edit_appeal', 'local_rtocompliance') : get_string('new_appeal', 'local_rtocompliance'));
+echo $OUTPUT->heading($id ? get_string('edit_appeal', 'local_rtocompliance') : get_string('new_appeal', 'local_rtocompliance'));
 
 $form->display();
 

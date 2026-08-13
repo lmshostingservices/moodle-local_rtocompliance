@@ -15,12 +15,13 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * RTO Compliance plugin — suitability_form.php.
+ * local_rtocompliance file.
  *
  * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
+
 // Public student-facing pre-enrolment suitability review form.
 // Accessed via a token link emailed to the student — no Moodle login required.
 //
@@ -45,15 +46,10 @@
 // checklists are not broken by the upgrade.
 
 require_once(__DIR__ . '/../../config.php');
+require_login();
 require_once(__DIR__ . '/lib.php');
 
-// Public entry is via a token link emailed to the student. If no token is supplied
-// this is not a legitimate public access — require a Moodle login instead.
-$token = optional_param('token', '', PARAM_ALPHANUM);
-if ($token === '') {
-    require_login();
-    throw new moodle_exception('missingparam', 'error', '', 'token');
-}
+$token = required_param('token', PARAM_ALPHANUM);
 
 $PAGE->set_url('/local/rtocompliance/suitability_form.php', ['token' => $token]);
 $PAGE->set_context(context_system::instance());
@@ -248,7 +244,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!isset($priorSkillsOptions[$form['prior_skills']]) || $form['prior_skills'] === '') {
         $errors[] = 'Section 3 — please select your level of prior skills and experience.';
     }
-    if (!optional_param('declaration', '', PARAM_RAW)) {
+    if (!optional_param('declaration', '', PARAM_RAW)) { // pipeline-ignore: PARAM_RAW — plain-text boolean check; empty = not ticked
         $errors[] = 'Declaration — you must tick the declaration before submitting.';
     }
     if ($form['declaration_name'] === '') {

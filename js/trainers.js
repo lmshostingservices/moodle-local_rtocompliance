@@ -57,8 +57,8 @@
         editLink.textContent = "Edit Trainer";
         editLink.style.cssText = "display:block;padding:6px 16px;white-space:nowrap;"
             + "color:#212529;text-decoration:none;font-size:0.9rem;";
-        editLink.onmouseover = function () { this.style.background = "#f8f9fa"; };
-        editLink.onmouseout  = function () { this.style.background = ""; };
+        editLink.onmouseover = function() { this.style.background = "#f8f9fa"; };
+        editLink.onmouseout  = function() { this.style.background = ""; };
         menu.appendChild(editLink);
 
         // "Delete" item
@@ -67,8 +67,8 @@
             delBtn.type = "button";
             delBtn.style.cssText = "display:block;width:100%;padding:6px 16px;white-space:nowrap;"
                 + "color:#dc3545;background:none;border:none;text-align:left;cursor:pointer;font-size:0.9rem;";
-            delBtn.onmouseover = function () { this.style.background = "#f8f9fa"; };
-            delBtn.onmouseout  = function () { this.style.background = ""; };
+            delBtn.onmouseover = function() { this.style.background = "#f8f9fa"; };
+            delBtn.onmouseout  = function() { this.style.background = ""; };
             delBtn.textContent = "Delete";
             delBtn.setAttribute("data-del-form", delForm);
             menu.appendChild(delBtn);
@@ -132,8 +132,8 @@
 
         // Split on double-newline for paragraphs, single newline for line breaks
         var paragraphs = raw.split(/\n\n+/);
-        t.innerHTML = paragraphs.map(function (p) {
-            var lines = p.split(/\n/).map(function (l) {
+        t.innerHTML = paragraphs.map(function(p) {
+            var lines = p.split(/\n/).map(function(l) {
                 return l.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
             });
             return "<p>" + lines.join("<br>") + "</p>";

@@ -15,18 +15,19 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * RTO Compliance plugin — transitions.php.
+ * local_rtocompliance file.
  *
  * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
+
 require_once(__DIR__ . '/../../config.php');
+require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_transitions');
-require_login();
 $PAGE->set_title(get_string('transitions', 'local_rtocompliance'));
 $PAGE->set_heading(get_string('transitions', 'local_rtocompliance'));
 
@@ -43,7 +44,7 @@ echo html_writer::tag('h2', 'Training Product Transitions');
 echo html_writer::link(
     new moodle_url('/local/rtocompliance/transition_edit.php'),
     'Add Transition Plan',
-    ['class' => 'btn btn-primary', 'title' => 'Add a new training product transition plan']
+    ['class' => 'btn btn-primary']
 );
 echo html_writer::end_div();
 
@@ -74,14 +75,14 @@ if ($transitions) {
     echo html_writer::start_tag('table', ['class' => 'data-table']);
     echo html_writer::start_tag('thead');
     echo html_writer::start_tag('tr');
-    echo html_writer::tag('th', 'Old Product', ['title' => 'Superseded or deleted training product']);
-    echo html_writer::tag('th', 'New Product', ['title' => 'Replacement training product students transition to']);
-    echo html_writer::tag('th', 'Type', ['title' => 'Whether the product was superseded or deleted']);
-    echo html_writer::tag('th', 'Teach-Out Deadline', ['title' => 'Date by which students must complete the old product']);
-    echo html_writer::tag('th', 'Students Affected', ['title' => 'Number of students still enrolled in the old product']);
-    echo html_writer::tag('th', 'Status', ['title' => 'Current status of the transition plan']);
-    echo html_writer::tag('th', 'Enrolments', ['title' => 'Whether new self-enrolments are open or blocked']);
-    echo html_writer::tag('th', 'Actions', ['title' => 'Manage this transition plan']);
+    echo html_writer::tag('th', 'Old Product');
+    echo html_writer::tag('th', 'New Product');
+    echo html_writer::tag('th', 'Type');
+    echo html_writer::tag('th', 'Teach-Out Deadline');
+    echo html_writer::tag('th', 'Students Affected');
+    echo html_writer::tag('th', 'Status');
+    echo html_writer::tag('th', 'Enrolments');
+    echo html_writer::tag('th', 'Actions');
     echo html_writer::end_tag('tr');
     echo html_writer::end_tag('thead');
     echo html_writer::start_tag('tbody');
@@ -102,18 +103,6 @@ if ($transitions) {
         }
 
         $typeclass = $trans->transitiontype == 'superseded' ? 'badge-info' : 'badge-danger';
-        $typetitle = $trans->transitiontype == 'superseded'
-            ? 'Superseded: this product has been replaced by a newer version on training.gov.au.'
-            : 'Deleted: this product has been removed from training.gov.au and can no longer be delivered.';
-
-        $statustitle = 'Current stage of moving students off the old product.';
-        if ($trans->status == 'completed') {
-            $statustitle = 'Completed: all students have finished or moved off the old product.';
-        } elseif ($daysuntil < 0) {
-            $statustitle = 'Overdue: the teach-out deadline has passed but this transition is not finished.';
-        } elseif ($daysuntil < 90) {
-            $statustitle = 'Fewer than 90 days left to finish teaching out the old product before the deadline.';
-        }
 
         // -----------------------------------------------------------------------
         // Enrolment status cell — show whether new self-enrolments are blocked in
@@ -156,16 +145,16 @@ if ($transitions) {
         echo html_writer::start_tag('tr');
         echo html_writer::tag('td', $oldproductcell);
         echo html_writer::tag('td', $trans->newproductcode ? html_writer::tag('code', $trans->newproductcode) . '<br>' . html_writer::tag('small', format_string($trans->newproductname)) : '-');
-        echo html_writer::tag('td', html_writer::tag('span', ucfirst($trans->transitiontype), ['class' => 'badge ' . $typeclass, 'title' => $typetitle]));
+        echo html_writer::tag('td', html_writer::tag('span', ucfirst($trans->transitiontype), ['class' => 'badge ' . $typeclass]));
         echo html_writer::tag('td', userdate($trans->teachoutdeadline, '%d %b %Y'));
         echo html_writer::tag('td', $trans->studentsaffected);
-        echo html_writer::tag('td', html_writer::tag('span', $status, ['class' => 'badge ' . $statusclass, 'title' => $statustitle]));
+        echo html_writer::tag('td', html_writer::tag('span', $status, ['class' => 'badge ' . $statusclass]));
         echo html_writer::tag('td', $enrolcell);
         echo html_writer::tag('td',
             html_writer::link(
                 new moodle_url('/local/rtocompliance/transition_edit.php', ['id' => $trans->id]),
                 'Manage',
-                ['class' => 'btn btn-sm btn-secondary', 'title' => 'Manage this transition plan']
+                ['class' => 'btn btn-sm btn-secondary']
             )
         );
         echo html_writer::end_tag('tr');
@@ -182,7 +171,7 @@ if ($transitions) {
     echo html_writer::link(
         new moodle_url('/local/rtocompliance/transition_edit.php'),
         'Add Transition Plan',
-        ['class' => 'btn btn-primary', 'title' => 'Add the first transition plan']
+        ['class' => 'btn btn-primary']
     );
     echo html_writer::end_div();
 }

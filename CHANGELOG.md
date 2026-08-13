@@ -1,17 +1,3 @@
-## v5.9.341 — 30 Jul 2026
-
-### Changed — UI styling engine, getting-started navigation, and Moodle 4.4–5.3 support
-
-- **COMPAT-4.4-5.3** (`version.php`): declared support widened to Moodle 4.4 → 5.3 (`$plugin->requires = 2024042200`, `$plugin->supported = [404, 503]`).
-- **HOOK-MIGRATION** (`lib.php`): removed the legacy `local_rtocompliance_before_footer()` callback that double-registered the table JS already injected by the `before_footer_html_generation` hook (and threw the “should be migrated to hook” debug notice on 4.4/4.5).
-- **INSTALL-XML-FIX** (`db/install.xml`): added the `local_rtocompliance_qualunit_courses` table so **fresh installs** build it (it previously existed only in `upgrade.php`, breaking new installs of Qual Builder, Cert Hub and Course Map).
-- **CAP-LANG** (`lang/en`): added the 5 missing capability strings (`viewtrainer`, `viewcerts`, `viewstudents`, `viewreports`, `managecerttemplates`).
-- **GETTING-STARTED-NAV** (`lib.php`): left menu reordered to a first-step → last-step onboarding flow; added USI Verification + Qual Certificate Hub (previously off-menu); removed the dead “Testing Engine” link; registered the missing `info`/`file-check`/`search` icons; fixed the active-item matcher to respect `?section=` query strings.
-- **LIGHT-SIDEBAR** (`lib.php`): recoloured the sidebar from near-black (`#0d1424`; group labels failed WCAG at 1.77:1) to a modern light slate surface with AA-contrast text.
-- **UI-ENGINE** (`styles.css`): appended a single unified styling engine — one canonical token `:root`, overflow-safe premium data-tables (fixes the last-column overlap), cross-Bootstrap-4/5 badge + spacing shims so components render identically on 4.4 and 5.x, and a 4-tier responsive system.
-- **BS5-MODALS** (`certificates.php`, `generate_course_certs.php`): added `data-bs-toggle`/`data-bs-target`/`data-bs-dismiss` alongside the Bootstrap-4 attributes so the bulk-generate modals open on Moodle 5.x.
-- No DB schema changes. Savepoint 2026073000341.
-
 ## v4.9.179 — 20 May 2026
 
 ### Fixed — Auto-enrol wizard now uses Moodle categories (qualifications) not courses

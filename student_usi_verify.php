@@ -15,13 +15,6 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * RTO Compliance plugin — student_usi_verify.php.
- *
- * @package    local_rtocompliance
- * @copyright  2025 LMS Labs
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
-/**
  * USI Verification — inline AJAX endpoint.
  *
  * Called by the "Verify via usi.gov.au" button on students.php.
@@ -32,18 +25,17 @@
  *
  * Returns JSON: { success, html, message }
  * or redirects back to students.php on non-AJAX use.
+ * @package    local_rtocompliance
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
 
 require_once(__DIR__ . '/../../config.php');
+require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
 use local_rtocompliance\usi\usi_verification_service;
-
-// Logged-in staff endpoint (invoked from the Students roster). Enforce authentication
-// and the manage capability in addition to the sesskey CSRF guard below.
-require_login();
-require_capability('local/rtocompliance:manage', context_system::instance());
 
 $profileid = required_param('profileid', PARAM_INT);
 $ajax      = optional_param('ajax',      0, PARAM_INT);

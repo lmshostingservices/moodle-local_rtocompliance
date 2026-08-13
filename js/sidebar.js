@@ -2,7 +2,7 @@
    Previously this was an inline <script> block injected by local_rtocompliance_render_sidebar()
    in lib.php. Moving it here allows it to be served as a same-origin script, which is
    permitted by Moodle's Content-Security-Policy 'self' directive. */
-(function () {
+(function() {
     var STORAGE_KEY = 'rtoc_sb_collapsed';
     var SB_W  = 258;
     var SB_CW = 62;
@@ -19,19 +19,19 @@
     // -- MOBILE: slide-in overlay ------------------------------------------
     function setupMobile() {
         if (mobileBtn) {
-            mobileBtn.addEventListener('click', function () {
+            mobileBtn.addEventListener('click', function() {
                 sidebar.classList.toggle('rtoc-sb-mobile-open');
                 if (overlay) overlay.classList.toggle('rtoc-overlay-visible');
             });
         }
         if (overlay) {
-            overlay.addEventListener('click', function () {
+            overlay.addEventListener('click', function() {
                 sidebar.classList.remove('rtoc-sb-mobile-open');
                 overlay.classList.remove('rtoc-overlay-visible');
             });
         }
-        sidebar.querySelectorAll('.rtoc-sb-item').forEach(function (a) {
-            a.addEventListener('click', function () {
+        sidebar.querySelectorAll('.rtoc-sb-item').forEach(function(a) {
+            a.addEventListener('click', function() {
                 sidebar.classList.remove('rtoc-sb-mobile-open');
                 if (overlay) overlay.classList.remove('rtoc-overlay-visible');
             });
@@ -60,7 +60,7 @@
     }
 
     if (toggleBtn) {
-        toggleBtn.addEventListener('click', function () {
+        toggleBtn.addEventListener('click', function() {
             var willCollapse = !sidebar.classList.contains('rtoc-sb-is-collapsed');
             applyCollapsed(willCollapse);
             localStorage.setItem(STORAGE_KEY, willCollapse ? '1' : '0');
@@ -83,8 +83,8 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ siteId: siteid, apiKey: apikey })
         })
-        .then(function (r) { return r.ok ? r.json() : null; })
-        .then(function (d) {
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(d) {
             if (!d) return;
             if (d.isUnlimited || d.creditsRaw === -1) {
                 valEl.textContent = 'Unlimited';
@@ -95,7 +95,7 @@
                 valEl.style.color = bal < 10 ? '#f87171' : (bal < 50 ? '#fbbf24' : '#93c5fd');
             }
         })
-        .catch(function () { /* silent — credits widget is non-critical UI */ });
+        .catch(function() { /* silent — credits widget is non-critical UI */ });
     }
 
     // -- Collapsed icon tooltips (JS-based, avoids overflow:hidden clipping) --
@@ -139,8 +139,8 @@
         if (_tip) { _tip.parentNode && _tip.parentNode.removeChild(_tip); _tip = null; }
     }
     function wireTips() {
-        sidebar.querySelectorAll('.rtoc-sb-item').forEach(function (item) {
-            item.addEventListener('mouseenter', function () { showTip(item); });
+        sidebar.querySelectorAll('.rtoc-sb-item').forEach(function(item) {
+            item.addEventListener('mouseenter', function() { showTip(item); });
             item.addEventListener('mouseleave', hideTip);
             item.addEventListener('click', hideTip);
         });
@@ -158,61 +158,18 @@
         }
         // Fetch credits after a short delay to not compete with page load.
         setTimeout(fetchCredits, 600);
-        // SECTION-PINNING (v6.2.43): on load, scroll the nav's own scroll container so the
-        // ACTIVE item's SECTION HEADER (e.g. "4. Students & Support") sits near the top —
-        // not merely so the active link is "nearest" visible. Walks back from the active item
-        // to its group label (labels are flat siblings of the items) and pins that. Degrades
-        // to the active item if no label/container is found. Scoped to the nav's internal
-        // scroll so the page itself never jumps.
-        // v6.2.88 FIX: the scroll container is whichever ancestor actually overflows — the
-        // inner .rtoc-sb-nav OR the whole #rtoc-sidebar (which also has overflow-y:auto). The old
-        // code only scrolled .rtoc-sb-nav and, when the nav itself did not overflow (the sidebar
-        // scrolled as a whole), fell back to scrollIntoView({block:'nearest'}) — which just made
-        // the link barely visible instead of pinning its section to the top. Now we find the real
-        // scroller and always align the section header to the top, and re-run after layout settles.
-        function rtocScrollActiveSectionToTop() {
-            var activeItem = sidebar.querySelector('.rtoc-sb-active');
-            if (!activeItem) { return; }
-            // Walk back through flat siblings to this item's group label (its section header).
-            var label = activeItem;
-            while (label && !(label.classList && label.classList.contains('rtoc-sb-group-label'))) {
-                label = label.previousElementSibling;
-            }
-            var target = label || activeItem;
-            // Nearest ancestor that actually scrolls (prefer the inner nav, else the sidebar).
-            var scroller = null, node = activeItem.parentElement;
-            while (node) {
-                var oy = window.getComputedStyle(node).overflowY;
-                if ((oy === 'auto' || oy === 'scroll') && node.scrollHeight > node.clientHeight + 1) {
-                    scroller = node; break;
-                }
-                if (node === sidebar) { break; }
-                node = node.parentElement;
-            }
-            if (!scroller) {
-                // Sidebar content fits — nothing to scroll within it.
-                return;
-            }
-            var delta = target.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
-            scroller.scrollTop = Math.max(0, scroller.scrollTop + delta - 8);
+        // Scroll active sidebar item into view so it is always visible on page load.
+        var activeItem = sidebar.querySelector('.rtoc-sb-active');
+        if (activeItem) {
+            activeItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         }
-        rtocScrollActiveSectionToTop();
-        // Re-run once layout has settled (web-font swap, the credits widget resolving its width,
-        // Moodle drawers finishing their transition can all shift heights after DOMContentLoaded).
-        setTimeout(rtocScrollActiveSectionToTop, 250);
-        if (window.requestAnimationFrame) {
-            window.requestAnimationFrame(function () {
-                window.requestAnimationFrame(rtocScrollActiveSectionToTop);
-            });
-        }
-        window.addEventListener('load', rtocScrollActiveSectionToTop, { once: true });
         // Prevent the browser restoring a saved scroll position on nav, which
         // would fire before our scroll and trip the guard below.
         if ('scrollRestoration' in history) { history.scrollRestoration = 'manual'; }
         // Auto-scroll: push the page so Moodle's fixed primary header stays visible
         // but ALL secondary chrome (secondary-nav, breadcrumbs, page-header) scrolls away,
         // leaving plugin content flush against the bottom edge of the fixed header.
-        setTimeout(function () {
+        setTimeout(function() {
             if (window.scrollY > 80) return; // user already scrolled — respect their position
             // Measure the actual height of Moodle's fixed primary navbar at runtime.
             var navEl = document.querySelector('.navbar.fixed-top')
@@ -235,7 +192,7 @@
 
     document.addEventListener('DOMContentLoaded', doInit);
 
-    window.addEventListener('resize', function () {
+    window.addEventListener('resize', function() {
         if (!isMobile()) {
             applyCollapsed(localStorage.getItem(STORAGE_KEY) === '1');
             sidebar.classList.remove('rtoc-sb-mobile-open');
