@@ -6352,6 +6352,19 @@ function local_rtocompliance_get_course_settings($courseid) {
 function local_rtocompliance_user_requires_avetmiss($userid) {
     global $DB;
 
+    static $cache = [];
+    $userid = (int)$userid;
+    if ($userid <= 0) {
+        return false;
+    }
+    // The gate can ask this question several times per page request, so the answer
+    // is cached — but never under PHPUnit, where a test enrols/unenrols a user and
+    // then re-asks within the same process and must see the new answer.
+    $usecache = !(defined('PHPUNIT_TEST') && PHPUNIT_TEST);
+    if ($usecache && array_key_exists($userid, $cache)) {
+        return $cache[$userid];
+    }
+
     // Note: Do NOT add LIMIT clause - record_exists_sql() adds its own LIMIT automatically
     $sql = "SELECT 1
               FROM {user_enrolments} ue
@@ -6361,7 +6374,406 @@ function local_rtocompliance_user_requires_avetmiss($userid) {
                AND ue.status = 0
                AND lrc.nationallyrecognised = 1";
 
-    return $DB->record_exists_sql($sql, ['userid' => $userid]);
+    $requires = $DB->record_exists_sql($sql, ['userid' => $userid]);
+
+    // QUALBUILDER-PATH (v6.3.0): the nationallyrecognised flag on
+    // local_rtocompliance_courses is the LEGACY signal. Since the Qual Builder /
+    // course-map / category-ancestor resolution was introduced, a student can hold
+    // real AVETMISS training-activity records (local_rtocompliance_enrolments) for a
+    // qualification, skill set or standalone unit without that flag ever having been
+    // ticked on the Moodle course. Those students are just as reportable, so they
+    // must also be treated as requiring AVETMISS data.
+    //
+    // This must only match students who are CURRENTLY training. Three conditions,
+    // all required, because none of them is trustworthy on its own:
+    //   - the AVETMISS row says in-training ('active' / 'hold'), AND
+    //   - the outcome is not a final one — results_importer::build_record() stamps
+    //     every imported row 'active' regardless of outcome, so status alone would
+    //     sweep in every student ever loaded from a NAT/results file, AND
+    //   - the student still holds an ACTIVE Moodle enrolment in that same course,
+    //     so people who finished or were unenrolled years ago are never chased for
+    //     data they can no longer do anything about.
+    // AVETMISS final outcomes: 20 competent, 30 not competent, 40 withdrawn,
+    // 51 RPL granted, 52 RPL not granted, 60 credit transfer, 61 superseded CT,
+    // 81/82 non-assessable outcomes, 85 not started, 90 result withheld.
+    if (!$requires) {
+        $finaloutcomes = "'20','30','40','51','52','60','61','81','82','85','90'";
+        $requires = $DB->record_exists_sql(
+            "SELECT 1
+               FROM {local_rtocompliance_enrolments} en
+               JOIN {local_rtocompliance_students} st ON st.id = en.studentid
+               JOIN {user_enrolments} ue ON ue.userid = st.userid
+               JOIN {enrol} e ON e.id = ue.enrolid AND e.courseid = en.courseid
+              WHERE st.userid = :userid
+                AND ue.status = 0
+                AND en.status IN ('active', 'hold')
+                AND (en.outcomeidentifier IS NULL
+                     OR en.outcomeidentifier NOT IN ($finaloutcomes))",
+            ['userid' => $userid]
+        );
+    }
+
+    if ($usecache) {
+        $cache[$userid] = $requires;
+    }
+    return $requires;
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// AVETMISS PROFILE GATE (v6.3.0)
+//
+// ASQA Standard 1.8 / Clause 12 and the AVETMISS 2.3 NAT files require accurate
+// student data. Collecting it "when someone remembers to ask" does not survive an
+// audit, so this group of functions lets the plugin REQUIRE a student in
+// nationally recognised training to complete their AVETMISS profile before they
+// can use the site: on login they land on My AVETMISS Profile and every other
+// page bounces them back there until the mandatory fields are filled in.
+//
+// The pieces:
+//   local_rtocompliance_avetmiss_field_labels()      human labels for each field
+//   local_rtocompliance_avetmiss_mandatory_fields()  which fields are mandatory
+//   local_rtocompliance_avetmiss_value_missing()     one field's "is it blank?" rule
+//   local_rtocompliance_get_missing_avetmiss_fields() the gap list for a user
+//   local_rtocompliance_profile_gate_applies()       should this user be locked?
+//   local_rtocompliance_profile_gate_check()         the redirect itself
+// ═════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Human-readable label for every field the profile gate can require.
+ *
+ * @return array field name => translated label
+ */
+function local_rtocompliance_avetmiss_field_labels(): array {
+    return [
+        'usi'                => get_string('usi', 'local_rtocompliance'),
+        'dateofbirth'        => get_string('dateofbirth', 'local_rtocompliance'),
+        'sex'                => get_string('sex', 'local_rtocompliance'),
+        'suburb'             => get_string('suburb', 'local_rtocompliance'),
+        'postcode'           => get_string('postcode', 'local_rtocompliance'),
+        // Labels reuse the exact strings the profile form prints, so the "you are
+        // missing X" list always names the field the student is looking at.
+        'statecode'          => get_string('residentialstate', 'local_rtocompliance'),
+        'indigenousstatus'   => get_string('atsi', 'local_rtocompliance'),
+        'countryofbirth'     => get_string('countryofbirth', 'local_rtocompliance'),
+        'languageathome'     => get_string('languageathome', 'local_rtocompliance'),
+        'labourforcestatus'  => get_string('labourforcestatus', 'local_rtocompliance'),
+        'highestschoollevel' => get_string('schoollevel', 'local_rtocompliance'),
+    ];
+}
+
+/**
+ * The full AVETMISS field set that defines a COMPLETE student profile.
+ *
+ * This list is deliberately fixed. profilecomplete is a compliance flag read by
+ * certificate issuance, NAT readiness counts and the Compliance Health dashboard,
+ * so it must not move when an administrator changes what the login gate asks for.
+ *
+ * @return string[] field names
+ */
+function local_rtocompliance_avetmiss_all_fields(): array {
+    return [
+        'usi', 'dateofbirth', 'sex', 'postcode', 'statecode', 'suburb',
+        'indigenousstatus', 'countryofbirth', 'languageathome',
+        'labourforcestatus', 'highestschoollevel',
+    ];
+}
+
+/**
+ * The AVETMISS fields a student must supply before the login gate lets them through.
+ *
+ * Defaults to every field EXCEPT the USI. A student cannot conjure a USI on demand —
+ * it is issued by usi.gov.au and many enrol before they hold one (or the RTO applies
+ * on their behalf) — so making it a condition of accessing the site would lock those
+ * students out with no way to comply. Everything else on the list is information the
+ * student simply knows and can type in. An administrator who does require a USI up
+ * front can tick it in
+ * Site administration → RTO Compliance → RTO details → Student data enforcement.
+ *
+ * Note this is the GATE list, not the completeness definition — a profile is still
+ * only "complete" (and a certificate still only issuable) once the USI is present.
+ *
+ * @return string[] field names
+ */
+function local_rtocompliance_avetmiss_mandatory_fields(): array {
+    $all = local_rtocompliance_avetmiss_all_fields();
+    $default = array_values(array_diff($all, ['usi']));
+
+    $raw = get_config('local_rtocompliance', 'mandatoryprofilefields');
+    if ($raw === false || $raw === null || trim((string)$raw) === '') {
+        return $default;
+    }
+
+    // admin_setting_configmulticheckbox stores a comma separated list of ticked keys.
+    $chosen = array_filter(array_map('trim', explode(',', (string)$raw)));
+    $fields = array_values(array_intersect($all, $chosen));
+
+    // Never end up with an empty mandatory list by accident — that would make the
+    // gate a no-op and silently stop collecting data.
+    return $fields ?: $default;
+}
+
+/**
+ * Is a single AVETMISS value effectively blank?
+ *
+ * AVETMISS uses "@" sentinels for not-stated values ('@' for one-character fields,
+ * '@@' for two, '@@@@' for four), which are NOT the same as a real answer — a
+ * profile full of sentinels fails NAT validation just as hard as an empty one.
+ *
+ * @param string $field Field name.
+ * @param mixed $value Stored value.
+ * @return bool True when the field still needs to be answered.
+ */
+function local_rtocompliance_avetmiss_value_missing(string $field, $value): bool {
+    if ($field === 'dateofbirth') {
+        return empty($value) || (int)$value <= 0;
+    }
+
+    if ($value === null) {
+        return true;
+    }
+
+    $v = trim((string)$value);
+    if ($v === '') {
+        return true;
+    }
+
+    // '@', '@@', '@@@@' … any all-sentinel value means "not stated".
+    if (trim($v, '@') === '') {
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * Which mandatory AVETMISS fields is this student still missing?
+ *
+ * @param int $userid Moodle user id.
+ * @param stdClass|null $student Optional pre-loaded students row (saves a query).
+ * @return array field name => human label, empty when the profile is complete.
+ */
+function local_rtocompliance_get_missing_avetmiss_fields($userid, $student = null): array {
+    global $DB;
+
+    if ($student === null) {
+        $student = $DB->get_record('local_rtocompliance_students', ['userid' => (int)$userid]);
+    }
+
+    $labels  = local_rtocompliance_avetmiss_field_labels();
+    $missing = [];
+
+    foreach (local_rtocompliance_avetmiss_mandatory_fields() as $field) {
+        $value = ($student && isset($student->$field)) ? $student->$field : null;
+        if (local_rtocompliance_avetmiss_value_missing($field, $value)) {
+            $missing[$field] = $labels[$field] ?? $field;
+        }
+    }
+
+    return $missing;
+}
+
+/**
+ * Recompute the profilecomplete flag.
+ *
+ * Single source of truth for staff edits (student_profile.php) and student
+ * self-service (my_profile.php), so the flag means the same thing whoever saved
+ * the record. Uses the FIXED field set — never the configurable gate list — so
+ * changing what the login gate asks for can never silently relax certificate
+ * issuance, NAT readiness or the Compliance Health figures.
+ *
+ * @param stdClass|array $data Student record or submitted form data.
+ * @return int 1 when complete, 0 when not.
+ */
+function local_rtocompliance_calculate_profilecomplete($data): int {
+    $obj = is_array($data) ? (object)$data : $data;
+
+    foreach (local_rtocompliance_avetmiss_all_fields() as $field) {
+        $value = isset($obj->$field) ? $obj->$field : null;
+        if (local_rtocompliance_avetmiss_value_missing($field, $value)) {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+/**
+ * Should the profile gate hold this user? (Ignores which page they are on.)
+ *
+ * @param int|null $userid Defaults to the current user.
+ * @return array|false ['missing' => [field => label]] when the user must be held,
+ *                     false when they are free to browse.
+ */
+function local_rtocompliance_profile_gate_applies($userid = null) {
+    global $USER;
+
+    $userid = (int)($userid ?? $USER->id);
+    if ($userid <= 0) {
+        return false;
+    }
+
+    // Off by default-safe: the setting has to be explicitly enabled.
+    if (!get_config('local_rtocompliance', 'enforceprofile')) {
+        return false;
+    }
+
+    // Never hold guests, admins, or a staff member who is logged in AS a student
+    // (breaking out of a "login as" session is impossible if we redirect them).
+    if (!isloggedin() || isguestuser($userid)) {
+        return false;
+    }
+    if (is_siteadmin($userid)) {
+        return false;
+    }
+    if (class_exists('\core\session\manager') && \core\session\manager::is_loggedinas()) {
+        return false;
+    }
+
+    // Staff bypass — trainers, assessors, managers and anyone granted the
+    // bypass capability keep working normally even if they are also a learner.
+    if (has_capability('local/rtocompliance:bypassprofilegate', context_system::instance(), $userid)) {
+        return false;
+    }
+
+    // NEVER hold a user who cannot actually use the destination page: my_profile.php
+    // requires local/rtocompliance:editownprofile, so if a site has overridden that
+    // capability away, redirecting there would throw a permissions exception on every
+    // page and leave the user with nothing but the logout link.
+    if (!has_capability('local/rtocompliance:editownprofile',
+            context_user::instance($userid, IGNORE_MISSING) ?: context_system::instance(), $userid)) {
+        return false;
+    }
+
+    // Only students actually in nationally recognised / reportable training.
+    if (!local_rtocompliance_user_requires_avetmiss($userid)) {
+        return false;
+    }
+
+    $missing = local_rtocompliance_get_missing_avetmiss_fields($userid);
+    if (empty($missing)) {
+        return false;
+    }
+
+    return ['missing' => $missing];
+}
+
+/**
+ * Paths the gate must never redirect away from, or the user gets stuck in a loop
+ * (or locked out of logging out / accepting policies / resetting a password).
+ *
+ * Matched against the tail of the running script path, so this works on sites
+ * installed in a subdirectory too.
+ *
+ * @return string[]
+ */
+function local_rtocompliance_profile_gate_allowlist(): array {
+    return [
+        // The gate's own destination.
+        'local/rtocompliance/my_profile.php',
+        // Where my_profile.php sends a user it decides does not need AVETMISS data —
+        // allowlisted so the two pages can never ping-pong if their conditions
+        // ever diverge.
+        'user/profile.php',
+        // Authentication and account recovery.
+        'login/index.php', 'login/logout.php', 'login/change_password.php',
+        'login/forgot_password.php', 'login/confirm.php', 'login/signup.php',
+        'login/token.php', 'login/set_password.php',
+        // Site policies / GDPR consent must still be completable.
+        'user/policy.php', 'admin/tool/policy/index.php', 'admin/tool/policy/view.php',
+        // Moodle's own required-profile-field form.
+        'user/edit.php', 'user/editadvanced.php',
+        // Administration (managers are bypassed by capability, but never trap an admin).
+        'admin/',
+        // File serving, AJAX endpoints, JS/CSS and web services — these are not
+        // "pages" and redirecting them breaks the page the student is already on.
+        'pluginfile.php', 'draftfile.php', 'tokenpluginfile.php', 'webservice/',
+        'lib/ajax/', 'lib/javascript.php', 'lib/requirejs.php', 'lib/scriptslib.php',
+        'theme/styles.php', 'theme/javascript.php', 'theme/image.php', 'theme/font.php',
+    ];
+}
+
+/**
+ * The gate itself: bounce a student with an incomplete AVETMISS profile back to
+ * My AVETMISS Profile, on every page, until the mandatory fields are filled in.
+ *
+ * Called from local_rtocompliance_extend_navigation() (which runs while the global
+ * navigation is built — after require_login() and before any output) and, as a
+ * backstop for page layouts that never build the navigation, from the
+ * before_standard_head_html_generation hook.
+ *
+ * @return void
+ */
+function local_rtocompliance_profile_gate_check(): void {
+    global $USER, $SESSION, $CFG;
+
+    static $alreadychecked = false;
+    if ($alreadychecked) {
+        return;
+    }
+    $alreadychecked = true;
+
+    // Emergency off switch for an administrator locked out by a misconfiguration:
+    //   $CFG->local_rtocompliance_disable_profile_gate = true;  in config.php
+    if (!empty($CFG->local_rtocompliance_disable_profile_gate)) {
+        return;
+    }
+
+    // Not a browser page view — never redirect these.
+    if ((defined('CLI_SCRIPT') && CLI_SCRIPT)
+        || (defined('AJAX_SCRIPT') && AJAX_SCRIPT)
+        || (defined('WS_SERVER') && WS_SERVER)
+        || (defined('NO_MOODLE_COOKIES') && NO_MOODLE_COOKIES)) {
+        return;
+    }
+
+    // Mid-install/upgrade the students table may not even exist yet.
+    if (during_initial_install()) {
+        return;
+    }
+
+    if (!isloggedin() || isguestuser()) {
+        return;
+    }
+
+    // Is the current script one the student must still be able to reach?
+    //
+    // The allowlist entries are Moodle-root-relative ('login/logout.php', 'admin/'),
+    // so the site's own subdirectory has to be stripped off the running script path
+    // before comparing — otherwise a Moodle installed at /admin/ or /login/ would
+    // match every entry and switch the gate off site-wide, and a plain substring
+    // test would allowlist any path that merely contained 'admin/' somewhere.
+    $script = (string)($_SERVER['SCRIPT_NAME'] ?? '');
+    if ($script === '') {
+        $script = (string)($_SERVER['PHP_SELF'] ?? '');
+    }
+    $script = ltrim(str_replace('\\', '/', $script), '/');
+
+    $wwwpath = trim((string)parse_url($CFG->wwwroot, PHP_URL_PATH), '/');
+    if ($wwwpath !== '' && strpos($script, $wwwpath . '/') === 0) {
+        $script = substr($script, strlen($wwwpath) + 1);
+    }
+
+    foreach (local_rtocompliance_profile_gate_allowlist() as $allowed) {
+        if ($allowed !== '' && strpos($script, $allowed) === 0) {
+            return;
+        }
+    }
+
+    $gate = local_rtocompliance_profile_gate_applies((int)$USER->id);
+    if ($gate === false) {
+        return;
+    }
+
+    // Remember where they were headed so we can send them back once the profile
+    // is complete — the student finishes the form and lands where they wanted.
+    if (empty($SESSION->local_rtocompliance_gate_return)) {
+        $me = qualified_me();
+        if (!empty($me)) {
+            $SESSION->local_rtocompliance_gate_return = $me;
+        }
+    }
+
+    redirect(new moodle_url('/local/rtocompliance/my_profile.php', ['prompt' => 1]));
 }
 
 function local_rtocompliance_get_user_nationally_recognised_courses($userid) {
@@ -7959,24 +8371,27 @@ function local_rtocompliance_user_role(): string {
 function local_rtocompliance_extend_navigation(global_navigation $nav) {
     global $PAGE, $SESSION;
 
-    // LOGIN-PROFILE-PROMPT (v5.9.314) ──────────────────────────────────────
-    // The user_loggedin observer sets this flag when a student with an
-    // incomplete AVETMISS profile logs in. We consume it here — after
-    // require_login() has run on the destination page — so redirect() is safe.
+    // AVETMISS PROFILE GATE (v6.3.0, replaces the one-shot LOGIN-PROFILE-PROMPT
+    // of v5.9.314) ─────────────────────────────────────────────────────────────
+    // The old behaviour set a session flag at login and consumed it on the very
+    // next page: one nudge, then the student could click away and carry on
+    // training with no date of birth, no USI and no address — which is exactly
+    // the data ASQA expects the RTO to hold. The gate below is persistent: it
+    // re-checks on every page build, so an incomplete student keeps landing back
+    // on My AVETMISS Profile until the mandatory fields are filled in.
     //
-    // Guard: don't redirect if the user is already on my_profile.php (prevents
-    // an infinite loop when the profile form is cancelled or saved but still
-    // incomplete). Also skip for guests (isloggedin check below).
-    if (!empty($SESSION->local_rtocompliance_needs_profile)) {
+    // This runs while the global navigation is initialised — after require_login()
+    // on the destination page and before any output — so redirect() is safe here.
+    // Guests, admins, "login as" sessions, staff with the bypass capability, and
+    // the allowlisted pages (login, logout, policies, admin, file serving) are all
+    // excluded inside local_rtocompliance_profile_gate_check().
+    local_rtocompliance_profile_gate_check();
+
+    // Legacy flag from the pre-6.3.0 observer — clear it so an old session that
+    // still carries it doesn't leave stale state behind. The gate above has
+    // already made the redirect decision on its own.
+    if (isset($SESSION->local_rtocompliance_needs_profile)) {
         unset($SESSION->local_rtocompliance_needs_profile);
-        if (isloggedin() && !isguestuser()) {
-            $profilebase = (new moodle_url('/local/rtocompliance/my_profile.php'))
-                ->out_omit_querystring();
-            $currentbase = $PAGE->url->out_omit_querystring();
-            if ($currentbase !== $profilebase) {
-                redirect(new moodle_url('/local/rtocompliance/my_profile.php', ['prompt' => 1]));
-            }
-        }
     }
 
     if (!isloggedin() || isguestuser()) {

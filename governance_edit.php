@@ -29,6 +29,11 @@ use local_rtocompliance\form\governance_form;
 
 admin_externalpage_setup('local_rtocompliance_governancepage');
 require_login();
+// ACCESS (v6.3.7): admin_externalpage_setup() above already enforces the capability this
+// page was registered with in settings.php ('local/rtocompliance:manage'). Stating it
+// explicitly as well makes the requirement visible in this file rather than only in the
+// settings registration, and costs nothing — it is the same check.
+require_capability('local/rtocompliance:manage', context_system::instance());
 $context = context_system::instance();
 
 $id = optional_param('id', 0, PARAM_INT);

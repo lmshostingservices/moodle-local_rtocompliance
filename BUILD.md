@@ -8,9 +8,9 @@ Global rules that apply to all plugins live in `moodle-plugin/MOODLE_PLUGIN_CHEC
 ## 1. Bump `version.php`
 
 ```php
-$plugin->version  = YYYYMMDDNNN;   // date + 3-digit sequence (e.g. 2026073000325)
-$plugin->release  = '5.9.NNN';     // prepend newest entry; keep prior entry as $plugin->release_prev
-$plugin->release_prev = '5.9.NNN-1';  // the version you are replacing — NOT the one before that
+$plugin->version  = YYYYMMDDXX;   // date + 2-digit sequence, 10 digits (e.g. 2026081400)
+$plugin->release  = '6.3.N';      // prepend newest entry; keep prior entry as $plugin->release_prev
+$plugin->release_prev = '6.3.N-1';  // the version you are replacing — NOT the one before that
 ```
 
 **Trap:** there are dozens of `$plugin->release_prev = ...` lines in this file. PHP is
@@ -18,9 +18,23 @@ last-assignment-wins — the LOWEST `release_prev` line in the file is what Mood
 Insert your new `release` line and update **only the immediately-preceding** `release_prev`
 to the version you are replacing. Do NOT add a second `release_prev` line.
 
-Version number format: `YYYYMMDDNNN`
+Version number format: **`YYYYMMDDXX` — exactly 10 digits. This is not a style preference.**
 - `YYYYMMDD` = today's date
-- `NNN` = 3-digit sequence starting at `001`; increment within the same day (e.g. `001`, `002`)
+- `XX` = 2-digit sequence starting at `00`; increment within the same day (`00`, `01`, … `99`)
+
+> **Why this is load-bearing (fixed in v6.3.0).** Until v6.3.0 this file specified an
+> 11-digit `YYYYMMDDNNN`, and the savepoints in `db/upgrade.php` had drifted further to
+> 13 digits (`2026080500663`) while `version.php` still declared a correct 10-digit
+> version (`2026080600`). A 13-digit savepoint is numerically ~200× larger than any valid
+> 10-digit version, so every site that ran those steps ended up with a **stored version
+> higher than the one version.php declares** — and Moodle then refuses to upgrade the
+> plugin ever again with *"Downgrade of local_rtocompliance is not supported"*.
+>
+> v6.3.0 renumbered all 792 savepoints to a strictly ascending 10-digit sequence ending
+> at `2026081400`, which equals `$plugin->version`. A site already stranded on a 13-digit
+> value is repaired with `php local/rtocompliance/cli/normalise_version.php --execute`.
+>
+> Never exceed 10 digits again, and never let a savepoint exceed `$plugin->version`.
 
 ---
 
@@ -40,14 +54,30 @@ Otherwise:
 
 Rules (see MOODLE_PLUGIN_CHECKLIST.md §2 for full detail):
 - The new block must be **last** — placed immediately before `return true;`
-- The version number must be **identical** to `$plugin->version`
+- The version number must be **identical** to `$plugin->version` (10 digits)
+- Never reuse a number: a repeated savepoint throws `downgrade_exception` mid-upgrade
 - Use the Edit tool — never `cat >>` (appends outside the function → ParseError)
 
-Verify ascending order after every edit:
+Verify the whole sequence after every edit — 10 digits, unique, strictly ascending,
+and never above `$plugin->version`:
 ```bash
-grep "upgrade_plugin_savepoint" moodle-plugin/local_rtocompliance/db/upgrade.php \
-  | grep -oP "\d{13}" | sort -nc
-# Must exit 0 with no output
+cd moodle-plugin/local_rtocompliance
+php -r '
+$s = file_get_contents("db/upgrade.php");
+preg_match_all("/upgrade_plugin_savepoint\(\s*[^,]+,\s*(\d+)/", $s, $m);
+$n = array_map("intval", $m[1]);
+$v = (int) preg_replace("/\D/", "", (preg_match("/plugin->version\s*=\s*(\d+)/", file_get_contents("version.php"), $x) ? $x[1] : "0"));
+$bad = [];
+foreach ($m[1] as $i => $raw) {
+  if (strlen($raw) !== 10)                    $bad[] = "$raw: not 10 digits";
+  if ($i && $n[$i] <= $n[$i-1])               $bad[] = "$raw: not ascending";
+  if ($n[$i] > $v)                            $bad[] = "$raw: above plugin version $v";
+}
+if (count($n) !== count(array_unique($n)))    $bad[] = "duplicate savepoint number";
+if (end($n) !== $v)                           $bad[] = "last savepoint " . end($n) . " != version $v";
+echo $bad ? implode("\n", array_unique($bad)) . "\n" : "OK: " . count($n) . " savepoints, ending at $v\n";
+'
+# Must print OK
 ```
 
 ---

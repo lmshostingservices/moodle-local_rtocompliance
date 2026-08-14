@@ -248,7 +248,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!isset($priorSkillsOptions[$form['prior_skills']]) || $form['prior_skills'] === '') {
         $errors[] = 'Section 3 — please select your level of prior skills and experience.';
     }
-    if (!optional_param('declaration', '', PARAM_RAW)) { // pipeline-ignore: PARAM_RAW — free-text payload; sanitised/validated immediately after read, never echoed raw.
+    if (!optional_param('declaration', '', PARAM_RAW)) {  // pipeline-ignore: PARAM_RAW — presence-only check; the value itself is never stored or printed
         $errors[] = 'Declaration — you must tick the declaration before submitting.';
     }
     if ($form['declaration_name'] === '') {

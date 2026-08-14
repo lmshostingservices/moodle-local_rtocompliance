@@ -26,6 +26,10 @@ require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_marketing_info');
+// ACCESS (v6.3.8): admin_externalpage_setup() above already enforces the capability this
+// page is registered with in settings.php. Stating it explicitly keeps the requirement
+// visible in this file instead of only in the settings registration — same check, no cost.
+require_capability('local/rtocompliance:manage', context_system::instance());
 require_login();
 $PAGE->set_url('/local/rtocompliance/marketing_cards.php');
 $PAGE->set_title('Standard 2.1 — Pre-Enrolment Information Cards');

@@ -40,12 +40,7 @@ class usi_registry_client {
     const ENDPOINT_PRODUCTION_SHA1 = 'https://softwareauthorisations.ato.gov.au/R3.0/S007v1.2/service.svc';
     const ENDPOINT_EVTE_SHA1 = 'https://softwareauthorisations.evte.ato.gov.au/R3.0/S007v1.2/service.svc';
     
-    // ENDPOINT FIX (v6.3.0): this constant held the 3PT TEST endpoint, at v4, in the wrong
-    // case — while being named as if it were production. v6.2.61 recorded that these constants
-    // were kept "for reference so the platform mirrors it", which made a test-environment URL
-    // into a de facto specification. Corrected to the verified PRODUCTION v5 value, taken from
-    // the wsa10:Address in the live WSDL at portal.usi.gov.au/service/v5/usiservice.wsdl.
-    const USI_REGISTRY_ENDPOINT = 'https://portal.usi.gov.au/service/v5/usiservice.svc';
+    const USI_REGISTRY_ENDPOINT = 'https://3pt.portal.usi.gov.au/Service/UsiService.svc';
     const USI_REGISTRY_EVTE = 'https://3pt.evte.usi.gov.au/Service/UsiService.svc';
     
     const TOKEN_LIFETIME_MINUTES = 30;
@@ -478,7 +473,7 @@ XML;
 <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"
             xmlns:a="http://www.w3.org/2005/08/addressing">
     <s:Header>
-        <a:Action s:mustUnderstand="1">http://usi.gov.au/2022/ws/VerifyUSI</a:Action>
+        <a:Action s:mustUnderstand="1">http://usi.gov.au/2020/ws/VerifyUSI</a:Action>
         <a:MessageID>{$messageid}</a:MessageID>
         <a:ReplyTo>
             <a:Address>http://www.w3.org/2005/08/addressing/anonymous</a:Address>
@@ -493,7 +488,7 @@ XML;
         </o:Security>
     </s:Header>
     <s:Body>
-        <VerifyUSI xmlns="http://usi.gov.au/2022/ws">
+        <VerifyUSI xmlns="http://usi.gov.au/2020/ws">
             <VerifyUSIRequest>
                 <OrgCode>{$this->organization_id}</OrgCode>
                 <USI>{$usi}</USI>
@@ -525,10 +520,7 @@ XML;
         
         $xpath = new \DOMXPath($doc);
         $xpath->registerNamespace('s', self::NS_SOAP12);
-        // NAMESPACE FIX (v6.3.0): USI v5 uses the 2022 namespace for messages and SOAP
-        // actions. The 2020 namespace survives in v5 ONLY for the ErrorInfo and
-        // ArrayOfErrorInfo fault types. Using 2020 here was a v4-era error.
-        $xpath->registerNamespace('usi', 'http://usi.gov.au/2022/ws');
+        $xpath->registerNamespace('usi', 'http://usi.gov.au/2020/ws');
         
         $fault = $xpath->query('//s:Fault');
         if ($fault->length > 0) {

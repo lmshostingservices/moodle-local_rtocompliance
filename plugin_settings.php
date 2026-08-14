@@ -53,6 +53,10 @@ if (!in_array($section, $allowed_sections)) {
 
 // Auth: site admins only (same restriction as admin_settingpage entries in settings.php).
 admin_externalpage_setup('local_rtocompliance_plugin_settings');
+// ACCESS (v6.3.8): admin_externalpage_setup() above already enforces the capability this
+// page is registered with in settings.php. Stating it explicitly keeps the requirement
+// visible in this file instead of only in the settings registration — same check, no cost.
+require_capability('moodle/site:config', context_system::instance());
 require_login();
 
 $thisurl = new moodle_url('/local/rtocompliance/plugin_settings.php', ['section' => $section]);

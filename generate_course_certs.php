@@ -147,7 +147,7 @@ if (!$courseid) {
         $selecthtml .= '<optgroup label="' . htmlspecialchars($grplabel, ENT_QUOTES) . '">';
         foreach ($grpcourses as $c) {
             $selecthtml .= '<option value="' . (int)$c->id . '">'
-                         . htmlspecialchars(format_string($c->fullname), ENT_QUOTES)
+                         . format_string($c->fullname)
                          . '</option>';
             $totalcourses++;
         }
@@ -694,7 +694,7 @@ if (!empty($siblingcourses)) {
     ]);
 
     // Build option list grouped by sibling category name
-    $sibopthtml = '<option value="">— Current: ' . htmlspecialchars(format_string($course->fullname), ENT_QUOTES) . ' —</option>';
+    $sibopthtml = '<option value="">— Current: ' . format_string($course->fullname) . ' —</option>';
     $lastcat = '';
     foreach ($siblingcourses as $sc) {
         $sccat = format_string($sc->catname);
@@ -704,7 +704,7 @@ if (!empty($siblingcourses)) {
             $lastcat = $sccat;
         }
         $sibopthtml .= '<option value="' . (int)$sc->id . '">'
-                     . htmlspecialchars(format_string($sc->fullname), ENT_QUOTES)
+                     . format_string($sc->fullname)
                      . '</option>';
     }
     if ($lastcat !== '') { $sibopthtml .= '</optgroup>'; }

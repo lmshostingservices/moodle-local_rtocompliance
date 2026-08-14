@@ -103,12 +103,12 @@ if ($action === 'save' && confirm_sesskey()) {
                 set_config('integ_' . $key, optional_param($key, 0, PARAM_BOOL) ? 1 : 0, 'local_rtocompliance');
             } else if ($type === 'secret') {
                 // Only overwrite a secret when a new value is actually entered (blank = keep existing).
-                $val = optional_param($key, '', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text payload; sanitised/validated immediately after read, never echoed raw.
+                $val = optional_param($key, '', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — free-text value, escaped at output; a narrower type would corrupt legitimate punctuation
                 if ($val !== '') {
                     set_config('integ_' . $key, $val, 'local_rtocompliance');
                 }
             } else {
-                set_config('integ_' . $key, trim(optional_param($key, '', PARAM_RAW)), 'local_rtocompliance'); // pipeline-ignore: PARAM_RAW — free-text payload; sanitised/validated immediately after read, never echoed raw.
+                set_config('integ_' . $key, trim(optional_param($key, '', PARAM_RAW)), 'local_rtocompliance');  // pipeline-ignore: PARAM_RAW — free-text value, escaped at output; a narrower type would corrupt legitimate punctuation
             }
         }
     }

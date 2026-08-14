@@ -29,6 +29,10 @@ $id  = optional_param('id', 0, PARAM_INT);
 $tab = optional_param('tab', 'rpl', PARAM_ALPHA);
 
 admin_externalpage_setup('local_rtocompliance_rpl');
+// ACCESS (v6.3.8): admin_externalpage_setup() above already enforces the capability this
+// page is registered with in settings.php. Stating it explicitly keeps the requirement
+// visible in this file instead of only in the settings registration — same check, no cost.
+require_capability('local/rtocompliance:manage', context_system::instance());
 require_login();
 $PAGE->set_url('/local/rtocompliance/rpl_edit.php', ['id' => $id, 'tab' => $tab]);
 $PAGE->set_title($id ? 'Edit RPL / Credit Transfer Record' : 'Add RPL / Credit Transfer Record');
@@ -78,7 +82,7 @@ if ($action === 'save' && confirm_sesskey()) {
     // RPL-P1 (v5.9.424): evidence-to-criteria matrix arrives as a JSON string from the
     // repeating table. Normalise it (decode → keep only well-formed rows → re-encode) so
     // only clean data is stored; an empty/garbage payload becomes null.
-    $matrixraw = optional_param('evidencematrix', '', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text payload; sanitised/validated immediately after read, never echoed raw.
+    $matrixraw = optional_param('evidencematrix', '', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — JSON document, json_decode()'d immediately and rejected if it does not decode
     $data->evidencematrix = null;
     if (trim($matrixraw) !== '') {
         $decoded = json_decode($matrixraw, true);

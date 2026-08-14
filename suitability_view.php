@@ -38,6 +38,10 @@ require_once(__DIR__ . '/lib.php');
 $id = required_param('id', PARAM_INT);
 
 admin_externalpage_setup('local_rtocompliance_students');
+// ACCESS (v6.3.8): admin_externalpage_setup() above already enforces the capability this
+// page is registered with in settings.php. Stating it explicitly keeps the requirement
+// visible in this file instead of only in the settings registration — same check, no cost.
+require_capability('local/rtocompliance:manage', context_system::instance());
 require_login();
 
 $PAGE->set_url(new moodle_url('/local/rtocompliance/suitability_view.php', ['id' => $id]));
@@ -61,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && confirm_sesskey()
     $decision   = optional_param('trainer_decision_val', '', PARAM_ALPHANUMEXT);
     $advicetxt  = trim(optional_param('trainer_advice_text', '', PARAM_TEXT));
     $justif     = trim(optional_param('trainer_justification', '', PARAM_TEXT));
-    $decl_tick  = optional_param('trainer_declaration_tick', '', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text payload; sanitised/validated immediately after read, never echoed raw.
+    $decl_tick  = optional_param('trainer_declaration_tick', '', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — presence-only check; the value itself is never stored or printed
     $validDec   = ['suitable', 'suitable_with_support', 'not_suitable'];
 
     if (!in_array($decision, $validDec, true)) {

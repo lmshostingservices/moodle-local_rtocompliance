@@ -3592,10 +3592,33 @@ $string['repair_programcodes_how_li2'] = 'Counts enrolment rows for those course
 $string['repair_programcodes_how_li3'] = 'When you click "Apply Code", writes the qualification\'s code to every matching row and logs the action.';
 
 
-// Cache definition descriptions (db/caches.php) — required by Moodle Marketplace.
-$string['cachedef_dashboard_metrics'] = 'Dashboard compliance metric aggregates';
-$string['cachedef_student_counts'] = 'Per-cohort student count aggregates';
-$string['cachedef_trainer_status'] = 'Trainer currency and matrix status summaries';
-$string['cachedef_course_settings'] = 'Per-course compliance settings';
-$string['cachedef_compliance_summary'] = 'Site-wide compliance summary snapshot';
-$string['cachedef_avetmiss_codes'] = 'AVETMISS reference code lookups';
+// ═══════════════════════════════════════════════════════════════════════════
+// AVETMISS PROFILE GATE (v6.3.0) — force students in nationally recognised
+// training to complete their AVETMISS data before they can use the site.
+// ═══════════════════════════════════════════════════════════════════════════
+$string['rtocompliance:bypassprofilegate'] = 'Bypass the AVETMISS profile completion lock';
+$string['enforceprofileheading'] = 'Student data enforcement (AVETMISS profile lock)';
+$string['enforceprofileheading_desc'] = 'ASQA Standard 1.8 and Clause 12 require accurate student records, and a missing date of birth or USI blocks USI verification, certificate issuance and your NAT file submission. These settings let you require a student to complete their AVETMISS profile before they can access their training, so the data is collected at the point of enrolment instead of chased before a reporting deadline.';
+$string['enforceprofile'] = 'Lock students out until their AVETMISS profile is complete';
+$string['enforceprofile_desc'] = 'When enabled, a student enrolled in nationally recognised training who is missing any mandatory AVETMISS field is redirected to <em>My AVETMISS Profile</em> at login and on every page until they complete it. They can still log out, change their password and accept site policies. Trainers, assessors, managers, site administrators and anyone with the <em>Bypass the AVETMISS profile completion lock</em> capability are never held, and neither is a staff member using "log in as". Students not in nationally recognised training are unaffected.';
+$string['mandatoryprofilefields'] = 'Fields required before the lock lifts';
+$string['mandatoryprofilefields_desc'] = 'The AVETMISS fields a student must supply. All eleven are ticked by default — this is the same set the plugin already uses to mark a profile complete, and all eleven are needed for a valid NAT00080 submission. Untick a field only if your RTO collects it another way. AVETMISS "not stated" values (@ and @@) do not count as an answer.';
+$string['avetmiss_profile_locked_title'] = 'Complete your training profile to continue';
+$string['avetmiss_profile_locked_body'] = 'Your access to the site is on hold until your AVETMISS training profile is complete. Australian government reporting rules require this information for every student in nationally recognised training — without it we cannot verify your Unique Student Identifier, report your results, or issue your qualification or statement of attainment.';
+$string['avetmiss_still_needed'] = 'Still needed:';
+$string['avetmiss_profile_locked_footer'] = 'Fill in the fields below and save. This only needs to be done once, and you will be taken straight back to your training.';
+$string['avetmiss_profile_unlocked'] = 'Thank you — your training profile is complete. You now have full access to your courses.';
+$string['avetmiss_field_required'] = 'Required for government reporting — please provide your {$a}.';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CACHE DEFINITIONS (v6.3.7)
+// Moodle requires a cachedef_<name> string for every entry in db/caches.php.
+// These are what an administrator sees in Site administration → Plugins →
+// Caching → Configuration, so each one says what is stored and why.
+// ═══════════════════════════════════════════════════════════════════════════
+$string['cachedef_dashboard_metrics'] = 'Compliance dashboard metrics (student, enrolment and certificate counts)';
+$string['cachedef_student_counts'] = 'Student record counts used by the Student Records and USI pages';
+$string['cachedef_trainer_status'] = 'Trainer credential and currency status';
+$string['cachedef_course_settings'] = 'Per-course RTO settings (nationally recognised flag, qualification code, nominal hours)';
+$string['cachedef_compliance_summary'] = 'Compliance Health summary figures';
+$string['cachedef_avetmiss_codes'] = 'AVETMISS reference code lists (states, countries, languages, outcome codes)';

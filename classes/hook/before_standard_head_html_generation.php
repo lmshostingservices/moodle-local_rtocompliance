@@ -48,7 +48,28 @@ class before_standard_head_html_generation {
      * @return void
      */
     public static function callback(\core\hook\output\before_standard_head_html_generation $hook): void {
-        global $PAGE;
+        global $PAGE, $CFG;
+
+        // AVETMISS PROFILE GATE BACKSTOP (v6.3.0):
+        // local_rtocompliance_extend_navigation() is where the gate normally fires,
+        // but that callback only runs when a page actually builds the global
+        // navigation. Layouts that never do (embedded, popup, some report pages)
+        // would slip past it, so the gate is re-checked here as well. The function
+        // itself is idempotent — a static guard makes the second call a no-op.
+        //
+        // Two conditions before it may run here:
+        //  - nothing has been sent to the browser yet, and
+        //  - no debugging output has been printed. Once DEBUGGING_PRINTED is defined,
+        //    Moodle's redirect() refuses the fast 303 path and instead renders a
+        //    "continue" page, which calls $OUTPUT->header() — and we are already
+        //    inside header generation, so moodle_page::set_state() would throw. On a
+        //    developer site that would turn every page into a fatal error for a
+        //    gated student. Skipping here is harmless: the navigation callback
+        //    catches them on the next request.
+        if (!headers_sent() && !defined('DEBUGGING_PRINTED')) {
+            require_once($CFG->dirroot . '/local/rtocompliance/lib.php');
+            local_rtocompliance_profile_gate_check();
+        }
 
         if (empty($PAGE->url)) {
             return;

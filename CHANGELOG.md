@@ -1,3 +1,37 @@
+## v6.3.0 — 14 Aug 2026
+
+### Added — AVETMISS profile lock: students must complete their data before they can train
+
+- **PROFILE-GATE** (`lib.php`): a student enrolled in nationally recognised training who is missing mandatory AVETMISS data is now **held** at *My AVETMISS Profile* — on login and on every page — until they complete it. v5.9.314 set a session flag that the first page load consumed, so a student could click straight past the prompt and train for months with no date of birth on file (which blocks USI verification, certificate issuance and the NAT00080 submission).
+  - `local_rtocompliance_profile_gate_check()` performs the redirect from `local_rtocompliance_extend_navigation()` (after `require_login()`, before any output), with a `before_standard_head_html_generation` backstop for page layouts that never build the global navigation.
+  - Nobody can be locked out: an allowlist covers login, logout, password reset, site policies, Moodle's own required-profile form, admin pages, `pluginfile.php`, AJAX and web services; site administrators, "log in as" sessions, and holders of the new `local/rtocompliance:bypassprofilegate` capability (manager, course creator, teacher archetypes) are never held; and a user who lacks `local/rtocompliance:editownprofile` — and so could not use the destination page — is skipped rather than bounced into a permissions error.
+  - The allowlist is matched against the Moodle-root-relative script path, so a site installed in a subdirectory (or at `/admin/`) behaves correctly.
+- **SHARED-FIELD-DEFINITION** (`lib.php`): the mandatory-field list and the "is this actually answered?" rule (AVETMISS `@`/`@@`/`@@@@` not-stated sentinels do not count) now live in one place — `local_rtocompliance_avetmiss_all_fields()`, `_avetmiss_mandatory_fields()`, `_avetmiss_value_missing()`, `_get_missing_avetmiss_fields()`, `_calculate_profilecomplete()` — and are used by the gate, `my_profile.php` and `student_profile.php`. The three paths previously each carried their own copy of the list and drifted apart.
+- **USI-NOT-A-BARRIER**: the USI is deliberately **not** required by the lock by default. A student cannot obtain one on demand, so requiring it to reach the site would hold them with no way to comply. It remains part of the definition of a complete profile (and of certificate issuance), and an administrator can tick it on.
+- **SCOPE** (`lib.php`): `local_rtocompliance_user_requires_avetmiss()` now also matches students holding AVETMISS enrolment records created through Qual Builder (not only courses carrying the legacy `nationallyrecognised` flag), but only where the row is in-training, the outcome is not final, and the student still holds an **active Moodle enrolment** in that course — so past students are never chased for data they can no longer affect.
+- **LOCKED MODE** (`my_profile.php`, `classes/form/student_profile_form.php`): lists exactly which fields are outstanding and why they are required, enforces them in form validation, removes the dead-end Cancel button, and returns the student to the page they originally wanted once the profile is complete.
+- **SETTINGS**: *RTO Settings → RTO details → Student data enforcement* — enable/disable the lock and choose which fields it requires. New capability string and 13 new language strings.
+- **TESTS** (`tests/profile_gate_test.php`): 14 new PHPUnit tests covering the sentinel rules, the completeness calculation, the setting, and every guard condition.
+
+### Fixed — USI Verification page: stat cards, filters, exports and paging
+
+- **SCOPED-STATS** (`usi_settings.php`): the stat cards were whole-of-site totals that never moved when the admin filtered by category, course or search. They are now recomputed inside the current scope in a single grouped query, sit directly above the filters, and act as one-click status filters with a visible active state.
+- **COUNT-CORRECTNESS**: "Not yet verified" counted `usiverified = 0` outright, so it included every student with no USI at all and could read *higher* than "Students with a USI" (6,119 vs 1,060 on a live site). Every status filter now also requires a USI to be present, so the buckets are mutually exclusive and add up: *students with a USI = verified + not yet verified + failed + manual review*.
+- **DYNAMIC-COURSE-FILTER**: choosing a Category now genuinely narrows the Course dropdown. The previous implementation set `option.hidden`, which browsers ignore inside a native `<select>`; the list is now rebuilt from real option nodes, shows a count, and says so when a category has no courses.
+- **Added**: Clear filters button, removable active-filter chips, a 25/50/100/200 per-page selector, sortable column headers (applied to the exports too), a PDF export of the filtered view alongside the CSV, a proper empty state, sticky table headers, and an out-of-range page guard.
+- **DOB ROUND-TRIP**: the missing-DOB backfill is now an explicit two-step download/upload with the accepted column names and date formats stated on screen; the exported template's header is plain `Date of birth` (the importer still accepts the older heading). The postcode field is no longer pre-filled from `$USER->city` (a suburb name in a 4-digit column).
+- **SECURITY**: the CSV and PDF exports now enforce `require_sesskey()`.
+- No DB schema changes. Savepoint 2026081400.
+
+### Fixed — plugin version numbering restored to correct Moodle format
+
+- **VERSION-FORMAT** (`version.php`, `db/upgrade.php`, `BUILD.md`): Moodle plugin versions are `YYYYMMDDXX` — 8 date digits plus a 2-digit counter, **10 digits**. `version.php` was correct (`2026080600`), but 764 of the 792 savepoints in `db/upgrade.php` used a 13-digit `YYYYMMDD` + 5-digit build number (e.g. `2026080500663`), which is numerically ~200x larger than any valid 10-digit version.
+  - Consequence: a site that ran those steps stored a version **higher** than the one `version.php` declares, so Moodle refused to upgrade the plugin again — *"Downgrade of local_rtocompliance is not supported"*. It also meant `$oldversion` never matched the guards, so every upgrade re-ran all 792 steps.
+  - All 792 savepoints (and their matching `if ($oldversion < N)` guards) are renumbered to a strictly ascending 10-digit sequence, `2025120400` → `2026081400`, the last of which equals `$plugin->version`.
+  - Two further latent faults fixed by the same pass: savepoint `2026042100056` was used **twice**, and several savepoints were **out of numeric order** in file order. Either throws `downgrade_exception` part-way through an upgrade, leaving the plugin half-migrated.
+  - `BUILD.md` documented the wrong format (`YYYYMMDDNNN`, 3-digit sequence) — corrected, with a validator command that checks digit count, uniqueness, ordering and the version ceiling.
+  - **`cli/normalise_version.php`** repairs a site already stranded on a 13-digit stored version (dry run by default, `--execute` to apply). Nothing inside the plugin can do this automatically, because Moodle compares versions before it runs any plugin code.
+
 ## v5.9.341 — 30 Jul 2026
 
 ### Changed — UI styling engine, getting-started navigation, and Moodle 4.4–5.3 support

@@ -344,6 +344,31 @@ class usi_verification_service {
             // run forever. Only genuinely transient/infrastructure outcomes stay PENDING.
             $status = strtoupper(trim((string) ($result['status'] ?? '')));
             switch ($status) {
+                // REGISTRY-STATUS-FIX (v6.3.2): the two status strings the USI Registry
+                // ACTUALLY returns are the bare words "Valid" and "Invalid". They arrive as
+                // usiStatus and are passed straight through by usi_platform_client (see the
+                // CONTRACT-MATCH block in that class). Neither appeared in this switch, so
+                // both fell through to `default` and were written back as STATUS_PENDING —
+                // re-queued every hour, forever, on data that can never pass.
+                //
+                // Observed on a live site: 3,574 verification calls, ZERO students ever
+                // reaching Manual review, "Verification failed" stuck at 1, and a permanent
+                // block of records churning at status 3 while genuinely new students queued
+                // behind them. These two cases are the fix.
+                case 'VALID':
+                    // The USI exists and is active, but verified = false — so the registry did
+                    // NOT match the name and/or date of birth we sent. Only a data correction
+                    // resolves this: a changed surname, a typo, or a DOB guessed at import.
+                    // Park it for a human instead of asking the registry the same question
+                    // every hour.
+                    $update->usiverified = self::STATUS_MANUAL_REVIEW;
+                    break;
+                case 'INVALID':
+                    // The registry does not recognise this USI at all. Terminal — the value in
+                    // the USI column is wrong (commonly junk from a misaligned import) and has
+                    // to be replaced before there is any point calling again.
+                    $update->usiverified = self::STATUS_FAILED;
+                    break;
                 case 'PARTIAL_MATCH':
                 case 'NO_MATCH':
                 case 'NOT_VERIFIED':
@@ -429,28 +454,12 @@ class usi_verification_service {
             "usi IS NOT NULL AND usi != ''"
         );
         
-        // STATS-SCOPE FIX (v6.3.0): every status counter below MUST be restricted to students
-        // who actually hold a USI. Previously they were not, and because STATUS_UNVERIFIED is 0
-        // — the default for every student row — 'unverified' counted the entire student table,
-        // including students with no USI at all. On one live site this reported 5,398 students
-        // "not yet verified" against a total_with_usi of 1,060: arithmetically impossible, and
-        // it also meant 1,047 students sitting in STATUS_PENDING were invisible on the page.
-        // These five counters must now always sum to total_with_usi.
-        $hasusi = "usi IS NOT NULL AND usi != ''";
-        $countbystatus = function ($status) use ($DB, $hasusi) {
-            return $DB->count_records_select(
-                'local_rtocompliance_students',
-                $hasusi . ' AND usiverified = :st',
-                ['st' => $status]
-            );
-        };
-
-        $stats['verified']      = $countbystatus(self::STATUS_VERIFIED);
-        $stats['unverified']    = $countbystatus(self::STATUS_UNVERIFIED);
-        $stats['failed']        = $countbystatus(self::STATUS_FAILED);
-        $stats['pending_review'] = $countbystatus(self::STATUS_MANUAL_REVIEW);
-        // STATUS_PENDING (3) = transient error (CERT_PENDING, NETWORK_ERROR, ATO_ERROR) — retried
-        $stats['pending_retry'] = $countbystatus(self::STATUS_PENDING);
+        $stats['verified'] = $DB->count_records('local_rtocompliance_students', ['usiverified' => self::STATUS_VERIFIED]);
+        $stats['unverified'] = $DB->count_records('local_rtocompliance_students', ['usiverified' => self::STATUS_UNVERIFIED]);
+        $stats['failed'] = $DB->count_records('local_rtocompliance_students', ['usiverified' => self::STATUS_FAILED]);
+        $stats['pending_review'] = $DB->count_records('local_rtocompliance_students', ['usiverified' => self::STATUS_MANUAL_REVIEW]);
+        // STATUS_PENDING (3) = transient error (CERT_PENDING, NETWORK_ERROR, etc.) — will be retried
+        $stats['pending_retry'] = $DB->count_records('local_rtocompliance_students', ['usiverified' => self::STATUS_PENDING]);
         $stats['missing_usi'] = $DB->count_records_select(
             'local_rtocompliance_students',
             "usi IS NULL OR usi = ''"

@@ -34,6 +34,10 @@ require_once(__DIR__ . '/lib.php');
 $action = optional_param('action', 'fill_gaps', PARAM_ALPHANUMEXT); // PARAM_ALPHA stripped the underscore from a submitted 'fill_gaps'.
 
 admin_externalpage_setup('local_rtocompliance_students');
+// ACCESS (v6.3.8): admin_externalpage_setup() above already enforces the capability this
+// page is registered with in settings.php. Stating it explicitly keeps the requirement
+// visible in this file instead of only in the settings registration — same check, no cost.
+require_capability('local/rtocompliance:manage', context_system::instance());
 require_login();
 
 $PAGE->set_url(new moodle_url('/local/rtocompliance/suitability_bulk.php', ['action' => $action]));

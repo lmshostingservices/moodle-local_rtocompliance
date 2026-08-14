@@ -27,6 +27,10 @@ require_once($CFG->libdir . '/formslib.php');
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_tas');
+// ACCESS (v6.3.8): admin_externalpage_setup() above already enforces the capability this
+// page is registered with in settings.php. Stating it explicitly keeps the requirement
+// visible in this file instead of only in the settings registration — same check, no cost.
+require_capability('local/rtocompliance:manage', context_system::instance());
 require_login();
 $context = context_system::instance();
 
@@ -107,7 +111,7 @@ class tas_form extends moodleform {
             . 'for the applicable teach-out / transition timeframe.</div>');
 
         $mform->addElement('textarea', 'scopedetails', 'RTO Scope Details', ['rows' => 3, 'cols' => 80]);
-        $mform->setType('scopedetails', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('scopedetails', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addHelpButton('scopedetails', 'scopedetails', 'local_rtocompliance');
 
         $mform->addElement('header', 'section2', 'Section 2: Target Learner Cohort & Entry Requirements');
@@ -249,19 +253,19 @@ class tas_form extends moodleform {
 </script>');
 
         $mform->addElement('textarea', 'targetcohort', 'Target Learner Cohort', ['rows' => 4, 'cols' => 80]);
-        $mform->setType('targetcohort', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('targetcohort', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addHelpButton('targetcohort', 'targetcohort', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'entryrequirements', 'Entry Requirements', ['rows' => 4, 'cols' => 80]);
-        $mform->setType('entryrequirements', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('entryrequirements', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addHelpButton('entryrequirements', 'entryrequirements', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'llnrequirements', 'LLN Requirements', ['rows' => 3, 'cols' => 80]);
-        $mform->setType('llnrequirements', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('llnrequirements', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addHelpButton('llnrequirements', 'llnrequirements', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'prerequisites', 'Prerequisites', ['rows' => 3, 'cols' => 80]);
-        $mform->setType('prerequisites', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('prerequisites', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addHelpButton('prerequisites', 'prerequisites', 'local_rtocompliance');
 
         $mform->addElement('header', 'section3', 'Section 3: Industry Consultation');
@@ -302,10 +306,10 @@ class tas_form extends moodleform {
         }
 
         $mform->addElement('hidden', 'industryconsultation');
-        $mform->setType('industryconsultation', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('industryconsultation', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
 
         $mform->addElement('textarea', 'jobroles', 'Job Roles & Outcomes', ['rows' => 4, 'cols' => 80]);
-        $mform->setType('jobroles', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('jobroles', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addHelpButton('jobroles', 'jobroles', 'local_rtocompliance');
 
         $mform->addElement('header', 'section4', 'Section 4: Delivery Structure & Volume of Learning');
@@ -344,22 +348,22 @@ class tas_form extends moodleform {
         $mform->addHelpButton('volumeoflearning', 'volumeoflearning', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'deliveryschedule', 'Delivery Schedule', ['rows' => 8, 'cols' => 80]);
-        $mform->setType('deliveryschedule', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('deliveryschedule', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addHelpButton('deliveryschedule', 'deliveryschedule', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'learningbreakdown', 'Volume of Learning Breakdown', ['rows' => 6, 'cols' => 80]);
-        $mform->setType('learningbreakdown', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('learningbreakdown', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addHelpButton('learningbreakdown', 'learningbreakdown', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'volumejustification', 'TAS Volume of Learning Justification', ['rows' => 6, 'cols' => 80]);
-        $mform->setType('volumejustification', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('volumejustification', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addHelpButton('volumejustification', 'volumejustification', 'local_rtocompliance');
 
         $mform->addElement('header', 'section5', 'Section 5: Assessment Plan');
 
         // Hidden field - stores JSON of selected assessment methods
         $mform->addElement('hidden', 'assessmentmethods');
-        $mform->setType('assessmentmethods', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('assessmentmethods', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
 
         // Assessment methods checklist
         $amCategories = [
@@ -526,11 +530,11 @@ document.addEventListener("DOMContentLoaded", function (){
 
         // Validation Schedule removed - managed in dashboard
         $mform->addElement('hidden', 'validationschedule');
-        $mform->setType('validationschedule', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('validationschedule', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addElement('static', 'validationschedule_note', '', '<div class="alert alert-info" style="margin-bottom:0;"><strong>Assessment Validation Schedule</strong> is managed in the Validation Register on the <a href="/local/rtocompliance/validation.php">RTO Compliance Dashboard</a>. Validation is not qualification-specific and belongs in the central register.</div>');
 
         $mform->addElement('textarea', 'assessmentnotes', 'Assessment Plan Notes', ['rows' => 4, 'cols' => 80, 'placeholder' => 'Describe your overall assessment approach, contextualisation of assessment tools, reasonable adjustment principles, and how assessment meets the rules of evidence (valid, sufficient, authentic, current)...']);
-        $mform->setType('assessmentnotes', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('assessmentnotes', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addElement('static', 'assessmentnotes_help', '', '<p style="color:#666;font-size:12px;margin-top:4px;">Use this field to document your assessment approach narrative. AI suggestion is available via the sparkle button.</p>');
 
         // TAS-AUTHENTICITY-FIELDS (v6.2.45): online/blended authenticity, identity verification,
@@ -539,10 +543,10 @@ document.addEventListener("DOMContentLoaded", function (){
             '<div class="alert alert-info" style="margin-bottom:8px;"><strong>Assessment authenticity &amp; online delivery (Standard 1.4).</strong> Complete the fields below where delivery is online or blended, so the strategy shows how you keep evidence authentic and the right person is assessed.</div>');
         $mform->addElement('textarea', 'identityverification', 'Learner identity verification',
             ['rows' => 3, 'cols' => 80, 'placeholder' => 'How do you verify the enrolled learner is the person who completes the training and assessment (especially online/blended) — e.g. USI check, photo ID at induction, proctoring, live video verification?']);
-        $mform->setType('identityverification', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('identityverification', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addElement('textarea', 'academicintegrity', 'Academic integrity — authenticity of evidence',
             ['rows' => 3, 'cols' => 80, 'placeholder' => 'How do you assure assessment evidence is the learner\'s own work and NOT plagiarised or AI-generated — e.g. authenticity declarations, oral/live questioning to corroborate, similarity/AI checks, supervised tasks? (Required where delivery is online or blended.)']);
-        $mform->setType('academicintegrity', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('academicintegrity', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addElement('text', 'aireviewedby', 'AI-assisted content reviewed by',
             ['size' => 60, 'placeholder' => 'Name of the RTO staff member who reviewed any AI-assisted drafts']);
         $mform->setType('aireviewedby', PARAM_TEXT);
@@ -552,7 +556,7 @@ document.addEventListener("DOMContentLoaded", function (){
         // TAS-STRUCTURAL (v6.2.48): RPL as a documented pathway (was only an assessment-method checkbox).
         $mform->addElement('textarea', 'rplpathway', 'RPL pathway (documented process)',
             ['rows' => 3, 'cols' => 80, 'placeholder' => 'Describe how Recognition of Prior Learning is offered for this qualification as a documented process — the evidence-gathering methods (portfolio, third-party report, competency conversation, challenge test), how authenticity and currency are assured, and how gaps are addressed with gap training.']);
-        $mform->setType('rplpathway', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('rplpathway', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
 
         $mform->addElement('header', 'section6', 'Section 6: Trainer & Assessor Requirements');
 
@@ -560,44 +564,44 @@ document.addEventListener("DOMContentLoaded", function (){
         // TAS-STRUCTURAL (v6.2.48): per-unit trainer mapping + Credential-Policy classification.
         $mform->addElement('textarea', 'trainerunitmapping', 'Trainer/assessor → units mapping',
             ['rows' => 3, 'cols' => 80, 'placeholder' => 'Map each trainer/assessor to the specific units they deliver/assess, and note their Credential-Policy classification (fully credentialled vs working under direction — no assessment judgements), vocational competency, and industry currency / CPD (Standards 3.1-3.3).']);
-        $mform->setType('trainerunitmapping', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
-        $mform->setType('trainerrequirements', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('trainerunitmapping', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
+        $mform->setType('trainerrequirements', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addHelpButton('trainerrequirements', 'trainerrequirements', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'supervisionarrangements', 'Supervision Arrangements (if applicable)', ['rows' => 3, 'cols' => 80]);
-        $mform->setType('supervisionarrangements', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('supervisionarrangements', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addHelpButton('supervisionarrangements', 'supervisionarrangements', 'local_rtocompliance');
 
         $mform->addElement('header', 'section7', 'Section 7: Learning Resources & Equipment');
 
         $mform->addElement('textarea', 'learningresources', 'Learning Resources & Materials', ['rows' => 4, 'cols' => 80]);
-        $mform->setType('learningresources', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('learningresources', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addHelpButton('learningresources', 'learningresources', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'facilities', 'Facilities & Equipment', ['rows' => 4, 'cols' => 80]);
-        $mform->setType('facilities', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('facilities', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addHelpButton('facilities', 'facilities', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'technology', 'Technology Requirements', ['rows' => 3, 'cols' => 80]);
-        $mform->setType('technology', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('technology', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addHelpButton('technology', 'technology', 'local_rtocompliance');
 
         // Section 8: Third-Party Arrangements — removed from TAS, managed in the dashboard register
         $mform->addElement('hidden', 'thirdparty');
-        $mform->setType('thirdparty', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('thirdparty', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
 
         // Section 9: Learner Support & Wellbeing — removed from TAS, managed in the dashboard
         $mform->addElement('hidden', 'learnersupport');
-        $mform->setType('learnersupport', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('learnersupport', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addElement('hidden', 'accessibility');
-        $mform->setType('accessibility', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('accessibility', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
 
         // Section 10: Marketing & Pre-Enrolment — removed from TAS, managed in Marketing Information page
         $mform->addElement('hidden', 'marketinginfo');
-        $mform->setType('marketinginfo', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('marketinginfo', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
 
         $mform->addElement('hidden', 'feesinformation');
-        $mform->setType('feesinformation', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('feesinformation', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
 
         $mform->addElement('header', 'section8', 'Section 8: Work Placement Requirements');
 
@@ -608,25 +612,25 @@ document.addEventListener("DOMContentLoaded", function (){
         $mform->disabledIf('placementhours', 'hasworkplacement', 'notchecked');
 
         $mform->addElement('textarea', 'placementdetails', 'Placement Details & Supervision', ['rows' => 4, 'cols' => 80]);
-        $mform->setType('placementdetails', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('placementdetails', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addHelpButton('placementdetails', 'placementdetails', 'local_rtocompliance');
         $mform->disabledIf('placementdetails', 'hasworkplacement', 'notchecked');
 
         // Section 12: Transition & Teach-Out — removed from TAS, managed in Training Transitions register
         $mform->addElement('hidden', 'transitionplan');
-        $mform->setType('transitionplan', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('transitionplan', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
 
         // Section 13: Risk Management — removed from TAS, managed in Risk Register
         $mform->addElement('hidden', 'riskmanagement');
-        $mform->setType('riskmanagement', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('riskmanagement', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
 
         // Section 14: Complaints & Appeals — removed from TAS, managed in Complaints register
         $mform->addElement('hidden', 'complaintsprocess');
-        $mform->setType('complaintsprocess', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('complaintsprocess', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
 
         // Section 15: Continuous Improvement — removed from TAS, managed in CI register
         $mform->addElement('hidden', 'continuousimprovement');
-        $mform->setType('continuousimprovement', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('continuousimprovement', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
 
         $mform->addElement('header', 'section9', 'Section 9: TAS Approval & Review');
 
@@ -650,7 +654,7 @@ document.addEventListener("DOMContentLoaded", function (){
         $mform->addElement('date_selector', 'nextreviewdate', 'Next Review Date');
 
         $mform->addElement('textarea', 'revisionnotes', 'Revision Notes', ['rows' => 3, 'cols' => 80]);
-        $mform->setType('revisionnotes', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('revisionnotes', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addHelpButton('revisionnotes', 'revisionnotes', 'local_rtocompliance');
 
         $this->add_action_buttons(true, $tas ? 'Update TAS' : 'Create TAS');

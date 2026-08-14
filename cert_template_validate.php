@@ -52,7 +52,7 @@ header('Content-Type: application/json; charset=utf-8');
 
 try {
     $certtype = required_param('certtype', PARAM_ALPHA);
-    $designjson = required_param('design', PARAM_RAW); // pipeline-ignore: PARAM_RAW — JSON blob, json_decode()'d by validate_template_design(); never stored or echoed raw.
+    $designjson = required_param('design', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — JSON document, json_decode()'d immediately and rejected if it does not decode
 
     // Note: we deliberately do NOT restrict to cert_template::CERT_TYPES here.
     // validate_template_design() is the single source of truth and handles every

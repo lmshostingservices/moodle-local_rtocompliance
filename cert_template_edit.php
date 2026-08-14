@@ -65,7 +65,7 @@ $PAGE->requires->css('/local/rtocompliance/styles.css');
 
 // Handle POST save.
 if (data_submitted() && confirm_sesskey()) {
-    $designjson = required_param('designjson', PARAM_RAW); // pipeline-ignore: PARAM_RAW — JSON blob, json_decode()'d and validated by validate_template_design() before storage.
+    $designjson = required_param('designjson', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — JSON document, json_decode()'d immediately and rejected if it does not decode
     $name       = trim(optional_param('name', '', PARAM_TEXT));
     // v4.3.0 CERT-TEMPLATE-AUDIENCES — admins can re-target an existing
     // template's audience from the editor at any time. Empty string means

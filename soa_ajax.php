@@ -79,7 +79,7 @@ try {
             global $DB, $USER;
 
             $userid    = required_param('userid', PARAM_INT);
-            $courseids = required_param('courseids', PARAM_RAW); // JSON array of ints // pipeline-ignore: PARAM_RAW — free-text payload; sanitised/validated immediately after read, never echoed raw.
+            $courseids = required_param('courseids', PARAM_RAW); // JSON array of ints  // pipeline-ignore: PARAM_RAW — JSON document, json_decode()'d immediately and rejected if it does not decode
             $audience  = optional_param('audience', 'default', PARAM_ALPHA);
             $qualcode  = optional_param('qualcode', '', PARAM_ALPHANUMEXT);
             $qualname  = optional_param('qualname', '', PARAM_TEXT);

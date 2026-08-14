@@ -54,7 +54,7 @@ if (!is_array($in)) {
 
 // Sesskey travels in the JSON body (the request is application/json, so it is not a
 // normal POST param). Validate it against this user's session.
-$sesskey = isset($in['sesskey']) ? (string) $in['sesskey'] : optional_param('sesskey', '', PARAM_ALPHANUM);
+$sesskey = isset($in['sesskey']) ? (string) $in['sesskey'] : optional_param('sesskey', '', PARAM_ALPHANUMEXT);
 if (!confirm_sesskey($sesskey)) {
     echo json_encode(['ok' => false, 'error' => 'Your session expired — please reload the page.']);
     exit;

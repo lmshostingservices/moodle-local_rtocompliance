@@ -31,6 +31,10 @@ $allowed_categories = ['operational', 'financial', 'conflict_of_interest', 'unde
 $category = in_array($category, $allowed_categories, true) ? $category : 'operational';
 
 admin_externalpage_setup('local_rtocompliance_risk');
+// ACCESS (v6.3.8): admin_externalpage_setup() above already enforces the capability this
+// page is registered with in settings.php. Stating it explicitly keeps the requirement
+// visible in this file instead of only in the settings registration — same check, no cost.
+require_capability('local/rtocompliance:manage', context_system::instance());
 require_login();
 $PAGE->set_url('/local/rtocompliance/risk_edit.php', ['id' => $id]);
 $PAGE->set_title($id ? 'Edit Risk' : 'Add Risk');

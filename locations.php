@@ -29,6 +29,10 @@ require_once(__DIR__ . '/classes/audit_logger.php');
 use local_rtocompliance\audit_logger;
 
 admin_externalpage_setup('local_rtocompliance_locations');
+// ACCESS (v6.3.8): admin_externalpage_setup() above already enforces the capability this
+// page is registered with in settings.php. Stating it explicitly keeps the requirement
+// visible in this file instead of only in the settings registration — same check, no cost.
+require_capability('local/rtocompliance:manage', context_system::instance());
 require_login();
 
 $action = optional_param('action', '', PARAM_ALPHA);

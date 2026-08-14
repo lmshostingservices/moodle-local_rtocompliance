@@ -36,7 +36,7 @@ require_login();
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && confirm_sesskey()
         && optional_param('action', '', PARAM_ALPHANUMEXT) === 'save_support_state') {
     require_capability('local/rtocompliance:manage', context_system::instance());
-    $state = optional_param('state', '', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text payload; sanitised/validated immediately after read, never echoed raw.
+    $state = optional_param('state', '', PARAM_ALPHANUMEXT);
     // Validate it is well-formed JSON before storing; cap size defensively.
     $decoded = json_decode((string) $state, true);
     if (is_array($decoded) && strlen((string) $state) < 65535) {

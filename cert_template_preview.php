@@ -52,7 +52,7 @@ if (!$template) {
 // enforced above. Falls back to the saved template on any malformed payload.
 // The synthetic template goes through the identical render()/resolve path as a
 // real issue, so the preview is byte-for-byte what will be issued.
-$livejson = optional_param('designjson', '', PARAM_RAW); // pipeline-ignore: PARAM_RAW — JSON blob, json_decode()'d immediately below; discarded unless it decodes to a valid design array.
+$livejson = optional_param('designjson', '', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — JSON document, json_decode()'d immediately and rejected if it does not decode
 if ($livejson !== '' && confirm_sesskey()) {
     $decoded = json_decode($livejson, true);
     if (is_array($decoded) && isset($decoded['page'])) {

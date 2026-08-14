@@ -931,7 +931,7 @@ if (!$qualid) {
 
     // v5.9.383: landing search — find a qualification by code/name and filter by
     // category, instead of scrolling the whole list.
-    $fq   = optional_param('fq', '', PARAM_RAW_TRIMMED); // pipeline-ignore: PARAM_RAW — free-text payload; sanitised/validated immediately after read, never echoed raw.
+    $fq   = optional_param('fq', '', PARAM_RAW_TRIMMED);  // pipeline-ignore: PARAM_RAW — free-text value, escaped at output; a narrower type would corrupt legitimate punctuation
     $fcat = optional_param('fcat', 0, PARAM_INT);
     // v6.2.84 CASCADE: parent category -> sub-category -> course, sourced from each
     // qualification's ACTUAL result courses (enrolments.programcode -> courseid -> category),
@@ -1193,7 +1193,7 @@ HUBCASCADE;
 
             echo '<tr>';
             echo '<td><strong>' . s($q->qualificationcode) . '</strong><br>'
-                . '<span style="color:#6b7280;font-size:0.85rem;">' . s(format_string($q->qualificationname)) . '</span></td>';
+                . '<span style="color:#6b7280;font-size:0.85rem;">' . format_string($q->qualificationname) . '</span></td>';
             $variant = trim((string) ($q->streamname ?? ''));
             echo '<td>' . ($variant !== ''
                 ? '<span style="display:inline-block;background:#eef2ff;color:#3730a3;border:1px solid #e0e7ff;border-radius:6px;padding:2px 9px;font-size:0.82rem;font-weight:600;" title="Variant / intake: ' . s($variant) . '">' . s($variant) . '</span>'

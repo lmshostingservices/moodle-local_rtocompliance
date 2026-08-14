@@ -28,6 +28,11 @@ require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_feeprotection');
 require_login();
+// ACCESS (v6.3.7): admin_externalpage_setup() above already enforces the capability this
+// page was registered with in settings.php ('local/rtocompliance:manage'). Stating it
+// explicitly as well makes the requirement visible in this file rather than only in the
+// settings registration, and costs nothing — it is the same check.
+require_capability('local/rtocompliance:manage', context_system::instance());
 $context = context_system::instance();
 
 $id = optional_param('id', 0, PARAM_INT);
@@ -101,7 +106,7 @@ class feeprotection_form extends moodleform {
         $mform->addElement('header', 'feeheader', 'Fee Details');
 
         $mform->addElement('text', 'amount', 'Fee Amount ($)', ['size' => 15]);
-        $mform->setType('amount', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('amount', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addRule('amount', null, 'required', null, 'client');
         $mform->addRule('amount', 'Please enter a valid amount', 'numeric', null, 'client');
 

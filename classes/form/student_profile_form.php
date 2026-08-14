@@ -229,11 +229,44 @@ class student_profile_form extends \moodleform {
         $mform->addHelpButton('schooltype', 'schooltype', 'local_rtocompliance');
         $mform->hideIf('schooltype', 'atschoolflag', 'neq', 'Y');
 
-        $this->add_action_buttons();
+        // PROFILE-GATE (v6.3.0): in locked mode there is nowhere to cancel to — every
+        // other page redirects straight back here — so the Cancel button is removed
+        // rather than left as a dead end that just reloads this same form.
+        if (!empty($this->_customdata['lockmode'])) {
+            $this->add_action_buttons(false, get_string('savechanges'));
+        } else {
+            $this->add_action_buttons();
+        }
     }
 
     public function validation($data, $files) {
+        global $CFG;
+
         $errors = parent::validation($data, $files);
+
+        // PROFILE-GATE (v6.3.0): the fields the AVETMISS gate requires are validated
+        // here, server-side, rather than with client-side 'required' rules — neither
+        // rule type can express what "answered" means for AVETMISS. The selects are
+        // never empty (they default to the '@' / '@@' not-stated sentinels) and the
+        // date of birth is an optional date_selector group.
+        // local_rtocompliance_avetmiss_value_missing() holds the one true definition,
+        // shared with the gate and with the profilecomplete flag, so this form can
+        // never accept a profile that the gate would immediately reject again.
+        $requiredfields = $this->_customdata['requiredfields'] ?? [];
+        if (!empty($requiredfields)) {
+            require_once($CFG->dirroot . '/local/rtocompliance/lib.php');
+            $labels = local_rtocompliance_avetmiss_field_labels();
+            foreach ($requiredfields as $field) {
+                if (isset($errors[$field])) {
+                    continue; // A more specific error already applies to this field.
+                }
+                $value = $data[$field] ?? null;
+                if (local_rtocompliance_avetmiss_value_missing($field, $value)) {
+                    $errors[$field] = get_string('avetmiss_field_required', 'local_rtocompliance',
+                        $labels[$field] ?? $field);
+                }
+            }
+        }
 
         if (!empty($data['usi'])) {
             $result = avetmiss_codes::validate_usi($data['usi']);

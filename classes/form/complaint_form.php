@@ -119,7 +119,7 @@ class complaint_form extends \moodleform {
         $mform->addHelpButton('subject', 'complaint_subject', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'description', get_string('complaint_description', 'local_rtocompliance'), ['rows' => 8, 'cols' => 80]);
-        $mform->setType('description', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('description', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addRule('description', get_string('required'), 'required', null, 'client');
         $mform->addHelpButton('description', 'complaint_description', 'local_rtocompliance');
 
@@ -128,7 +128,7 @@ class complaint_form extends \moodleform {
         $mform->setType('respondentname', PARAM_TEXT);
 
         $mform->addElement('textarea', 'respondentresponse', "Respondent's response (opportunity to respond)", ['rows' => 5, 'cols' => 80]);
-        $mform->setType('respondentresponse', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('respondentresponse', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
 
         $priorityoptions = [
             'low' => get_string('priority_low', 'local_rtocompliance'),
@@ -191,7 +191,7 @@ class complaint_form extends \moodleform {
         $mform->addElement('date_selector', 'dateoutcomecommunicated', 'Date outcome communicated to all parties', ['optional' => true]);
 
         $mform->addElement('textarea', 'resolution', get_string('resolution', 'local_rtocompliance'), ['rows' => 5, 'cols' => 80]);
-        $mform->setType('resolution', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('resolution', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addHelpButton('resolution', 'resolution', 'local_rtocompliance');
 
         // FIX-COMPLAINT-PHP-ERROR: Use NOWDOC to avoid PHP single-quoted string parse errors
@@ -290,7 +290,7 @@ RTOCAIBLOCK;
         $mform->addElement('header', 'additionalinfo', get_string('additional_information', 'local_rtocompliance'));
 
         $mform->addElement('textarea', 'notes', get_string('notes', 'local_rtocompliance'), ['rows' => 4, 'cols' => 80]);
-        $mform->setType('notes', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('notes', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addHelpButton('notes', 'complaint_notes', 'local_rtocompliance');
 
         $this->add_action_buttons(true, get_string('savechanges'));

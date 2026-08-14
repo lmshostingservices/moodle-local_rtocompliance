@@ -52,6 +52,13 @@ class process_enrolment_task extends \core\task\adhoc_task {
             $existingdata = @json_decode($record->customdata, true);
             if ($existingdata === null || $existingdata === false) {
                 // Hardened: never instantiate arbitrary objects from stored data.
+                // SECURITY NOTE (v6.3.7): this is the SAFE form of unserialize(). The
+                // ['allowed_classes' => false] option makes PHP refuse to build any object,
+                // returning __PHP_Incomplete_Class instead, which closes the object-injection
+                // attack that makes unserialize() dangerous. It exists only as a fallback for
+                // enrolment customdata written before the plugin moved to JSON, and the value
+                // comes from Moodle's own enrol table, not from user input. The json_decode()
+                // above is tried first and this only runs when that fails.
                 $existingdata = @unserialize($record->customdata, ['allowed_classes' => false]);
             }
 

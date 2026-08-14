@@ -71,11 +71,28 @@ if (!$student) {
     $student->surveycontactstatus = 'N';
     $student->profilecomplete = 0;
     
-    $student->postcode = $USER->city ?: '';
+    // POSTCODE-PREFILL-FIX (v6.3.0): $USER->city is a suburb NAME, so copying it into
+    // postcode pre-filled an invalid value into a 4-digit column — with the postcode
+    // now gate-mandatory that produced a "must be 4 digits" error on a field the
+    // student had never touched. Only the suburb is pre-filled.
     $student->suburb = $USER->city ?: '';
+    $student->postcode = '';
 }
 
-$form = new student_profile_form(null, ['student' => $student, 'selfservice' => true]);
+// PROFILE-GATE (v6.3.0): when the gate is on and this student still has mandatory
+// AVETMISS fields outstanding, the page is rendered in LOCKED mode — the missing
+// fields become hard form requirements, the Cancel button is removed (there is
+// nowhere to cancel to; every other page redirects straight back here), and the
+// banner explains exactly what is outstanding and why it is being asked for.
+$gatemissing = local_rtocompliance_get_missing_avetmiss_fields($userid, $student);
+$gatelocked  = (local_rtocompliance_profile_gate_applies($userid) !== false);
+
+$form = new student_profile_form(null, [
+    'student'       => $student,
+    'selfservice'   => true,
+    'lockmode'      => $gatelocked,
+    'requiredfields' => $gatelocked ? local_rtocompliance_avetmiss_mandatory_fields() : [],
+]);
 $form->set_data($student);
 
 if ($form->is_cancelled()) {
@@ -90,19 +107,13 @@ if ($form->is_cancelled()) {
     // BUG-5 FIX: Expanded mandatory fields to include all AVETMISS-required fields.
     // Checking only 6 of 11 required fields caused students to be incorrectly marked
     // "complete" by self-service while still failing admin AVETMISS validation.
-    $mandatoryfields = [
-        'usi', 'dateofbirth', 'sex', 'postcode', 'statecode', 'suburb',
-        'indigenousstatus', 'countryofbirth', 'languageathome',
-        'labourforcestatus', 'highestschoollevel',
-    ];
-    $complete = true;
-    foreach ($mandatoryfields as $field) {
-        if (empty($data->$field) || $data->$field === '@' || $data->$field === '@@') {
-            $complete = false;
-            break;
-        }
-    }
-    $data->profilecomplete = $complete ? 1 : 0;
+    //
+    // SHARED-DEFINITION (v6.3.0): the 11-field list and the "is this value actually
+    // answered?" rule now live in lib.php
+    // (local_rtocompliance_calculate_profilecomplete), so staff edits, student
+    // self-service and the login gate can never disagree about what "complete"
+    // means — previously each path carried its own copy of the list and they drifted.
+    $data->profilecomplete = local_rtocompliance_calculate_profilecomplete($data);
 
     // BUG-4 FIX: Filter to only DB columns before write. Passing raw form data (which
     // includes submitbutton, sesskey, and other non-DB form fields) to update_record()
@@ -187,8 +198,30 @@ if ($form->is_cancelled()) {
         );
     }
     
+    // GATE-RELEASE (v6.3.0): if this save completed the profile, let the student
+    // straight through to wherever they were originally headed when the gate
+    // caught them (or their dashboard), with a clear "you're done" message —
+    // rather than dumping them back on the form they just finished.
+    if (!empty($data->profilecomplete)) {
+        $returnurl = new moodle_url('/my/');
+        if (!empty($SESSION->local_rtocompliance_gate_return)) {
+            try {
+                $returnurl = new moodle_url($SESSION->local_rtocompliance_gate_return);
+            } catch (\Throwable $e) {
+                $returnurl = new moodle_url('/my/');
+            }
+            unset($SESSION->local_rtocompliance_gate_return);
+        }
+        redirect(
+            $returnurl,
+            get_string('avetmiss_profile_unlocked', 'local_rtocompliance'),
+            null,
+            \core\output\notification::NOTIFY_SUCCESS
+        );
+    }
+
     redirect(
-        new moodle_url('/local/rtocompliance/my_profile.php'),
+        new moodle_url('/local/rtocompliance/my_profile.php', ['prompt' => 1]),
         get_string('profilesaved', 'local_rtocompliance'),
         null,
         \core\output\notification::NOTIFY_SUCCESS
@@ -221,7 +254,38 @@ if (!empty($nrcourses)) {
 
 $isprompt = optional_param('prompt', 0, PARAM_INT);
 
-if ($isprompt && !$student->profilecomplete) {
+if ($gatelocked) {
+    // LOCKED (v6.3.0): the student cannot reach any other page until these fields
+    // are answered, so the banner has to do three things — say plainly that access
+    // is held, list exactly what is outstanding, and explain why it is required.
+    echo html_writer::start_div('alert alert-danger', ['style' => 'margin-bottom: 24px;', 'role' => 'alert']);
+    echo html_writer::tag('h4',
+        '&#128274; ' . get_string('avetmiss_profile_locked_title', 'local_rtocompliance'),
+        ['style' => 'margin: 0 0 10px 0; font-size: 1.15em;']
+    );
+    echo html_writer::tag('p',
+        get_string('avetmiss_profile_locked_body', 'local_rtocompliance'),
+        ['style' => 'margin: 0 0 12px 0;']
+    );
+
+    if (!empty($gatemissing)) {
+        echo html_writer::tag('p',
+            html_writer::tag('strong', get_string('avetmiss_still_needed', 'local_rtocompliance')),
+            ['style' => 'margin: 0 0 6px 0;']
+        );
+        echo '<ul style="margin: 0 0 12px 0; padding-left: 22px;">';
+        foreach ($gatemissing as $label) {
+            echo '<li>' . s($label) . '</li>';
+        }
+        echo '</ul>';
+    }
+
+    echo html_writer::tag('p',
+        get_string('avetmiss_profile_locked_footer', 'local_rtocompliance'),
+        ['style' => 'margin: 0; font-size: 0.95em; opacity: .9;']
+    );
+    echo html_writer::end_div();
+} else if ($isprompt && !$student->profilecomplete) {
     // Arrived here via the login-time redirect — show an action-required banner
     // that explains WHY the profile is needed, not just that it's incomplete.
     echo html_writer::start_div('alert alert-danger', ['style' => 'margin-bottom: 24px;', 'role' => 'alert']);

@@ -128,6 +128,22 @@ $capabilities = [
             'user' => CAP_ALLOW,
         ],
     ],
+    // PROFILE-GATE (v6.3.0): holders of this capability are never held by the
+    // AVETMISS profile gate — they can browse the site with an incomplete student
+    // profile. Granted to staff archetypes so a trainer, assessor or manager who
+    // also happens to be enrolled in a nationally recognised course as a learner
+    // is not locked out of the site they need to run. Site administrators bypass
+    // the gate unconditionally and do not rely on this capability.
+    'local/rtocompliance:bypassprofilegate' => [
+        'captype' => 'read',
+        'contextlevel' => CONTEXT_SYSTEM,
+        'archetypes' => [
+            'manager' => CAP_ALLOW,
+            'coursecreator' => CAP_ALLOW,
+            'editingteacher' => CAP_ALLOW,
+            'teacher' => CAP_ALLOW,
+        ],
+    ],
     'local/rtocompliance:viewcerts' => [
         'riskbitmask' => RISK_PERSONAL,
         'captype' => 'read',

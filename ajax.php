@@ -373,7 +373,7 @@ if ($action === 'generate_resolution') {
 //   - tas_consultation.php "AI Generate Assessment Impact"(context=consult_impact_assessment)
 if ($action === 'ai_draft_text') {
     $contexttype = optional_param('contexttype', '', PARAM_ALPHANUMEXT);
-    $seed        = optional_param_array('seed', [], PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text AI prompt seeds; keys cleaned with PARAM_ALPHANUMEXT and values capped to 1KB immediately below.
+    $seed        = optional_param_array('seed', [], PARAM_RAW);  // pipeline-ignore: PARAM_RAW — JSON document, json_decode()'d immediately and rejected if it does not decode
 
     // Sanitise seed values (cap each to 1KB so prompts stay reasonable).
     $clean = [];

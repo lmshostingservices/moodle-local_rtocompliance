@@ -97,7 +97,7 @@ class transition_form extends \moodleform {
         $mform->addHelpButton('transitionplan_section', 'transitionplan_header', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'transitionplan', get_string('transition_plan', 'local_rtocompliance'), ['rows' => 6, 'cols' => 80]);
-        $mform->setType('transitionplan', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('transitionplan', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addHelpButton('transitionplan', 'transitionplan', 'local_rtocompliance');
 
         // FEAT-TRANSITION-AI (v4.4.69): AI Generate button for Transition Plan field.
@@ -151,7 +151,7 @@ class transition_form extends \moodleform {
         $mform->addElement('header', 'additionalinfo', get_string('additional_information', 'local_rtocompliance'));
 
         $mform->addElement('textarea', 'notes', get_string('notes', 'local_rtocompliance'), ['rows' => 4, 'cols' => 80]);
-        $mform->setType('notes', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('notes', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addHelpButton('notes', 'transition_notes', 'local_rtocompliance');
 
         $this->add_action_buttons(true, get_string('savechanges'));

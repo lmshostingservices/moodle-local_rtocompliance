@@ -179,7 +179,7 @@ $qualopts = '<option value="">— Select a qualification —</option>';
 foreach ($activeQuals as $aq) {
     $qualopts .= '<option value="' . $aq->id . '">'
         . htmlspecialchars($aq->qualificationcode) . ' — '
-        . htmlspecialchars(format_string($aq->qualificationname))
+        . format_string($aq->qualificationname)
         . '</option>';
 }
 $qualNavOnclick = 'var v=document.getElementById(\'generateQualSelect\').value; if(v){window.location=\'' . htmlspecialchars($generateQualBaseUrl, ENT_QUOTES) . '?qualid=\'+v;}else{alert(\'Please select a qualification\');}';

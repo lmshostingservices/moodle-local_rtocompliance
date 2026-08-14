@@ -27,6 +27,10 @@ require_once($CFG->libdir . '/formslib.php');
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_tas');
+// ACCESS (v6.3.8): admin_externalpage_setup() above already enforces the capability this
+// page is registered with in settings.php. Stating it explicitly keeps the requirement
+// visible in this file instead of only in the settings registration — same check, no cost.
+require_capability('local/rtocompliance:manage', context_system::instance());
 require_login();
 $context = context_system::instance();
 
@@ -301,7 +305,7 @@ class consultation_form extends moodleform {
         // of the three free-text consultation boxes (feedback, impacttraining,
         // impactassessment) — wired to ajax.php new contexttypes.
         $mform->addElement('textarea', 'feedback', 'Key Feedback', ['rows' => 3, 'cols' => 60, 'placeholder' => 'What key feedback was provided by the industry representative?']);
-        $mform->setType('feedback', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('feedback', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addElement('static', 'feedbackaihelp', '',
             '<div class="rtoc-ai-box">' .
             '<button type="button" id="rtoc-ai-consult-feedback" class="btn btn-primary" title="Draft a key-feedback summary from the participant details and ticked feedback categories" data-target="id_feedback" data-context="consult_feedback">' .
@@ -334,7 +338,7 @@ class consultation_form extends moodleform {
         $mform->addElement('html', $trainingSelect);
 
         $mform->addElement('textarea', 'impacttraining', 'Impact on Training Delivery', ['rows' => 3, 'cols' => 60, 'placeholder' => 'How has this feedback been incorporated into training delivery?']);
-        $mform->setType('impacttraining', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('impacttraining', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addElement('static', 'impacttrainingaihelp', '',
             '<div class="rtoc-ai-box">' .
             '<button type="button" id="rtoc-ai-consult-training" class="btn btn-primary" title="Draft a statement on how this feedback shapes training delivery" data-target="id_impacttraining" data-context="consult_impact_training">' .
@@ -365,7 +369,7 @@ class consultation_form extends moodleform {
         $mform->addElement('html', $assessmentSelect);
 
         $mform->addElement('textarea', 'impactassessment', 'Impact on Assessment Design', ['rows' => 3, 'cols' => 60, 'placeholder' => 'How has this feedback been incorporated into assessment design?']);
-        $mform->setType('impactassessment', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('impactassessment', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addElement('static', 'impactassessmentaihelp', '',
             '<div class="rtoc-ai-box">' .
             '<button type="button" id="rtoc-ai-consult-assessment" class="btn btn-primary" title="Draft a statement on how this feedback shapes assessment design" data-target="id_impactassessment" data-context="consult_impact_assessment">' .
@@ -388,7 +392,7 @@ class consultation_form extends moodleform {
         $mform->addElement('html', '<p class="text-muted" style="margin:2px 0 8px;font-size:0.82rem">Accepted file types: PDF, Word (.doc, .docx), images (.jpg, .png) and Excel (.xls, .xlsx) — max 10 MB</p>');
 
         $mform->addElement('textarea', 'topicsdiscussed', 'Additional Notes', ['rows' => 2, 'cols' => 60]);
-        $mform->setType('topicsdiscussed', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('topicsdiscussed', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
 
         $this->add_action_buttons(true, $entry ? 'Update Consultation Record' : 'Add Consultation Record');
     }

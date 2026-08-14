@@ -66,16 +66,16 @@ $observers = [
         'priority' => 0,
         'internal' => true,
     ],
-    [
-        // LOGIN-PROFILE-PROMPT: set a session flag when a student with an
-        // incomplete AVETMISS profile logs in. The flag is consumed by
-        // local_rtocompliance_extend_navigation() in lib.php, which fires
-        // after require_login() on the destination page and can safely call
-        // redirect() before any output is written.
-        'eventname' => '\core\event\user_loggedin',
-        'callback' => 'local_rtocompliance_observer::user_loggedin',
-        'includefile' => '/local/rtocompliance/classes/observer.php',
-        'priority' => 0,
-        'internal' => false,
-    ],
+    // LOGIN-PROFILE-PROMPT (v5.9.314) — REMOVED in v6.3.0.
+    //
+    // The \core\event\user_loggedin observer used to set a session flag that
+    // local_rtocompliance_extend_navigation() consumed to redirect a student with an
+    // incomplete AVETMISS profile. That was a single nudge on the first page after
+    // login and nothing more — the student could click away and never see it again.
+    //
+    // It is replaced by local_rtocompliance_profile_gate_check() in lib.php, which
+    // evaluates the same question on every page build, so the observer's two DB
+    // queries per login now buy nothing. local_rtocompliance_observer::user_loggedin()
+    // is intentionally left in place (unregistered) so that any event cache still
+    // holding a reference to it during the upgrade resolves rather than fataling.
 ];

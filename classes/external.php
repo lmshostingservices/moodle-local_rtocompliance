@@ -694,7 +694,7 @@ class external extends external_api {
     public static function qualbuilder_import_units_parameters() {
         return new external_function_parameters([
             'qualbuilderid' => new external_value(PARAM_INT, 'Qualification builder ID', VALUE_REQUIRED),
-            'units' => new external_value(PARAM_RAW, 'JSON array of units to import', VALUE_REQUIRED), // pipeline-ignore: PARAM_RAW — JSON blob parameter, json_decode()'d and validated before use; never stored or echoed raw.
+            'units' => new external_value(PARAM_RAW, 'JSON array of units to import', VALUE_REQUIRED),  // pipeline-ignore: PARAM_RAW — web service parameter carrying a JSON document; decoded and validated by the handler
         ]);
     }
 
@@ -1076,12 +1076,12 @@ class external extends external_api {
         return new external_single_structure([
             'success'          => new external_value(PARAM_BOOL, 'Success'),
             'error'            => new external_value(PARAM_TEXT, 'Error message'),
-            'qualification'    => new external_value(PARAM_RAW, 'Qualification JSON {code,title,type,aqfLevel}'), // pipeline-ignore: PARAM_RAW — JSON blob parameter, json_decode()'d and validated before use; never stored or echoed raw.
-            'packagingrules'   => new external_value(PARAM_RAW, 'Rules text JSON array'), // pipeline-ignore: PARAM_RAW — JSON blob parameter, json_decode()'d and validated before use; never stored or echoed raw.
+            'qualification'    => new external_value(PARAM_RAW, 'Qualification JSON {code,title,type,aqfLevel}'),  // pipeline-ignore: PARAM_RAW — web service parameter carrying a JSON document; decoded and validated by the handler
+            'packagingrules'   => new external_value(PARAM_RAW, 'Rules text JSON array'),  // pipeline-ignore: PARAM_RAW — web service parameter carrying a JSON document; decoded and validated by the handler
             'totalunits'       => new external_value(PARAM_INT, 'Total units required'),
             'corerequired'     => new external_value(PARAM_INT, 'Core units required'),
             'electiverequired' => new external_value(PARAM_INT, 'Elective units required'),
-            'grouprules'       => new external_value(PARAM_RAW, 'Group requirements JSON {A:{min,max},...}'), // pipeline-ignore: PARAM_RAW — JSON blob parameter, json_decode()'d and validated before use; never stored or echoed raw.
+            'grouprules'       => new external_value(PARAM_RAW, 'Group requirements JSON {A:{min,max},...}'),  // pipeline-ignore: PARAM_RAW — web service parameter carrying a JSON document; decoded and validated by the handler
             'pointsrequired'        => new external_value(PARAM_INT, 'Credit points required (0 = not a points-based qual)'),
             'pointssystem'          => new external_value(PARAM_INT, '1 = qualification uses credit points system'),
             'corepointsrequired'    => new external_value(PARAM_INT, 'Sum of core unit credit points (minimum core pts)'),
@@ -1143,8 +1143,8 @@ class external extends external_api {
             'totalunits'        => new external_value(PARAM_INT,          'Total units required',  VALUE_DEFAULT, 0),
             'coreunitcount'     => new external_value(PARAM_INT,          'Core units required',   VALUE_DEFAULT, 0),
             'electivecount'     => new external_value(PARAM_INT,          'Elective units required', VALUE_DEFAULT, 0),
-            'electiverules'     => new external_value(PARAM_RAW,          'Elective rules JSON', VALUE_DEFAULT, ''), // pipeline-ignore: PARAM_RAW — JSON blob parameter, json_decode()'d and validated before use; never stored or echoed raw.
-            'units'             => new external_value(PARAM_RAW,          'Units JSON array', VALUE_DEFAULT, '[]'), // pipeline-ignore: PARAM_RAW — JSON blob parameter, json_decode()'d and validated before use; never stored or echoed raw.
+            'electiverules'     => new external_value(PARAM_RAW,          'Elective rules JSON', VALUE_DEFAULT, ''),  // pipeline-ignore: PARAM_RAW — web service parameter carrying a JSON document; decoded and validated by the handler
+            'units'             => new external_value(PARAM_RAW,          'Units JSON array', VALUE_DEFAULT, '[]'),  // pipeline-ignore: PARAM_RAW — web service parameter carrying a JSON document; decoded and validated by the handler
             'streamname'        => new external_value(PARAM_TEXT,         'Stream / variant name', VALUE_DEFAULT, ''),
         ]);
     }

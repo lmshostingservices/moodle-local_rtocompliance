@@ -163,10 +163,9 @@ if ($form->is_cancelled()) {
     ];
 
     $validationerrors = validate_student_profile($data);
-    $data->profilecomplete = empty($validationerrors) ? 1 : 0;
     $data->validationerrors = !empty($validationerrors) ? json_encode($validationerrors) : null;
     $data->timemodified = $now;
-    
+
     // Ensure required default values for NOT NULL fields
     if (empty($data->indigenousstatus)) {
         $data->indigenousstatus = '@';
@@ -201,6 +200,17 @@ if ($form->is_cancelled()) {
     if (empty($data->surveycontactstatus)) {
         $data->surveycontactstatus = 'N';
     }
+
+    // SHARED-DEFINITION (v6.3.0): profilecomplete is computed by
+    // local_rtocompliance_calculate_profilecomplete() — the same function the student
+    // self-service form uses — so staff saves and student saves can never disagree
+    // about whether a profile is complete.
+    //
+    // It is deliberately calculated HERE, after the NOT NULL sentinel defaults above
+    // have been applied, so the flag describes the row as it is actually written to
+    // the database. Calculating it earlier made a saved row look incomplete purely
+    // because a blank field had not yet been defaulted.
+    $data->profilecomplete = local_rtocompliance_calculate_profilecomplete($data);
 
     // DEPENDENT-FIELD-CLEAR-FIX (v5.9.306): Moodle's hideIf is client-side JS only.
     // A hidden form field still submits its cached value, so when an admin toggles a
@@ -938,7 +948,7 @@ if ($isnewprofile) {
             echo '<span class="rtoc-qual-code">' . s($qcode) . '</span><br>';
         }
         echo '<span class="rtoc-qual-name">'
-            . ($qname !== '' ? s(format_string($qname)) : s($qcode)) . '</span>';
+            . ($qname !== '' ? format_string($qname) : s($qcode)) . '</span>';
         echo '</div>';
 
         echo '<div class="rtoc-qual-progress">';
@@ -970,15 +980,15 @@ if ($isnewprofile) {
         foreach ($rows as $r) {
             $ucode = s(trim((string)($r->unitcode ?? '')));
             $uname = trim((string)($r->unitname ?? '')) !== ''
-                ? ' <span class="rtoc-unit-name">&mdash; ' . s(format_string($r->unitname)) . '</span>'
+                ? ' <span class="rtoc-unit-name">&mdash; ' . format_string($r->unitname) . '</span>'
                 : '';
 
             // Source: resolve courseid to the Moodle course shortname.
             $cid = (int)($r->courseid ?? 0);
             if ($cid > 0 && isset($coursecache[$cid])) {
                 $co = $coursecache[$cid];
-                $src = '<span class="rtoc-src" title="' . s(format_string($co->fullname)) . '">'
-                    . s(format_string($co->shortname)) . '</span>';
+                $src = '<span class="rtoc-src" title="' . format_string($co->fullname) . '">'
+                    . format_string($co->shortname) . '</span>';
             } else {
                 $src = '<span class="rtoc-src-muted">Manual / RPL</span>';
             }

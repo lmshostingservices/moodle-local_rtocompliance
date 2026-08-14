@@ -101,7 +101,7 @@ class survey_send_form extends moodleform {
         }
 
         $mform->addElement('editor', 'message', 'Email Message', ['rows' => 10]);
-        $mform->setType('message', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('message', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
 
         $defaultmessage = '<p>Dear {FIRSTNAME},</p>';
         if ($type === 'learner') {

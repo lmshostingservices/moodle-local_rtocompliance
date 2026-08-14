@@ -556,7 +556,7 @@ echo html_writer::end_div();
 
 echo html_writer::tag('p',
     html_writer::tag('strong', htmlspecialchars($qual->qualificationcode), ['style' => 'color:#1e40af;'])
-    . ' — ' . htmlspecialchars(format_string($qual->qualificationname)),
+    . ' — ' . format_string($qual->qualificationname),
     ['style' => 'margin:0 0 8px;font-size:0.95rem;color:#374151;']
 );
 

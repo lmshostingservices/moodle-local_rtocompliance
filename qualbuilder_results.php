@@ -46,7 +46,7 @@ $export = optional_param('export', '', PARAM_ALPHA);
 // ROSTER-OVERHAUL (v5.9.373): the no-id landing is now a full cross-qualification
 // "Master Student Roster" — the single table an RTO looks at first.  These extra
 // filters drive it.  They are ignored by the per-product (id=N) drill-down below.
-$rqual = optional_param('rqual', '', PARAM_RAW_TRIMMED);  // filter roster by a qualification code // pipeline-ignore: PARAM_RAW — free-text payload; sanitised/validated immediately after read, never echoed raw.
+$rqual = optional_param('rqual', '', PARAM_RAW_TRIMMED);  // filter roster by a qualification code  // pipeline-ignore: PARAM_RAW — free-text value, escaped at output; a narrower type would corrupt legitimate punctuation
 $rcat  = optional_param('rcat', 0, PARAM_INT);            // filter roster by Moodle category (sub-category)
 $rusi  = optional_param('rusi', 'all', PARAM_ALPHA);      // USI health filter: all|verified|unverified|missing
 $rsort = optional_param('rsort', 'name', PARAM_ALPHA);    // name|progress|recent|units

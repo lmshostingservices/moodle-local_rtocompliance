@@ -74,11 +74,11 @@ class insurance_form extends \moodleform {
         $mform->addHelpButton('excessamount', 'excessamount', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'coveragedetails', get_string('coverage_details', 'local_rtocompliance'), ['rows' => 4, 'cols' => 80]);
-        $mform->setType('coveragedetails', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('coveragedetails', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addHelpButton('coveragedetails', 'coveragedetails', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'exclusions', get_string('exclusions', 'local_rtocompliance'), ['rows' => 3, 'cols' => 80]);
-        $mform->setType('exclusions', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('exclusions', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addHelpButton('exclusions', 'exclusions', 'local_rtocompliance');
 
         $mform->addElement('header', 'coveragemapping', 'Coverage Mapping');
@@ -91,17 +91,17 @@ class insurance_form extends \moodleform {
             ['rows' => 3, 'cols' => 80, 'placeholder' => 'BSB50420 - Diploma of Leadership and Management
 CHC50121 - Diploma of Early Childhood Education and Care
 SIS40221 - Certificate IV in Fitness']);
-        $mform->setType('qualificationscovered', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('qualificationscovered', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
 
         $mform->addElement('textarea', 'deliverymodes', get_string('delivery_modes', 'local_rtocompliance'), 
             ['rows' => 2, 'cols' => 80, 'placeholder' => 'Classroom, Online, Workplace, Blended']);
-        $mform->setType('deliverymodes', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('deliverymodes', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addHelpButton('deliverymodes', 'deliverymodes', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'locations', get_string('locations', 'local_rtocompliance'), 
             ['rows' => 2, 'cols' => 80, 'placeholder' => 'Head Office - 123 Main St, Sydney NSW 2000
 Training Centre - 456 Training Rd, Melbourne VIC 3000']);
-        $mform->setType('locations', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('locations', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addHelpButton('locations', 'insurance_locations', 'local_rtocompliance');
 
         $mform->addElement('header', 'policydates', 'Policy Period');
@@ -132,7 +132,7 @@ Training Centre - 456 Training Rd, Melbourne VIC 3000']);
         $mform->addElement('header', 'additionalinfo', get_string('additional_information', 'local_rtocompliance'));
 
         $mform->addElement('textarea', 'notes', get_string('notes', 'local_rtocompliance'), ['rows' => 4, 'cols' => 80]);
-        $mform->setType('notes', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('notes', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addHelpButton('notes', 'insurance_notes', 'local_rtocompliance');
 
         $this->add_action_buttons(true, get_string('savechanges'));

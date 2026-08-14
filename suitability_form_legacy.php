@@ -93,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $answervals[$a->id]   = (int)$val;
         $evidencevals[$a->id] = substr($ev, 0, 2000);
     }
-    if (!optional_param('declaration', '', PARAM_RAW)) { // pipeline-ignore: PARAM_RAW — free-text payload; sanitised/validated immediately after read, never echoed raw.
+    if (!optional_param('declaration', '', PARAM_RAW)) {  // pipeline-ignore: PARAM_RAW — presence-only check; the value itself is never stored or printed
         $errors[] = 'You must tick the declaration before submitting.';
     }
     if (empty($errors)) {

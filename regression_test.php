@@ -53,6 +53,10 @@ $PAGE->set_title('Complaint Student Acceptance Tests');
 $PAGE->set_heading('Complaint Student Acceptance Tests');
 
 admin_externalpage_setup('local_rtocompliance_regression_test');
+// ACCESS (v6.3.8): admin_externalpage_setup() above already enforces the capability this
+// page is registered with in settings.php. Stating it explicitly keeps the requirement
+// visible in this file instead of only in the settings registration — same check, no cost.
+require_capability('local/rtocompliance:manage', context_system::instance());
 require_login();
 
 // ─── Helper functions — same algorithm as reconcile.php ──────────────────────

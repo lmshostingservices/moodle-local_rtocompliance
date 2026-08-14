@@ -45,6 +45,10 @@ $userid   = required_param('userid', PARAM_INT);
 $resendid = optional_param('resendid', 0, PARAM_INT);
 
 admin_externalpage_setup('local_rtocompliance_students');
+// ACCESS (v6.3.8): admin_externalpage_setup() above already enforces the capability this
+// page is registered with in settings.php. Stating it explicitly keeps the requirement
+// visible in this file instead of only in the settings registration — same check, no cost.
+require_capability('local/rtocompliance:manage', context_system::instance());
 require_login();
 
 $PAGE->set_url(new moodle_url('/local/rtocompliance/suitability_send.php', ['userid' => $userid]));
@@ -152,10 +156,10 @@ $llnIsManual     = ($llnAdapterCode === 'manual');
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && confirm_sesskey()) {
     $tasid       = required_param('tasid', PARAM_INT);
     $reqPrereq   = optional_param('req_prereq', 'none', PARAM_ALPHANUMEXT);
-    $reqLLNRaw   = optional_param('req_lln_level', '3', PARAM_RAW_TRIMMED); // pipeline-ignore: PARAM_RAW — free-text payload; sanitised/validated immediately after read, never echoed raw.
+    $reqLLNRaw   = optional_param('req_lln_level', '3', PARAM_RAW_TRIMMED);  // pipeline-ignore: PARAM_RAW — free-text value, escaped at output; a narrower type would corrupt legitimate punctuation
     // Manual override is implicit when adapter = manual; explicit checkbox otherwise.
     $manualOverride = (bool) optional_param('lln_manual_override', $llnIsManual ? 1 : 0, PARAM_BOOL);
-    $actLLNRaw   = $manualOverride ? optional_param('lln_actual_level', '', PARAM_RAW_TRIMMED) : ''; // pipeline-ignore: PARAM_RAW — free-text payload; sanitised/validated immediately after read, never echoed raw.
+    $actLLNRaw   = $manualOverride ? optional_param('lln_actual_level', '', PARAM_RAW_TRIMMED) : '';  // pipeline-ignore: PARAM_RAW — free-text value, escaped at output; a narrower type would corrupt legitimate punctuation
 
     $reqLLN = in_array($reqLLNRaw, ['1', '2', '3', '4', '5'], true) ? $reqLLNRaw : '3';
     $actLLN = in_array($actLLNRaw, ['1', '2', '3', '4', '5'], true) ? $actLLNRaw : null;

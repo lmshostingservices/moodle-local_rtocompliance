@@ -2563,7 +2563,7 @@ if ($action === 'foe_trace' && $importid) {
     require_capability('local/rtocompliance:manage', $context);
     \core\session\manager::write_close();
 
-    $_traceCid   = strtolower(trim(optional_param('tracecid', '', PARAM_RAW))); // pipeline-ignore: PARAM_RAW — free-text payload; sanitised/validated immediately after read, never echoed raw.
+    $_traceCid   = strtolower(trim(optional_param('tracecid', '', PARAM_ALPHANUMEXT)));
     $_traceLcCid = $_traceCid; // already lowercased
 
     echo $OUTPUT->header();
@@ -3514,7 +3514,7 @@ if (($action === 'fix_overenrolments' || $action === 'fix_overenrolments_apply')
     // ── FOE DEBUG PANEL (v5.9.99): activated by &debugcid=XXXX in URL ────────
     // Shows exactly what the detection computed for a specific client ID so you
     // can pinpoint where the flag fails to fire without reading server logs.
-    $_debugCid = strtolower(trim(optional_param('debugcid', '', PARAM_RAW))); // pipeline-ignore: PARAM_RAW — free-text payload; sanitised/validated immediately after read, never echoed raw.
+    $_debugCid = strtolower(trim(optional_param('debugcid', '', PARAM_ALPHANUMEXT)));
     if ($_debugCid !== '') {
         $debugOut  = '<div style="background:#fff8e1;border:2px solid #e65100;border-radius:6px;'
                    . 'padding:1rem 1.2rem;margin-bottom:1.5rem;font-size:0.87em;">';
@@ -4682,7 +4682,7 @@ if ($action === 'do_archive_link' && $_SERVER['REQUEST_METHOD'] === 'POST' && co
 
     // Step 2: If this is the second POST (approvals submitted), process them
     $approvals = optional_param_array('approve_group', [], PARAM_INT); // array of group indices to approve
-    $groupsJson = optional_param('groups_json', '', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text payload; sanitised/validated immediately after read, never echoed raw.
+    $groupsJson = optional_param('groups_json', '', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — JSON document, json_decode()'d immediately and rejected if it does not decode
     if (!empty($approvals) && !empty($groupsJson)) {
         // Process approved group → course mappings
         $groupsData = @json_decode($groupsJson, true);
@@ -7918,7 +7918,7 @@ if ($action === 'qcm_save') {
     // v5.9.368 CAP-FIX: 'importavetmiss' is undeclared — use the manage capability.
     require_capability('local/rtocompliance:manage', $context);
     header('Content-Type: application/json');
-    $mapRaw  = optional_param('map', '', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text payload; sanitised/validated immediately after read, never echoed raw.
+    $mapRaw  = optional_param('map', '', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — JSON document, json_decode()'d immediately and rejected if it does not decode
     $newMap  = json_decode($mapRaw ?: '{}', true);
     if (!is_array($newMap)) $newMap = [];
     $existing = json_decode(get_config('local_rtocompliance', 'qualcat_map') ?: '{}', true) ?: [];

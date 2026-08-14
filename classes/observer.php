@@ -336,6 +336,13 @@ class local_rtocompliance_observer {
      *
      * Skipped for: guest users, site admins, users with no nationally recognised
      * enrolments, and users whose profile is already complete.
+     *
+     * @deprecated since v6.3.0 — UNREGISTERED in db/events.php. The one-shot login
+     * flag has been replaced by local_rtocompliance_profile_gate_check(), which
+     * re-evaluates on every page build instead of only the first page after login.
+     * The method is retained so that an event cache still referencing it during the
+     * upgrade resolves cleanly rather than fataling; it can be deleted in a later
+     * release once all sites have upgraded past 6.3.0.
      */
     public static function user_loggedin(\core\event\user_loggedin $event): void {
         global $DB, $SESSION;
@@ -353,17 +360,20 @@ class local_rtocompliance_observer {
             return;
         }
 
-        // Profile exists and is already complete — nothing to do.
-        $student = $DB->get_record(
-            'local_rtocompliance_students',
-            ['userid' => $userid],
-            'id, profilecomplete'
-        );
-        if ($student && (int)$student->profilecomplete === 1) {
+        // PROFILE-GATE (v6.3.0): completeness is judged from the actual field values,
+        // not from the stored profilecomplete flag. That flag can be stale — it is
+        // written by NAT imports, bulk syncs and older plugin versions that used a
+        // shorter mandatory-field list — so a student with, for example, no date of
+        // birth could carry profilecomplete = 1 and never be asked for it again.
+        $missing = local_rtocompliance_get_missing_avetmiss_fields($userid);
+        if (empty($missing)) {
             return;
         }
 
-        // Flag is read and consumed by local_rtocompliance_extend_navigation().
+        // Kept for backwards compatibility with sessions started before v6.3.0.
+        // The redirect is no longer driven by this flag — it is now the persistent
+        // gate in local_rtocompliance_profile_gate_check(), which re-checks on every
+        // page instead of only once on the first page after login.
         $SESSION->local_rtocompliance_needs_profile = 1;
     }
 

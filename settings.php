@@ -522,7 +522,7 @@ if ($canviewfull) {
             get_string('supersededunitmap', 'local_rtocompliance'),
             get_string('supersededunitmap_help', 'local_rtocompliance'),
             '',
-            PARAM_RAW, // pipeline-ignore: PARAM_RAW — free-text payload; sanitised/validated immediately after read, never echoed raw.
+            PARAM_RAW,  // pipeline-ignore: PARAM_RAW — free-text value, escaped at output; a narrower type would corrupt legitimate punctuation
             '70',
             '12'
         ));
@@ -541,7 +541,7 @@ if ($canviewfull) {
             get_string('archivefamilymap', 'local_rtocompliance'),
             get_string('archivefamilymap_help', 'local_rtocompliance'),
             '',
-            PARAM_RAW, // pipeline-ignore: PARAM_RAW — free-text payload; sanitised/validated immediately after read, never echoed raw.
+            PARAM_RAW,  // pipeline-ignore: PARAM_RAW — free-text value, escaped at output; a narrower type would corrupt legitimate punctuation
             '70',
             '8'
         ));
@@ -550,7 +550,7 @@ if ($canviewfull) {
             get_string('archivefamilykeywords', 'local_rtocompliance'),
             get_string('archivefamilykeywords_help', 'local_rtocompliance'),
             '',
-            PARAM_RAW, // pipeline-ignore: PARAM_RAW — free-text payload; sanitised/validated immediately after read, never echoed raw.
+            PARAM_RAW,  // pipeline-ignore: PARAM_RAW — free-text value, escaped at output; a narrower type would corrupt legitimate punctuation
             '70',
             '8'
         ));
@@ -989,6 +989,49 @@ if ($canviewfull) {
             get_string('lln_webhook_secret', 'local_rtocompliance'),
             get_string('lln_webhook_secret_desc', 'local_rtocompliance'),
             ''
+        ));
+
+        // ── STUDENT DATA ENFORCEMENT (AVETMISS profile gate) — v6.3.0 ──────────
+        $settings->add(new admin_setting_heading(
+            'local_rtocompliance/enforceprofileheading',
+            get_string('enforceprofileheading', 'local_rtocompliance'),
+            get_string('enforceprofileheading_desc', 'local_rtocompliance')
+        ));
+
+        $settings->add(new admin_setting_configcheckbox(
+            'local_rtocompliance/enforceprofile',
+            get_string('enforceprofile', 'local_rtocompliance'),
+            get_string('enforceprofile_desc', 'local_rtocompliance'),
+            1
+        ));
+
+        // Which AVETMISS fields the student must supply before the lock lifts.
+        // Everything except the USI is ticked by default: a student cannot conjure a
+        // USI on demand (it is issued by usi.gov.au, and many enrol before they hold
+        // one), so requiring it to access the site would lock those students out with
+        // no way to comply. Every other field is something the student simply knows.
+        //
+        // This list controls the LOCK only. A profile is still only counted as
+        // complete — and a certificate still only issuable — once the USI is present.
+        $profilefieldopts = [
+            'usi'                => get_string('usi', 'local_rtocompliance'),
+            'dateofbirth'        => get_string('dateofbirth', 'local_rtocompliance'),
+            'sex'                => get_string('sex', 'local_rtocompliance'),
+            'suburb'             => get_string('suburb', 'local_rtocompliance'),
+            'postcode'           => get_string('postcode', 'local_rtocompliance'),
+            'statecode'          => get_string('residentialstate', 'local_rtocompliance'),
+            'indigenousstatus'   => get_string('atsi', 'local_rtocompliance'),
+            'countryofbirth'     => get_string('countryofbirth', 'local_rtocompliance'),
+            'languageathome'     => get_string('languageathome', 'local_rtocompliance'),
+            'labourforcestatus'  => get_string('labourforcestatus', 'local_rtocompliance'),
+            'highestschoollevel' => get_string('schoollevel', 'local_rtocompliance'),
+        ];
+        $settings->add(new admin_setting_configmulticheckbox(
+            'local_rtocompliance/mandatoryprofilefields',
+            get_string('mandatoryprofilefields', 'local_rtocompliance'),
+            get_string('mandatoryprofilefields_desc', 'local_rtocompliance'),
+            array_fill_keys(array_diff(array_keys($profilefieldopts), ['usi']), 1),
+            $profilefieldopts
         ));
     }
 
