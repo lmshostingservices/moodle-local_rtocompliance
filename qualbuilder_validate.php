@@ -15,15 +15,13 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — qualbuilder_validate.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 require_once(__DIR__ . '/classes/packagingrules_validator.php');
@@ -35,8 +33,7 @@ use local_rtocompliance\audit_logger;
 $id = required_param('id', PARAM_INT);
 
 admin_externalpage_setup('local_rtocompliance_qualbuilder');
-$context = context_system::instance();
-require_capability('moodle/site:config', $context);
+require_login();
 $context = context_system::instance();
 
 // Bug S fix: this page writes DB state (validationpassed/date/errors) on every page load.
@@ -82,7 +79,7 @@ echo html_writer::start_div('compliance-container');
 echo html_writer::start_div('compliance-header');
 echo html_writer::tag('h2', get_string('packaging_validation_results', 'local_rtocompliance'));
 echo html_writer::end_div();
-echo html_writer::tag('p', $product->qualificationcode . ' - ' . $product->qualificationname, ['class' => 'text-muted', 'style' => 'margin-bottom: 1.5rem;']);
+echo html_writer::tag('p', $product->qualificationcode . ' ' . $product->qualificationname, ['class' => 'text-muted', 'style' => 'margin-bottom: 1.5rem;']);
 
 // Source badge: is the data fresh from TGA or stored?
 $tgaSourced = false;

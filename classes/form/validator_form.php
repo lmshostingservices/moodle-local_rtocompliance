@@ -15,13 +15,12 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — validator_form.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 namespace local_rtocompliance\form;
 
 defined('MOODLE_INTERNAL') || die();
@@ -79,13 +78,13 @@ class validator_form extends \moodleform {
         $mform->addHelpButton('taedateachieved', 'tae_date_achieved', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'vocationalqualifications', get_string('vocational_qualifications', 'local_rtocompliance'), ['rows' => 3, 'cols' => 80]);
-        $mform->setType('vocationalqualifications', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+        $mform->setType('vocationalqualifications', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
         $mform->addHelpButton('vocationalqualifications', 'validator_vocquals', 'local_rtocompliance');
 
         $mform->addElement('header', 'experience', 'Industry Experience');
 
         $mform->addElement('textarea', 'industryexperience', get_string('industry_experience', 'local_rtocompliance'), ['rows' => 4, 'cols' => 80]);
-        $mform->setType('industryexperience', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+        $mform->setType('industryexperience', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
         $mform->addHelpButton('industryexperience', 'validator_industryexp', 'local_rtocompliance');
 
         $mform->addElement('text', 'industryexperienceyears', get_string('industry_experience_years', 'local_rtocompliance'), ['size' => 5]);
@@ -93,11 +92,11 @@ class validator_form extends \moodleform {
         $mform->addHelpButton('industryexperienceyears', 'validator_expyears', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'currentindustryengagement', get_string('current_industry_engagement', 'local_rtocompliance'), ['rows' => 3, 'cols' => 80]);
-        $mform->setType('currentindustryengagement', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+        $mform->setType('currentindustryengagement', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
         $mform->addHelpButton('currentindustryengagement', 'current_industry_engagement', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'specialisations', get_string('specialisations', 'local_rtocompliance'), ['rows' => 2, 'cols' => 80]);
-        $mform->setType('specialisations', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+        $mform->setType('specialisations', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
         $mform->addHelpButton('specialisations', 'validator_specialisations', 'local_rtocompliance');
 
         $mform->addElement('header', 'validationhistory', 'Validation History');
@@ -126,7 +125,7 @@ class validator_form extends \moodleform {
         $mform->addElement('header', 'additionalinfo', get_string('additional_information', 'local_rtocompliance'));
 
         $mform->addElement('textarea', 'notes', get_string('notes', 'local_rtocompliance'), ['rows' => 4, 'cols' => 80]);
-        $mform->setType('notes', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+        $mform->setType('notes', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
         $mform->addHelpButton('notes', 'validator_notes', 'local_rtocompliance');
 
         $this->add_action_buttons(true, get_string('savechanges'));

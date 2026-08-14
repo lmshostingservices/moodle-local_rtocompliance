@@ -15,13 +15,12 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — access.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 defined('MOODLE_INTERNAL') || die();
 
 // ROLE-SPLIT (v4.2.30, 30 Apr 2026): the previous capability map granted
@@ -145,6 +144,19 @@ $capabilities = [
         'archetypes' => [
             'manager' => CAP_ALLOW,
             'editingteacher' => CAP_ALLOW,
+        ],
+    ],
+
+    // SENSITIVE-DATA (v5.9.401): a dedicated permission for the most sensitive
+    // student data — disability disclosures and USI — so least-privilege can be
+    // enforced (an admin officer with general student access need not see these).
+    // Granted to manager by default so existing manager access is unchanged.
+    'local/rtocompliance:viewsensitive' => [
+        'riskbitmask' => RISK_PERSONAL,
+        'captype' => 'read',
+        'contextlevel' => CONTEXT_SYSTEM,
+        'archetypes' => [
+            'manager' => CAP_ALLOW,
         ],
     ],
 

@@ -1,5 +1,4 @@
 <?php
-// require_login() — deliberately omitted: this endpoint uses its own authentication or is not a user-facing web page.
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -14,7 +13,6 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
-
 /**
  * RTO Compliance Test Fixture Seeder
  * 
@@ -31,7 +29,7 @@
  * Usage: php admin/cli/fixture_seed.php
  * 
  * @package    local_rtocompliance
- * @copyright  2025 AI Grader
+ * @copyright  2025 LMS Labs
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 

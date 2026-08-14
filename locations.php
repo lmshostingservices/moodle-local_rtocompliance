@@ -15,15 +15,13 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — locations.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 require_once(__DIR__ . '/classes/audit_logger.php');
@@ -31,8 +29,7 @@ require_once(__DIR__ . '/classes/audit_logger.php');
 use local_rtocompliance\audit_logger;
 
 admin_externalpage_setup('local_rtocompliance_locations');
-$context = context_system::instance();
-require_capability('moodle/site:config', $context);
+require_login();
 
 $action = optional_param('action', '', PARAM_ALPHA);
 $id     = optional_param('id', 0, PARAM_INT);
@@ -42,7 +39,9 @@ $PAGE->requires->css('/local/rtocompliance/styles.css');
 if ($action === 'delete' && $id && confirm_sesskey()) {
     $loc = $DB->get_record('local_rtocompliance_locations', ['id' => $id], '*', MUST_EXIST);
     $DB->delete_records('local_rtocompliance_locations', ['id' => $id]);
-    audit_logger::log_create('location', $id, 'Delivery location deleted: ' . $loc->locationname, []);
+    // v5.9.368 AUDIT-FIX: a deletion was being logged as a CREATE with empty data.
+    // Use log_delete and capture the deleted record so the audit trail is correct.
+    audit_logger::log_delete('location', $id, 'Delivery location deleted: ' . $loc->locationname, (array) $loc);
     redirect(
         new moodle_url('/local/rtocompliance/locations.php'),
         get_string('location_deleted', 'local_rtocompliance'),
@@ -65,7 +64,7 @@ echo html_writer::tag('h2', get_string('delivery_locations', 'local_rtocomplianc
 echo html_writer::link(
     new moodle_url('/local/rtocompliance/location_edit.php'),
     get_string('add_location', 'local_rtocompliance'),
-    ['class' => 'btn btn-primary']
+    ['class' => 'btn btn-primary', 'title' => 'Add a new delivery location']
 );
 echo html_writer::end_div();
 
@@ -77,15 +76,21 @@ $locations = $DB->get_records('local_rtocompliance_locations', [], 'locationname
 
 if ($locations) {
     $table = new html_table();
+    $mkhead = function ($text, $title) {
+        $cell = new html_table_cell($text);
+        $cell->header = true;
+        $cell->attributes['title'] = $title;
+        return $cell;
+    };
     $table->head = [
-        get_string('location_id', 'local_rtocompliance'),
-        get_string('location_name', 'local_rtocompliance'),
-        get_string('suburb', 'local_rtocompliance'),
-        get_string('postcode', 'local_rtocompliance'),
-        get_string('state', 'local_rtocompliance'),
-        get_string('status'),
-        get_string('rule9b_col', 'local_rtocompliance'),
-        get_string('actions'),
+        $mkhead(get_string('location_id', 'local_rtocompliance'), 'Your internal identifier for this delivery location'),
+        $mkhead(get_string('location_name', 'local_rtocompliance'), 'Name of the delivery location'),
+        $mkhead(get_string('suburb', 'local_rtocompliance'), 'Suburb where the location is situated'),
+        $mkhead(get_string('postcode', 'local_rtocompliance'), 'Postcode of the location'),
+        $mkhead(get_string('state', 'local_rtocompliance'), 'State or territory of the location'),
+        $mkhead(get_string('status'), 'Whether this location is currently active or inactive'),
+        $mkhead(get_string('rule9b_col', 'local_rtocompliance'), 'ASQA Rule 9B building classification status for this location'),
+        $mkhead(get_string('actions'), 'Actions available for this location'),
     ];
     $table->attributes['class'] = 'data-table';
 
@@ -105,12 +110,12 @@ if ($locations) {
             html_writer::link(
                 new moodle_url('/local/rtocompliance/location_edit.php', ['id' => $loc->id]),
                 get_string('edit'),
-                ['class' => 'btn btn-sm btn-outline-primary', 'style' => 'margin-right:4px;']
+                ['class' => 'btn btn-sm btn-outline-primary', 'style' => 'margin-right:4px;', 'title' => 'Edit this delivery location']
             ) .
             html_writer::link(
                 new moodle_url('/local/rtocompliance/locations.php', ['action' => 'delete', 'id' => $loc->id, 'sesskey' => sesskey()]),
                 get_string('delete'),
-                ['class' => 'btn btn-sm btn-outline-danger', 'onclick' => "return confirm('" . get_string('confirm_delete_location', 'local_rtocompliance') . "');"]
+                ['class' => 'btn btn-sm btn-outline-danger', 'title' => 'Delete this delivery location', 'onclick' => "return confirm('" . get_string('confirm_delete_location', 'local_rtocompliance') . "');"]
             );
 
         // 9B certificate download link (if uploaded)
@@ -174,7 +179,7 @@ if ($locations) {
         html_writer::link(
             new moodle_url('/local/rtocompliance/location_edit.php'),
             get_string('add_first_location', 'local_rtocompliance'),
-            ['class' => 'btn btn-primary']
+            ['class' => 'btn btn-primary', 'title' => 'Add your first delivery location']
         ),
         'alert alert-info'
     );
@@ -184,9 +189,9 @@ echo html_writer::start_div('', ['style' => 'margin-top:2rem;padding:1.5rem;back
 echo html_writer::tag('h4', 'Related pages', ['style' => 'margin:0 0 0.75rem;color:#0369a1;']);
 echo html_writer::tag('p', 'Delivery locations and physical resources feed directly into TAS Section 7 — Learning Resources &amp; Equipment. Document what facilities are available at each location and why they are fit-for-purpose for the training products delivered there.', ['style' => 'margin:0 0 0.75rem;font-size:0.9rem;color:#374151;']);
 echo '<div style="display:flex;flex-wrap:wrap;gap:0.75rem;">';
-echo '<a href="' . (new moodle_url('/local/rtocompliance/tas_edit.php', ['#' => 'tas-section-7']))->out() . '#tas-section-7" class="btn btn-outline-primary btn-sm">TAS Section 7 — Learning Resources &amp; Equipment</a>';
-echo '<a href="' . (new moodle_url('/local/rtocompliance/tas.php'))->out() . '" class="btn btn-outline-primary btn-sm">TAS Generator</a>';
-echo '<a href="' . (new moodle_url('/local/rtocompliance/practice_guides.php', ['guide' => 'facilities']))->out() . '" class="btn btn-outline-primary btn-sm">ASQA Practice Guide — Facilities</a>';
+echo '<a href="' . (new moodle_url('/local/rtocompliance/tas_edit.php'))->out() . '#tas-section-7" class="btn btn-outline-primary btn-sm" title="Open TAS Section 7 — Learning Resources and Equipment">TAS Section 7 — Learning Resources &amp; Equipment</a>'; // v5.9.368: drop bogus ?%23= param, keep real #fragment
+echo '<a href="' . (new moodle_url('/local/rtocompliance/tas.php'))->out() . '" class="btn btn-outline-primary btn-sm" title="Open the TAS Generator">TAS Generator</a>';
+echo '<a href="' . (new moodle_url('/local/rtocompliance/practice_guides.php', ['guide' => 'facilities']))->out() . '" class="btn btn-outline-primary btn-sm" title="Open the ASQA practice guide on facilities">ASQA Practice Guide — Facilities</a>';
 echo '</div>';
 echo html_writer::end_div();
 

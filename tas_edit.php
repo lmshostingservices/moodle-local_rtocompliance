@@ -15,22 +15,19 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — tas_edit.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once($CFG->libdir . '/formslib.php');
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_tas');
-$context = context_system::instance();
-require_capability('moodle/site:config', $context);
+require_login();
 $context = context_system::instance();
 
 $id = optional_param('id', 0, PARAM_INT);
@@ -94,8 +91,23 @@ class tas_form extends moodleform {
         $mform->addElement('text', 'traininggovlink', 'Training.gov.au Link', ['size' => 80, 'placeholder' => 'https://training.gov.au/Training/Details/...']);
         $mform->setType('traininggovlink', PARAM_URL);
 
+        // Advisory (audit P2): bind this TAS to the training-product release it was
+        // written against, so it is obvious when the qualification is superseded and
+        // the TAS needs review. No schema change — this is captured within the
+        // Version Number / Revision Notes fields in Section 9 and flagged here.
+        $mform->addElement('static', 'trainingproductrelease_advisory', '',
+            '<div class="alert alert-info" style="margin-bottom:16px;">'
+            . '<strong>Training-product release check:</strong> Record above the exact '
+            . 'training-product release (training.gov.au status/release) this TAS was '
+            . 'written against, and note it in the <em>Revision Notes</em> field (Section 9). '
+            . 'This TAS is <strong>not</strong> automatically re-linked when the qualification '
+            . 'is superseded or updated on training.gov.au — if this training product is '
+            . 'superseded, review and re-version this TAS and check the '
+            . '<a href="/local/rtocompliance/transitions.php">Training Transitions register</a> '
+            . 'for the applicable teach-out / transition timeframe.</div>');
+
         $mform->addElement('textarea', 'scopedetails', 'RTO Scope Details', ['rows' => 3, 'cols' => 80]);
-        $mform->setType('scopedetails', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+        $mform->setType('scopedetails', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
         $mform->addHelpButton('scopedetails', 'scopedetails', 'local_rtocompliance');
 
         $mform->addElement('header', 'section2', 'Section 2: Target Learner Cohort & Entry Requirements');
@@ -237,19 +249,19 @@ class tas_form extends moodleform {
 </script>');
 
         $mform->addElement('textarea', 'targetcohort', 'Target Learner Cohort', ['rows' => 4, 'cols' => 80]);
-        $mform->setType('targetcohort', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+        $mform->setType('targetcohort', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
         $mform->addHelpButton('targetcohort', 'targetcohort', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'entryrequirements', 'Entry Requirements', ['rows' => 4, 'cols' => 80]);
-        $mform->setType('entryrequirements', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+        $mform->setType('entryrequirements', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
         $mform->addHelpButton('entryrequirements', 'entryrequirements', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'llnrequirements', 'LLN Requirements', ['rows' => 3, 'cols' => 80]);
-        $mform->setType('llnrequirements', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+        $mform->setType('llnrequirements', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
         $mform->addHelpButton('llnrequirements', 'llnrequirements', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'prerequisites', 'Prerequisites', ['rows' => 3, 'cols' => 80]);
-        $mform->setType('prerequisites', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+        $mform->setType('prerequisites', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
         $mform->addHelpButton('prerequisites', 'prerequisites', 'local_rtocompliance');
 
         $mform->addElement('header', 'section3', 'Section 3: Industry Consultation');
@@ -290,10 +302,10 @@ class tas_form extends moodleform {
         }
 
         $mform->addElement('hidden', 'industryconsultation');
-        $mform->setType('industryconsultation', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
- // pipeline-ignore: PARAM_RAW — rich-text/JSON field sanitised before display or decoded immediately
+        $mform->setType('industryconsultation', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+
         $mform->addElement('textarea', 'jobroles', 'Job Roles & Outcomes', ['rows' => 4, 'cols' => 80]);
-        $mform->setType('jobroles', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+        $mform->setType('jobroles', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
         $mform->addHelpButton('jobroles', 'jobroles', 'local_rtocompliance');
 
         $mform->addElement('header', 'section4', 'Section 4: Delivery Structure & Volume of Learning');
@@ -332,23 +344,23 @@ class tas_form extends moodleform {
         $mform->addHelpButton('volumeoflearning', 'volumeoflearning', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'deliveryschedule', 'Delivery Schedule', ['rows' => 8, 'cols' => 80]);
-        $mform->setType('deliveryschedule', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+        $mform->setType('deliveryschedule', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
         $mform->addHelpButton('deliveryschedule', 'deliveryschedule', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'learningbreakdown', 'Volume of Learning Breakdown', ['rows' => 6, 'cols' => 80]);
-        $mform->setType('learningbreakdown', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+        $mform->setType('learningbreakdown', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
         $mform->addHelpButton('learningbreakdown', 'learningbreakdown', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'volumejustification', 'TAS Volume of Learning Justification', ['rows' => 6, 'cols' => 80]);
-        $mform->setType('volumejustification', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+        $mform->setType('volumejustification', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
         $mform->addHelpButton('volumejustification', 'volumejustification', 'local_rtocompliance');
 
         $mform->addElement('header', 'section5', 'Section 5: Assessment Plan');
 
         // Hidden field - stores JSON of selected assessment methods
         $mform->addElement('hidden', 'assessmentmethods');
-        $mform->setType('assessmentmethods', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
- // pipeline-ignore: PARAM_RAW — rich-text/JSON field sanitised before display or decoded immediately
+        $mform->setType('assessmentmethods', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+
         // Assessment methods checklist
         $amCategories = [
             'Knowledge (Theoretical) Assessments' => [
@@ -514,54 +526,79 @@ document.addEventListener("DOMContentLoaded", function (){
 
         // Validation Schedule removed - managed in dashboard
         $mform->addElement('hidden', 'validationschedule');
-        $mform->setType('validationschedule', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+        $mform->setType('validationschedule', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
         $mform->addElement('static', 'validationschedule_note', '', '<div class="alert alert-info" style="margin-bottom:0;"><strong>Assessment Validation Schedule</strong> is managed in the Validation Register on the <a href="/local/rtocompliance/validation.php">RTO Compliance Dashboard</a>. Validation is not qualification-specific and belongs in the central register.</div>');
 
         $mform->addElement('textarea', 'assessmentnotes', 'Assessment Plan Notes', ['rows' => 4, 'cols' => 80, 'placeholder' => 'Describe your overall assessment approach, contextualisation of assessment tools, reasonable adjustment principles, and how assessment meets the rules of evidence (valid, sufficient, authentic, current)...']);
-        $mform->setType('assessmentnotes', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+        $mform->setType('assessmentnotes', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
         $mform->addElement('static', 'assessmentnotes_help', '', '<p style="color:#666;font-size:12px;margin-top:4px;">Use this field to document your assessment approach narrative. AI suggestion is available via the sparkle button.</p>');
+
+        // TAS-AUTHENTICITY-FIELDS (v6.2.45): online/blended authenticity, identity verification,
+        // academic integrity, and the responsible-AI review attestation (Standard 1.4).
+        $mform->addElement('static', 'authenticity_note', '',
+            '<div class="alert alert-info" style="margin-bottom:8px;"><strong>Assessment authenticity &amp; online delivery (Standard 1.4).</strong> Complete the fields below where delivery is online or blended, so the strategy shows how you keep evidence authentic and the right person is assessed.</div>');
+        $mform->addElement('textarea', 'identityverification', 'Learner identity verification',
+            ['rows' => 3, 'cols' => 80, 'placeholder' => 'How do you verify the enrolled learner is the person who completes the training and assessment (especially online/blended) — e.g. USI check, photo ID at induction, proctoring, live video verification?']);
+        $mform->setType('identityverification', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->addElement('textarea', 'academicintegrity', 'Academic integrity — authenticity of evidence',
+            ['rows' => 3, 'cols' => 80, 'placeholder' => 'How do you assure assessment evidence is the learner\'s own work and NOT plagiarised or AI-generated — e.g. authenticity declarations, oral/live questioning to corroborate, similarity/AI checks, supervised tasks? (Required where delivery is online or blended.)']);
+        $mform->setType('academicintegrity', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->addElement('text', 'aireviewedby', 'AI-assisted content reviewed by',
+            ['size' => 60, 'placeholder' => 'Name of the RTO staff member who reviewed any AI-assisted drafts']);
+        $mform->setType('aireviewedby', PARAM_TEXT);
+        $mform->addElement('static', 'aireview_note', '',
+            '<p style="color:#666;font-size:12px;margin-top:4px;">AI may assist drafting, but a competent person must review and approve all content before use — record who reviewed it (ASQA responsible-AI expectation).</p>');
+
+        // TAS-STRUCTURAL (v6.2.48): RPL as a documented pathway (was only an assessment-method checkbox).
+        $mform->addElement('textarea', 'rplpathway', 'RPL pathway (documented process)',
+            ['rows' => 3, 'cols' => 80, 'placeholder' => 'Describe how Recognition of Prior Learning is offered for this qualification as a documented process — the evidence-gathering methods (portfolio, third-party report, competency conversation, challenge test), how authenticity and currency are assured, and how gaps are addressed with gap training.']);
+        $mform->setType('rplpathway', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
 
         $mform->addElement('header', 'section6', 'Section 6: Trainer & Assessor Requirements');
 
         $mform->addElement('textarea', 'trainerrequirements', 'Trainer/Assessor Requirements', ['rows' => 4, 'cols' => 80]);
-        $mform->setType('trainerrequirements', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+        // TAS-STRUCTURAL (v6.2.48): per-unit trainer mapping + Credential-Policy classification.
+        $mform->addElement('textarea', 'trainerunitmapping', 'Trainer/assessor → units mapping',
+            ['rows' => 3, 'cols' => 80, 'placeholder' => 'Map each trainer/assessor to the specific units they deliver/assess, and note their Credential-Policy classification (fully credentialled vs working under direction — no assessment judgements), vocational competency, and industry currency / CPD (Standards 3.1-3.3).']);
+        $mform->setType('trainerunitmapping', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+        $mform->setType('trainerrequirements', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
         $mform->addHelpButton('trainerrequirements', 'trainerrequirements', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'supervisionarrangements', 'Supervision Arrangements (if applicable)', ['rows' => 3, 'cols' => 80]);
-        $mform->setType('supervisionarrangements', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+        $mform->setType('supervisionarrangements', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
         $mform->addHelpButton('supervisionarrangements', 'supervisionarrangements', 'local_rtocompliance');
 
         $mform->addElement('header', 'section7', 'Section 7: Learning Resources & Equipment');
 
         $mform->addElement('textarea', 'learningresources', 'Learning Resources & Materials', ['rows' => 4, 'cols' => 80]);
-        $mform->setType('learningresources', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+        $mform->setType('learningresources', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
         $mform->addHelpButton('learningresources', 'learningresources', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'facilities', 'Facilities & Equipment', ['rows' => 4, 'cols' => 80]);
-        $mform->setType('facilities', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+        $mform->setType('facilities', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
         $mform->addHelpButton('facilities', 'facilities', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'technology', 'Technology Requirements', ['rows' => 3, 'cols' => 80]);
-        $mform->setType('technology', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+        $mform->setType('technology', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
         $mform->addHelpButton('technology', 'technology', 'local_rtocompliance');
 
         // Section 8: Third-Party Arrangements — removed from TAS, managed in the dashboard register
         $mform->addElement('hidden', 'thirdparty');
-        $mform->setType('thirdparty', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
- // pipeline-ignore: PARAM_RAW — rich-text/JSON field sanitised before display or decoded immediately
+        $mform->setType('thirdparty', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+
         // Section 9: Learner Support & Wellbeing — removed from TAS, managed in the dashboard
         $mform->addElement('hidden', 'learnersupport');
-        $mform->setType('learnersupport', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+        $mform->setType('learnersupport', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
         $mform->addElement('hidden', 'accessibility');
-        $mform->setType('accessibility', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
- // pipeline-ignore: PARAM_RAW — rich-text/JSON field sanitised before display or decoded immediately
+        $mform->setType('accessibility', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+
         // Section 10: Marketing & Pre-Enrolment — removed from TAS, managed in Marketing Information page
         $mform->addElement('hidden', 'marketinginfo');
-        $mform->setType('marketinginfo', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
- // pipeline-ignore: PARAM_RAW — rich-text/JSON field sanitised before display or decoded immediately
+        $mform->setType('marketinginfo', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+
         $mform->addElement('hidden', 'feesinformation');
-        $mform->setType('feesinformation', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
- // pipeline-ignore: PARAM_RAW — rich-text/JSON field sanitised before display or decoded immediately
+        $mform->setType('feesinformation', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+
         $mform->addElement('header', 'section8', 'Section 8: Work Placement Requirements');
 
         $mform->addElement('advcheckbox', 'hasworkplacement', 'Requires Work Placement', 'This qualification includes mandatory work placement');
@@ -571,26 +608,26 @@ document.addEventListener("DOMContentLoaded", function (){
         $mform->disabledIf('placementhours', 'hasworkplacement', 'notchecked');
 
         $mform->addElement('textarea', 'placementdetails', 'Placement Details & Supervision', ['rows' => 4, 'cols' => 80]);
-        $mform->setType('placementdetails', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+        $mform->setType('placementdetails', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
         $mform->addHelpButton('placementdetails', 'placementdetails', 'local_rtocompliance');
         $mform->disabledIf('placementdetails', 'hasworkplacement', 'notchecked');
 
         // Section 12: Transition & Teach-Out — removed from TAS, managed in Training Transitions register
         $mform->addElement('hidden', 'transitionplan');
-        $mform->setType('transitionplan', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
- // pipeline-ignore: PARAM_RAW — rich-text/JSON field sanitised before display or decoded immediately
+        $mform->setType('transitionplan', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+
         // Section 13: Risk Management — removed from TAS, managed in Risk Register
         $mform->addElement('hidden', 'riskmanagement');
-        $mform->setType('riskmanagement', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
- // pipeline-ignore: PARAM_RAW — rich-text/JSON field sanitised before display or decoded immediately
+        $mform->setType('riskmanagement', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+
         // Section 14: Complaints & Appeals — removed from TAS, managed in Complaints register
         $mform->addElement('hidden', 'complaintsprocess');
-        $mform->setType('complaintsprocess', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
- // pipeline-ignore: PARAM_RAW — rich-text/JSON field sanitised before display or decoded immediately
+        $mform->setType('complaintsprocess', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+
         // Section 15: Continuous Improvement — removed from TAS, managed in CI register
         $mform->addElement('hidden', 'continuousimprovement');
-        $mform->setType('continuousimprovement', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
- // pipeline-ignore: PARAM_RAW — rich-text/JSON field sanitised before display or decoded immediately
+        $mform->setType('continuousimprovement', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+
         $mform->addElement('header', 'section9', 'Section 9: TAS Approval & Review');
 
         $statuses = [
@@ -613,10 +650,27 @@ document.addEventListener("DOMContentLoaded", function (){
         $mform->addElement('date_selector', 'nextreviewdate', 'Next Review Date');
 
         $mform->addElement('textarea', 'revisionnotes', 'Revision Notes', ['rows' => 3, 'cols' => 80]);
-        $mform->setType('revisionnotes', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+        $mform->setType('revisionnotes', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
         $mform->addHelpButton('revisionnotes', 'revisionnotes', 'local_rtocompliance');
 
         $this->add_action_buttons(true, $tas ? 'Update TAS' : 'Create TAS');
+    }
+
+    /**
+     * TAS-AI-REVIEW-GATE (v6.2.46): a TAS cannot be set to "Approved" until the AI-review
+     * attestation is recorded. AI may assist drafting, but a competent person must review and
+     * approve the content before it is used (ASQA responsible-AI expectation).
+     *
+     * @param array $data submitted form data
+     * @param array $files submitted files
+     * @return array validation errors keyed by element name
+     */
+    public function validation($data, $files) {
+        $errors = parent::validation($data, $files);
+        if (($data['status'] ?? '') === 'approved' && trim((string) ($data['aireviewedby'] ?? '')) === '') {
+            $errors['aireviewedby'] = 'Record who reviewed the AI-assisted content before setting the status to Approved.';
+        }
+        return $errors;
     }
 }
 
@@ -624,6 +678,21 @@ $form = new tas_form(null, ['tas' => $tas]);
 
 if ($tas) {
     $formdata = clone $tas;
+    // NOMINAL HOURS PHASE 4 (v5.9.421): if this TAS has no Total Nominal Hours recorded
+    // yet, pre-fill it from the qualification's authoritative total (Qual Builder product
+    // total → unit sum → reference table). Feeds the AQF volume-of-learning justification.
+    // Only fills a genuinely-empty value — a figure the RTO has already entered is kept.
+    if (empty($formdata->nominalhours) && !empty($formdata->qualificationcode)) {
+        $qualnominal = local_rtocompliance_qual_nominal_total((string) $formdata->qualificationcode);
+        if ($qualnominal > 0) {
+            $formdata->nominalhours = $qualnominal;
+            // VOL-FIX (v6.2.41): do NOT auto-copy nominal (supervised) hours into Volume of
+            // Learning. AQF volume of learning includes unsupervised learning + assessment and
+            // is almost always GREATER than nominal hours — pre-filling them EQUAL understates
+            // VoL and steers RTOs toward under-delivery (the single most common ASQA finding).
+            // The RTO must set VoL against the AQF range for the qualification's level.
+        }
+    }
     $form->set_data($formdata);
 }
 
@@ -654,9 +723,15 @@ if ($form->is_cancelled()) {
     $record->volumejustification = $data->volumejustification ?? '';
     $record->assessmentmethods = $data->assessmentmethods ?? '';
     $record->assessmentmapping = $data->assessmentmapping ?? '';
+    // TAS-AUTHENTICITY-FIELDS (v6.2.45): persist the new authenticity / integrity / AI-review fields.
+    $record->identityverification = $data->identityverification ?? '';
+    $record->academicintegrity = $data->academicintegrity ?? '';
+    $record->aireviewedby = $data->aireviewedby ?? '';
+    $record->rplpathway = $data->rplpathway ?? '';
     $record->assessmentnotes   = $data->assessmentnotes   ?? '';
     $record->validationschedule = $data->validationschedule ?? '';
     $record->trainerrequirements = $data->trainerrequirements ?? '';
+    $record->trainerunitmapping = $data->trainerunitmapping ?? '';
     $record->supervisionarrangements = $data->supervisionarrangements ?? '';
     $record->learningresources = $data->learningresources ?? '';
     $record->facilities = $data->facilities ?? '';
@@ -701,10 +776,15 @@ if ($form->is_cancelled()) {
     if (!empty($record->trainerrequirements) || !empty($record->jobroles)) $filledfields++;
     // Section 7: Learning Resources & Equipment
     if (!empty($record->learningresources)) $filledfields++;
-    // Section 8: Work Placement Requirements — always count. Having no work placement
-    // (hasworkplacement=0) is a valid, deliberate answer meaning "no WP required".
-    // The section is complete whether the RTO selected "yes with details" or "no WP needed".
-    $filledfields++;
+    // Section 8: Work Placement Requirements (v6.2.39: no longer an unconditional +1, which
+    // inflated the completeness score). Count as complete when the RTO has genuinely engaged
+    // with it: either work placement is NOT required (a valid deliberate answer), or it IS
+    // required AND placement details have been provided. "Required but no details" is incomplete.
+    if (empty($record->hasworkplacement)) {
+        $filledfields++;
+    } else if (!empty($record->placementdetails)) {
+        $filledfields++;
+    }
     // Section 9: TAS Approval & Review
     if (!empty($record->approvedby) || $record->status === 'approved') $filledfields++;
 
@@ -764,6 +844,7 @@ echo html_writer::tag('div', '', [
     'aria-hidden'    => 'true',
 ]);
 echo local_rtocompliance_render_nav_header($id ? 'Edit TAS' : 'Create TAS', get_string('tas', 'local_rtocompliance'), '/local/rtocompliance/tas.php', 'tas');
+echo local_rtocompliance_page_banner($id ? 'Edit TAS' : 'Create TAS');
 echo html_writer::start_div('compliance-container');
 echo $OUTPUT->heading($id ? 'Edit Training & Assessment Strategy' : 'Create Training & Assessment Strategy');
 
@@ -784,6 +865,15 @@ echo html_writer::tag('p', 'Complete all 9 ASQA-mandated sections below. Fields 
 echo html_writer::end_div();
 
 $form->display();
+
+// NOMINAL HOURS PHASE 4 (v5.9.421): expose the qualification's authoritative total to
+// the AI delivery-plan generator so it uses the plugin's own nominal hours as the final
+// fallback (instead of a units×hrs/week guess) when training.gov.au returns none.
+$tasnominal = 0;
+if ($tas && !empty($tas->qualificationcode)) {
+    $tasnominal = local_rtocompliance_qual_nominal_total((string) $tas->qualificationcode);
+}
+echo '<script>window.RTOC_QUAL_NOMINAL = ' . (int) $tasnominal . ';</script>';
 
 echo '<script>
 document.addEventListener("DOMContentLoaded", function () {
@@ -1012,6 +1102,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 var tgaNominalHours = (data.qualification && data.qualification.NominalHours) ? data.qualification.NominalHours : 0;
                 if (!tgaNominalHours) {
                     tgaNominalHours = units.reduce(function (sum, u) { return sum + (u.NominalHours || 0); }, 0);
+                }
+                // NOMINAL HOURS PHASE 4 (v5.9.421): prefer the plugin authoritative
+                // qualification total over the units x hrs/week estimate when TGA has none.
+                if (!tgaNominalHours && window.RTOC_QUAL_NOMINAL > 0) {
+                    tgaNominalHours = window.RTOC_QUAL_NOMINAL;
                 }
                 if (nominalEl) nominalEl.value = tgaNominalHours > 0 ? tgaNominalHours : units.length * hrsPerWeek;
                 if (durationEl) durationEl.value = deliveryWeeks;

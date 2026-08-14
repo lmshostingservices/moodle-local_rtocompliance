@@ -14,8 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * RTO Compliance plugin — trainers.php.
+ *
+ * @package    local_rtocompliance
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 require_once(__DIR__ . '/../../config.php');
-require_login();
 ini_set('memory_limit', '512M');
 
 require_once($CFG->libdir . '/adminlib.php');
@@ -40,9 +46,6 @@ function rtoc_mb_substr($s, $start, $len) {
  * @param  string $raw  Raw DB value
  * @return array  ['text' => string, 'error' => bool]
  *   'error' is true only when the value is clearly corrupt/unreadable JSON.
- * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
 function rtoc_decode_vocqual(string $raw): array {
     $raw = trim($raw);
@@ -91,6 +94,7 @@ function rtoc_decode_vocqual(string $raw): array {
 }
 
 admin_externalpage_setup('local_rtocompliance_trainers');
+require_login();
 require_capability('local/rtocompliance:managetrainers', context_system::instance());
 
 // ── v4.4.20 HARDENING ─────────────────────────────────────────────────────────
@@ -269,7 +273,7 @@ if (!empty($unregistered_teachers)) {
     echo html_writer::link(
         $importurl->out(false),
         'Import ' . $count . ' Moodle Teacher' . ($count > 1 ? 's' : '') . ' as RTO Trainer Profile' . ($count > 1 ? 's' : ''),
-        ['class' => 'btn btn-info']
+        ['class' => 'btn btn-info', 'title' => 'Create RTO trainer profiles for these Moodle teachers so they appear in the register']
     );
     echo html_writer::end_div();
 }
@@ -279,7 +283,7 @@ echo html_writer::tag('h2', get_string('trainers', 'local_rtocompliance'));
 echo html_writer::link(
     new moodle_url('/local/rtocompliance/trainer_edit.php'),
     get_string('add_trainer', 'local_rtocompliance'),
-    ['class' => 'btn btn-primary']
+    ['class' => 'btn btn-primary', 'title' => 'Add a new trainer or assessor profile to the register']
 );
 echo html_writer::end_div();
 
@@ -311,18 +315,18 @@ catch (\Throwable $e) { $_wwcc_t = 0; $rtoc_captured_errors[] = '[wwcc] ' . $e->
 
 echo html_writer::start_div('stats-cards', ['style' => 'margin-bottom: 24px;']);
 foreach ([
-    ['label' => 'Total Trainer Profiles',         'value' => $_total_t,   'color' => 'blue',   'icon' => local_rtocompliance_stat_icon('users')],
-    ['label' => 'TAE Current',                    'value' => $_current_t, 'color' => 'green',  'icon' => local_rtocompliance_stat_icon('check')],
-    ['label' => 'TAE Expiring in 30 Days',        'value' => $_expiring_t,'color' => $_expiring_t > 0 ? 'amber' : 'green', 'icon' => local_rtocompliance_stat_icon('clock')],
-    ['label' => 'TAE Expired',                    'value' => $_expired_t, 'color' => $_expired_t > 0  ? 'rose'  : 'green', 'icon' => local_rtocompliance_stat_icon('alert')],
-    ['label' => 'Missing TAE Credential',         'value' => $_notae_t,   'color' => $_notae_t > 0    ? 'rose'  : 'green', 'icon' => local_rtocompliance_stat_icon('alert')],
-    ['label' => 'Moodle Teachers Without Profile','value' => $_missing_t, 'color' => $_missing_t > 0  ? 'amber' : 'green', 'icon' => local_rtocompliance_stat_icon('user')],
-    ['label' => 'TAE40116 Qualified',             'value' => $_tae116_t,  'color' => 'purple', 'icon' => local_rtocompliance_stat_icon('book')],
-    ['label' => 'TAE40122 Qualified',             'value' => $_tae122_t,  'color' => 'blue',   'icon' => local_rtocompliance_stat_icon('book')],
-    ['label' => 'TAE40110 Qualified',             'value' => $_tae110_t,  'color' => 'blue',   'icon' => local_rtocompliance_stat_icon('book')],
-    ['label' => 'WWCC Cleared',                   'value' => $_wwcc_t,    'color' => $_wwcc_t > 0 ? 'green' : 'amber', 'icon' => local_rtocompliance_stat_icon('shield')],
+    ['label' => 'Total Trainer Profiles',         'value' => $_total_t,   'color' => 'blue',   'icon' => local_rtocompliance_stat_icon('users'), 'tip' => 'The total number of trainers and assessors on your register.'],
+    ['label' => 'TAE Current',                    'value' => $_current_t, 'color' => 'green',  'icon' => local_rtocompliance_stat_icon('check'), 'tip' => 'Trainers whose TAE (the trainer teaching qualification) is current and not expired.'],
+    ['label' => 'TAE Expiring in 30 Days',        'value' => $_expiring_t,'color' => $_expiring_t > 0 ? 'amber' : 'green', 'icon' => local_rtocompliance_stat_icon('clock'), 'tip' => 'Trainers whose TAE (the trainer teaching qualification) expires within the next 30 days. Plan to renew these soon.'],
+    ['label' => 'TAE Expired',                    'value' => $_expired_t, 'color' => $_expired_t > 0  ? 'rose'  : 'green', 'icon' => local_rtocompliance_stat_icon('alert'), 'tip' => 'Trainers whose TAE (the trainer teaching qualification) has passed its expiry date. Check each one before they train or assess.'],
+    ['label' => 'Missing TAE Credential',         'value' => $_notae_t,   'color' => $_notae_t > 0    ? 'rose'  : 'green', 'icon' => local_rtocompliance_stat_icon('alert'), 'tip' => 'Trainers with no TAE (the trainer teaching qualification) recorded, or still working towards it. Add their qualification details.'],
+    ['label' => 'Moodle Teachers Without Profile','value' => $_missing_t, 'color' => $_missing_t > 0  ? 'amber' : 'green', 'icon' => local_rtocompliance_stat_icon('user'), 'tip' => 'Moodle teachers who have no trainer profile yet. Import them so they appear on the register.'],
+    ['label' => 'TAE40116 Qualified',             'value' => $_tae116_t,  'color' => 'purple', 'icon' => local_rtocompliance_stat_icon('book'), 'tip' => 'Trainers holding the TAE40116 teaching qualification (a superseded version; TAE40122 is the current one).'],
+    ['label' => 'TAE40122 Qualified',             'value' => $_tae122_t,  'color' => 'blue',   'icon' => local_rtocompliance_stat_icon('book'), 'tip' => 'Trainers holding the TAE40122 teaching qualification, which is the current accepted version.'],
+    ['label' => 'TAE40110 Qualified',             'value' => $_tae110_t,  'color' => 'blue',   'icon' => local_rtocompliance_stat_icon('book'), 'tip' => 'Trainers holding the TAE40110 teaching qualification (a superseded version; TAE40122 is the current one).'],
+    ['label' => 'WWCC Cleared',                   'value' => $_wwcc_t,    'color' => $_wwcc_t > 0 ? 'green' : 'amber', 'icon' => local_rtocompliance_stat_icon('shield'), 'tip' => 'Trainers with a current Working With Children Check (WWCC).'],
 ] as $s) {
-    echo html_writer::start_div('stat-card stat-' . $s['color']);
+    echo html_writer::start_div('stat-card stat-' . $s['color'], ['title' => $s['tip']]);
     echo '<div class="stat-icon-wrap">' . $s['icon'] . '</div>';
     echo html_writer::start_div('stat-info');
     echo html_writer::tag('span', $s['value'], ['class' => 'stat-number']);
@@ -405,9 +409,9 @@ if (!empty($status)) {
         // FIX-MISSING-TAE-FILTER: Trainers with NO TAE credential (or "Working Towards")
         // must NOT appear under this filter — "Approved" implies they have at least a credential
         // that the RTO has authorised via policy. Missing TAE belongs in the "Missing" view only.
-        $sql .= " WHERE t.managersignoff IS NOT NULL AND t.managersignoff != ''"
+        $sql .= " WHERE t.managersignoff IS NOT NULL AND t.managersignoff <> 0"
               . " AND t.taecredential IS NOT NULL AND t.taecredential != '' AND t.taecredential != 'Working Towards'";
-        $countsql .= " WHERE t.managersignoff IS NOT NULL AND t.managersignoff != ''"
+        $countsql .= " WHERE t.managersignoff IS NOT NULL AND t.managersignoff <> 0"
                    . " AND t.taecredential IS NOT NULL AND t.taecredential != '' AND t.taecredential != 'Working Towards'";
     }
 }
@@ -437,7 +441,7 @@ if ($rtoc_is_admin && !empty($rtoc_captured_errors)) {
     echo html_writer::tag('p',
         'If errors mention a missing column, click ' .
         html_writer::link($repairurl->out(false), 'Repair schema',
-            ['class' => 'btn btn-sm btn-warning']) .
+            ['class' => 'btn btn-sm btn-warning', 'title' => 'Add any missing database columns and reset the code cache']) .
         ' to add any missing columns and reset OPcache.'
     );
     echo html_writer::end_div();
@@ -468,20 +472,20 @@ if ($trainers) {
     $trainerNameLink = html_writer::link($trainerNameSortUrl,
         get_string('trainer_name', 'local_rtocompliance') . $trainerNameArrow,
         ['style' => 'white-space:nowrap;text-decoration:none;color:inherit;font-weight:bold']);
-    echo html_writer::tag('th', $trainerNameLink, ['class' => 'rtoc-col-trainer-name']);
-    echo html_writer::tag('th', 'Role');
-    echo html_writer::tag('th', 'TAE Credential');
-    echo html_writer::tag('th', 'TAE Achieved');
-    echo html_writer::tag('th', 'Status under TGA');
-    echo html_writer::tag('th', 'Status under Credential Policy');
-    echo html_writer::tag('th', 'Vocational Competency');
-    echo html_writer::tag('th', 'Units Being Delivered');
-    echo html_writer::tag('th', 'LLN Capability');
-    echo html_writer::tag('th', 'VET Currency');
-    echo html_writer::tag('th', 'Industry Currency');
-    echo html_writer::tag('th', 'CPD Points');
-    echo html_writer::tag('th', 'Next Review Date');
-    echo html_writer::tag('th', '', ['class' => 'rtoc-sticky-right rtoc-col-actions-hdr']);
+    echo html_writer::tag('th', $trainerNameLink, ['class' => 'rtoc-col-trainer-name', 'title' => 'Trainer or assessor name and email — click to sort']);
+    echo html_writer::tag('th', 'Role', ['title' => 'Credential role classification under the ASQA Trainer and Assessor Credential Policy']);
+    echo html_writer::tag('th', 'TAE Credential', ['title' => 'Training and assessment (TAE) qualification held']);
+    echo html_writer::tag('th', 'TAE Achieved', ['title' => 'Date the TAE qualification was achieved']);
+    echo html_writer::tag('th', 'Status under TGA', ['title' => 'Whether the TAE qualification is current under training.gov.au']);
+    echo html_writer::tag('th', 'Status under Credential Policy', ['title' => 'Whether the trainer is approved to deliver under the RTO Credential Policy']);
+    echo html_writer::tag('th', 'Vocational Competency', ['title' => 'Vocational qualifications and competency held for the units delivered']);
+    echo html_writer::tag('th', 'Units Being Delivered', ['title' => 'Units this trainer is currently delivering or assessing']);
+    echo html_writer::tag('th', 'LLN Capability', ['title' => 'Language, literacy and numeracy capability level']);
+    echo html_writer::tag('th', 'VET Currency', ['title' => 'Date of most recent VET training and assessment currency']);
+    echo html_writer::tag('th', 'Industry Currency', ['title' => 'Date or record of recent industry currency activity']);
+    echo html_writer::tag('th', 'CPD Points', ['title' => 'Continuing professional development points accrued']);
+    echo html_writer::tag('th', 'Next Review Date', ['title' => 'Date the trainer credentials are next due for review']);
+    echo html_writer::tag('th', '', ['class' => 'rtoc-sticky-right rtoc-col-actions-hdr', 'title' => 'Edit or delete this trainer']);
     echo html_writer::end_tag('tr');
     echo html_writer::end_tag('thead');
     echo html_writer::start_tag('tbody');
@@ -583,13 +587,16 @@ if ($trainers) {
         if (!empty($trainer->industrycurrencydate)) {
             $currencyBadge = html_writer::tag('span',
                 userdate($trainer->industrycurrencydate, '%d %b %Y'),
-                ['class' => 'badge', 'style' => 'background-color: #28a745; color: white;']);
+                ['class' => 'badge', 'style' => 'background-color: #28a745; color: white;',
+                 'title' => 'Date this trainer last did recent real-world work in their industry, which keeps their skills current.']);
         } elseif ($currencyCount > 0) {
             // Fallback: still show activity count if no date recorded yet
             $currencyBadge = html_writer::tag('span', $currencyCount . ' activities',
-                ['class' => 'badge', 'style' => 'background-color: #6c757d; color: white;']);
+                ['class' => 'badge', 'style' => 'background-color: #6c757d; color: white;',
+                 'title' => 'Number of industry currency activities on file. Add a currency date on the profile to confirm they are up to date.']);
         } else {
-            $currencyBadge = html_writer::tag('span', 'None', ['class' => 'badge badge-warning', 'style' => 'background-color: #ffc107; color: #212529;']);
+            $currencyBadge = html_writer::tag('span', 'None', ['class' => 'badge badge-warning', 'style' => 'background-color: #ffc107; color: #212529;',
+                 'title' => 'No recent industry work recorded. Add industry currency activity to keep this trainer compliant.']);
         }
 
         // Compute extra register fields
@@ -722,7 +729,8 @@ if ($trainers) {
             ];
             $llnLabel = $llnLabels[$trainer->llncapability] ?? htmlspecialchars($trainer->llncapability);
             $llnDisplay = html_writer::tag('span', $llnLabel,
-                ['class' => 'badge', 'style' => 'background:#7c3aed;color:#fff;']);
+                ['class' => 'badge', 'style' => 'background:#7c3aed;color:#fff;',
+                 'title' => 'The level of language, literacy and numeracy (LLN) support this trainer can give learners.']);
         } elseif (!empty($trainer->llncapability) && $trainer->llncapability === 'na') {
             $llnDisplay = html_writer::tag('span', 'N/A', ['class' => 'text-muted']);
         }
@@ -730,7 +738,8 @@ if ($trainers) {
         // VET Currency date
         $vetCurrencyDisplay = !empty($trainer->vetcurrencydate)
             ? html_writer::tag('span', userdate($trainer->vetcurrencydate, '%d %b %Y'),
-                ['class' => 'badge', 'style' => 'background:#059669;color:#fff;'])
+                ['class' => 'badge', 'style' => 'background:#059669;color:#fff;',
+                 'title' => 'Date this trainer last kept their VET (vocational education) training and assessment skills current.'])
             : '-';
 
         // Status with debug tooltip - shows WHY the status was calculated
@@ -799,6 +808,7 @@ if ($trainers) {
         $actionCell = '<div class="rtoc-trainer-actions">'
             . $deleteForm
             . '<button class="btn btn-sm btn-primary rtoc-action-btn" type="button"'
+            . ' title="Edit or delete this trainer"'
             . ' data-edit-url="' . htmlspecialchars($editUrl->out(false), ENT_QUOTES) . '"'
             . ' data-del-form="' . $delFormId . '">'
             . 'Edit &#9660;'

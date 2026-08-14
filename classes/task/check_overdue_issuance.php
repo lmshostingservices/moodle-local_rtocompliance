@@ -13,7 +13,6 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
-
 /**
  * v4.4.0 NRT-LOGO-COMPLIANCE — scheduled task that flags certificates
  * marked complete more than 30 days ago that have not yet been issued.
@@ -30,7 +29,7 @@
  * itself; admins/auditors monitor the audit log.
  *
  * @package    local_rtocompliance
- * @copyright  2026 Essay Grader AI
+ * @copyright  2026 LMS Labs
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 

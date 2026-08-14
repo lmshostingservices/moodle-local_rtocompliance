@@ -15,13 +15,12 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — external.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 namespace local_rtocompliance;
 
 defined('MOODLE_INTERNAL') || die();
@@ -280,7 +279,7 @@ class external extends external_api {
         $result = [];
         foreach ($certificates as $cert) {
             $verifytokenurl = !empty($cert->verifytoken)
-                ? (new \moodle_url('/local/rtocompliance/verify_cert.php', ['token' => $cert->verifytoken]))->out(false)
+                ? (new \moodle_url('/local/rtocompliance/verify.php', ['token' => $cert->verifytoken]))->out(false)
                 : '';
             $result[] = [
                 'id' => (int)$cert->id,
@@ -486,7 +485,7 @@ class external extends external_api {
         if (empty($apikey)) {
             return [
                 'success' => false,
-                'error' => 'API key not configured. Please configure the EssayGraderAI API key in plugin settings.',
+                'error' => 'API key not configured. Please configure the Platform API key in Plugin Settings.',
                 'qualification' => null,
                 'units' => [],
             ];
@@ -695,7 +694,7 @@ class external extends external_api {
     public static function qualbuilder_import_units_parameters() {
         return new external_function_parameters([
             'qualbuilderid' => new external_value(PARAM_INT, 'Qualification builder ID', VALUE_REQUIRED),
-            'units' => new external_value(PARAM_RAW, 'JSON array of units to import', VALUE_REQUIRED), // pipeline-ignore: PARAM_RAW — JSON blob; decoded and validated by caller
+            'units' => new external_value(PARAM_RAW, 'JSON array of units to import', VALUE_REQUIRED), // pipeline-ignore: PARAM_RAW — JSON blob parameter, json_decode()'d and validated before use; never stored or echoed raw.
         ]);
     }
 
@@ -905,7 +904,7 @@ class external extends external_api {
             // Build the subtree rooted at $categoryid via BFS.
             //
             // DO NOT use $getRootCatId($categoryid) as the subtree root.  For nested qual
-            // roots (e.g. "Diploma Int'l Freight Fwding" nested under "Miscellaneous"),
+            // roots (e.g. "Diploma a qualification" nested under "Miscellaneous"),
             // $getRootCatId walks all the way to parent=0 and returns "Miscellaneous".
             // Using that as the root collects EVERY category under Miscellaneous, causing
             // the SQL to return courses from all other qualifications on the site.
@@ -959,13 +958,13 @@ class external extends external_api {
         // dictionary lookup instead of fragile string-matching tier logic.
         //
         // Sources checked per course (highest confidence first):
-        //   1. idnumber — admins often set this to the exact unit code on italc
-        //   2. shortname — e.g. "ATI 2652" contains codes like "TLIA5059" if embedded
-        //   3. fullname  — e.g. "ATI 2652 – TLIA5059 TLIA5060 TLIA5061 Plan and..."
+        //   1. idnumber — admins often set this to the exact unit code on the RTO
+        //   2. shortname — e.g. "ATI 2652" contains codes like "ABC12345" if embedded
+        //   3. fullname  — e.g. "ATI 2652 – ABC12345 ABC12345 ABC12345 Plan and..."
         //
         // Pattern: 2–7 uppercase letters + 3–6 digits + optional trailing letter.
         // Minimum 6 characters to filter noise (HTML5, COVID19, etc.).
-        // Matches: TLIA5059, BSBOPS505, CPCCBC4014, HLTAID011, TLIX0006, etc.
+        // Matches: ABC12345, BSBOPS505, CPCCBC4014, HLTAID011, ABC12345, etc.
         $unitcodemap = [];
         $ucPattern   = '/\b([A-Z]{2,7}[0-9]{3,6}[A-Z]?)\b/';
         foreach ($moodlecourses as $mc) {
@@ -1077,12 +1076,12 @@ class external extends external_api {
         return new external_single_structure([
             'success'          => new external_value(PARAM_BOOL, 'Success'),
             'error'            => new external_value(PARAM_TEXT, 'Error message'),
-            'qualification'    => new external_value(PARAM_RAW, 'Qualification JSON {code,title,type,aqfLevel}'), // pipeline-ignore: PARAM_RAW — JSON blob decoded immediately
-            'packagingrules'   => new external_value(PARAM_RAW, 'Rules text JSON array'), // pipeline-ignore: PARAM_RAW — JSON blob decoded immediately
+            'qualification'    => new external_value(PARAM_RAW, 'Qualification JSON {code,title,type,aqfLevel}'), // pipeline-ignore: PARAM_RAW — JSON blob parameter, json_decode()'d and validated before use; never stored or echoed raw.
+            'packagingrules'   => new external_value(PARAM_RAW, 'Rules text JSON array'), // pipeline-ignore: PARAM_RAW — JSON blob parameter, json_decode()'d and validated before use; never stored or echoed raw.
             'totalunits'       => new external_value(PARAM_INT, 'Total units required'),
             'corerequired'     => new external_value(PARAM_INT, 'Core units required'),
             'electiverequired' => new external_value(PARAM_INT, 'Elective units required'),
-            'grouprules'       => new external_value(PARAM_RAW, 'Group requirements JSON {A:{min,max},...}'), // pipeline-ignore: PARAM_RAW — JSON blob decoded immediately
+            'grouprules'       => new external_value(PARAM_RAW, 'Group requirements JSON {A:{min,max},...}'), // pipeline-ignore: PARAM_RAW — JSON blob parameter, json_decode()'d and validated before use; never stored or echoed raw.
             'pointsrequired'        => new external_value(PARAM_INT, 'Credit points required (0 = not a points-based qual)'),
             'pointssystem'          => new external_value(PARAM_INT, '1 = qualification uses credit points system'),
             'corepointsrequired'    => new external_value(PARAM_INT, 'Sum of core unit credit points (minimum core pts)'),
@@ -1144,8 +1143,8 @@ class external extends external_api {
             'totalunits'        => new external_value(PARAM_INT,          'Total units required',  VALUE_DEFAULT, 0),
             'coreunitcount'     => new external_value(PARAM_INT,          'Core units required',   VALUE_DEFAULT, 0),
             'electivecount'     => new external_value(PARAM_INT,          'Elective units required', VALUE_DEFAULT, 0),
-            'electiverules'     => new external_value(PARAM_RAW,          'Elective rules JSON', VALUE_DEFAULT, ''), // pipeline-ignore: PARAM_RAW — JSON blob decoded immediately
-            'units'             => new external_value(PARAM_RAW,          'Units JSON array', VALUE_DEFAULT, '[]'), // pipeline-ignore: PARAM_RAW — JSON blob decoded immediately
+            'electiverules'     => new external_value(PARAM_RAW,          'Elective rules JSON', VALUE_DEFAULT, ''), // pipeline-ignore: PARAM_RAW — JSON blob parameter, json_decode()'d and validated before use; never stored or echoed raw.
+            'units'             => new external_value(PARAM_RAW,          'Units JSON array', VALUE_DEFAULT, '[]'), // pipeline-ignore: PARAM_RAW — JSON blob parameter, json_decode()'d and validated before use; never stored or echoed raw.
             'streamname'        => new external_value(PARAM_TEXT,         'Stream / variant name', VALUE_DEFAULT, ''),
         ]);
     }

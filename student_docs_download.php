@@ -15,13 +15,12 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — student_docs_download.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 // v4.9.108 STUDENT-DOC-REPOSITORY — File download handler for student_docs.
 // Serves files stored via Moodle file API (component=local_rtocompliance, filearea=student_doc).
 // Access: students see own docs, admins/trainers with viewall see any.

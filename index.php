@@ -15,23 +15,20 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — index.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 // v4.2.39 hotfix: lib.php must be explicitly included so that
 // local_rtocompliance_render_nav_header() is available on this page.
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_dashboard');
-$context = context_system::instance();
-require_capability('moodle/site:config', $context);
+require_login();
 $PAGE->set_title(get_string('dashboard', 'local_rtocompliance'));
 $PAGE->set_heading(get_string('pluginname', 'local_rtocompliance'));
 
@@ -106,23 +103,25 @@ if (empty($rtoname) || empty($rtocode)) {
     );
 }
 
-// USI-NOT-CONFIGURED CTA (v4.2.31): If neither the per-tenant cert (auto-pushed
-// back as usi_certificate_path) nor the legacy local-file path is set, show
-// a prominent setup CTA pointing to the Upload Machine Credential page.  Only
-// shown to site admins who can actually act on it.
+// USI-NOT-CONFIGURED CTA (v4.2.31): show a prominent setup CTA pointing to the
+// Upload Machine Credential page when USI is not yet set up. Only shown to site
+// admins who can actually act on it.
+// USI-STATUS-UNIFY (v5.9.413): use the shared authoritative check so the dashboard
+// agrees with the Machine Credential Setup page. The old check required BOTH legacy
+// keys (usi_certificate_path AND usi_organization_id), so a per-tenant SaaS RTO —
+// whose credential lives on the platform, not in those legacy configs — was wrongly
+// told "USI is not set up" on the dashboard even when the setup page said "ready".
 if (is_siteadmin()) {
-    $usicertset = (bool) get_config('local_rtocompliance', 'usi_certificate_path');
-    $usiorgset  = (bool) get_config('local_rtocompliance', 'usi_organization_id');
-    if (!$usicertset || !$usiorgset) {
+    if (!local_rtocompliance_usi_is_configured()) {
         $usiuploadurl = (new moodle_url('/local/rtocompliance/usi_settings.php'))->out();
         echo '<div style="background:#eff6ff;border:1px solid #3b82f6;border-radius:8px;padding:18px 22px;margin-bottom:20px;display:flex;gap:14px;align-items:flex-start;">' .
             '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>' .
             '<div style="flex:1;">' .
             '<div style="font-weight:600;color:#1e3a8a;font-size:15px;margin-bottom:4px;">USI verification is not yet set up for your RTO</div>' .
             '<div style="color:#1e40af;font-size:13px;line-height:1.5;margin-bottom:10px;">' .
-            'Upload your myGovID Machine Credential and TOID so student USI lookups verify against <strong>your own RTO</strong> on the USI Registry. Without this, the Verify USI button on the Students page will fail.' .
+            'Your myGovID Machine Credential and TOID are managed in the <strong>lms-labs.com admin panel</strong> — add them there and student USI lookups will verify against your own RTO automatically. Without this, the Verify USI button on the Students page will fail.' .
             '</div>' .
-            '<a href="' . $usiuploadurl . '" class="btn btn-primary btn-sm" style="background:#1d4ed8;color:#fff;text-decoration:none;padding:8px 16px;border-radius:6px;font-weight:600;display:inline-block;">Set up USI verification →</a>' .
+            '<a href="' . $usiuploadurl . '" class="btn btn-primary btn-sm" style="background:#1d4ed8;color:#fff;text-decoration:none;padding:8px 16px;border-radius:6px;font-weight:600;display:inline-block;">View USI status →</a>' .
             '</div></div>';
     }
 }
@@ -143,103 +142,96 @@ $metrics = \local_rtocompliance\cache_helper::get_dashboard_metrics();
 
 echo html_writer::start_div('dashboard-main');
 
-echo html_writer::start_div('get-started-banner');
-echo html_writer::start_div('get-started-banner-header');
-echo html_writer::start_div('get-started-banner-icon');
-echo rtoc_icon('rocket');
-echo html_writer::end_div();
-echo html_writer::start_div('get-started-banner-text');
-echo html_writer::tag('h3', 'Get Started Guide', ['class' => 'get-started-banner-title']);
-echo html_writer::tag('p', 'New to RTO Compliance? Follow these 6 steps to set up your system.', ['class' => 'get-started-banner-desc']);
-echo html_writer::end_div();
-echo html_writer::end_div();
-
-echo html_writer::start_div('get-started-steps-row');
-
-$getStartedSteps = [
-    ['num' => '1', 'icon' => 'settings', 'title' => 'Settings', 'desc' => 'Configure RTO details', 'url' => '/admin/settings.php?section=local_rtocompliance_settings', 'color' => 'sky'],
-    ['num' => '2', 'icon' => 'book-open', 'title' => 'Qualifications', 'desc' => 'Build your courses', 'url' => '/local/rtocompliance/qualbuilder.php', 'color' => 'purple'],
-    ['num' => '3', 'icon' => 'user-plus', 'title' => 'Students', 'desc' => 'Add student records', 'url' => '/local/rtocompliance/students.php', 'color' => 'blue'],
-    ['num' => '4', 'icon' => 'user-check', 'title' => 'Trainers', 'desc' => 'Register your trainers', 'url' => '/local/rtocompliance/trainers.php', 'color' => 'amber'],
-    ['num' => '5', 'icon' => 'map-pin', 'title' => 'Locations', 'desc' => 'Manage delivery sites', 'url' => '/local/rtocompliance/locations.php', 'color' => 'teal'],
-    ['num' => '6', 'icon' => 'target', 'title' => 'Results', 'desc' => 'Track competencies', 'url' => '/local/rtocompliance/qualbuilder_results.php', 'color' => 'emerald'],
-    ['num' => '7', 'icon' => 'award', 'title' => 'Certificates', 'desc' => 'Issue credentials', 'url' => '/local/rtocompliance/certificates.php', 'color' => 'green'],
-];
-
-foreach ($getStartedSteps as $step) {
-    echo html_writer::start_tag('a', ['href' => new moodle_url($step['url']), 'class' => 'get-started-step-card step-card-' . $step['color']]);
-    echo html_writer::tag('span', $step['num'], ['class' => 'step-card-num num-' . $step['color']]);
-    echo html_writer::start_div('step-card-icon icon-' . $step['color']);
-    echo rtoc_icon($step['icon']);
-    echo html_writer::end_div();
-    echo html_writer::tag('span', $step['title'], ['class' => 'step-card-title']);
-    echo html_writer::tag('span', $step['desc'], ['class' => 'step-card-desc']);
-    echo html_writer::end_tag('a');
-}
-
-echo html_writer::end_div();
-echo html_writer::end_div();
+// DECLUTTER (v5.9.417): removed the static "Get Started Guide" 7-card row — it
+// mirrored the live Setup Progress tracker below exactly (same 7 steps, order and
+// destinations), so the dashboard showed the same checklist twice. The live tracker
+// (which reflects real completion state) is now the single source of truth, and How
+// It Works is one click away in the sidebar.
 
 // ─── Live Setup Progress Tracker ─────────────────────────────────────────────
 // Each check queries the actual DB / config so the card reflects real state.
 $dbman = $DB->get_manager();
 
+// SETUP-PROGRESS-FULL-JOURNEY (v5.9.383): the tracker now covers the complete
+// path from a blank install to the first certificate issued — configure, build,
+// MAP units to courses, staff, students, record results, and issue — each check
+// queries real DB/config state.
 $setup_rtoname   = !empty(get_config('local_rtocompliance', 'rtoname'));
 $setup_rtocode   = !empty(get_config('local_rtocompliance', 'rtocode'));
-// SETUP-PROGRESS-QUALS-FIX (v5.9.300): step 2 "Add Your First Qualification"
-// was checking local_rtocompliance_tas (Training and Assessment Strategy), not
-// local_rtocompliance_qualbuilder (the Qualification Builder). An RTO could build
-// qualifications without a TAS, causing the step to stay incomplete forever, or
-// create a TAS without building a qual, causing it to falsely show complete.
 $setup_quals     = $dbman->table_exists('local_rtocompliance_qualbuilder')
                    && $DB->count_records('local_rtocompliance_qualbuilder') > 0;
-$setup_students  = $dbman->table_exists('local_rtocompliance_students')
-                   && $DB->count_records('local_rtocompliance_students') > 0;
+
+// Units linked to their Moodle delivery course — the mapping that lets
+// completions flow into results (primary link OR any course-map row).
+$setup_mapping = false;
+if ($dbman->table_exists('local_rtocompliance_qualunits')) {
+    $setup_mapping = $DB->record_exists_select('local_rtocompliance_qualunits',
+        'courseid IS NOT NULL AND courseid > 0 AND selected = 1');
+}
+if (!$setup_mapping && $dbman->table_exists('local_rtocompliance_course_map')) {
+    $setup_mapping = $DB->count_records('local_rtocompliance_course_map') > 0;
+}
+
 $setup_trainers  = $dbman->table_exists('local_rtocompliance_trainers')
                    && $DB->count_records('local_rtocompliance_trainers') > 0;
-$setup_enrolments = $dbman->table_exists('local_rtocompliance_enrolments')
+$setup_students  = $dbman->table_exists('local_rtocompliance_students')
+                   && $DB->count_records('local_rtocompliance_students') > 0;
+// At least one unit result recorded in the register.
+$setup_results   = $dbman->table_exists('local_rtocompliance_enrolments')
                    && $DB->count_records('local_rtocompliance_enrolments') > 0;
+// At least one certificate issued — the end of the journey.
+$setup_cert      = $dbman->table_exists('local_rtocompliance_certs')
+                   && $DB->record_exists_select('local_rtocompliance_certs', "status = 'issued'");
 
 $setup_checks = [
     [
         'done'  => $setup_rtoname && $setup_rtocode,
-        'label' => 'Configure RTO Details',
-        'hint'  => 'Enter your RTO name, code and contact details',
+        'label' => 'Configure RTO details',
+        'hint'  => 'Enter your RTO name, code and contact details — they appear on every certificate.',
         'url'   => new moodle_url('/admin/settings.php', ['section' => 'local_rtocompliance_settings']),
         'icon'  => 'settings',
     ],
     [
         'done'  => $setup_quals,
-        'label' => 'Add Your First Qualification',
-        'hint'  => 'Build a qualification or skill set in the Qual Builder',
+        'label' => 'Build a qualification',
+        'hint'  => 'Add a qualification or skill set and its units in the Qualification Builder.',
         'url'   => new moodle_url('/local/rtocompliance/qualbuilder.php'),
         'icon'  => 'book-open',
     ],
     [
-        'done'  => $setup_students,
-        'label' => 'Add Your First Student',
-        'hint'  => 'Create a student record with USI and AVETMISS data',
-        'url'   => new moodle_url('/local/rtocompliance/students.php'),
-        'icon'  => 'user-plus',
+        'done'  => $setup_mapping,
+        'label' => 'Link units to Moodle courses',
+        'hint'  => 'Connect each unit to the Moodle course that delivers it, so completions flow into results.',
+        'url'   => new moodle_url('/local/rtocompliance/course_map.php'),
+        'icon'  => 'network',
     ],
     [
         'done'  => $setup_trainers,
-        'label' => 'Register a Trainer',
-        'hint'  => 'Add trainer credentials and industry currency evidence',
+        'label' => 'Register a trainer',
+        'hint'  => 'Add trainer credentials and industry currency evidence.',
         'url'   => new moodle_url('/local/rtocompliance/trainers.php'),
         'icon'  => 'user-check',
     ],
     [
-        'done'  => $setup_enrolments,
-        'label' => 'Create Your First Enrolment',
-        'hint'  => 'Pick a student from the list, then add a qualification + unit enrolment for them',
-        // BUG-DASH-FIRST-ENROL: Was '/local/rtocompliance/student_enrolments.php' which
-        // requires ?userid=N — clicking it from a fresh dashboard (no student selected)
-        // landed on the "No student was specified" error page, blocking the whole
-        // onboarding step. Redirect to the student picker so users can choose
-        // a student first, then click "Manage Enrolments" from that row.
+        'done'  => $setup_students,
+        'label' => 'Add students',
+        'hint'  => 'Create student records with USI and AVETMISS data (or import them).',
         'url'   => new moodle_url('/local/rtocompliance/students.php'),
-        'icon'  => 'clipboard-list',
+        'icon'  => 'user-plus',
+    ],
+    [
+        'done'  => $setup_results,
+        'label' => 'Record unit results',
+        'hint'  => 'Sync Moodle completions or import NAT files so unit outcomes appear in Student Results.',
+        'url'   => new moodle_url('/local/rtocompliance/qualbuilder_results.php'),
+        'icon'  => 'bar-chart-2',
+    ],
+    [
+        'done'  => $setup_cert,
+        'label' => 'Issue a certificate',
+        'hint'  => 'Issue a Testamur or Statement of Attainment to a student who has completed their units.',
+        'url'   => new moodle_url('/local/rtocompliance/qual_cert_hub.php'),
+        'icon'  => 'award',
     ],
 ];
 
@@ -344,19 +336,6 @@ $complianceSummary = \local_rtocompliance\cache_helper::get_compliance_summary()
 
 $missingusi       = $metrics['missing_usi'];
 $pendingCerts     = $metrics['pending_certs'];
-
-// Task #151: Count orphaned autocert queue entries — pending rows whose qual builder
-// no longer exists. These will never auto-complete and need manual cleanup.
-$orphanedAutocerts = 0;
-if ($dbman->table_exists('local_rtocompliance_autocerts') && $dbman->table_exists('local_rtocompliance_qualbuilder')) {
-    $orphanedAutocerts = $DB->count_records_sql(
-        "SELECT COUNT(*) FROM {local_rtocompliance_autocerts} a
-         WHERE a.status = 'pending'
-           AND NOT EXISTS (
-               SELECT 1 FROM {local_rtocompliance_qualbuilder} q WHERE q.id = a.qualbuilderid
-           )"
-    );
-}
 $dbman            = $DB->get_manager();
 $now              = time();
 
@@ -577,9 +556,6 @@ if ($manualReviewUSI > 0) {
 if ($pendingCerts > 0) {
     $qa2Items[] = ['severity' => 'info', 'value' => $pendingCerts, 'label' => get_string('pending_certificates', 'local_rtocompliance'), 'icon' => 'award', 'url' => '/local/rtocompliance/certificates.php'];
 }
-if ($orphanedAutocerts > 0) {
-    $qa2Items[] = ['severity' => 'warning', 'value' => $orphanedAutocerts, 'label' => 'Orphaned Autocert Entries (qual deleted)', 'icon' => 'alert-circle', 'url' => '/local/rtocompliance/certificates.php'];
-}
 if (!empty($qa2Items)) {
     $actionGroups[] = ['heading' => 'QA2 – Learner Support', 'headingClass' => 'action-group-qa', 'items' => $qa2Items];
 }
@@ -664,46 +640,11 @@ if ($hasAlerts) {
 
 echo html_writer::start_div('modules-section');
 
-echo html_writer::tag('h3', 'Quick Access', ['class' => 'section-heading']);
-echo html_writer::tag('p', 'Your most frequently used features - manage qualifications, student records, and certificates.', ['class' => 'section-subtitle', 'style' => 'color: #6b7280; margin-bottom: 20px;']);
-
-echo html_writer::start_div('quick-access-cards');
-
-$qualCount = 0;
-if ($dbman->table_exists('local_rtocompliance_qualbuilder')) {
-    $qualCount = $DB->count_records('local_rtocompliance_qualbuilder');
-}
-echo '<a href="' . (new moodle_url('/local/rtocompliance/qualbuilder.php'))->out() . '" class="quick-access-card qa-primary">';
-echo '<div class="qa-icon-wrap">' . rtoc_icon('briefcase') . '</div>';
-echo '<div class="qa-content">';
-echo '<h4 class="qa-title">Qualification Builder</h4>';
-echo '<p class="qa-desc">Build full qualifications, skill sets, and single unit courses with TGA packaging rules validation. Auto-issue certificates.</p>';
-echo '<span class="qa-stat">' . $qualCount . ' qualifications configured</span>';
-echo '</div>';
-echo '<div class="qa-arrow">' . rtoc_icon('arrow-right') . '</div>';
-echo '</a>';
-
-echo '<a href="' . (new moodle_url('/local/rtocompliance/students.php'))->out() . '" class="quick-access-card qa-secondary">';
-echo '<div class="qa-icon-wrap">' . rtoc_icon('users') . '</div>';
-echo '<div class="qa-content">';
-echo '<h4 class="qa-title">Student Records</h4>';
-echo '<p class="qa-desc">View all enrolled students, AVETMISS profiles, USI verification status, enrolments, and competency outcomes.</p>';
-echo '<span class="qa-stat">' . $metrics['total_students'] . ' students enrolled</span>';
-echo '</div>';
-echo '<div class="qa-arrow">' . rtoc_icon('arrow-right') . '</div>';
-echo '</a>';
-
-echo '<a href="' . (new moodle_url('/local/rtocompliance/certificates.php'))->out() . '" class="quick-access-card qa-tertiary">';
-echo '<div class="qa-icon-wrap">' . rtoc_icon('award') . '</div>';
-echo '<div class="qa-content">';
-echo '<h4 class="qa-title">Certificates</h4>';
-echo '<p class="qa-desc">Issue Testamurs, Statements of Attainment, and Records of Results. QR verification and 30-year register.</p>';
-echo '<span class="qa-stat">' . $metrics['issued_certs'] . ' certificates issued</span>';
-echo '</div>';
-echo '<div class="qa-arrow">' . rtoc_icon('arrow-right') . '</div>';
-echo '</a>';
-
-echo html_writer::end_div();
+// DECLUTTER (v5.9.417): removed the "Quick Access" cards — the three destinations
+// (Qualification Builder, Student Records, Certificates) are all in the left sidebar,
+// and their stat lines just repeated the Overview tiles above (students, certs
+// issued). The live Student-Results product grid below is the useful, non-duplicated
+// content and is kept.
 
 echo html_writer::tag('h3', get_string('student_results', 'local_rtocompliance'), ['class' => 'section-heading mt-4']);
 echo html_writer::tag('p', get_string('student_results_desc', 'local_rtocompliance'), ['class' => 'section-subtitle text-muted mb-3']);
@@ -747,132 +688,9 @@ if (!empty($qualproducts)) {
     echo '</div>';
 }
 
-echo '<a href="' . (new moodle_url('/local/rtocompliance/practice_guides.php'))->out() . '" class="practice-guides-banner mt-4">';
-echo '<div class="pgb-icon">' . rtoc_icon('book-open') . '</div>';
-echo '<div class="pgb-content">';
-echo '<h4 class="pgb-title">ASQA Practice Guides - Self-Assurance Tool</h4>';
-echo '<p class="pgb-desc">19 Practice Guides with 80+ self-assurance questions mapped to RTO Compliance features. Evaluate your compliance against the 2025 Standards.</p>';
-echo '</div>';
-echo '<div class="pgb-arrow">' . rtoc_icon('arrow-right') . '</div>';
-echo '</a>';
-
-echo html_writer::tag('h3', 'Compliance Modules by ASQA 2025 Standards', ['class' => 'section-heading mt-4']);
-echo html_writer::tag('p', 'Organised by Standards for RTOs 2025 Quality Areas (effective 1 July 2025).', ['class' => 'section-subtitle text-muted mb-3']);
-
-$moduleCategories = [
-    [
-        // ASQA 2025: Quality Area 1 – Training and Assessment (Part 1, Divisions 1-4)
-        // Tester feedback: split "Assessment & Validation" into separate Assessment (1.3-1.4)
-        // and Validation (1.5) cards; rename RPL card; fix Resources link (was qualbuilder.php).
-        'title' => 'Quality Area 1: Training &amp; Assessment<br><span class="clause-ref">(Part 1, Divisions 1–4)</span>',
-        'color' => 'amber',
-        'modules' => [
-            ['url' => '/local/rtocompliance/tas.php',        'icon' => 'clipboard-list', 'title' => 'Training',               'desc' => 'Standard 1.1–1.2: TAS, industry consultation',         'standards' => '1.1, 1.2'],
-            ['url' => '/local/rtocompliance/tas.php', 'icon' => 'check-circle', 'title' => 'Assessment Plan', 'desc' => 'Standard 1.3–1.4: Assessment practices & methods (see Section 5 of your TAS)', 'standards' => '1.3, 1.4'],
-            ['url' => '/local/rtocompliance/validation.php', 'icon' => 'badge-check',    'title' => 'Validation',              'desc' => 'Standard 1.5: Validation of assessment',              'standards' => '1.5'],
-            ['url' => '/local/rtocompliance/rpl.php',        'icon' => 'repeat',         'title' => 'Recognition of Prior Learning &amp; Credit Transfer', 'desc' => 'Standard 1.6–1.7: RPL and credit transfer pathways', 'standards' => '1.6, 1.7'],
-            ['url' => '/local/rtocompliance/transitions.php','icon' => 'refresh-cw',     'title' => 'Training Product Transitions', 'desc' => 'Clause 14: Manage superseded &amp; deleted training products, teach-out planning &amp; student notifications', 'standards' => 'Clause 14'],
-            ['url' => '/local/rtocompliance/tas.php#tas-section-7',  'icon' => 'building-2',     'title' => 'Facilities, Resources &amp; Equipment', 'desc' => 'Standard 1.8: Delivery locations, tools & learning resources (TAS Section 7)', 'standards' => '1.8'],
-        ]
-    ],
-    [
-        // ASQA 2025: Quality Area 2 – VET Student Support (Part 2, Divisions 1-5)
-        // Tester feedback: added Learner Support (2.5-2.6) and Wellbeing (new) cards;
-        // fixed Training Support + Diversity links (both wrongly pointed to support.php);
-        // renamed "Complaints & Appeals" to "Feedback, Complaints & Appeals".
-        'title' => 'Quality Area 2: VET Student Support<br><span class="clause-ref">(Part 2, Divisions 1–5)</span>',
-        'color' => 'blue',
-        'modules' => [
-            ['url' => '/local/rtocompliance/marketing_info.php', 'icon' => 'info',        'title' => 'Marketing Information',          'desc' => 'Standard 2.1: Marketing Information — accurate and accessible information about training products and services', 'standards' => '2.1'],
-            ['url' => '/local/rtocompliance/students.php',      'icon' => 'clipboard-check', 'title' => 'Pre-enrolment Suitability',   'desc' => 'Standard 2.2: Student Eligibility — pre-enrolment checks, suitability assessment and enrolment evidence', 'standards' => '2.2'],
-            ['url' => '/local/rtocompliance/student_support.php', 'icon' => 'users',     'title' => 'Student Support',                'desc' => 'Standard 2.3–2.6: Training support, learner support, diversity, wellbeing & reasonable adjustment', 'standards' => '2.3, 2.4, 2.5, 2.6'],
-            ['url' => '/local/rtocompliance/complaints.php', 'icon' => 'message-circle', 'title' => 'Feedback, Complaints &amp; Appeals', 'desc' => 'Standard 2.7–2.8: Feedback processes & appeals',  'standards' => '2.7, 2.8'],
-        ]
-    ],
-    [
-        // ASQA 2025: Quality Area 3 – VET Workforce (Part 3, Divisions 1-2)
-        // Tester feedback: renamed "Workforce Management" → "VET Workforce Management";
-        // renamed "Trainer & Assessor Credentials" → "Trainer & Assessor Competencies".
-        'title' => 'Quality Area 3: VET Workforce<br><span class="clause-ref">(Part 3, Divisions 1–2)</span>',
-        'color' => 'green',
-        'modules' => [
-            ['url' => '/local/rtocompliance/workforce_management.php', 'icon' => 'user-check', 'title' => 'VET Workforce Management',  'desc' => 'Standard 3.1: Appropriate staffing levels & workforce planning', 'standards' => '3.1'],
-            ['url' => '/local/rtocompliance/trainers.php',   'icon' => 'graduation-cap', 'title' => 'Trainer &amp; Assessor Competencies', 'desc' => 'Standard 3.2–3.3: TAE qualifications, supervision & currency', 'standards' => '3.2, 3.3'],
-        ]
-    ],
-    [
-        // ASQA 2025: Quality Area 4 – Governance (Part 4, Divisions 1-3)
-        'title' => 'Quality Area 4: Governance<br><span class="clause-ref">(Part 4, Divisions 1–3)</span>',
-        'color' => 'purple',
-        'modules' => [
-            ['url' => '/local/rtocompliance/governance.php',              'icon' => 'building',      'title' => 'Leadership &amp; Accountability', 'desc' => 'Standard 4.1–4.2: Governing persons, accountability obligations', 'standards' => '4.1, 4.2'],
-            ['url' => '/local/rtocompliance/risk.php',                    'icon' => 'alert-triangle', 'title' => 'Risk Management',               'desc' => 'Standard 4.3: Risk register, financial oversight, conflicts of interest', 'standards' => '4.3'],
-            ['url' => '/local/rtocompliance/complaints.php?tab=improvement', 'icon' => 'refresh-cw', 'title' => 'Continuous Improvement',         'desc' => 'Standard 4.4: Systematic quality improvement processes',       'standards' => '4.4'],
-        ]
-    ],
-    [
-        // Practice Guides – Compliance Standards for RTOs
-        // Tester feedback: renamed from "Compliance Requirements" (old Part 5-8 numbering);
-        // added Third-Party Arrangements; updated standards to ASQA 2025 numbering.
-        'title' => 'Practice Guides – Compliance Standards<br><span class="clause-ref">(Information, Integrity, Accountability)</span>',
-        'color' => 'rose',
-        'modules' => [
-            ['url' => '/local/rtocompliance/thirdparty.php',              'icon' => 'link',          'title' => 'Third-Party Arrangements',       'desc' => 'Standard 2.1, 4.2: Third-party delivery agreements',            'standards' => '2.1, 4.2'],
-            ['url' => '/local/rtocompliance/feeprotection.php',           'icon' => 'wallet',        'title' => 'Fee Protection',                 'desc' => 'Part 2/Div 3: Prepaid fee threshold & refund policy',           'standards' => '2.3, 2.4'],
-            ['url' => '/local/rtocompliance/insurance.php',               'icon' => 'shield',        'title' => 'Insurance Register',             'desc' => 'Part 2/Div 3: Public liability & professional indemnity',        'standards' => '2.3'],
-            ['url' => '/local/rtocompliance/certificates.php',            'icon' => 'award',         'title' => 'Certificates &amp; Integrity',   'desc' => 'Integrity of Nationally Recognised Training: 30-day issuance, 30-year records', 'standards' => '2.3, 2.4'],
-            ['url' => '/local/rtocompliance/governance.php?tab=adc',      'icon' => 'clipboard-check', 'title' => 'Fit &amp; Proper Person Requirements', 'desc' => 'Standard 4.1–4.2: ADC, governing persons declarations',   'standards' => '4.1, 4.2'],
-        ]
-    ],
-    [
-        'title' => 'Data Provision<br><span class="clause-ref">(NCVER/AVETMISS)</span>',
-        'color' => 'teal',
-        'modules' => [
-            ['url' => '/local/rtocompliance/natexport.php', 'icon' => 'download', 'title' => 'NAT/AVETMISS Export', 'desc' => 'Total VET Activity reporting', 'standards' => 'Data Provision'],
-            ['url' => '/local/rtocompliance/surveys.php', 'icon' => 'bar-chart-2', 'title' => 'Quality Indicator Surveys', 'desc' => 'Learner & employer questionnaires', 'standards' => 'QI Data'],
-        ]
-    ],
-    [
-        'title' => 'Administration',
-        'color' => 'slate',
-        'modules' => [
-            ['url' => '/local/rtocompliance/qualbuilder.php', 'icon' => 'briefcase', 'title' => 'Qualification Builder', 'desc' => 'Build quals, skill sets & auto-certs'],
-            ['url' => '/local/rtocompliance/audit.php', 'icon' => 'file-clock', 'title' => 'Audit Log', 'desc' => 'Full activity trail with filters'],
-            ['url' => '/local/rtocompliance/deadlines.php', 'icon' => 'calendar', 'title' => 'Deadlines', 'desc' => 'Regulatory dates'],
-            ['url' => '/admin/settings.php?section=local_rtocompliance_settings', 'icon' => 'settings', 'title' => 'Settings', 'desc' => 'RTO configuration'],
-            ['url' => '/local/rtocompliance/support.php', 'icon' => 'book-open', 'title' => 'Support Docs', 'desc' => 'Help & compliance guides'],
-        ]
-    ],
-];
-
-echo html_writer::start_div('modules-grid');
-
-foreach ($moduleCategories as $category) {
-    echo html_writer::start_div('module-category category-' . $category['color']);
-    echo '<h4 class="category-title">' . $category['title'] . '</h4>';
-    echo html_writer::start_div('category-modules');
-    
-    foreach ($category['modules'] as $module) {
-        echo html_writer::start_tag('a', ['href' => new moodle_url($module['url']), 'class' => 'module-card']);
-        echo html_writer::start_div('module-icon');
-        echo rtoc_icon($module['icon']);
-        echo html_writer::end_div();
-        echo html_writer::start_div('module-info');
-        echo html_writer::tag('span', $module['title'], ['class' => 'module-title']);
-        echo html_writer::tag('span', $module['desc'], ['class' => 'module-desc']);
-        if (!empty($module['standards'])) {
-            echo html_writer::tag('span', 'Clauses: ' . $module['standards'], ['class' => 'module-standards', 'style' => 'font-size: 10px; color: #9ca3af; margin-top: 4px; display: block;']);
-        }
-        echo html_writer::end_div();
-        echo html_writer::end_tag('a');
-    }
-    
-    echo html_writer::end_div();
-    echo html_writer::end_div();
-}
-
-echo html_writer::end_div();
-echo html_writer::end_div();
+// DECLUTTER (v5.9.417): removed the two full-width cross-link banners (ASQA Practice
+// Guides and Compliance Map) from the dashboard — both destinations are already in
+// the left sidebar, so the banners were pure navigation duplication.
 
 if ($dbman->table_exists('local_rtocompliance_deadlines')) {
     $deadlines = $DB->get_records_sql(

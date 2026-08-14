@@ -22,7 +22,7 @@ defined('MOODLE_INTERNAL') || die();
  * Hook callback for before_standard_head_html_generation.
  *
  * @package   local_rtocompliance
- * @copyright 2025 Essay Grader AI
+ * @copyright 2025 LMS Labs
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class before_standard_head_html_generation {

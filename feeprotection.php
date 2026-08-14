@@ -15,21 +15,18 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — feeprotection.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_feeprotection');
-$context = context_system::instance();
-require_capability('moodle/site:config', $context);
+require_login();
 $PAGE->set_title(get_string('feeprotection', 'local_rtocompliance'));
 $PAGE->set_heading(get_string('feeprotection', 'local_rtocompliance'));
 
@@ -49,7 +46,7 @@ echo html_writer::tag('h2', 'Fee Protection');
 echo html_writer::link(
     new moodle_url('/local/rtocompliance/feeprotection_edit.php'),
     'Add Student Fee Record',
-    ['class' => 'btn btn-primary']
+    ['class' => 'btn btn-primary', 'title' => 'Add a student prepaid fee record to track']
 );
 echo html_writer::end_div();
 
@@ -73,18 +70,28 @@ if ($protectiontype) {
     ];
     echo html_writer::tag('p', '<strong>Type:</strong> ' . ($types[$protectiontype] ?? $protectiontype));
     echo html_writer::tag('p', '<strong>Details:</strong> ' . format_string($protectiondetails));
-    echo html_writer::link(
-        new moodle_url('/admin/settings.php', ['section' => 'local_rtocompliance_asqa2025']),
-        'Update Settings',
-        ['class' => 'btn btn-sm btn-secondary']
-    );
+    // FIX-MANAGER-DEADLINK (v5.9.415): the fee-protection config lives in the plugin
+    // settings section, which is site-config-only. A manager who reaches this page via
+    // the :manage capability would hit access-denied on that link, so only show it to
+    // users who can actually open it; others get a note to ask a site administrator.
+    if (has_capability('moodle/site:config', context_system::instance())) {
+        echo html_writer::link(
+            new moodle_url('/admin/settings.php', ['section' => 'local_rtocompliance_asqa2025']),
+            'Update Settings', ['class' => 'btn btn-sm btn-secondary', 'title' => 'Open plugin settings to update the fee protection arrangement']);
+    } else {
+        echo html_writer::tag('p', 'Fee protection is configured in the plugin settings (ask a site administrator).',
+            ['class' => 'text-muted', 'style' => 'font-size:0.85rem;']);
+    }
 } else {
     echo html_writer::tag('p', 'No fee protection arrangement configured.', ['class' => 'text-muted']);
-    echo html_writer::link(
-        new moodle_url('/admin/settings.php', ['section' => 'local_rtocompliance_asqa2025']),
-        'Configure Fee Protection',
-        ['class' => 'btn btn-primary']
-    );
+    if (has_capability('moodle/site:config', context_system::instance())) {
+        echo html_writer::link(
+            new moodle_url('/admin/settings.php', ['section' => 'local_rtocompliance_asqa2025']),
+            'Configure Fee Protection', ['class' => 'btn btn-primary', 'title' => 'Open plugin settings to configure the fee protection arrangement']);
+    } else {
+        echo html_writer::tag('p', 'A site administrator must configure fee protection in the plugin settings.',
+            ['class' => 'text-muted', 'style' => 'font-size:0.85rem;']);
+    }
 }
 echo html_writer::end_div();
 
@@ -95,7 +102,7 @@ if ($DB->get_manager()->table_exists('local_rtocompliance_fees')) {
          FROM {local_rtocompliance_fees} f
          JOIN {user} u ON u.id = f.userid
          LEFT JOIN {course} c ON c.id = f.courseid
-         WHERE f.amount > 1500 OR f.thresholdalert = 1
+         WHERE f.amount > 1200 OR f.thresholdalert = 1
          ORDER BY f.paymentdate DESC",
         [],
         0,
@@ -109,12 +116,12 @@ if ($fees) {
     echo html_writer::start_tag('table', ['class' => 'data-table']);
     echo html_writer::start_tag('thead');
     echo html_writer::start_tag('tr');
-    echo html_writer::tag('th', 'Student');
-    echo html_writer::tag('th', 'Course');
-    echo html_writer::tag('th', 'Total Fees');
-    echo html_writer::tag('th', 'Date Received');
-    echo html_writer::tag('th', 'Status');
-    echo html_writer::tag('th', 'Actions');
+    echo html_writer::tag('th', 'Student', ['title' => 'Name of the student']);
+    echo html_writer::tag('th', 'Course', ['title' => 'Course the fees relate to']);
+    echo html_writer::tag('th', 'Total Fees', ['title' => 'Total prepaid fees received from this student']);
+    echo html_writer::tag('th', 'Date Received', ['title' => 'Date the payment was received']);
+    echo html_writer::tag('th', 'Status', ['title' => 'Whether fees are OK, approaching or exceeding the $1,500 threshold']);
+    echo html_writer::tag('th', 'Actions', ['title' => 'Actions available for this record']);
     echo html_writer::end_tag('tr');
     echo html_writer::end_tag('thead');
     echo html_writer::start_tag('tbody');
@@ -144,7 +151,7 @@ if ($fees) {
             html_writer::link(
                 new moodle_url('/local/rtocompliance/feeprotection_edit.php', ['id' => $fee->id]),
                 'View',
-                ['class' => 'btn btn-sm btn-secondary']
+                ['class' => 'btn btn-sm btn-secondary', 'title' => 'View this student fee record']
             )
         );
         echo html_writer::end_tag('tr');

@@ -15,20 +15,19 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — trainer_edit.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once($CFG->libdir . '/formslib.php');
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_trainers');
+require_login();
 $context = context_system::instance();
 require_capability('local/rtocompliance:managetrainers', $context);
 
@@ -119,13 +118,28 @@ class trainer_edit_form extends moodleform {
             'TAE50116' => 'TAE50116 - Diploma of Vocational Education and Training',
             'TAE50122' => 'TAE50122 - Diploma of Vocational Education and Training (current)',
             'TAE50216' => 'TAE50216 - Diploma of Training Design and Development',
-            'TAESS00021' => 'TAESS00021 - Assessor skill set (under direction only)',
-            'TAESS00024' => 'TAESS00024 - Trainer skill set (under direction only)',
+            'TAESS00011' => 'TAESS00011 - Assessor Skill Set (assessment under direction only)',
+            'TAESS00024' => 'TAESS00024 - Assessor Skill Set (updated version of TAESS00011; assessment under direction only)',
+            'TAESS00019' => 'TAESS00019 - Enterprise Trainer Skill Set (training under direction only)',
             'Working Towards' => 'Working Towards TAE (requires supervision)',
             'Other' => 'Other TAE qualification',
         ];
         $mform->addElement('select', 'taecredential', get_string('trainer_taecredential', 'local_rtocompliance'), $taeoptions);
         $mform->addHelpButton('taecredential', 'taecredential_help_long', 'local_rtocompliance');
+
+        // Std 3.2 (T-P1-3): Working Towards trainers must complete their TAE within 2 years.
+        // Capture the commencement date; the 2-year deadline is computed on save (wtstartdate + 2 years).
+        $mform->addElement('date_selector', 'wtstartdate',
+            'Working Towards commencement date (starts the 2-year deadline)', ['optional' => true]);
+        $mform->addElement('static', 'wtstartdatehelp', '',
+            '<div class="alert alert-info" style="margin-bottom: 12px;">Only used when the TAE Credential above is set to <strong>Working Towards</strong>. The trainer must complete their full TAE within <strong>2 years</strong> of this date. This field is cleared automatically if the credential is not "Working Towards".</div>');
+        if ($trainer && ($trainer->taecredential ?? '') === 'Working Towards' && !empty($trainer->wtdeadline)) {
+            $deadlineclass = ($trainer->wtdeadline < time()) ? 'alert-danger' : 'alert-warning';
+            $mform->addElement('static', 'wtdeadlinedisplay', '',
+                '<div class="alert ' . $deadlineclass . '" style="margin-bottom: 12px;"><strong>2-year TAE completion deadline:</strong> '
+                . userdate($trainer->wtdeadline, '%d %b %Y')
+                . (($trainer->wtdeadline < time()) ? ' <strong>(OVERDUE)</strong>' : '') . '</div>');
+        }
 
         $mform->addElement('date_selector', 'taedateachieved', 'Date Achieved', ['optional' => true]);
         $mform->addHelpButton('taedateachieved', 'taedateachieved', 'local_rtocompliance');
@@ -386,6 +400,7 @@ if ($trainer) {
         'id' => $trainer->id,
         'userid' => $trainer->userid,
         'taecredential' => $trainer->taecredential,
+        'wtstartdate' => $trainer->wtstartdate ?? 0,
         'taedateachieved' => $trainer->taedateachieved,
         'taeexpirydate' => $trainer->taeexpirydate ?? null,
         'vocationalqualifications' => $trainer->vocationalqualifications,
@@ -440,6 +455,17 @@ if ($form->is_cancelled()) {
     $record->taecredential = $data->taecredential ?? '';
     $record->taedateachieved = $data->taedateachieved ?? 0;
     $record->taeexpirydate = !empty($data->taeexpirydate) ? (int)$data->taeexpirydate : null;
+
+    // Std 3.2 (T-P1-3): Working Towards trainers must complete their full TAE within 2 years.
+    // Store the commencement date and compute the 2-year deadline (wtstartdate + 2 years).
+    // If the credential is not "Working Towards", clear both fields.
+    if ($record->taecredential === 'Working Towards' && !empty($data->wtstartdate)) {
+        $record->wtstartdate = (int)$data->wtstartdate;
+        $record->wtdeadline = (int)$data->wtstartdate + (2 * 365 * 86400);
+    } else {
+        $record->wtstartdate = null;
+        $record->wtdeadline = null;
+    }
     
     // Collect selected credential roles from checkboxes
     $rolekeys = ['1A', '1B', '1C', '1D', '1E', '2A', '2B', '2C', '3A', '3B'];
@@ -500,7 +526,22 @@ if ($form->is_cancelled()) {
         }
     }
     
+    // Std 3.2 / Credential Policy: manager "Approved" sign-off must NOT be recorded when the
+    // trainer has no TAE credential, or is Working Towards and their 2-year deadline has passed.
+    $signoffblocked = false;
+    $signoffblockmsg = '';
     if (!empty($data->managersignoff)) {
+        if (empty($record->taecredential)) {
+            $signoffblocked = true;
+            $signoffblockmsg = 'Manager sign-off was NOT recorded: this trainer has no TAE credential set. A trainer cannot be approved without a credential.';
+        } else if ($record->taecredential === 'Working Towards'
+                && !empty($record->wtdeadline) && $record->wtdeadline < time()) {
+            $signoffblocked = true;
+            $signoffblockmsg = 'Manager sign-off was NOT recorded: this Working Towards trainer has passed their 2-year TAE completion deadline. Sign-off is blocked until the full TAE is achieved.';
+        }
+    }
+
+    if (!empty($data->managersignoff) && !$signoffblocked) {
         $record->managersignoff = 1;
         if (empty($trainer->managersignoff)) {
             $record->managersignoffby = $USER->id;
@@ -545,6 +586,15 @@ if ($form->is_cancelled()) {
     $log->timecreated = time();
     $DB->insert_record('local_rtocompliance_log', $log);
 
+    if ($signoffblocked) {
+        redirect(
+            new moodle_url('/local/rtocompliance/trainers.php'),
+            $signoffblockmsg,
+            null,
+            \core\output\notification::NOTIFY_WARNING
+        );
+    }
+
     redirect(
         new moodle_url('/local/rtocompliance/trainers.php'),
         get_string('trainer_saved', 'local_rtocompliance'),
@@ -575,6 +625,7 @@ echo html_writer::tag('div', '', [
 ]);
 
 echo local_rtocompliance_render_nav_header($id ? get_string('edit_trainer', 'local_rtocompliance') : get_string('add_trainer', 'local_rtocompliance'), get_string('trainers', 'local_rtocompliance'), '/local/rtocompliance/trainers.php', 'trainers');
+echo local_rtocompliance_page_banner($id ? get_string('edit_trainer', 'local_rtocompliance') : get_string('add_trainer', 'local_rtocompliance'));
 
 echo html_writer::start_div('', ['style' => 'max-width: 800px; margin: 0 auto; padding: 20px;']);
 

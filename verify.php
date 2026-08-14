@@ -15,15 +15,13 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — verify.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 require_once(__DIR__ . '/../../config.php');
-require_login();
 // v4.2.39 hotfix: lib.php must be explicitly included so that
 // local_rtocompliance_get_certificate_types() (defined in lib.php) is
 // available.  Moodle does NOT auto-load a plugin's lib.php for standalone
@@ -33,7 +31,13 @@ require_login();
 // "Call to undefined function local_rtocompliance_get_certificate_types()".
 require_once(__DIR__ . '/lib.php');
 
-$token = required_param('token', PARAM_ALPHANUM);
+// Public certificate verification is via a token (from the QR code). If no token is
+// supplied this is not a legitimate public access — require a Moodle login instead.
+$token = optional_param('token', '', PARAM_ALPHANUM);
+if ($token === '') {
+    require_login();
+    throw new moodle_exception('missingparam', 'error', '', 'token');
+}
 
 $PAGE->set_url('/local/rtocompliance/verify.php', ['token' => $token]);
 $PAGE->set_context(context_system::instance());
@@ -47,7 +51,25 @@ echo $OUTPUT->header();
 
 echo html_writer::start_div('verify-container');
 
-$cert = $DB->get_record('local_rtocompliance_certs', ['verifytoken' => $token, 'status' => 'issued']);
+// SUPERSEDED-VERIFY-FIX (v5.9.406): a reissued/superseded ORIGINAL keeps
+// status='issued' and is distinguished ONLY by reissued_at being set. The old
+// lookup filtered on status='issued' alone, so a superseded (voided) certificate
+// still verified as fully authentic — a learner could keep presenting an
+// out-of-date certificate indefinitely. Fetch by token, then decide the state:
+// only an issued, non-superseded certificate is authentic; superseded and revoked
+// certificates are surfaced explicitly.
+$certrow = $DB->get_record('local_rtocompliance_certs', ['verifytoken' => $token]);
+$verifystate = 'invalid';
+if ($certrow) {
+    if ($certrow->status === 'issued' && empty($certrow->reissued_at)) {
+        $verifystate = 'valid';
+    } else if (!empty($certrow->reissued_at)) {
+        $verifystate = 'superseded';
+    } else if ($certrow->status === 'revoked') {
+        $verifystate = 'revoked';
+    }
+}
+$cert = ($verifystate === 'valid') ? $certrow : false;
 
 if ($cert) {
     $user = core_user::get_user($cert->userid);
@@ -85,7 +107,7 @@ if ($cert) {
     ];
 
     if ($cert->qualificationcode) {
-        $details['Qualification'] = $cert->qualificationcode . ' - ' . $cert->qualificationname;
+        $details['Qualification'] = $cert->qualificationcode . ' ' . $cert->qualificationname;
     }
 
     if ($cert->units) {
@@ -226,7 +248,7 @@ if ($cert) {
             $dbman = $DB->get_manager();
             if ($dbman->table_exists('local_rtocompliance_students')) {
                 $student = $DB->get_record('local_rtocompliance_students', ['userid' => $cert->userid]);
-                $usiVerified = ($student && !empty($student->usiverified));
+                $usiVerified = ($student && local_rtocompliance_usi_is_verified($student->usiverified));
             }
         }
 
@@ -269,7 +291,14 @@ if ($cert) {
     echo html_writer::start_div('verify-card verify-failed');
     echo html_writer::tag('div', '✗', ['class' => 'verify-icon']);
     echo html_writer::tag('h2', get_string('certificate_invalid', 'local_rtocompliance'), ['class' => 'verify-title']);
-    echo html_writer::tag('p', 'This certificate could not be verified. It may have been revoked or the verification code is incorrect.');
+    if ($verifystate === 'superseded') {
+        $failmsg = 'This certificate has been SUPERSEDED — the issuing RTO has replaced it with a newer certificate, so this copy is no longer current. Please contact the RTO for the current certificate.';
+    } else if ($verifystate === 'revoked') {
+        $failmsg = 'This certificate has been REVOKED by the issuing RTO and is no longer valid.';
+    } else {
+        $failmsg = 'This certificate could not be verified. The verification code is incorrect or no such certificate exists.';
+    }
+    echo html_writer::tag('p', $failmsg);
     echo html_writer::end_div();
 }
 

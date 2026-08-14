@@ -15,21 +15,18 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — workforce_management.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_workforce_management');
-$context = context_system::instance();
-require_capability('moodle/site:config', $context);
+require_login();
 $PAGE->set_url('/local/rtocompliance/workforce_management.php');
 $PAGE->set_title('VET Workforce Management');
 $PAGE->set_heading('VET Workforce Management');
@@ -69,7 +66,7 @@ echo html_writer::end_div();
 
 echo html_writer::start_div('info-card', ['style' => 'margin-top:1.5rem;']);
 echo html_writer::tag('h4', 'Comprehensive Workforce Check System');
-echo html_writer::tag('p', 'Enter your current workforce data to generate a full compliance check, trainer load analysis, and an auto-generated compliance statement suitable for ASQA audit evidence. All calculations use ASQA-aligned benchmarks. There is no single mandated ratio — ASQA expects RTOs to demonstrate <strong>sufficient</strong> staffing for the load they carry.');
+echo html_writer::tag('p', 'Enter your current workforce data to generate a trainer-load analysis and a workforce-planning summary you can use as a starting point for your own evidence. <strong>The ratios below are indicative planning figures, not ASQA-mandated ratios</strong> — ASQA does not set a single mandated ratio and instead expects each RTO to demonstrate <strong>sufficient</strong> staffing for the load it carries. Adjust the benchmarks to whatever your own TAS and workforce plan justify. This tool does not verify trainer credentials or vocational competency; that verification is done in the Trainer &amp; Assessor Register.');
 echo <<<'HTML'
 <style>
 .wfm-section { background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:1.25rem; margin-top:1rem; }
@@ -175,8 +172,8 @@ echo <<<'HTML'
 <div id="wfm-trainer-output" style="margin-top:1rem;"></div>
 
 <div id="wfm-compliance-section" style="display:none;">
-  <h5 style="margin:1.25rem 0 0.5rem;font-weight:700;color:#374151;">Auto-Generated ASQA Compliance Statement</h5>
-  <p style="font-size:0.88rem;color:#6b7280;margin:0 0 0.5rem;">Copy this text into your TAS (Section 6) or workforce management evidence folder.</p>
+  <h5 style="margin:1.25rem 0 0.5rem;font-weight:700;color:#374151;">Workforce Planning Summary</h5>
+  <p style="font-size:0.88rem;color:#6b7280;margin:0 0 0.5rem;">A draft summary of the figures you entered, to use as a starting point for your own workforce plan or TAS (Section 6). Review it, confirm the numbers, and verify every trainer&#39;s vocational competency in the Trainer &amp; Assessor Register before treating it as evidence.</p>
   <div id="wfm-compliance-text" class="wfm-compliance-text"></div>
 </div>
 
@@ -314,14 +311,14 @@ function wfmRun() {
   // Compliance statement
   var today = new Date().toLocaleDateString('en-AU', {day:'2-digit',month:'long',year:'numeric'});
   var gapUnits = units.filter(function (u){ return u.gap; });
-  var compText = 'WORKFORCE MANAGEMENT COMPLIANCE STATEMENT\n';
+  var compText = 'WORKFORCE PLANNING SUMMARY (DRAFT — for RTO review)\n';
   compText += 'Generated: ' + today + '\n\n';
-  compText += 'The RTO uses a structured workforce management system that continuously monitors student numbers, delivery requirements, assessment load, and trainer capacity in accordance with Standard 3.1 of the Standards for Registered Training Organisations (RTOs) 2025.\n\n';
+  compText += 'This summary supports the RTO\'s workforce planning under Standard 3.1 of the Standards for Registered Training Organisations (RTOs) 2025. It is a planning worksheet based on the figures entered below and does not by itself demonstrate compliance — the RTO must confirm the data and hold the underlying evidence.\n\n';
   compText += 'CURRENT WORKFORCE STATUS\n';
   compText += 'Delivery mode: ' + modeLabel + '\n';
   compText += 'Active trainers/assessors: ' + trainers + '\n';
   compText += 'Enrolled students: ' + students + '\n';
-  compText += 'Current ratio: 1 : ' + ratio.toFixed(1) + ' (benchmark 1 : ' + benchmark + ')\n';
+  compText += 'Current ratio: 1 : ' + ratio.toFixed(1) + ' (indicative planning benchmark 1 : ' + benchmark + ' — not an ASQA-mandated ratio)\n';
   compText += 'Benchmark utilisation: ' + utilisation + '%\n\n';
   compText += 'TRAINER LOAD ANALYSIS\n';
   compText += 'Based on current data, ' + trainersNeeded + ' trainer(s) are required to support delivery. The current workforce of ' + trainers + ' trainer(s) carries an estimated load of ' + hoursPerTrainer.toFixed(1) + ' hours per trainer per week (delivery: ' + deliveryHours + ' hrs, marking weekly avg: ' + markingHours.toFixed(1) + ' hrs [total course marking: ' + totalMarkingHours.toFixed(0) + ' hrs spread over ' + deliveryWeeks + ' weeks], student support: ' + supportHours.toFixed(0) + ' hrs) against a weekly capacity of ' + capacity + ' hours per trainer.\n\n';
@@ -338,12 +335,12 @@ function wfmRun() {
     compText += 'Coverage gaps: ' + gapUnits.length + '\n';
     if (gapUnits.length > 0) {
       compText += 'Gap units: ' + gapUnits.map(function (u){return u.unit;}).join(', ') + '\n';
-      compText += 'ACTION: Recruit or assign a trainer with verified vocational competency for each gap unit listed above.\n';
+      compText += 'ACTION: Assign a trainer to each gap unit and verify their vocational competency in the Trainer & Assessor Register.\n';
     } else {
-      compText += 'All units have a qualified trainer assigned. The RTO has verified vocational competency evidence for each trainer-unit assignment.\n';
+      compText += 'A trainer has been nominated against every unit above. These assignments are self-reported on this page and are NOT verified here — confirm each trainer\'s vocational competency and currency against the Trainer & Assessor Register before relying on this summary.\n';
     }
   }
-  compText += '\nThis statement was generated by the RTO Compliance Management System and is to be retained as evidence of ongoing workforce monitoring.';
+  compText += '\nDRAFT worksheet generated by the RTO Compliance plugin from the figures entered above. It is a planning aid only. On its own it is not audit evidence — the RTO must review the figures, verify trainer credentials in the Trainer & Assessor Register, and retain the supporting records.';
 
   document.getElementById('wfm-compliance-text').textContent = compText;
   document.getElementById('wfm-compliance-section').style.display = 'block';
@@ -356,11 +353,11 @@ echo html_writer::end_div();
 echo html_writer::start_div('', ['style' => 'margin-top:2rem;padding:1.5rem;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;']);
 echo html_writer::tag('h4', 'Related pages', ['style' => 'margin:0 0 0.75rem;color:#0369a1;']);
 echo '<div style="display:flex;flex-wrap:wrap;gap:0.75rem;">';
-echo '<a href="' . (new moodle_url('/local/rtocompliance/trainers.php'))->out() . '" class="btn btn-outline-primary btn-sm">Trainer & Assessor Register</a>';
-echo '<a href="' . (new moodle_url('/local/rtocompliance/supervision.php'))->out() . '" class="btn btn-outline-primary btn-sm">Supervision Log</a>';
-echo '<a href="' . (new moodle_url('/local/rtocompliance/thirdparty.php'))->out() . '" class="btn btn-outline-primary btn-sm">Third-Party Arrangements</a>';
-echo '<a href="' . (new moodle_url('/local/rtocompliance/qualbuilder.php'))->out() . '" class="btn btn-outline-primary btn-sm">Qualification Builder</a>';
-echo '<a href="' . (new moodle_url('/local/rtocompliance/tas.php'))->out() . '" class="btn btn-outline-primary btn-sm">TAS Generator</a>';
+echo '<a href="' . (new moodle_url('/local/rtocompliance/trainers.php'))->out() . '" class="btn btn-outline-primary btn-sm" title="Open the Trainer and Assessor Register, where vocational competency is verified">Trainer & Assessor Register</a>';
+echo '<a href="' . (new moodle_url('/local/rtocompliance/supervision.php'))->out() . '" class="btn btn-outline-primary btn-sm" title="Open the Supervision and Direction Log">Supervision Log</a>';
+echo '<a href="' . (new moodle_url('/local/rtocompliance/thirdparty.php'))->out() . '" class="btn btn-outline-primary btn-sm" title="Open Third-Party Arrangements">Third-Party Arrangements</a>';
+echo '<a href="' . (new moodle_url('/local/rtocompliance/qualbuilder.php'))->out() . '" class="btn btn-outline-primary btn-sm" title="Open the Qualification Builder">Qualification Builder</a>';
+echo '<a href="' . (new moodle_url('/local/rtocompliance/tas.php'))->out() . '" class="btn btn-outline-primary btn-sm" title="Open the TAS Generator">TAS Generator</a>';
 echo '</div>';
 echo html_writer::end_div();
 

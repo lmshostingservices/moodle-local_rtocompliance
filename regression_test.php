@@ -15,13 +15,12 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — regression_test.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Complaint Student Acceptance Test Engine  (local_rtocompliance v5.9.127)
 //
@@ -46,7 +45,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 require_once(dirname(dirname(dirname(__FILE__))) . '/config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
@@ -55,8 +53,7 @@ $PAGE->set_title('Complaint Student Acceptance Tests');
 $PAGE->set_heading('Complaint Student Acceptance Tests');
 
 admin_externalpage_setup('local_rtocompliance_regression_test');
-$context = context_system::instance();
-require_capability('moodle/site:config', $context);
+require_login();
 
 // ─── Helper functions — same algorithm as reconcile.php ──────────────────────
 
@@ -637,6 +634,7 @@ if ($logstoreAvailable) {
 // ─────────────────────────────────────────────────────────────────────────────
 // OUTPUT
 // ─────────────────────────────────────────────────────────────────────────────
+$PAGE->add_body_class('path-local-rtocompliance'); // v5.9.445: scoped CSS needs this on admin_externalpage pages.
 echo $OUTPUT->header();
 local_rtocompliance_render_nav_header();
 echo '<div class="rtoc-main-content" style="max-width:1200px;margin:0 auto;padding:1rem;">';

@@ -15,22 +15,20 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — ai_usage_report.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_ai_usage_report');
-$context = context_system::instance();
-require_capability('moodle/site:config', $context);
+require_login();
 
+require_capability('local/rtocompliance:manage', context_system::instance());
 $PAGE->set_url('/local/rtocompliance/ai_usage_report.php');
 $PAGE->set_title(get_string('ai_usage_report', 'local_rtocompliance'));
 $PAGE->set_heading(get_string('ai_usage_report', 'local_rtocompliance'));
@@ -149,19 +147,19 @@ if ($fetch_error) {
         'This report shows credits consumed by RTO Compliance plugin features only (TAS AI Suggest, ' .
         'Complaints/Appeals AI Draft, Compliance Auditor, Unit Mapping, etc.). ' .
         'Credits used by other AI Grader plugins (AI Grader, AI Knowledge Check, AI Content Creator, etc.) ' .
-        'are not included — check the AI Grader admin portal for a full account-wide credit history.',
+        'are not included — check the LMS-Labs.com admin portal for a full account-wide credit history.',
         ['class' => 'ai-usage-scope-note']
     );
 
     echo html_writer::start_div('ai-usage-stat-grid');
     $cards = [
-        ['Total AI Calls',       $total_calls,             'stat-card'],
-        ['Credits Used',         number_format($total_credits), 'stat-card'],
-        ['Credits Remaining',    number_format($remaining), 'stat-card'],
-        ['Est. Cost (AUD)',       '$' . $aud_cost,          'stat-card'],
+        ['Total AI Calls',       $total_calls,             'stat-card', 'How many times an AI feature was run in this period. Each run is one call.'],
+        ['Credits Used',         number_format($total_credits), 'stat-card', 'Number of AI credits spent so far. Credits are the prepaid units the AI features draw on when they run.'],
+        ['Credits Remaining',    number_format($remaining), 'stat-card', 'AI credits still left to use. When these run out, AI features stop until more credits are added.'],
+        ['Est. Cost (AUD)',       '$' . $aud_cost,          'stat-card', 'Rough dollar value of the credits used so far, in Australian dollars. An estimate, not an exact bill.'],
     ];
-    foreach ($cards as [$label, $value, $cls]) {
-        echo html_writer::start_div('ai-usage-stat-card ' . $cls);
+    foreach ($cards as [$label, $value, $cls, $tip]) {
+        echo html_writer::start_div('ai-usage-stat-card ' . $cls, ['title' => $tip]);
         echo html_writer::tag('div', s((string)$value), ['class' => 'stat-value']);
         echo html_writer::tag('div', $label, ['class' => 'stat-label']);
         echo html_writer::end_div();
@@ -190,7 +188,7 @@ if ($fetch_error) {
                 'ai-usage-bar'
             );
             echo html_writer::start_tag('tr');
-            echo html_writer::tag('td', html_writer::tag('strong', s($row['label'] ?? $row['usageType'])));
+            echo html_writer::tag('td', html_writer::tag('strong', s($row['label'] ?? ($row['usageType'] ?? '')))); // v5.9.368: guard both keys
             echo html_writer::tag('td', number_format($calls));
             echo html_writer::tag('td', number_format($credits));
             echo html_writer::tag('td', '$' . number_format($credits * 0.10, 2));
@@ -283,7 +281,7 @@ require(['core/chartjs'], function (Chart) {
         foreach ($recent as $row) {
             echo html_writer::start_tag('tr');
             echo html_writer::tag('td', s($row['ts'] ?? ''), ['style' => 'font-family:monospace;font-size:0.85rem;color:#6b7280;']);
-            echo html_writer::tag('td', s($row['label'] ?? $row['usageType']));
+            echo html_writer::tag('td', s($row['label'] ?? ($row['usageType'] ?? ''))); // v5.9.368: guard both keys
             echo html_writer::tag('td', number_format((int)($row['credits'] ?? 0)));
             echo html_writer::end_tag('tr');
         }

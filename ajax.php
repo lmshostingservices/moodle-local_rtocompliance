@@ -15,13 +15,12 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — ajax.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 define('AJAX_SCRIPT', true);
 require_once(__DIR__ . '/../../config.php');
 $PAGE->set_context(context_system::instance());
@@ -374,7 +373,7 @@ if ($action === 'generate_resolution') {
 //   - tas_consultation.php "AI Generate Assessment Impact"(context=consult_impact_assessment)
 if ($action === 'ai_draft_text') {
     $contexttype = optional_param('contexttype', '', PARAM_ALPHANUMEXT);
-    $seed        = optional_param_array('seed', [], PARAM_RAW); // pipeline-ignore: PARAM_RAW — array of mixed AI seed values (strings/numbers) passed directly to json_encode; sanitised before any DB write
+    $seed        = optional_param_array('seed', [], PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text AI prompt seeds; keys cleaned with PARAM_ALPHANUMEXT and values capped to 1KB immediately below.
 
     // Sanitise seed values (cap each to 1KB so prompts stay reasonable).
     $clean = [];
@@ -423,38 +422,52 @@ if ($action === 'ai_draft_text') {
         $prompt .= "Explain what vocational skills were applied or maintained through this activity and how they directly relate to the units of competency in the qualification(s) being delivered. ";
         $prompt .= "Use Australian English and an objective professional tone (no first-person pronouns, no placeholders). 80-150 words.";
     } else if ($contexttype === 'consult_feedback') {
-        $prompt  = "You are an Australian RTO compliance officer drafting the 'Key Feedback' summary section of an industry consultation record (ASQA Standards 2025 clauses 1.4 / 4.1).\n\n";
-        $prompt .= "CONSULTATION DETAILS:\n";
+        // TAS-PROMPT-2025 (v6.2.38): correct clause (Industry Engagement is Standard 1.2 under
+        // the 2025 Standards, not 1.4/4.1), grounded-only (no fabricated consensus), with a
+        // mandatory human-review disclaimer per ASQA's responsible-AI expectations.
+        $prompt  = "You are assisting an Australian RTO to record the KEY FEEDBACK actually given by an industry/employer representative during genuine industry engagement (2025 Standards for RTOs, Quality Area 1, Standard 1.2 Industry Engagement).\n\n";
+        $prompt .= "CONSULTATION DETAILS (use ONLY what is provided — do NOT invent findings, statistics, names or quotes):\n";
         if (!empty($clean['participantname']))  { $prompt .= "Industry Representative: " . $clean['participantname'] . "\n"; }
         if (!empty($clean['participantorg']))   { $prompt .= "Organisation: " . $clean['participantorg'] . "\n"; }
         if (!empty($clean['participantrole']))  { $prompt .= "Role: " . $clean['participantrole'] . "\n"; }
         if (!empty($clean['consultationmethod'])) { $prompt .= "Consultation Method: " . $clean['consultationmethod'] . "\n"; }
         if (!empty($clean['qualification']))    { $prompt .= "Qualification: " . $clean['qualification'] . "\n"; }
-        if (!empty($clean['categories']))       { $prompt .= "Feedback Themes Identified: " . $clean['categories'] . "\n"; }
-        $prompt .= "\nWrite a concise 3-5 sentence summary of the key feedback the industry representative provided. ";
-        $prompt .= "Reflect their perspective (third person), reference the themes selected above, and tie the feedback to job-readiness for the qualification's target roles. ";
-        $prompt .= "Australian English, professional tone, no placeholders. 80-150 words.";
+        if (!empty($clean['categories']))       { $prompt .= "Feedback themes the RTO ticked: " . $clean['categories'] . "\n"; }
+        $prompt .= "\nWrite a 3-5 sentence, third-person summary of THIS representative's feedback, grounded strictly in the details above. ";
+        $prompt .= "If no substantive feedback themes are supplied, do NOT fabricate consensus — instead write a neutral line such as 'The representative was consulted on [topic]; specific feedback to be recorded by the RTO.' ";
+        $prompt .= "Do not claim industry-wide agreement from a single contact. Australian English, professional tone, no placeholders, 80-150 words. ";
+        $prompt .= "End with: 'This is an AI-assisted draft and must be reviewed and verified against the actual consultation record by RTO staff before use.'";
     } else if ($contexttype === 'consult_impact_training') {
-        $prompt  = "You are an Australian RTO compliance officer drafting the 'Impact on Training Delivery' section of an industry consultation record (ASQA Standards 2025 clauses 1.4 / 1.5 / 4.1).\n\n";
-        $prompt .= "CONSULTATION CONTEXT:\n";
+        // TAS-PROMPT-2025 (v6.2.38): Training strategy is Standard 1.1 + Industry Engagement 1.2
+        // (not 1.4/1.5/4.1); require online/blended human touchpoints; never assert changes are
+        // already done unless the input says so; human-review disclaimer.
+        $prompt  = "You are assisting an Australian RTO to document how verified industry feedback will change TRAINING DELIVERY (2025 Standards for RTOs, Quality Area 1, Standard 1.1 Training and assessment strategies and practices; Standard 1.2 Industry Engagement).\n\n";
+        $prompt .= "CONTEXT (use ONLY what is provided):\n";
         if (!empty($clean['qualification']))   { $prompt .= "Qualification: " . $clean['qualification'] . "\n"; }
-        if (!empty($clean['feedback']))        { $prompt .= "Feedback Received: " . $clean['feedback'] . "\n"; }
-        if (!empty($clean['categories']))      { $prompt .= "Training-Delivery Strategies Selected: " . $clean['categories'] . "\n"; }
-        $prompt .= "\nWrite a concise 3-5 sentence statement explaining how the feedback will be incorporated into training delivery. ";
-        $prompt .= "Be specific about the strategies selected (e.g. scenario-based learning, workplace simulations, guest speakers) and tie each strategy to a unit-of-competency outcome. ";
-        $prompt .= "Australian English, future-tense action voice (\"the RTO will...\"), no placeholders. 80-150 words.";
+        if (!empty($clean['feedback']))        { $prompt .= "Verified feedback: " . $clean['feedback'] . "\n"; }
+        if (!empty($clean['categories']))      { $prompt .= "Delivery strategies the RTO selected: " . $clean['categories'] . "\n"; }
+        $prompt .= "\nWrite a 3-5 sentence statement in future action voice (\"the RTO will...\") linking EACH selected strategy to a specific unit/skill outcome of the training product. ";
+        $prompt .= "For online or blended delivery, state the human touchpoints and supervision that keep delivery authentic (scheduled live sessions, trainer check-ins). ";
+        $prompt .= "Do not assert changes have already been made unless the input says so. Australian English, no placeholders, 80-150 words. ";
+        $prompt .= "End with: 'AI-assisted draft — review and confirm against the RTO's actual training plan before saving.'";
     } else if ($contexttype === 'consult_impact_assessment') {
-        $prompt  = "You are an Australian RTO compliance officer drafting the 'Impact on Assessment Design' section of an industry consultation record (ASQA Standards 2025 clauses 1.8 / 1.12 / 4.1).\n\n";
-        $prompt .= "CONSULTATION CONTEXT:\n";
+        // TAS-PROMPT-2025 (v6.2.38): Assessment is Standards 1.3 (consistent with the product),
+        // 1.4 (principles + rules of evidence) and 1.5 (validation) — not 1.8/1.12/4.1. Add the
+        // rules of evidence + authenticity/AI-integrity; never assert tools already changed;
+        // human-review disclaimer.
+        $prompt  = "You are assisting an Australian RTO to document how verified industry feedback will change ASSESSMENT (2025 Standards for RTOs, Quality Area 1: Standard 1.3 assessment consistent with the training product; Standard 1.4 principles of assessment and rules of evidence; Standard 1.5 validation).\n\n";
+        $prompt .= "CONTEXT (use ONLY what is provided):\n";
         if (!empty($clean['qualification']))   { $prompt .= "Qualification: " . $clean['qualification'] . "\n"; }
-        if (!empty($clean['feedback']))        { $prompt .= "Feedback Received: " . $clean['feedback'] . "\n"; }
-        if (!empty($clean['categories']))      { $prompt .= "Assessment-Design Strategies Selected: " . $clean['categories'] . "\n"; }
-        $prompt .= "\nWrite a concise 3-5 sentence statement explaining how the feedback will be incorporated into assessment design. ";
-        $prompt .= "Be specific about the strategies selected (e.g. workplace observation, third-party reports, portfolios) and the principles of assessment (validity, reliability, fairness, flexibility) they reinforce. ";
-        $prompt .= "Australian English, future-tense action voice, no placeholders. 80-150 words.";
+        if (!empty($clean['feedback']))        { $prompt .= "Verified feedback: " . $clean['feedback'] . "\n"; }
+        if (!empty($clean['categories']))      { $prompt .= "Assessment strategies the RTO selected: " . $clean['categories'] . "\n"; }
+        $prompt .= "\nWrite a 3-5 sentence statement tying each selected strategy to the principles of assessment (fairness, flexibility, validity, reliability) and the rules of evidence (valid, sufficient, authentic, current). ";
+        $prompt .= "Where relevant, note how authenticity is assured (that evidence is the student's own work, not plagiarised or AI-generated) and how any change will be validated. Do not state that tools have already been changed unless the input says so. ";
+        $prompt .= "Australian English, no placeholders, 80-150 words. End with: 'AI-assisted draft — an assessment-competent person must review and validate before use.'";
     } else if ($contexttype === 'transitionplan') {
         // FEAT-TRANSITION-AI (v4.4.69): AI Generate button for Transition Plan.
-        $prompt  = "You are an Australian RTO compliance officer drafting a qualification teach-out and transition plan (Standard 1.12 of the Standards for RTOs 2025).\n\n";
+        // TAS-PROMPT-2025 (v6.2.38): there is no "Standard 1.12" in the 2025 Standards — cite
+        // the training-product transition requirements under the VET Quality Framework instead.
+        $prompt  = "You are an Australian RTO compliance officer drafting a qualification teach-out and transition plan (training-product transition requirements under the VET Quality Framework and the 2025 Standards for RTOs).\n\n";
         $prompt .= "TRANSITION DETAILS:\n";
         if (!empty($clean['oldproductcode']))    { $prompt .= "Superseded Qualification Code: " . $clean['oldproductcode'] . "\n"; }
         if (!empty($clean['oldproductname']))    { $prompt .= "Superseded Qualification Name: " . $clean['oldproductname'] . "\n"; }
@@ -597,6 +610,161 @@ if ($action === 'ai_draft_text') {
     } else {
         echo json_encode(['success' => false, 'error' => ($result['error'] ?: 'AI generation failed — please try again.')]);
     }
+    exit;
+}
+
+// ── Issue certificate from Student Results page ───────────────────────────────
+// TASK-45 (v5.9.345): AJAX endpoint called by "Issue Certificate" button on
+// qualbuilder_results.php. Accepts userid + qualbuilderid, resolves cert types
+// based on product type (testamur+record for qualifications, statement for skill
+// sets/single units), checks for existing certs, and calls
+// local_rtocompliance_programmatic_issue_cert() for each required cert type.
+if ($action === 'issue_cert_from_results') {
+    $userid       = required_param('userid',       PARAM_INT);
+    $qualbuilderid = required_param('qualbuilderid', PARAM_INT);
+
+    require_once(__DIR__ . '/lib.php');
+
+    // Load the qualification record.
+    $qual = $DB->get_record('local_rtocompliance_qualbuilder', ['id' => $qualbuilderid]);
+    if (!$qual) {
+        echo json_encode(['success' => false, 'error' => 'Qualification not found']);
+        exit;
+    }
+
+    $user = core_user::get_user($userid);
+    if (!$user) {
+        echo json_encode(['success' => false, 'error' => 'User not found']);
+        exit;
+    }
+
+    // Resolve the student record (needed for unit outcome lookup).
+    $studentrec = $DB->get_record('local_rtocompliance_students', ['userid' => $userid], 'id', IGNORE_MISSING);
+
+    // Determine which cert types to issue.
+    $isqualification = ($qual->producttype === 'qualification');
+    $certtypes = $isqualification ? ['testamur', 'record'] : ['statement'];
+
+    // Verify the student is actually complete (all selected units have a
+    // competent outcome) before issuing — guards against button being shown
+    // in edge cases or direct AJAX calls.
+    $allunits = $DB->get_records('local_rtocompliance_qualunits', [
+        'qualbuilderid' => $qualbuilderid, 'selected' => 1], 'unittype ASC, unitcode ASC');
+    if (!empty($allunits)) {
+        $isComplete = $DB->record_exists_sql(
+            "SELECT 1 FROM {local_rtocompliance_qualunits} qu
+              WHERE qu.qualbuilderid = :qbid
+                AND qu.selected = 1
+                AND NOT EXISTS (
+                    SELECT 1 FROM {local_rtocompliance_enrolments} e2
+                     WHERE e2.studentid = :studentid
+                       AND e2.unitcode = qu.unitcode
+                       AND e2.outcomeidentifier IN ('20','51','60','81')
+                )",
+            ['qbid' => $qualbuilderid, 'studentid' => $studentrec ? $studentrec->id : -1]
+        );
+        // EXISTS returns true = there IS a unit without a final outcome → not complete.
+        if ($isComplete) {
+            echo json_encode(['success' => false, 'error' => 'Student has not yet completed all units']);
+            exit;
+        }
+    }
+
+    // Build unit list with per-student outcomes for the cert.
+    $unitsForCert = [];
+    if ($studentrec) {
+        $unitsForCert = local_rtocompliance_get_qualbuilder_unit_list_with_outcomes($qualbuilderid, $studentrec->id);
+    }
+    if (empty($unitsForCert)) {
+        // Fallback: plain unit list with outcome '20'.
+        foreach ($allunits as $u) {
+            $unitsForCert[] = ['code' => $u->unitcode, 'name' => $u->unitname, 'outcome' => '20'];
+        }
+    }
+
+    \core\session\manager::write_close();
+
+    $issued  = [];
+    $skipped = [];
+    $errors  = [];
+
+    foreach ($certtypes as $certtype) {
+        // Skip if a non-superseded cert already exists for this qual + type.
+        $existing = $DB->get_record_sql(
+            "SELECT id, certnumber, issuedate
+               FROM {local_rtocompliance_certs}
+              WHERE userid            = :userid
+                AND certtype          = :certtype
+                AND qualificationcode = :qualcode
+                AND status            = 'issued'
+                AND (reissued_at IS NULL OR reissued_at = 0)
+              LIMIT 1",
+            ['userid' => $userid, 'certtype' => $certtype, 'qualcode' => $qual->qualificationcode]
+        );
+        if ($existing) {
+            $skipped[] = [
+                'certtype'   => $certtype,
+                'certnumber' => $existing->certnumber,
+                'issuedate'  => userdate($existing->issuedate, get_string('strftimedate', 'core_langconfig')),
+            ];
+            continue;
+        }
+
+        $result = local_rtocompliance_programmatic_issue_cert(
+            $userid,
+            $certtype,
+            $qual->qualificationcode,
+            $qual->qualificationname,
+            $unitsForCert,
+            time(),
+            'default',
+            1,  // send email
+            0   // timecompleted unknown here
+        );
+
+        if ($result['ok']) {
+            $issued[] = [
+                'certtype'   => $certtype,
+                'certnumber' => $result['certnumber'],
+                'certid'     => $result['certid'],
+                'issuedate'  => userdate(time(), get_string('strftimedate', 'core_langconfig')),
+            ];
+            // Mark autocert queue row complete if one exists.
+            if ($studentrec) {
+                $autocertrow = $DB->get_record('local_rtocompliance_autocerts', [
+                    'studentid'     => $studentrec->id,
+                    'qualbuilderid' => $qualbuilderid,
+                    'status'        => 'pending',
+                ]);
+                if ($autocertrow) {
+                    $DB->update_record('local_rtocompliance_autocerts', (object)[
+                        'id'            => $autocertrow->id,
+                        'status'        => 'complete',
+                        'timeprocessed' => time(),
+                        'certsissued'   => ($autocertrow->certsissued ?? 0) + 1,
+                    ]);
+                }
+            }
+        } elseif ($result['error'] === 'INSUFFICIENT_CREDITS') {
+            echo json_encode(['success' => false, 'error' => 'Insufficient credits to issue certificate']);
+            exit;
+        } else {
+            $errors[] = $certtype . ': ' . ($result['error'] ?? 'unknown error');
+        }
+    }
+
+    if (!empty($errors) && empty($issued)) {
+        echo json_encode(['success' => false, 'error' => implode('; ', $errors)]);
+        exit;
+    }
+
+    echo json_encode([
+        'success'    => true,
+        'issued'     => $issued,
+        'skipped'    => $skipped,
+        'errors'     => $errors,
+        'studentname' => fullname($user),
+    ]);
     exit;
 }
 

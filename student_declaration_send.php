@@ -15,13 +15,12 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — student_declaration_send.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 // student_declaration_send.php — Send a Student Declaration to selected students.
 // FIX-RTO-DECL-SELECT (v4.0.78): replaced "send to all N students" button with a
 // checkbox-selection table so admin can target 1 or more specific students.
@@ -29,11 +28,11 @@
 // POST now accepts userids[] (selected array) instead of userid=0 (all).
 
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_students');
+require_login();
 require_capability('local/rtocompliance:manage', context_system::instance());
 
 // userid is kept for single-student shortcut (called from student profile page).
@@ -105,8 +104,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && confirm_sesskey()) {
 
     // Accept either userids[] (new multi-select) or legacy single userid.
     $raw_ids = [];
-    if (!empty(optional_param_array('userids', [], PARAM_INT)) && is_array(optional_param_array('userids', [], PARAM_INT))) {
-        foreach (optional_param_array('userids', [], PARAM_INT) as $raw) {
+    $postedids = optional_param_array('userids', [], PARAM_INT);
+    if (!empty($postedids)) {
+        foreach ($postedids as $raw) {
             $i = (int)$raw;
             if ($i > 0) {
                 $raw_ids[] = $i;
@@ -214,6 +214,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && confirm_sesskey()) {
 // ── Render the page ──────────────────────────────────────────────────────────
 echo $OUTPUT->header();
 echo local_rtocompliance_render_nav_header('Send Student Declaration', get_string('students', 'local_rtocompliance'), '/local/rtocompliance/students.php', 'students');
+echo local_rtocompliance_page_banner('Send Student Declaration');
 echo html_writer::start_div('compliance-container');
 echo html_writer::tag('h2', 'Student Declaration — Pre-Enrolment Obligations');
 

@@ -15,14 +15,18 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — observer.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 defined('MOODLE_INTERNAL') || die();
+
+// COURSE-MAP-FIX (v5.9.338): lib.php must be explicitly loaded because observer
+// callbacks fire before Moodle's callback scanner auto-loads plugin lib files.
+// detect_qualcode_from_category_ancestors() and seed_course_map() live in lib.php.
+require_once(__DIR__ . '/../lib.php');
 
 class local_rtocompliance_observer {
     public static function course_deleted(\core\event\course_deleted $event) {
@@ -89,15 +93,31 @@ class local_rtocompliance_observer {
                 // Not the primary course — check the archive courses junction table.
                 // This allows enrolments in archive semester courses to also trigger
                 // AVETMISS record creation (ARCHIVE-COURSE-LINKING v5.2.37).
+                // COURSE-MAP-FIX (v5.9.338): previously when qualunit_courses table was
+                // absent the observer returned immediately, bypassing the course_map
+                // lookup entirely. Fixed: treat "table absent" and "course not in table"
+                // identically — both fall through to the course_map / BFS check.
                 static $qualunit_courses_table_exists = null;
                 if ($qualunit_courses_table_exists === null) {
                     $qualunit_courses_table_exists = $DB->get_manager()->table_exists('local_rtocompliance_qualunit_courses');
                 }
-                if (!$qualunit_courses_table_exists) {
-                    return;
-                }
-                if (!$DB->record_exists('local_rtocompliance_qualunit_courses', ['courseid' => $event->courseid])) {
-                    return;
+                $notInVariants = !$qualunit_courses_table_exists ||
+                    !$DB->record_exists('local_rtocompliance_qualunit_courses', ['courseid' => $event->courseid]);
+                if ($notInVariants) {
+                    // Not in QB primary, not in variant links — check course_map table
+                    // (single indexed lookup), then BFS ancestor walk as last resort.
+                    static $course_map_table_exists_c = null;
+                    if ($course_map_table_exists_c === null) {
+                        $course_map_table_exists_c = $DB->get_manager()->table_exists('local_rtocompliance_course_map');
+                    }
+                    $knownToMap = $course_map_table_exists_c &&
+                        $DB->record_exists('local_rtocompliance_course_map', ['courseid' => $event->courseid]);
+                    if (!$knownToMap) {
+                        // Map miss — fall back to BFS ancestor chain.
+                        if (local_rtocompliance_detect_qualcode_from_category_ancestors($event->courseid) === '') {
+                            return;
+                        }
+                    }
                 }
             }
         }
@@ -144,16 +164,29 @@ class local_rtocompliance_observer {
                 return;
             }
             if (!$DB->record_exists('local_rtocompliance_qualunits', ['courseid' => $event->courseid])) {
-                // Not primary — check archive junction table (ARCHIVE-COURSE-LINKING v5.2.37).
+                // Not a QB primary course. Check variant links, course_map, then BFS.
+                // COURSE-MAP-FIX (v5.9.338 revised): previously had an early return when
+                // qualunit_courses table was absent — that bypassed the course_map lookup.
+                // Now: absent table is treated identically to "course not in table", so
+                // the combined condition flows straight to course_map / BFS.
                 static $qualunit_courses_del_table_exists = null;
                 if ($qualunit_courses_del_table_exists === null) {
                     $qualunit_courses_del_table_exists = $DB->get_manager()->table_exists('local_rtocompliance_qualunit_courses');
                 }
-                if (!$qualunit_courses_del_table_exists) {
-                    return;
-                }
-                if (!$DB->record_exists('local_rtocompliance_qualunit_courses', ['courseid' => $event->courseid])) {
-                    return;
+                $notInVariantsDel = !$qualunit_courses_del_table_exists ||
+                    !$DB->record_exists('local_rtocompliance_qualunit_courses', ['courseid' => $event->courseid]);
+                if ($notInVariantsDel) {
+                    static $course_map_table_exists_d = null;
+                    if ($course_map_table_exists_d === null) {
+                        $course_map_table_exists_d = $DB->get_manager()->table_exists('local_rtocompliance_course_map');
+                    }
+                    $knownToMapD = $course_map_table_exists_d &&
+                        $DB->record_exists('local_rtocompliance_course_map', ['courseid' => $event->courseid]);
+                    if (!$knownToMapD) {
+                        if (local_rtocompliance_detect_qualcode_from_category_ancestors($event->courseid) === '') {
+                            return;
+                        }
+                    }
                 }
             }
         }
@@ -283,6 +316,55 @@ class local_rtocompliance_observer {
                 'courseid' => $courseid,
             ]);
         }
+    }
+
+    /**
+     * LOGIN-PROFILE-PROMPT (v5.9.314)
+     *
+     * Fires on every successful login. If the user is enrolled in nationally
+     * recognised training and their AVETMISS profile is missing or incomplete,
+     * we set a session flag. The flag is consumed by
+     * local_rtocompliance_extend_navigation() in lib.php, which runs after
+     * require_login() on the first real page the user lands on — at that point
+     * redirect() is safe to call because no output has been written yet.
+     *
+     * We do NOT redirect directly from here: event observers fire inside the
+     * login request before the session cookie has been finalised and the
+     * browser redirected to the wantsurl, so a redirect() here would race
+     * against Moodle's own post-login redirect and could drop the user on a
+     * blank page on some server configurations.
+     *
+     * Skipped for: guest users, site admins, users with no nationally recognised
+     * enrolments, and users whose profile is already complete.
+     */
+    public static function user_loggedin(\core\event\user_loggedin $event): void {
+        global $DB, $SESSION;
+        require_once(__DIR__ . '/../lib.php');
+
+        $userid = (int)$event->objectid;
+
+        // Never prompt guests or site admins.
+        if (isguestuser($userid) || is_siteadmin($userid)) {
+            return;
+        }
+
+        // Only relevant for students in nationally recognised training.
+        if (!local_rtocompliance_user_requires_avetmiss($userid)) {
+            return;
+        }
+
+        // Profile exists and is already complete — nothing to do.
+        $student = $DB->get_record(
+            'local_rtocompliance_students',
+            ['userid' => $userid],
+            'id, profilecomplete'
+        );
+        if ($student && (int)$student->profilecomplete === 1) {
+            return;
+        }
+
+        // Flag is read and consumed by local_rtocompliance_extend_navigation().
+        $SESSION->local_rtocompliance_needs_profile = 1;
     }
 
     /**

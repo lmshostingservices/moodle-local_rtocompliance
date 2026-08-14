@@ -15,13 +15,12 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — bulk_action_cert.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 // v4.2.37 BULK-CERT-ACTIONS — POST endpoint for bulk operations on certificates.
 //
 // Three actions exposed via the certificates.php floating action bar after the
@@ -130,7 +129,7 @@ $classify = function ($r) use ($studentsTableExists) {
     }
     if (in_array($r->certtype, ['testamur', 'statement'], true)
         && $studentsTableExists
-        && empty($r->usiverified)) {
+        && !local_rtocompliance_usi_is_verified($r->usiverified)) {
         $reasons[] = 'usi_unverified';
     }
     return $reasons;
@@ -373,7 +372,7 @@ if ($action === 'export_csv') {
             $r->issuedate ? userdate($r->issuedate, '%Y-%m-%d') : '',
             !empty($r->expirydate) ? userdate($r->expirydate, '%Y-%m-%d') : '',
             $studentsTableExists ? ($r->usi ?? '') : '',
-            $studentsTableExists ? (!empty($r->usiverified) ? 'Yes' : 'No') : '',
+            $studentsTableExists ? (local_rtocompliance_usi_is_verified($r->usiverified) ? 'Yes' : 'No') : '',
             !empty($r->emailsent) ? 'Yes' : 'No',
             !empty($r->emailsentdate) ? userdate($r->emailsentdate, '%Y-%m-%d %H:%M') : '',
             $r->status,

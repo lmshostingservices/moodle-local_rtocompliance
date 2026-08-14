@@ -15,19 +15,17 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — refresh_compliance_metrics_task.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 namespace local_rtocompliance\task;
 
 defined('MOODLE_INTERNAL') || die();
 
 class refresh_compliance_metrics_task extends \core\task\scheduled_task {
-    
     public function get_name() {
         return get_string('task_refresh_metrics', 'local_rtocompliance');
     }

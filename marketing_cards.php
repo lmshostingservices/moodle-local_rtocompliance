@@ -15,21 +15,18 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — marketing_cards.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_marketing_info');
-$context = context_system::instance();
-require_capability('moodle/site:config', $context);
+require_login();
 $PAGE->set_url('/local/rtocompliance/marketing_cards.php');
 $PAGE->set_title('Standard 2.1 — Pre-Enrolment Information Cards');
 $PAGE->set_heading('Standard 2.1 — Pre-Enrolment Information Cards');

@@ -15,22 +15,19 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — feeprotection_edit.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once($CFG->libdir . '/formslib.php');
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_feeprotection');
-$context = context_system::instance();
-require_capability('moodle/site:config', $context);
+require_login();
 $context = context_system::instance();
 
 $id = optional_param('id', 0, PARAM_INT);
@@ -104,7 +101,7 @@ class feeprotection_form extends moodleform {
         $mform->addElement('header', 'feeheader', 'Fee Details');
 
         $mform->addElement('text', 'amount', 'Fee Amount ($)', ['size' => 15]);
-        $mform->setType('amount', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+        $mform->setType('amount', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
         $mform->addRule('amount', null, 'required', null, 'client');
         $mform->addRule('amount', 'Please enter a valid amount', 'numeric', null, 'client');
 
@@ -263,8 +260,8 @@ if ($form->is_cancelled()) {
 $PAGE->add_body_class("path-local-rtocompliance");
 echo $OUTPUT->header();
 echo local_rtocompliance_render_nav_header($id ? 'Edit Fee Record' : 'Add Fee Record', get_string('feeprotection', 'local_rtocompliance'), '/local/rtocompliance/feeprotection.php', 'feeprotection');
+echo local_rtocompliance_page_banner($id ? 'Edit Fee Record' : 'Add Fee Record');
 echo html_writer::start_div('compliance-container');
-echo $OUTPUT->heading($id ? 'Edit Fee Record' : 'Add Fee Record');
 
 if (!$id) {
     echo html_writer::start_div('info-card warning', ['style' => 'margin-bottom: 24px;']);

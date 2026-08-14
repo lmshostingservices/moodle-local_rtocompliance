@@ -15,13 +15,12 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — foe_audit.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 // ─────────────────────────────────────────────────────────────────────────────
 // FOE Forensic Audit Tool — foe_audit.php
 // Replays the exact Fix Over-Enrolments comparison pipeline for ONE student,
@@ -30,16 +29,16 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_data_import');
+require_login();
 require_capability('local/rtocompliance:manage', context_system::instance());
 \core\session\manager::write_close();
 
 $importid = (int)optional_param('importid', 0, PARAM_INT);
-$clientid = strtolower(trim(optional_param('clientid', '', PARAM_RAW))); // pipeline-ignore: PARAM_RAW -- text/JSON param; sanitised before use
+$clientid = strtolower(trim(optional_param('clientid', '', PARAM_RAW))); // pipeline-ignore: PARAM_RAW — free-text payload; sanitised/validated immediately after read, never echoed raw.
 
 // ── Non-continuing outcome codes (must match data_import.php exactly) ─────────
 // FOE-OUTCOME-30-RESTORED (v5.9.100): 30 re-added after v5.9.84 removed it.
@@ -83,7 +82,9 @@ function _foa_warn(string $msg): string {
 }
 function _foa_h(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
 
+$PAGE->add_body_class('path-local-rtocompliance'); // v5.9.445: scoped CSS needs this on admin_externalpage pages.
 echo $OUTPUT->header();
+echo local_rtocompliance_render_nav_header('Over-Enrolment Audit'); // v5.9.404: add sidebar.
 echo '<h2 style="margin-bottom:0.2rem;">&#128270; FOE Forensic Audit Tool</h2>';
 echo '<p class="text-muted" style="margin-bottom:1.5rem;font-size:0.93em;">Replays the exact Fix Over-Enrolments comparison for one student. <strong>Read-only. No data is changed.</strong></p>';
 
@@ -267,7 +268,7 @@ foreach ($allStudentUnits as $_uc => $_oc) {
     $ncLabel = $ncFlag
         ? '<span style="color:#dc3545;font-weight:600;">YES → CRITERION 2 FIRES → REMOVE</span>'
         : '<span style="color:#155724;">No — safe</span>';
-    $ocMean  = $NC_LABELS[$_oc] ?? ($_oc === '70' ? 'Continuing enrolment (safe)' : ($_oc === '' ? '<em>empty — unknown/safe</em>' : 'Unknown code'));
+    $ocMean  = $NC_LABELS[$_oc] ?? ($_oc === '70' ? 'Continuing activity (safe)' : ($_oc === '' ? '<em>empty — unknown/safe</em>' : 'Unknown code'));
     echo '<tr>';
     echo '<td>' . $_s2n++ . '</td>';
     echo '<td><code>' . _foa_h($_uc) . '</code></td>';
@@ -497,7 +498,7 @@ if (!empty($_removeRows)) {
         }
         echo '</table>';
 
-        // Did a near-match exist? (e.g. TLIX5046 vs TLIX5046A)
+        // Did a near-match exist? (e.g. ABC12345 vs ABC12345)
         $_nearMatches = [];
         foreach ($allStudentUnits as $_availUc => $_availOc) {
             if ($_availUc !== $reqUc && (

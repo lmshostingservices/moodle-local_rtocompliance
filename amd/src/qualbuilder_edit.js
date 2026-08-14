@@ -12,7 +12,7 @@
  *
  * @module local_rtocompliance/qualbuilder_edit
  */
-define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/notification'], function($, ajax, notification) {
+define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/notification'], function ($, ajax, notification) {
     'use strict';
 
     /**
@@ -61,7 +61,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         pointsSystem:          !!(INIT.product && INIT.product.electiverules && INIT.product.electiverules.pointsSystem),
         corePointsRequired:    (INIT.product && INIT.product.electiverules && INIT.product.electiverules.corePointsRequired) || 0,
         electivePointsRequired:(INIT.product && INIT.product.electiverules && INIT.product.electiverules.electivePointsRequired) || 0,
-        currentUnits:  (INIT.existingUnits || []).map(function(u) {
+        currentUnits:  (INIT.existingUnits || []).map(function (u) {
             return {
                 id: u[0] || 0,
                 unitcode: u[1] || '',
@@ -80,22 +80,25 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         suggestedCategoryId: 0,
         tgaLoaded: false,
         wwwroot: INIT.wwwroot,
+        // NOMINAL HOURS PHASE 2 (v5.9.421): batch endpoint for authoritative per-unit hours.
+        endpointNominal: INIT.nominalHoursEndpoint || '',
+        nominalFilled: false,   // guard so the auto-fill only runs once per unit-set change
     };
 
     // ===== SEMESTER PICKER HELPER =====
     // Picks the best default semester from a list of category children.
     // Strategy: skip "Archive" folders, then sort by name DESCENDING so "S2" > "S1",
-    // "Term 2" > "Term 1", "26 DIFF S2" > "26 DIFF S1", etc.
+    // "Term 2" > "Term 1", "26 PQR S2" > "26 PQR S1", etc.
     // Falls back to all children (including archives) if everything is archived.
     // Never uses category ID as a tiebreaker — Moodle assigns IDs in creation order,
     // which has no relationship to delivery order (S1 can be created after S2).
     function pickDefaultSemester(semKids) {
         if (!semKids || !semKids.length) return null;
-        var active = semKids.filter(function(c) {
+        var active = semKids.filter(function (c) {
             return c.name.toLowerCase().indexOf('archive') === -1;
         });
         var pool = active.length ? active : semKids;
-        var sorted = pool.slice().sort(function(a, b) {
+        var sorted = pool.slice().sort(function (a, b) {
             return a.name < b.name ? 1 : a.name > b.name ? -1 : 0;
         });
         return sorted[0];
@@ -118,7 +121,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
             // We read it back here, populate the semester dropdown, and if the saved
             // categoryid was itself a child (semester), select it in the semester dropdown.
             if (QB.categoryid && QB.categoryTree.length) {
-                var savedCat = QB.categoryTree.find(function(c) { return c.id === QB.categoryid; });
+                var savedCat = QB.categoryTree.find(function (c) { return c.id === QB.categoryid; });
                 if (savedCat && savedCat.parent === 0) {
                     // Saved value IS a root category
                     $('#qb-qualcat-root').val(QB.categoryid);
@@ -126,7 +129,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
                     // Auto-select the most recent (highest-ID) semester child so that
                     // QB.semesterid is non-zero before loadFromTGA fires mapAllCourses.
                     // Without this, semid=0 causes cross-semester pool pollution.
-                    var setupSemKids = QB.categoryTree.filter(function(c) { return c.parent === QB.categoryid; });
+                    var setupSemKids = QB.categoryTree.filter(function (c) { return c.parent === QB.categoryid; });
                     var setupDefault = pickDefaultSemester(setupSemKids);
                     if (setupDefault) {
                         QB.semesterid = setupDefault.id;
@@ -136,14 +139,14 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
                     // savedCat.parent > 0 can mean two things:
                     // (a) savedCat is a leaf semester  → root = savedCat.parent
                     // (b) savedCat is a nested qual root (has children but parent != 0)
-                    //     e.g. "Diploma Int'l Freight Fwding" nested under "Miscellaneous"
+                    //     e.g. "Diploma a qualification" nested under "Miscellaneous"
                     // Distinguish using the same hasChildren test used in acceptCategoryAndMapAll.
-                    var savedHasChildren = QB.categoryTree.some(function(c) { return c.parent === savedCat.id; });
+                    var savedHasChildren = QB.categoryTree.some(function (c) { return c.parent === savedCat.id; });
                     if (savedHasChildren) {
                         // (b) Nested qual root — QB.categoryid already correct from INIT; keep it.
                         $('#qb-qualcat-root').val(QB.categoryid);
                         populateSemesterDropdown(QB.categoryid);
-                        var setupNestKids = QB.categoryTree.filter(function(c) { return c.parent === QB.categoryid; });
+                        var setupNestKids = QB.categoryTree.filter(function (c) { return c.parent === QB.categoryid; });
                         var nestDefault = pickDefaultSemester(setupNestKids);
                         if (nestDefault) {
                             QB.semesterid = nestDefault.id;
@@ -182,15 +185,18 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
             showComplianceCard();
             renderComplianceDashboard();
             renderUnitBuilder();
+            // NOMINAL HOURS PHASE 2 (v5.9.421): resolve authoritative hours for any unit
+            // still showing 0 and roll the qualification total up on load.
+            fillNominalHoursFromRegistry(false, function () { renderUnitBuilder(); });
         }
     }
 
     function bindEvents() {
         $('#qb-load-tga-btn, #qb-reload-tga-btn').on('click', loadFromTGA);
-        $('#qb-code-input').on('keydown', function(e) { if (e.which === 13) { e.preventDefault(); loadFromTGA(); } });
+        $('#qb-code-input').on('keydown', function (e) { if (e.which === 13) { e.preventDefault(); loadFromTGA(); } });
         // -- Two-level category picker --------------------------------------------
         // Step 1: qualification root changed
-        $('#qb-qualcat-root').on('change', function() {
+        $('#qb-qualcat-root').on('change', function () {
             var rootId = parseInt($(this).val()) || 0;
             QB.categoryid = rootId;
             QB.semesterid = 0;
@@ -199,7 +205,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
             $('#qb-category-suggestion').hide();
             populateSemesterDropdown(rootId);
             // If this root has no children, treat it as also the semester (flat structure)
-            var hasChildren = QB.categoryTree.some(function(c) { return c.parent === rootId; });
+            var hasChildren = QB.categoryTree.some(function (c) { return c.parent === rootId; });
             if (!hasChildren && rootId > 0) {
                 QB.semesterid = rootId;
                 if (QB.currentUnits.length > 0) {
@@ -213,11 +219,11 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
 
         // Step 2: semester / intake changed
         // Always refreshCourses first so QB.unitCodeMap is populated for the new semid scope.
-        $('#qb-semester-select').on('change', function() {
+        $('#qb-semester-select').on('change', function () {
             QB.semesterid = parseInt($(this).val()) || 0;
             if (QB.currentUnits.length > 0 && QB.categoryid > 0) {
                 showLoading('Loading courses for semester...');
-                refreshCourses(QB.categoryid, function() {
+                refreshCourses(QB.categoryid, function () {
                     hideLoading();
                     var mapped = mapAllCourses();
                     renderUnitBuilder();
@@ -228,12 +234,12 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         });
 
         // Hidden legacy select: kept for suggestion pills and any path that sets it directly
-        $('#qb-category-select').on('change', function() {
+        $('#qb-category-select').on('change', function () {
             QB.categoryid = parseInt($(this).val()) || 0;
             $('#qb-category-suggestion').hide();
             if (QB.currentUnits.length > 0 && QB.categoryid > 0) {
                 showLoading('Loading courses...');
-                refreshCourses(QB.categoryid, function() {
+                refreshCourses(QB.categoryid, function () {
                     hideLoading();
                     var mapped = mapAllCourses();
                     renderUnitBuilder();
@@ -243,14 +249,14 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
             }
         });
         $('#qb-save-btn').on('click', saveQualification);
-        $('#qb-map-all-btn').on('click', function() {
+        $('#qb-map-all-btn').on('click', function () {
             if (!QB.currentUnits.length) { showToast('No units loaded yet. Load from TGA first.'); return; }
             // Guard: if no semester is selected yet, auto-select the most recent (highest-ID)
             // semester child — same logic used in loadFromTGA().  Without this guard, mapAllCourses
             // runs with semid=0, which pools ALL semesters and links units to whichever semester's
             // courses happen to score highest — typically the wrong one.
             if (QB.categoryid > 0 && !QB.semesterid) {
-                var mapBtnSemKids = QB.categoryTree.filter(function(c) { return c.parent === QB.categoryid; });
+                var mapBtnSemKids = QB.categoryTree.filter(function (c) { return c.parent === QB.categoryid; });
                 var mapBtnDefault = pickDefaultSemester(mapBtnSemKids);
                 if (mapBtnDefault) {
                     QB.semesterid = mapBtnDefault.id;
@@ -260,7 +266,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
             // Always refresh courses before mapping so QB.unitCodeMap is current.
             if (QB.categoryid > 0) {
                 showLoading('Refreshing course list...');
-                refreshCourses(QB.categoryid, function() {
+                refreshCourses(QB.categoryid, function () {
                     hideLoading();
                     var mapped = mapAllCourses();
                     renderUnitBuilder();
@@ -278,7 +284,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         $(document).on('change', '.qb-course-sel', onCourseChange);
         $(document).on('change', '.qb-group-sel', onGroupChange);
         // Compact badge click: reveal the hidden dropdown for that unit.
-        $(document).on('click', '.qb-linked-badge', function() {
+        $(document).on('click', '.qb-linked-badge', function () {
             var $badge  = $(this);
             var $parent = $badge.closest('.qb-unit-course');
             $badge.hide();
@@ -286,7 +292,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         });
 
         // QPR PASTE BOX: parse pasted text and apply to QB state.
-        $(document).on('click', '#qb-qpr-parse-btn', function() {
+        $(document).on('click', '#qb-qpr-parse-btn', function () {
             var text   = $('#qb-qpr-paste-text').val() || '';
             var $res   = $('#qb-qpr-parse-result');
             if (!text.trim()) {
@@ -313,7 +319,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         });
 
         // QB-VARIANTS: show the hidden select when the + button is clicked.
-        $(document).on('click', '.qb-variant-add-btn', function(e) {
+        $(document).on('click', '.qb-variant-add-btn', function (e) {
             e.stopPropagation();
             var $btn  = $(this);
             var $wrap = $btn.closest('.qb-variant-add-wrap');
@@ -322,9 +328,9 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         });
 
         // QB-VARIANTS: hide the select and restore the + button if user clicks away without picking.
-        $(document).on('focusout', '.qb-variant-add', function() {
+        $(document).on('focusout', '.qb-variant-add', function () {
             var $sel = $(this);
-            setTimeout(function() {
+            setTimeout(function () {
                 if (!$sel.is(':focus')) {
                     var $wrap = $sel.closest('.qb-variant-add-wrap');
                     if ($wrap.length) {
@@ -336,30 +342,30 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         });
 
         // QB-VARIANTS: dismiss the info banner for the rest of the session.
-        $(document).on('click', '.qb-variants-info-dismiss', function() {
+        $(document).on('click', '.qb-variants-info-dismiss', function () {
             $(this).closest('.qb-variants-info').slideUp(150);
             try { sessionStorage.setItem('qb_variants_info_dismissed', '1'); } catch(e) {}
         });
 
         // QB-VARIANTS: remove a variant chip when the × is clicked.
-        $(document).on('click', '.qb-variant-remove', function(e) {
+        $(document).on('click', '.qb-variant-remove', function (e) {
             e.stopPropagation();
             var code     = String($(this).data('unitcode'));
             var courseid = parseInt($(this).data('courseid')) || 0;
-            var unit = QB.currentUnits.find(function(u) { return u.unitcode === code; });
+            var unit = QB.currentUnits.find(function (u) { return u.unitcode === code; });
             if (unit && courseid) {
-                unit.variants = (unit.variants || []).filter(function(id) { return id !== courseid; });
+                unit.variants = (unit.variants || []).filter(function (id) { return id !== courseid; });
                 renderUnitBuilder();
             }
         });
 
         // QB-VARIANTS: add a variant when a course is chosen from the + dropdown.
-        $(document).on('change', '.qb-variant-add', function() {
+        $(document).on('change', '.qb-variant-add', function () {
             var $sel     = $(this);
             var code     = String($sel.data('unitcode'));
             var courseid = parseInt($sel.val()) || 0;
             if (!courseid) return;
-            var unit = QB.currentUnits.find(function(u) { return u.unitcode === code; });
+            var unit = QB.currentUnits.find(function (u) { return u.unitcode === code; });
             if (unit) {
                 if (!unit.variants) unit.variants = [];
                 if (unit.variants.indexOf(courseid) === -1) { unit.variants.push(courseid); }
@@ -371,7 +377,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         // click but then clicked away without changing anything, show the badge again.
         // Previously the badge stayed hidden until the next renderUnitBuilder() call,
         // making the row look permanently "in edit mode".
-        $(document).on('focusout', '.qb-course-sel', function() {
+        $(document).on('focusout', '.qb-course-sel', function () {
             var $sel    = $(this);
             var $parent = $sel.closest('.qb-unit-course');
             // Only restore in compact (linked) mode — unlinked rows never show a badge.
@@ -389,7 +395,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         // update, so every TGA reload stacked another handler on the same elements.
         // A single delegated bind here fires exactly once per click regardless of
         // how many times the suggestion HTML has been replaced.
-        $(document).on('click', '.qb-suggestion-pill', function() {
+        $(document).on('click', '.qb-suggestion-pill', function () {
             var catId = parseInt($(this).data('catid'));
             if (catId) { acceptCategoryAndMapAll(catId); }
         });
@@ -399,13 +405,13 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         $(document).on('click', '.qb-del-unit-btn', deleteUnit);
 
         // -- Unit search: debounce 180 ms so rapid typing doesn't flicker --
-        $('#qb-unit-search').on('input', function() {
+        $('#qb-unit-search').on('input', function () {
             clearTimeout(_unitFilterTimer);
             _unitFilterTimer = setTimeout(applyUnitFilter, 180);
         });
 
         // Clear search on Escape
-        $('#qb-unit-search').on('keydown', function(e) {
+        $('#qb-unit-search').on('keydown', function (e) {
             if (e.which === 27) {
                 $(this).val('');
                 applyUnitFilter();
@@ -413,7 +419,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         });
 
         // Type filter buttons -- toggle active, then reapply
-        $(document).on('click', '.qb-type-btn', function() {
+        $(document).on('click', '.qb-type-btn', function () {
             $('#qb-unit-type-btns .qb-type-btn').removeClass('active');
             $(this).addClass('active');
             applyUnitFilter();
@@ -430,18 +436,18 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         // (may be incomplete mid-edit).  Fall back to empty string → unfiltered.
         var unitcodeList = '';
         if (QB.tgaUnits && QB.tgaUnits.length) {
-            unitcodeList = QB.tgaUnits.map(function(u) { return u.unitcode.toUpperCase(); }).join(',');
+            unitcodeList = QB.tgaUnits.map(function (u) { return u.unitcode.toUpperCase(); }).join(',');
         } else if (QB.currentUnits && QB.currentUnits.length) {
-            unitcodeList = QB.currentUnits.map(function(u) { return u.unitcode.toUpperCase(); }).join(',');
+            unitcodeList = QB.currentUnits.map(function (u) { return u.unitcode.toUpperCase(); }).join(',');
         }
         ajax.call([{
             methodname: 'local_rtocompliance_get_courses_for_category',
             args: { categoryid: categoryid || 0, unitcodes: unitcodeList }
-        }])[0].done(function(data) {
+        }])[0].done(function (data) {
             QB.courses     = data.courses     || [];
             QB.unitCodeMap = buildUnitCodeMap(data.unitcodemap || []);
             if (typeof callback === 'function') { callback(); }
-        }).fail(function() {
+        }).fail(function () {
             if (typeof callback === 'function') { callback(); }
         });
     }
@@ -452,7 +458,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
     // Multiple entries per code are normal — same unit may exist in S1 and S2.
     function buildUnitCodeMap(entries) {
         var map = {};
-        (entries || []).forEach(function(e) {
+        (entries || []).forEach(function (e) {
             var uc = (e.unitcode || '').toUpperCase();
             if (!uc || uc.length < 6) return;
             if (!map[uc]) map[uc] = [];
@@ -474,7 +480,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         ajax.call([{
             methodname: 'local_rtocompliance_tga_get_builder_data',
             args: { code: code, categoryid: QB.categoryid || 0 }
-        }])[0].done(function(data) {
+        }])[0].done(function (data) {
             hideLoading();
             if (!data.success) {
                 showTgaError(data.error || code + ' not found on training.gov.au. Check the code and try again.');
@@ -492,7 +498,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
             QB.corePointsRequired    = data.corepointsrequired || 0;
             QB.electivePointsRequired = data.electivepointsrequired || 0;
             // tgaUnits: normalise array-of-objects from web service
-            QB.tgaUnits = (data.units || []).map(function(u) {
+            QB.tgaUnits = (data.units || []).map(function (u) {
                 return {
                     unitcode:      u.unitcode || u[0] || '',
                     unitname:      u.unitname || u[1] || '',
@@ -535,8 +541,8 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
                 autoAddCoreUnits();
             } else {
                 // Merge TGA data: update names/hours for existing units if they were blank
-                QB.tgaUnits.forEach(function(tu) {
-                    var existing = QB.currentUnits.find(function(u) { return u.unitcode === tu.unitcode; });
+                QB.tgaUnits.forEach(function (tu) {
+                    var existing = QB.currentUnits.find(function (u) { return u.unitcode === tu.unitcode; });
                     if (existing) {
                         if (!existing.nominalhours && tu.nominalhours) existing.nominalhours = tu.nominalhours;
                         if (!existing.unitname && tu.unitname) existing.unitname = tu.unitname;
@@ -548,19 +554,22 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
                 // in QB.currentUnits because mapAllCourses() will re-link them to courses and
                 // getCompliance() will count them, making the compliance counter show the wrong
                 // numbers (e.g. "10/10 linked" while every displayed TGA unit shows Not linked).
-                QB.currentUnits = QB.currentUnits.filter(function(u) {
+                QB.currentUnits = QB.currentUnits.filter(function (u) {
                     if (u.unittype === 'imported') return true; // always keep imported units
-                    return QB.tgaUnits.some(function(tu) { return tu.unitcode === u.unitcode; });
+                    return QB.tgaUnits.some(function (tu) { return tu.unitcode === u.unitcode; });
                 });
                 // If the purge removed all non-imported units (qual code completely changed),
                 // auto-add the new qual's core units so the admin doesn't see an empty builder.
-                if (!QB.currentUnits.some(function(u) { return u.unittype !== 'imported'; })) {
+                if (!QB.currentUnits.some(function (u) { return u.unittype !== 'imported'; })) {
                     autoAddCoreUnits();
                 }
             }
 
-            // Step 2: Bulk fill nominal hours from TGA data and auto-sum total
+            // Step 2: Bulk fill nominal hours from TGA data and auto-sum total, then top up
+            // any units TGA left at 0 from the plugin's authoritative reference table
+            // (NOMINAL HOURS PHASE 2, v5.9.421 — TGA does not publish nominal hours).
             bulkFillNominalHours();
+            fillNominalHoursFromRegistry(true, function () { renderComplianceDashboard(); });
 
             // Step 3: If category already set (editing existing), auto-link all courses now.
             // Always ensure a semester is selected first — mapAllCourses with semid=0 searches
@@ -568,7 +577,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
             // e.g. S1 courses get linked to a S2 record silently.
             if (QB.categoryid > 0 && QB.currentUnits.length > 0) {
                 if (!QB.semesterid) {
-                    var tgaSemKids = QB.categoryTree.filter(function(c) { return c.parent === QB.categoryid; });
+                    var tgaSemKids = QB.categoryTree.filter(function (c) { return c.parent === QB.categoryid; });
                     var tgaDefault = pickDefaultSemester(tgaSemKids);
                     if (tgaDefault) {
                         QB.semesterid = tgaDefault.id;
@@ -590,7 +599,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
             renderComplianceDashboard();
             renderUnitBuilder();
 
-        }).fail(function(err) {
+        }).fail(function (err) {
             hideLoading();
             showTgaError('TGA fetch failed: ' + (err.message || 'Unknown error. Ensure the API URL is configured in plugin settings.'));
         });
@@ -603,10 +612,10 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         // with semid=0 drops into rootPool — all courses across ALL semesters — and links
         // units to a cross-semester mix before the admin's semester selection is known.
         // mapAllCourses() fires immediately after semesterid is set; let IT do all linking.
-        QB.tgaUnits.forEach(function(tu) {
+        QB.tgaUnits.forEach(function (tu) {
             if (!tu.iscore) return;
             var code = tu.unitcode;
-            if (QB.currentUnits.find(function(u) { return u.unitcode === code; })) return;
+            if (QB.currentUnits.find(function (u) { return u.unitcode === code; })) return;
             QB.currentUnits.push({
                 id: 0,
                 unitcode: code,
@@ -621,7 +630,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
     }
 
     // ===== MOODLE COURSE/CATEGORY SUGGESTIONS =====
-    // qualCode: the TGA qualification code (e.g. "TLI50822")  --  used for exact match
+    // qualCode: the TGA qualification code (e.g. "ABC12345")  --  used for exact match
     function suggestCategory(qualTitle, qualCode) {
         if (!QB.categories.length) return;
 
@@ -629,9 +638,9 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
             var codeUC = qualCode.trim().toUpperCase();
 
             // Tier 0a: idnumber exact match (highest confidence -- set by admin or auto-build).
-            // Italc stores TLI50119/TLI50822/TLI50816 as category.idnumber on their qual roots.
+            // The RTO stores ABC12345/ABC12345/ABC12345 as category.idnumber on their qual roots.
             // This is an unambiguous match -- auto-accept immediately.
-            var idnumMatch = QB.categories.find(function(cat) {
+            var idnumMatch = QB.categories.find(function (cat) {
                 return cat.idnumber && cat.idnumber.trim().toUpperCase() === codeUC;
             });
             if (idnumMatch) {
@@ -641,7 +650,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
 
             // Tier 0b: category name contains the qual code (e.g. "BSB50420 Diploma of...")
             // Auto-accept immediately, no user click needed.
-            var exactMatch = QB.categories.find(function(cat) {
+            var exactMatch = QB.categories.find(function (cat) {
                 return cat.name.toUpperCase().indexOf(codeUC) !== -1;
             });
             if (exactMatch) {
@@ -653,30 +662,30 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         // Tier 1: fuzzy keyword match against qual title  --  show suggestion pills
         if (!qualTitle) return;
         var stopwords = ['certificate', 'diploma', 'advanced', 'graduate', 'course', 'with', 'and', 'the', 'for', 'in', 'of', 'to', 'a', 'iii', 'iv', 'vi', 'vii', 'viii'];
-        var words = qualTitle.toLowerCase().split(/[\s,\/\-]+/).filter(function(w) {
+        var words = qualTitle.toLowerCase().split(/[\s,\/\-]+/).filter(function (w) {
             return w.length > 3 && stopwords.indexOf(w) === -1;
         });
         if (!words.length) return;
 
-        var scored = QB.categories.map(function(cat) {
+        var scored = QB.categories.map(function (cat) {
             var n = cat.name.toLowerCase();
             var score = 0;
-            words.forEach(function(w) {
+            words.forEach(function (w) {
                 if (n.indexOf(w) !== -1) {
                     score += w.length;
                     if (new RegExp('\\b' + w + '\\b').test(n)) score += 2;
                 }
             });
             return { cat: cat, score: score };
-        }).filter(function(s) { return s.score > 0; });
+        }).filter(function (s) { return s.score > 0; });
 
-        scored.sort(function(a, b) { return b.score - a.score; });
+        scored.sort(function (a, b) { return b.score - a.score; });
         var top = scored.slice(0, 3);
         if (!top.length) return;
 
         QB.suggestedCategoryId = top[0].cat.id;
         var html = '';
-        top.forEach(function(s, i) {
+        top.forEach(function (s, i) {
             var cls = i === 0 ? 'qb-suggestion-pill primary' : 'qb-suggestion-pill';
             var prefix = i === 0 ? '\u2713 Best match: ' : '\uD83D\uDCCC Also: ';
             html += '<span class="' + cls + '" data-catid="' + s.cat.id + '">' +
@@ -690,14 +699,14 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
     }
 
     function acceptCategoryAndMapAll(catId) {
-        var treeEntry = QB.categoryTree.find(function(c) { return c.id === catId; });
+        var treeEntry = QB.categoryTree.find(function (c) { return c.id === catId; });
 
         // Use child-presence to distinguish a qualification root from a semester leaf.
         // Checking parent===0 alone is unreliable: qual roots that are nested under a
         // site-level grouping (e.g. "Miscellaneous") have parent>0 even though they ARE
         // qual roots, causing them to be misidentified as semesters.  A category with
         // children is definitionally a root; a category with no children is a leaf semester.
-        var hasChildren = QB.categoryTree.some(function(c) { return c.parent === catId; });
+        var hasChildren = QB.categoryTree.some(function (c) { return c.parent === catId; });
 
         if (hasChildren) {
             // catId is a qualification root (has semester children).
@@ -706,7 +715,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
             $('#qb-qualcat-root').val(catId);
             $('#qb-category-select').val(catId);
             populateSemesterDropdown(catId);
-            var accSemKids = QB.categoryTree.filter(function(c) { return c.parent === catId; });
+            var accSemKids = QB.categoryTree.filter(function (c) { return c.parent === catId; });
             var accDefault = pickDefaultSemester(accSemKids);
             if (accDefault) {
                 QB.semesterid = accDefault.id;
@@ -734,7 +743,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         $('#qb-category-suggestion').hide();
         // Always refresh courses so QB.unitCodeMap reflects the newly selected category.
         showLoading('Loading courses...');
-        refreshCourses(QB.categoryid, function() {
+        refreshCourses(QB.categoryid, function () {
             hideLoading();
             var mapped = mapAllCourses();
             renderUnitBuilder();
@@ -759,12 +768,12 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
             $sem.prop('disabled', true);
             return;
         }
-        var children = QB.categoryTree.filter(function(c) { return c.parent === rootId; });
+        var children = QB.categoryTree.filter(function (c) { return c.parent === rootId; });
         if (!children.length) {
             $sem.prop('disabled', true);
             return;
         }
-        children.forEach(function(c) {
+        children.forEach(function (c) {
             $sem.append('<option value="' + c.id + '">' + escH(c.name) + '</option>');
         });
         $sem.prop('disabled', false);
@@ -772,7 +781,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
 
     function mapAllCourses() {
         var mapped = 0;
-        QB.currentUnits.forEach(function(unit) {
+        QB.currentUnits.forEach(function (unit) {
             var course = findCourseForUnit(unit.unitcode);
             if (course && course.id !== unit.courseid) {
                 unit.courseid = course.id;
@@ -805,8 +814,8 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
                 var semid = QB.semesterid;
                 var mapEntries = QB.unitCodeMap[uc] || [];
                 unit.variants = mapEntries
-                    .filter(function(e) { return e.category === semid && e.id !== unit.courseid; })
-                    .map(function(e) { return e.id; });
+                    .filter(function (e) { return e.category === semid && e.id !== unit.courseid; })
+                    .map(function (e) { return e.id; });
             }
         });
 
@@ -841,7 +850,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
                 return null;
             }
             // Resolve to the full course object from QB.courses (needed for id, shortname, etc.)
-            var resolved = QB.courses.find(function(c) { return c.id === chosen.id; });
+            var resolved = QB.courses.find(function (c) { return c.id === chosen.id; });
             if (resolved) {
                 console.log('[QB] ' + uc + ' → ' + resolved.shortname + ' (map, cat=' + resolved.category + ')');
                 return resolved;
@@ -855,18 +864,64 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
 
     // Bulk-fill nominal hours for all current units from TGA data, then auto-sum total hours
     function bulkFillNominalHours() {
-        QB.currentUnits.forEach(function(unit) {
+        QB.currentUnits.forEach(function (unit) {
             if (!unit.nominalhours) {
-                var tu = QB.tgaUnits.find(function(t) { return t.unitcode === unit.unitcode; });
+                var tu = QB.tgaUnits.find(function (t) { return t.unitcode === unit.unitcode; });
                 if (tu && tu.nominalhours) unit.nominalhours = tu.nominalhours;
             }
         });
-        // Sum all selected units and update the total nominal hours field
-        var total = QB.currentUnits.reduce(function(s, u) { return s + (u.nominalhours || 0); }, 0);
+        recomputeNominalTotal();
+    }
+
+    // NOMINAL HOURS PHASE 2 (v5.9.421): recompute and paint the qualification total
+    // from the per-unit hours currently held in QB.currentUnits.
+    function recomputeNominalTotal() {
+        var total = QB.currentUnits.reduce(function (s, u) { return s + (parseInt(u.nominalhours, 10) || 0); }, 0);
         if (total > 0) {
             QB.nominalhours = total;
             $('#qb-nominalhours-input').val(total);
         }
+        return total;
+    }
+
+    // NOMINAL HOURS PHASE 2 (v5.9.421): training.gov.au does not publish nominal hours,
+    // so for any unit whose hours are still 0 we resolve them from the plugin's own
+    // authoritative reference table via one batched request, roll the total up, and
+    // repaint. Runs at most once per unit-set unless forced (e.g. after adding units).
+    function fillNominalHoursFromRegistry(force, done) {
+        if (!QB.endpointNominal) { if (done) { done(); } return; }
+        if (QB.nominalFilled && !force) { if (done) { done(); } return; }
+        var missing = QB.currentUnits.filter(function (u) {
+            return !(parseInt(u.nominalhours, 10) > 0) && u.unitcode;
+        }).map(function (u) { return u.unitcode; });
+        // Nothing to resolve — still mark done and make sure the total reflects reality.
+        if (!missing.length) {
+            QB.nominalFilled = true;
+            recomputeNominalTotal();
+            if (done) { done(); }
+            return;
+        }
+        var codes = missing.filter(function (c, i, a) { return a.indexOf(c) === i; }).join(',');
+        QB.nominalFilled = true;   // set immediately so a concurrent render can't double-fire
+        $.ajax({
+            url: QB.endpointNominal,
+            method: 'GET',
+            dataType: 'json',
+            data: { codes: codes, sesskey: INIT.sesskey },
+        }).done(function (resp) {
+            if (resp && resp.success && resp.hours) {
+                QB.currentUnits.forEach(function (u) {
+                    if (!(parseInt(u.nominalhours, 10) > 0) && resp.hours[u.unitcode]) {
+                        u.nominalhours = parseInt(resp.hours[u.unitcode].nominalHours, 10) || 0;
+                    }
+                });
+            }
+        }).always(function () {
+            QB.nominalFilled = true;
+            recomputeNominalTotal();
+            if (typeof renderComplianceDashboard === 'function') { renderComplianceDashboard(); }
+            if (done) { done(); }
+        });
     }
 
     function refreshCourseDropdowns() {
@@ -889,7 +944,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         var grpKeys = Object.keys(QB.groupRules).sort();
         if (grpKeys.length) {
             summary += '<br><small class="text-muted">Groups: ';
-            summary += grpKeys.map(function(g) {
+            summary += grpKeys.map(function (g) {
                 var r = QB.groupRules[g];
                 var rmin = r.min || 0; var rmax = r.max || 999;
                 var s;
@@ -906,7 +961,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         var html = summary ? '<div style=\"margin-bottom:8px\">' + summary + '</div>' : '';
         if (QB.rulesText.length) {
             html += '<ul>';
-            QB.rulesText.forEach(function(line) { if (line.trim()) html += '<li>' + escH(line) + '</li>'; });
+            QB.rulesText.forEach(function (line) { if (line.trim()) html += '<li>' + escH(line) + '</li>'; });
             html += '</ul>';
         }
         $('#qb-rules-content').html(html);
@@ -917,13 +972,13 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
     function showComplianceCard() { $('#qb-compliance-card').show(); }
 
     function getCompliance() {
-        var coreUnits = QB.currentUnits.filter(function(u) { return u.unittype === 'core'; });
-        var elecUnits = QB.currentUnits.filter(function(u) { return u.unittype !== 'core'; });
+        var coreUnits = QB.currentUnits.filter(function (u) { return u.unittype === 'core'; });
+        var elecUnits = QB.currentUnits.filter(function (u) { return u.unittype !== 'core'; });
         var total = QB.currentUnits.length;
-        var linked = QB.currentUnits.filter(function(u) { return u.courseid > 0; }).length;
-        var hours  = QB.currentUnits.reduce(function(s,u) { return s + (u.nominalhours||0); }, 0);
+        var linked = QB.currentUnits.filter(function (u) { return u.courseid > 0; }).length;
+        var hours  = QB.currentUnits.reduce(function (s,u) { return s + (u.nominalhours||0); }, 0);
         var groups = {};
-        elecUnits.forEach(function(u) {
+        elecUnits.forEach(function (u) {
             if (u.electivegroup) groups[u.electivegroup] = (groups[u.electivegroup]||0) + 1;
         });
 
@@ -931,8 +986,8 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         // Break down into core vs elective so the dashboard can show both totals.
         var totalPoints = 0, corePoints = 0, electivePoints = 0;
         if (QB.pointsSystem) {
-            QB.currentUnits.forEach(function(u) {
-                var tu = QB.tgaUnits.find(function(t) { return t.unitcode === u.unitcode; });
+            QB.currentUnits.forEach(function (u) {
+                var tu = QB.tgaUnits.find(function (t) { return t.unitcode === u.unitcode; });
                 var pts = (tu && tu.creditpoints) ? tu.creditpoints : (u.creditpoints || 0);
                 totalPoints += pts;
                 if (u.unittype === 'core') {
@@ -944,8 +999,8 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         }
 
         // Per-type Moodle link counts (used by compound dashboard cards).
-        var coreLinked = coreUnits.filter(function(u) { return u.courseid > 0; }).length;
-        var elecLinked = elecUnits.filter(function(u) { return u.courseid > 0; }).length;
+        var coreLinked = coreUnits.filter(function (u) { return u.courseid > 0; }).length;
+        var elecLinked = elecUnits.filter(function (u) { return u.courseid > 0; }).length;
 
         return {
             coreUnits: coreUnits, elecUnits: elecUnits,
@@ -1027,9 +1082,9 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
 
         // Group cards  -  all groups present in either groupRules or currentUnits
         var allGroups = {};
-        Object.keys(QB.groupRules).forEach(function(g) { allGroups[g] = true; });
-        c.elecUnits.forEach(function(u) { if (u.electivegroup) allGroups[u.electivegroup] = true; });
-        Object.keys(allGroups).sort().forEach(function(grp) {
+        Object.keys(QB.groupRules).forEach(function (g) { allGroups[g] = true; });
+        c.elecUnits.forEach(function (u) { if (u.electivegroup) allGroups[u.electivegroup] = true; });
+        Object.keys(allGroups).sort().forEach(function (grp) {
             var rule = QB.groupRules[grp] || {};
             var cnt = c.groups[grp] || 0;
             var min = rule.min || 0;
@@ -1102,44 +1157,58 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
             html += statusCard(totSt, totIc, 'Total Units', c.linked + ' / ' + QB.totalRequired + ' linked');
         }
 
-        // Nominal hours info
-        if (c.hours > 0) {
-            html += statusCard('info', '\uD83D\uDD50', 'Nominal Hours', c.hours + ' hrs total');
+        // Nominal hours info (NOMINAL HOURS PHASE 2, v5.9.421). Show the rolled-up
+        // qualification total; flag any units still without an authoritative value so
+        // the admin knows the total is incomplete (and can import the NCVER dataset or
+        // enter the value on the unit). The total feeds NAT reporting and the TAS.
+        var nhMissing = QB.currentUnits.filter(function (u) {
+            return u.unitcode && !(parseInt(u.nominalhours, 10) > 0);
+        }).length;
+        if (c.hours > 0 || QB.currentUnits.length > 0) {
+            var nhSt = nhMissing > 0 ? 'warn' : 'info';
+            var nhVal = c.hours + ' hrs total'
+                + (nhMissing > 0 ? ' \u2014 ' + nhMissing + ' unit' + (nhMissing === 1 ? '' : 's') + ' missing hours' : '');
+            html += statusCard(nhSt, '\uD83D\uDD50', 'Nominal Hours', nhVal);
+        }
+        // If any unit still lacks hours and we haven't resolved this unit-set yet,
+        // kick off one batched authoritative lookup, then repaint.
+        if (nhMissing > 0 && !QB.nominalFilled && QB.endpointNominal) {
+            setTimeout(function () { fillNominalHoursFromRegistry(false, renderComplianceDashboard); }, 0);
         }
 
         // -- Auto-suggest missing units --
         if (QB.tgaLoaded && QB.tgaUnits.length > 0) {
             var suggestions = [];
             // Check each group for shortfalls
-            Object.keys(QB.groupRules).sort().forEach(function(grp) {
+            Object.keys(QB.groupRules).sort().forEach(function (grp) {
                 var rule = QB.groupRules[grp]; var min = rule.min || 0;
                 var cnt = c.groups[grp] || 0;
                 var shortfall = min - cnt;
                 if (shortfall > 0) {
                     // Find TGA units in this group that are not selected
-                    var available = QB.tgaUnits.filter(function(u) {
-                        return u.electivegroup === grp && !QB.currentUnits.find(function(cu) { return cu.unitcode === u.unitcode; });
+                    var available = QB.tgaUnits.filter(function (u) {
+                        return u.electivegroup === grp && !QB.currentUnits.find(function (cu) { return cu.unitcode === u.unitcode; });
                     });
                     // BUG-JS-1 FIX: Off-by-one. shortfall + 1 showed one extra suggestion
                     // beyond what the packaging rules actually require. Use shortfall only.
-                    available.slice(0, shortfall).forEach(function(u) {
+                    available.slice(0, shortfall).forEach(function (u) {
                         suggestions.push({ grp: grp, unit: u, reason: 'Need ' + shortfall + ' more in Group ' + grp });
                     });
                 }
             });
             // Check core shortfall
             if (QB.coreRequired > 0 && c.coreUnits.length < QB.coreRequired) {
-                var missingCore = QB.tgaUnits.filter(function(u) {
-                    return u.iscore && !QB.currentUnits.find(function(cu) { return cu.unitcode === u.unitcode; });
+                var missingCore = QB.tgaUnits.filter(function (u) {
+                    return u.iscore && !QB.currentUnits.find(function (cu) { return cu.unitcode === u.unitcode; });
                 });
-                missingCore.slice(0, 3).forEach(function(u) {
+                missingCore.slice(0, 3).forEach(function (u) {
                     suggestions.push({ grp: 'Core', unit: u, reason: 'Core unit not yet added' });
                 });
             }
             if (suggestions.length > 0) {
                 var sfHtml = '<div class=\"qb-autofix\">' +
                     '<div class=\"qb-autofix-title\">\uD83D\uDCA1 Suggested units to complete packaging rules:</div>';
-                suggestions.slice(0, 8).forEach(function(s) {
+                suggestions.slice(0, 8).forEach(function (s) {
                     sfHtml += '<div class=\"qb-autofix-item\">' +
                         '<span class=\"qb-badge qb-badge-group\" style=\"min-width:60px;text-align:center\">' + escH(s.grp) + '</span>' +
                         '<span class=\"qb-unit-code\">' + escH(s.unit.unitcode) + '</span>' +
@@ -1176,7 +1245,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
             // This catches qualifications where electiveReq was not derivable from packaging rules
             // text (e.g. TGA REST returned no totalUnits) but elective units clearly exist.
             if (QB.tgaLoaded && !QB.pointsSystem && Object.keys(QB.groupRules).length === 0) {
-                var tgaElecPoolCount = QB.tgaUnits.filter(function(u) { return !u.iscore; }).length;
+                var tgaElecPoolCount = QB.tgaUnits.filter(function (u) { return !u.iscore; }).length;
                 if (tgaElecPoolCount > 0 && c.elecUnits.length === 0) {
                     qprFail = true;
                     engineErrors.push(
@@ -1212,7 +1281,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
                 banner = '<div class=\"qb-qpr-banner fail\">\u2717 NOT YET COMPLIANT \u2014 Packaging rules not yet satisfied</div>';
                 if (engineErrors.length > 0) {
                     banner += '<div class=\"qb-engine-errors\">' +
-                        engineErrors.map(function(e) {
+                        engineErrors.map(function (e) {
                             return '<div class=\"qb-engine-error-item\">\u2717 ' + escH(e) + '</div>';
                         }).join('') +
                         '</div>';
@@ -1259,15 +1328,15 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         if (!QB.tgaLoaded || !QB.courses.length) { return; }
         // Build a sortorder map: unitcode → course.sortorder (from the linked course).
         var orderMap = {};
-        QB.currentUnits.forEach(function(cu) {
+        QB.currentUnits.forEach(function (cu) {
             if (cu.courseid > 0) {
-                var course = QB.courses.find(function(c) { return c.id === cu.courseid; });
+                var course = QB.courses.find(function (c) { return c.id === cu.courseid; });
                 if (course && course.sortorder != null) {
                     orderMap[cu.unitcode] = course.sortorder;
                 }
             }
         });
-        QB.tgaUnits.sort(function(a, b) {
+        QB.tgaUnits.sort(function (a, b) {
             var sa = (orderMap[a.unitcode] != null) ? orderMap[a.unitcode] : 999999999;
             var sb = (orderMap[b.unitcode] != null) ? orderMap[b.unitcode] : 999999999;
             return sa - sb;
@@ -1283,10 +1352,10 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         QB.groupRuleKeys = [];
 
         // Group TGA units
-        var tgaCore = QB.tgaUnits.filter(function(u) { return u.iscore; });
-        var tgaElec = QB.tgaUnits.filter(function(u) { return !u.iscore; });
+        var tgaCore = QB.tgaUnits.filter(function (u) { return u.iscore; });
+        var tgaElec = QB.tgaUnits.filter(function (u) { return !u.iscore; });
         var tgaGroups = {};
-        tgaElec.forEach(function(u) {
+        tgaElec.forEach(function (u) {
             var g = u.electivegroup || '';
             if (!tgaGroups[g]) tgaGroups[g] = [];
             tgaGroups[g].push(u);
@@ -1297,7 +1366,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
 
         // QB-VARIANTS info banner — shown when a semester is selected and at least one
         // unit has a primary course linked.  Dismissed once per session via sessionStorage.
-        var hasLinked = QB.currentUnits.some(function(u) { return u.courseid > 0; });
+        var hasLinked = QB.currentUnits.some(function (u) { return u.courseid > 0; });
         if (QB.semesterid && hasLinked) {
             var dismissed = false;
             try { dismissed = sessionStorage.getItem('qb_variants_info_dismissed') === '1'; } catch(e) {}
@@ -1314,8 +1383,8 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
                     '<br><strong>Why it matters:</strong> the system watches <em>all</em> linked courses. ' +
                     'When a student completes their course \u2014 whichever stream they\u2019re in \u2014 their AVETMISS enrolment record is created automatically, ' +
                     'and once they\u2019re Competent in every unit their Testamur (certificate) is issued without anyone having to click anything.' +
-                    '<br><strong>Example:</strong> TLIX0037 is delivered by three trainers in separate courses ' +
-                    '(<code>TLIX0037 26S1 \u2013 EL</code>, <code>TLIX0037 26S1 \u2013 CD</code>, <code>TLIX0037 26S1 \u2013 ND</code>). ' +
+                    '<br><strong>Example:</strong> ABC12345 is delivered by three trainers in separate courses ' +
+                    '(<code>ABC12345 26S1 \u2013 EL</code>, <code>ABC12345 26S1 \u2013 CD</code>, <code>ABC12345 26S1 \u2013 ND</code>). ' +
                     'Without variants, only students in the primary course get their cert. With variants, all three streams are watched \u2014 every student gets their cert.' +
                     '</div></div>';
             }
@@ -1327,14 +1396,14 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
             // === CORE UNITS ===
             var coreRows = '';
             if (tgaCore.length > 0) {
-                tgaCore.forEach(function(tu) {
-                    var existing = QB.currentUnits.find(function(u) { return u.unitcode === tu.unitcode; });
+                tgaCore.forEach(function (tu) {
+                    var existing = QB.currentUnits.find(function (u) { return u.unitcode === tu.unitcode; });
                     coreRows += unitRow(tu.unitcode, tu.unitname, 'core', '', tu.nominalhours, existing ? existing.courseid : 0, true, true, false, tu.creditpoints || 0);
                 });
             } else {
-                var existingCore = QB.currentUnits.filter(function(u) { return u.unittype === 'core'; });
+                var existingCore = QB.currentUnits.filter(function (u) { return u.unittype === 'core'; });
                 if (existingCore.length > 0) {
-                    existingCore.forEach(function(u) {
+                    existingCore.forEach(function (u) {
                         coreRows += unitRow(u.unitcode, u.unitname, 'core', '', u.nominalhours, u.courseid, true, true, false, u.creditpoints || 0);
                     });
                 } else {
@@ -1342,22 +1411,22 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
                 }
             }
             var coreReqLabel = QB.coreRequired > 0 ? ' <small class=\"text-muted\">(all ' + QB.coreRequired + ' required)</small>' : '';
-            var coreLinkedForPill = QB.currentUnits.filter(function(u){return u.unittype==='core' && u.courseid > 0;}).length;
+            var coreLinkedForPill = QB.currentUnits.filter(function (u){return u.unittype==='core' && u.courseid > 0;}).length;
             html += section('CORE', 'Core Units' + coreReqLabel, tgaCore.length > 0 ? linkedPill(coreLinkedForPill, QB.coreRequired) : '', 'core', coreRows);
 
             // === ELECTIVE GROUPS (A through Y and beyond) ===
-            Object.keys(tgaGroups).filter(function(g){return g!=='';}).sort().forEach(function(grp) {
+            Object.keys(tgaGroups).filter(function (g){return g!=='';}).sort().forEach(function (grp) {
                 var rule = QB.groupRules[grp] || {};
                 var units = tgaGroups[grp];
-                var selectedCount = QB.currentUnits.filter(function(u) { return u.unittype !== 'core' && u.electivegroup === grp; }).length;
+                var selectedCount = QB.currentUnits.filter(function (u) { return u.unittype !== 'core' && u.electivegroup === grp; }).length;
                 var min = rule.min || 0;
                 var max = rule.max || 999;
                 var reqLabel = (min > 0 && min === max && max < 999)
                     ? (min === 1 ? '1 unit only' : min + ' units only')
                     : (min > 0 ? 'Min ' + min + (max < 999 ? ', max ' + max : '') : 'optional');
                 var rows = '';
-                units.forEach(function(tu) {
-                    var existing = QB.currentUnits.find(function(u) { return u.unitcode === tu.unitcode; });
+                units.forEach(function (tu) {
+                    var existing = QB.currentUnits.find(function (u) { return u.unitcode === tu.unitcode; });
                     rows += unitRow(tu.unitcode, tu.unitname, 'elective', grp, tu.nominalhours, existing ? existing.courseid : 0, !!existing, false, false, tu.creditpoints || 0);
                 });
                 html += section('GROUP', 'Group ' + grp + ' <small class=\"text-muted\">' + reqLabel + '</small>', statusPill(selectedCount, min, min === 0), grp, rows);
@@ -1368,7 +1437,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
                 // Check if the packaging rules define groups but the TGA API returned no group
                 // assignments on individual units (common for Cert II and some older qualifications).
                 var hasGroupRules = QB.groupRules && Object.keys(QB.groupRules).length > 0;
-                var hasTaggedGroups = Object.keys(tgaGroups).filter(function(g){return g!=='';}).length > 0;
+                var hasTaggedGroups = Object.keys(tgaGroups).filter(function (g){return g!=='';}).length > 0;
                 // FIX-QB-MANUAL-GROUP: expose flags so unitRow can render group assignment dropdowns.
                 QB.manualGroupMode = hasGroupRules && !hasTaggedGroups;
                 QB.groupRuleKeys = hasGroupRules ? Object.keys(QB.groupRules).sort() : [];
@@ -1385,20 +1454,20 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
                         + '</div>';
                 }
                 var genRows = '';
-                tgaGroups[''].forEach(function(tu) {
-                    var existing = QB.currentUnits.find(function(u) { return u.unitcode === tu.unitcode; });
+                tgaGroups[''].forEach(function (tu) {
+                    var existing = QB.currentUnits.find(function (u) { return u.unitcode === tu.unitcode; });
                     genRows += unitRow(tu.unitcode, tu.unitname, 'elective', '', tu.nominalhours, existing ? existing.courseid : 0, !!existing, false, false, tu.creditpoints || 0);
                 });
-                var genSel = QB.currentUnits.filter(function(u) { return u.unittype !== 'core' && u.unittype !== 'imported' && !u.electivegroup; }).length;
+                var genSel = QB.currentUnits.filter(function (u) { return u.unittype !== 'core' && u.unittype !== 'imported' && !u.electivegroup; }).length;
                 // FIX-QB-SECTION-PILL: show '' (not '0 selected') when nothing is checked yet.
                 html += section('ELECTIVE', 'General Electives', genSel > 0 ? genSel + ' selected' : '', 'elective', groupNotice + genRows);
             }
         }
 
         // === IMPORTED UNITS ===
-        var importedUnits = QB.currentUnits.filter(function(u) { return u.unittype === 'imported'; });
+        var importedUnits = QB.currentUnits.filter(function (u) { return u.unittype === 'imported'; });
         var importedRows = '';
-        importedUnits.forEach(function(u) {
+        importedUnits.forEach(function (u) {
             importedRows += unitRow(u.unitcode, u.unitname, 'imported', '', u.nominalhours, u.courseid, true, false, true, u.creditpoints || 0);
         });
         var addForm = '<div class=\"qb-add-imported-form\" id=\"qb-add-imported-form\">' +
@@ -1421,7 +1490,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         // them into two buckets:
         //
         //  DUPLICATE UNITS — course shares a unit code with a TGA unit but is NOT the
-        //    primary linked course for that unit (e.g. two versions of TLIX0037 exist in
+        //    primary linked course for that unit (e.g. two versions of ABC12345 exist in
         //    Moodle: 26S2 standard and 26S2-ND).  These sit in their own section so the
         //    RTO can see and select the alternate version.
         //
@@ -1432,25 +1501,25 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         //  above in Core/Elective sections and are skipped here entirely.
         if (QB.semesterid && QB.courses.length) {
             var tgaCodeSet = {};
-            QB.tgaUnits.forEach(function(tu) { tgaCodeSet[tu.unitcode.toUpperCase()] = true; });
+            QB.tgaUnits.forEach(function (tu) { tgaCodeSet[tu.unitcode.toUpperCase()] = true; });
 
             var moodleExtraRows = '';
 
-            QB.courses.filter(function(c) { return c.category === QB.semesterid; }).forEach(function(c) {
+            QB.courses.filter(function (c) { return c.category === QB.semesterid; }).forEach(function (c) {
                 // Collect all unit codes this course maps to.
                 var courseCodes = [];
-                Object.keys(QB.unitCodeMap).forEach(function(uc) {
-                    if (QB.unitCodeMap[uc].some(function(e) { return e.id === c.id; })) {
+                Object.keys(QB.unitCodeMap).forEach(function (uc) {
+                    if (QB.unitCodeMap[uc].some(function (e) { return e.id === c.id; })) {
                         courseCodes.push(uc);
                     }
                 });
 
                 // If ANY code is in the TGA list the course is already shown above — skip.
-                if (courseCodes.some(function(uc) { return tgaCodeSet[uc]; })) { return; }
+                if (courseCodes.some(function (uc) { return tgaCodeSet[uc]; })) { return; }
 
                 // No TGA code at all — "Other Moodle Courses".
                 var bestCode = courseCodes[0] || '';
-                var isSelected = !!QB.currentUnits.find(function(u) {
+                var isSelected = !!QB.currentUnits.find(function (u) {
                     return u.courseid === c.id ||
                         (bestCode && u.unitcode.toUpperCase() === bestCode);
                 });
@@ -1489,7 +1558,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         var totalRows    = 0;
 
         // Walk every section and hide/show rows, then hide empty sections.
-        $('#qb-unit-builder .qb-section').each(function() {
+        $('#qb-unit-builder .qb-section').each(function () {
             var $section  = $(this);
             var sectionId = $section.attr('id') || '';
             // Imported section always visible regardless of type filter
@@ -1497,7 +1566,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
 
             var sectionVisible = 0;
 
-            $section.find('.qb-unit-row').each(function() {
+            $section.find('.qb-unit-row').each(function () {
                 var $row    = $(this);
                 var code    = ($row.data('unitcode') || '').toLowerCase();
                 var utype   = ($row.data('unittype') || '').toLowerCase();
@@ -1540,15 +1609,15 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         // Fallback: show existing units grouped by type when no TGA data loaded.
         // Groups A, B, C, etc. are rendered as separate sections to match the TGA-loaded view.
         var html = '';
-        var coreU = QB.currentUnits.filter(function(u) { return u.unittype === 'core'; });
-        var elecU = QB.currentUnits.filter(function(u) { return u.unittype === 'elective'; });
+        var coreU = QB.currentUnits.filter(function (u) { return u.unittype === 'core'; });
+        var elecU = QB.currentUnits.filter(function (u) { return u.unittype === 'elective'; });
 
         if (coreU.length) {
             var rows = '';
-            coreU.forEach(function(u) { rows += unitRow(u.unitcode, u.unitname, 'core', '', u.nominalhours, u.courseid, true, true, false, u.creditpoints || 0); });
+            coreU.forEach(function (u) { rows += unitRow(u.unitcode, u.unitname, 'core', '', u.nominalhours, u.courseid, true, true, false, u.creditpoints || 0); });
             // Use linkedPill for consistency with the TGA-loaded path: core section
             // always shows linked count, not just the raw unit count.
-            var fallbackCoreLinked = coreU.filter(function(u) { return u.courseid > 0; }).length;
+            var fallbackCoreLinked = coreU.filter(function (u) { return u.courseid > 0; }).length;
             var fallbackCorePill   = QB.coreRequired > 0
                 ? linkedPill(fallbackCoreLinked, QB.coreRequired)
                 : (coreU.length + ' units');
@@ -1556,13 +1625,13 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         }
         if (elecU.length) {
             var grps = {};
-            elecU.forEach(function(u) {
+            elecU.forEach(function (u) {
                 var g = u.electivegroup || '';
                 if (!grps[g]) grps[g] = [];
                 grps[g].push(u);
             });
             // Render named groups (A, B, C, ...) as separate sections.
-            Object.keys(grps).filter(function(g) { return g !== ''; }).sort().forEach(function(g) {
+            Object.keys(grps).filter(function (g) { return g !== ''; }).sort().forEach(function (g) {
                 var rule = QB.groupRules[g] || {};
                 var min = rule.min || 0;
                 var max = rule.max || 999;
@@ -1570,13 +1639,13 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
                     ? (min === 1 ? '1 unit only' : min + ' units only')
                     : (min > 0 ? 'Min ' + min + (max < 999 ? ', max ' + max : '') : 'optional');
                 var grows = '';
-                grps[g].forEach(function(u) { grows += unitRow(u.unitcode, u.unitname, 'elective', g, u.nominalhours, u.courseid, true, false, false, u.creditpoints || 0); });
+                grps[g].forEach(function (u) { grows += unitRow(u.unitcode, u.unitname, 'elective', g, u.nominalhours, u.courseid, true, false, false, u.creditpoints || 0); });
                 html += section('GROUP', 'Group ' + g + ' <small class=\"text-muted\">' + reqLabel + '</small>', statusPill(grps[g].length, min, min === 0), g, grows);
             });
             // Render ungrouped electives.
             if (grps[''] && grps[''].length) {
                 var erows = '';
-                grps[''].forEach(function(u) { erows += unitRow(u.unitcode, u.unitname, 'elective', '', u.nominalhours, u.courseid, true, false, false, u.creditpoints || 0); });
+                grps[''].forEach(function (u) { erows += unitRow(u.unitcode, u.unitname, 'elective', '', u.nominalhours, u.courseid, true, false, false, u.creditpoints || 0); });
                 html += section('ELECTIVE', 'Elective Units', grps[''].length + ' units', 'elective', erows);
             }
         }
@@ -1615,20 +1684,20 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
      */
     function updateSectionPill(type, group) {
         if (type === 'core') {
-            var coreLinkedCount = QB.currentUnits.filter(function(u) { return u.unittype === 'core' && u.courseid > 0; }).length;
+            var coreLinkedCount = QB.currentUnits.filter(function (u) { return u.unittype === 'core' && u.courseid > 0; }).length;
             $('#qb-section-core .qb-section-status').html(linkedPill(coreLinkedCount, QB.coreRequired) || '');
         } else if (group) {
-            var grpCount = QB.currentUnits.filter(function(u) { return u.electivegroup === group && u.unittype !== 'core'; }).length;
+            var grpCount = QB.currentUnits.filter(function (u) { return u.electivegroup === group && u.unittype !== 'core'; }).length;
             var grpRule  = QB.groupRules[group] || {};
             var grpMin   = grpRule.min || 0;
             var grpPill  = statusPill(grpCount, grpMin, grpMin === 0);
             $('#qb-section-' + group + ' .qb-section-status').html(grpPill || (grpCount > 0 ? grpCount + ' selected' : ''));
         } else if (type === 'imported') {
-            var impCount = QB.currentUnits.filter(function(u) { return u.unittype === 'imported'; }).length;
+            var impCount = QB.currentUnits.filter(function (u) { return u.unittype === 'imported'; }).length;
             $('#qb-section-imported .qb-section-status').html(impCount > 0 ? impCount + ' units' : '');
         } else {
             // General electives (type=elective, no group)
-            var genCount = QB.currentUnits.filter(function(u) { return u.unittype !== 'core' && u.unittype !== 'imported' && !u.electivegroup; }).length;
+            var genCount = QB.currentUnits.filter(function (u) { return u.unittype !== 'core' && u.unittype !== 'imported' && !u.electivegroup; }).length;
             $('#qb-section-elective .qb-section-status').html(genCount > 0 ? genCount + ' selected' : '');
         }
     }
@@ -1646,14 +1715,14 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
             ? '<button type=\"button\" class=\"qb-del-unit-btn btn btn-sm btn-outline-danger\" data-unitcode=\"' + escH(code) + '\" style=\"padding:1px 6px;font-size:0.75rem;visibility:hidden\">\u2717</button>'
             : '';
         // QB-VARIANTS: look up variant course IDs for this unit from QB.currentUnits.
-        var unitState = QB.currentUnits.find(function(u) { return u.unitcode === code; });
+        var unitState = QB.currentUnits.find(function (u) { return u.unitcode === code; });
         var unitVariants = unitState ? (unitState.variants || []) : [];
 
         // Course cell: primary badge + variant chips + add dropdown.
         // Unlinked units keep the plain dropdown until a primary is chosen.
         var courseCell;
         if (courseid > 0) {
-            var lc = QB.courses.find(function(x) { return x.id === courseid; });
+            var lc = QB.courses.find(function (x) { return x.id === courseid; });
             var cshort = lc ? escH((lc.shortname || lc.fullname || '').substring(0, 26)) : 'Linked';
             // Primary badge (click reveals change dropdown — existing behaviour).
             var primaryHtml = '<span class=\"qb-linked-badge\" data-unitcode=\"' + escH(code) + '\" title=\"Primary course \u2014 click to change\">\u2713 ' + cshort + '</span>' +
@@ -1661,8 +1730,8 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
 
             // Variant chips.
             var variantChipsHtml = '';
-            unitVariants.forEach(function(vid) {
-                var vc = QB.courses.find(function(x) { return x.id === vid; });
+            unitVariants.forEach(function (vid) {
+                var vc = QB.courses.find(function (x) { return x.id === vid; });
                 if (!vc) return;
                 var vshort = escH((vc.shortname || vc.fullname || '').substring(0, 22));
                 variantChipsHtml += '<span class=\"qb-variant-chip\" data-unitcode=\"' + escH(code) + '\" data-courseid=\"' + vid + '\" title=\"' + vshort + '\">' +
@@ -1674,11 +1743,11 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
             if (QB.semesterid) {
                 var usedMap = {};
                 usedMap[courseid] = true;
-                unitVariants.forEach(function(vid) { usedMap[vid] = true; });
-                var availableCourses = QB.courses.filter(function(c) { return c.category === QB.semesterid && !usedMap[c.id]; });
+                unitVariants.forEach(function (vid) { usedMap[vid] = true; });
+                var availableCourses = QB.courses.filter(function (c) { return c.category === QB.semesterid && !usedMap[c.id]; });
                 if (availableCourses.length > 0) {
                     var addOpts = '<option value=\"0\">\u2014 select a course \u2014</option>';
-                    availableCourses.forEach(function(c) {
+                    availableCourses.forEach(function (c) {
                         addOpts += '<option value=\"' + c.id + '\">' + escH((c.shortname || c.fullname || '').substring(0, 40)) + '</option>';
                     });
                     addVariantHtml = '<span class=\"qb-variant-add-wrap\">' +
@@ -1702,7 +1771,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         var groupHtml = '';
         if (type === 'elective' && QB.manualGroupMode) {
             var groupOpts = '<option value=\"\">-- No group --</option>';
-            (QB.groupRuleKeys || []).forEach(function(g) {
+            (QB.groupRuleKeys || []).forEach(function (g) {
                 groupOpts += '<option value=\"' + escH(g) + '\"' + (group === g ? ' selected' : '') + '>Group ' + escH(g) + '</option>';
             });
             groupHtml = '<select class=\"qb-group-sel form-control form-control-sm\" data-unitcode=\"' + escH(code) + '\" title=\"Assign this unit to a packaging group\" style=\"width:90px;font-size:0.7rem;margin-left:4px;display:inline-block;vertical-align:middle;height:auto;padding:1px 4px;\">' + groupOpts + '</select>';
@@ -1736,26 +1805,26 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         if (semid) {
             var uc = unitcode ? String(unitcode).toUpperCase() : '';
             var mapEntries = (uc && QB.unitCodeMap && QB.unitCodeMap[uc]) ? QB.unitCodeMap[uc] : [];
-            mapEntries.forEach(function(m) {
+            mapEntries.forEach(function (m) {
                 if (m.category === semid) { matchedIds[m.id] = true; }
             });
         }
 
         // Build pool: all semester courses, matched first then unmatched.
-        var allSem     = semid ? QB.courses.filter(function(c) { return c.category === semid; }) : [];
-        var matched    = allSem.filter(function(c) { return  matchedIds[c.id]; });
-        var unmatched  = allSem.filter(function(c) { return !matchedIds[c.id]; });
+        var allSem     = semid ? QB.courses.filter(function (c) { return c.category === semid; }) : [];
+        var matched    = allSem.filter(function (c) { return  matchedIds[c.id]; });
+        var unmatched  = allSem.filter(function (c) { return !matchedIds[c.id]; });
         var pool       = matched.concat(unmatched);
         var matchedCnt = matched.length;
 
         // Always include currently-selected course even if cross-semester (admin override).
-        if (selectedId && !pool.find(function(c) { return c.id === selectedId; })) {
-            var extra = QB.courses.find(function(c) { return c.id === selectedId; });
+        if (selectedId && !pool.find(function (c) { return c.id === selectedId; })) {
+            var extra = QB.courses.find(function (c) { return c.id === selectedId; });
             if (extra) { pool = pool.concat([extra]); }
         }
 
         var html = '<option value=\"0\">-- Not linked --</option>';
-        pool.forEach(function(c, idx) {
+        pool.forEach(function (c, idx) {
             // Visual separator between unit-code-matched and remaining semester courses.
             if (matchedCnt > 0 && idx === matchedCnt) {
                 html += '<option disabled>\u2500\u2500 Other courses in semester \u2500\u2500</option>';
@@ -1777,8 +1846,8 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         $row.toggleClass('selected', checked);
 
         if (checked) {
-            if (!QB.currentUnits.find(function(u) { return u.unitcode === code; })) {
-                var tu = QB.tgaUnits.find(function(u) { return u.unitcode === code; });
+            if (!QB.currentUnits.find(function (u) { return u.unitcode === code; })) {
+                var tu = QB.tgaUnits.find(function (u) { return u.unitcode === code; });
                 var courseid = parseInt($row.find('.qb-course-sel').val()) || 0;
                 QB.currentUnits.push({
                     id: 0,
@@ -1790,13 +1859,14 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
                     courseid: courseid,
                     creditpoints: tu ? (tu.creditpoints || 0) : 0,
                 });
+                QB.nominalFilled = false;   // new unit may need authoritative hours resolved
             }
             renderComplianceDashboard();
             // CHECK: fast path — update the section pill without a full re-render.
             // The course cell stays as the visible dropdown (correct for a just-selected unit).
             updateSectionPill(type, group);
         } else {
-            QB.currentUnits = QB.currentUnits.filter(function(u) { return u.unitcode !== code; });
+            QB.currentUnits = QB.currentUnits.filter(function (u) { return u.unitcode !== code; });
             renderComplianceDashboard();
             // FIX-QB-DESELECT-RENDER (v5.9.273): UNCHECK needs a full re-render.
             // Without it the compact "✓ BSB226" badge stays visible on a deselected row,
@@ -1811,12 +1881,12 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         var $sel = $(this);
         var code     = $sel.data('unitcode');
         var courseid = parseInt($sel.val()) || 0;
-        var unit = QB.currentUnits.find(function(u) { return u.unitcode === code; });
+        var unit = QB.currentUnits.find(function (u) { return u.unitcode === code; });
         if (unit) {
             unit.courseid = courseid;
             // If the new primary was previously a variant, remove it from variants.
             if (courseid && unit.variants) {
-                unit.variants = unit.variants.filter(function(id) { return id !== courseid; });
+                unit.variants = unit.variants.filter(function (id) { return id !== courseid; });
             }
             // Re-render so the compact badge / dropdown switches correctly for this unit.
             renderUnitBuilder();
@@ -1834,7 +1904,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
             if ($cb.length && !$cb.is(':checked')) {
                 var type  = $cb.data('unittype')  || 'elective';
                 var group = $cb.data('unitgroup') || '';
-                var tu    = QB.tgaUnits.find(function(u) { return u.unitcode === code; });
+                var tu    = QB.tgaUnits.find(function (u) { return u.unitcode === code; });
                 $cb.prop('checked', true);
                 $row.addClass('selected');
                 QB.currentUnits.push({
@@ -1847,6 +1917,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
                     courseid:      courseid,
                     creditpoints:  tu ? (tu.creditpoints || 0) : 0,
                 });
+                QB.nominalFilled = false;   // new unit may need authoritative hours resolved
                 // FIX-QB-AUTOCHECK-RENDER (v5.9.274): full re-render so the row
                 // immediately switches from open-dropdown to compact-badge mode.
                 // renderUnitBuilder() also recalculates section pills, so
@@ -1877,7 +1948,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         // returning the old value.  We must call BOTH .attr() (DOM) AND .data() (cache).
         $row.find('.qb-unit-cb').attr('data-unitgroup', newGroup).data('unitgroup', newGroup);
         // Keep QB.currentUnits in sync when the unit is already selected.
-        var unit = QB.currentUnits.find(function(u) { return u.unitcode === code; });
+        var unit = QB.currentUnits.find(function (u) { return u.unitcode === code; });
         if (unit) {
             unit.electivegroup = newGroup;
         }
@@ -1887,8 +1958,8 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
 
     function deleteUnit() {
         var code    = $(this).data('unitcode');
-        QB.currentUnits = QB.currentUnits.filter(function(u) { return u.unitcode !== code; });
-        var tgaUnit = QB.tgaUnits.find(function(u) { return u.unitcode === code; });
+        QB.currentUnits = QB.currentUnits.filter(function (u) { return u.unitcode !== code; });
+        var tgaUnit = QB.tgaUnits.find(function (u) { return u.unitcode === code; });
         if (!tgaUnit) {
             // Imported unit: remove the row from the DOM immediately so it disappears
             // before renderUnitBuilder() fires (avoids a brief flicker of the old row).
@@ -1923,7 +1994,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         var hours = parseInt($('#qb-imp-hours').val()) || 0;
         if (!code) { showError('Please enter a unit code.'); return; }
         if (!name) { showError('Please enter a unit name.'); return; }
-        if (QB.currentUnits.find(function(u) { return u.unitcode === code; })) {
+        if (QB.currentUnits.find(function (u) { return u.unitcode === code; })) {
             showError(code + ' is already in this qualification.'); return;
         }
         QB.currentUnits.push({ id:0, unitcode:code, unitname:name, unittype:'imported', electivegroup:'', nominalhours:hours, courseid:0, creditpoints:0 });
@@ -1965,10 +2036,10 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
 
         // Compute nominal hours from unit sum if not manually set
         if (!hours && QB.currentUnits.length > 0) {
-            hours = QB.currentUnits.reduce(function(s,u){ return s+(u.nominalhours||0); }, 0);
+            hours = QB.currentUnits.reduce(function (s,u){ return s+(u.nominalhours||0); }, 0);
         }
 
-        var unitsToSave = QB.currentUnits.map(function(u) {
+        var unitsToSave = QB.currentUnits.map(function (u) {
             return {
                 unitcode:      u.unitcode,
                 unitname:      u.unitname,
@@ -2002,7 +2073,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
                 electiverules:     electiverules,
                 units:             JSON.stringify(unitsToSave),
             }
-        }])[0].done(function(resp) {
+        }])[0].done(function (resp) {
             // BUG-MAY1-AUDIT #9 (v4.2.44): on success, briefly flash the button
             // green with "Saved OK" so the user sees positive confirmation, then
             // revert to the neutral primary state.  Previously the button was
@@ -2011,7 +2082,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
             $btn.prop('disabled', false).text('Save Qualification');
             if (resp.success) {
                 $btn.removeClass('btn-primary').addClass('btn-success').text('Saved \u2713');
-                setTimeout(function() {
+                setTimeout(function () {
                     $btn.removeClass('btn-success').addClass('btn-primary').text('Save Qualification');
                 }, 2000);
             }
@@ -2029,14 +2100,14 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
                     var $st = $('#qb-save-status');
                     $st.html('<span class="badge badge-success p-2" style="font-size:0.95rem"><i class="fa fa-check"></i> Saved &mdash; ' + (resp.message || 'changes committed') + '</span>')
                        .css({opacity: 1, transition: 'opacity 0.6s'});
-                    setTimeout(function() { $st.css('opacity', 0); }, 2500);
-                    setTimeout(function() { $st.empty().css('opacity', 1); }, 3200);
+                    setTimeout(function () { $st.css('opacity', 0); }, 2500);
+                    setTimeout(function () { $st.empty().css('opacity', 1); }, 3200);
                 }
             } else {
                 showError(resp.message || 'Save failed. Please try again.');
                 $('#qb-save-btn').prop('disabled', false).text('Save Qualification');
             }
-        }).fail(function(err) {
+        }).fail(function (err) {
             $('#qb-save-btn').prop('disabled', false).text('Save Qualification');
             showError('Save failed: ' + (err.message || 'Unknown error'));
         });
@@ -2061,7 +2132,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
             valid: true,
         };
 
-        units.forEach(function(unit) {
+        units.forEach(function (unit) {
             if (unit.type === 'CORE' || unit.unittype === 'core') {
                 result.coreCount++;
             } else {
@@ -2082,7 +2153,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         }
 
         if (rules.groups) {
-            Object.keys(rules.groups).sort().forEach(function(grp) {
+            Object.keys(rules.groups).sort().forEach(function (grp) {
                 var r = rules.groups[grp];
                 var cnt = result.groupCounts[grp] || 0;
                 var min = r.min || 0;
@@ -2119,7 +2190,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
             errors:         [],
         };
 
-        selectedUnits.forEach(function(u) {
+        selectedUnits.forEach(function (u) {
             var pts = Number(u.creditpoints || 0);
             result.totalPoints += pts;
             if ((u.unittype || '').toUpperCase() === 'CORE') {
@@ -2143,10 +2214,10 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         }
 
         // Prerequisite check: warn if a required prerequisite code is missing from the selection
-        selectedUnits.forEach(function(u) {
+        selectedUnits.forEach(function (u) {
             if (u.prerequisites && Array.isArray(u.prerequisites)) {
-                u.prerequisites.forEach(function(preCode) {
-                    var found = selectedUnits.find(function(x) {
+                u.prerequisites.forEach(function (preCode) {
+                    var found = selectedUnits.find(function (x) {
                         return (x.code || x.unitcode || '').toUpperCase() === preCode.toUpperCase();
                     });
                     if (!found) {
@@ -2164,7 +2235,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
     function showToast(msg) {
         var $t = $('#qb-toast');
         $t.text(msg).addClass('show');
-        setTimeout(function() { $t.removeClass('show'); }, 3500);
+        setTimeout(function () { $t.removeClass('show'); }, 3500);
     }
 
     function escH(str) {

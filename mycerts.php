@@ -15,13 +15,12 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — mycerts.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 // v4.7.104 STUDENT-CERT-PORTAL — Enhanced student-facing certificate document area.
 //
 // Replaces the basic v4.x card list with a proper certificate portfolio page:
@@ -64,30 +63,37 @@ echo $OUTPUT->header();
 echo local_rtocompliance_render_nav_header(get_string('mycertificates', 'local_rtocompliance'), null, null, 'certificates');
 
 // ── Fetch all issued certs ─────────────────────────────────────────────────
-$params = ['userid' => $userid, 'status' => 'issued'];
-$yearsql = '';
-if ($filteryear > 0) {
-    $yearsql = ' AND EXTRACT(YEAR FROM to_timestamp(issuedate)) = :year ';
-    $params['year'] = $filteryear;
-}
-
-$certs = $DB->get_records_sql(
+// PORTABLE-DATE-FIX (v5.9.385): issuedate is a Unix timestamp. The previous
+// EXTRACT(YEAR FROM to_timestamp(...)) / ::int SQL is PostgreSQL-only and fatally
+// errored the whole page on MySQL/MariaDB (the most common Moodle DB) on every
+// load. Fetch the user's issued certs once and derive the year in PHP.
+$allcerts = $DB->get_records_sql(
     "SELECT * FROM {local_rtocompliance_certs}
-     WHERE userid = :userid AND status = :status {$yearsql}
+     WHERE userid = :userid AND status = :status
      ORDER BY issuedate DESC",
-    $params
+    ['userid' => $userid, 'status' => 'issued']
 );
 
 $certtypes = local_rtocompliance_get_certificate_types();
 
-// Collect years for filter tabs
-$allyears = $DB->get_fieldset_sql(
-    "SELECT DISTINCT EXTRACT(YEAR FROM to_timestamp(issuedate))::int AS yr
-     FROM {local_rtocompliance_certs}
-     WHERE userid = :userid AND status = 'issued'
-     ORDER BY yr DESC",
-    ['userid' => $userid]
-);
+// Distinct issue years for the filter tabs (computed in PHP).
+$yearset = [];
+foreach ($allcerts as $c) {
+    if (!empty($c->issuedate)) {
+        $yearset[(int) date('Y', (int) $c->issuedate)] = true;
+    }
+}
+$allyears = array_keys($yearset);
+rsort($allyears);
+
+// Apply the year filter in PHP.
+if ($filteryear > 0) {
+    $certs = array_filter($allcerts, function ($c) use ($filteryear) {
+        return !empty($c->issuedate) && (int) date('Y', (int) $c->issuedate) === (int) $filteryear;
+    });
+} else {
+    $certs = $allcerts;
+}
 
 echo html_writer::start_div('certificates-container');
 
@@ -142,6 +148,9 @@ foreach ($typecounts as $type => $count) {
     echo html_writer::end_div();
 }
 echo html_writer::end_div();
+
+// ── Explainer card ──────────────────────────────────────────────────────────
+echo '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px 18px;margin-bottom:16px;"><div style="font-weight:700;color:#1e3a8a;margin-bottom:6px;font-size:15px;">Your Certificates</div><div style="font-size:14.5px;color:#334155;line-height:1.55;">These are the certificates issued to you, grouped by type. For each one you can <strong>Download PDF</strong> to save an official copy, or <strong>Verify</strong> to open the public page that confirms it is genuine. Use the year tabs to narrow the list by when a certificate was issued.</div></div>';
 
 // ── Year filter tabs ───────────────────────────────────────────────────────
 if (count($allyears) > 1) {
@@ -225,7 +234,7 @@ foreach ($orderedgroups as $grouptype => $groupcerts) {
         // Qualification
         if ($cert->qualificationcode || $cert->qualificationname) {
             echo html_writer::tag('h5',
-                ($cert->qualificationcode ? $cert->qualificationcode . ' — ' : '') . $cert->qualificationname,
+                ($cert->qualificationcode ? $cert->qualificationcode . ' ' : '') . $cert->qualificationname,
                 ['class' => 'mb-1']
             );
         } else {

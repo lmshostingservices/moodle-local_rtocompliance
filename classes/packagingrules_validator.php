@@ -14,6 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * RTO Compliance plugin — packagingrules_validator.php.
+ *
+ * @package    local_rtocompliance
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 namespace local_rtocompliance;
 
 defined('MOODLE_INTERNAL') || die();
@@ -25,9 +32,6 @@ defined('MOODLE_INTERNAL') || die();
  * cross-checks the selected units against those rules.  Falls back to the
  * values stored in the qualification product record when the API is
  * unavailable.
- * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
 class packagingrules_validator {
     // ── TGA API helpers ──────────────────────────────────────────────────────

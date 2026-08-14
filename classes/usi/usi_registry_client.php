@@ -14,6 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * RTO Compliance plugin — usi_registry_client.php.
+ *
+ * @package    local_rtocompliance
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 namespace local_rtocompliance\usi;
 
 defined('MOODLE_INTERNAL') || die();
@@ -26,18 +33,19 @@ defined('MOODLE_INTERNAL') || die();
  * 
  * Based on MAS-ST Service Definition v1.1 (June 2024)
  * https://softwareauthorisations.ato.gov.au/R3.0/S007v1.3/service.svc
- * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
 class usi_registry_client {
-    
     const ENDPOINT_PRODUCTION_SHA256 = 'https://softwareauthorisations.ato.gov.au/R3.0/S007v1.3/service.svc';
     const ENDPOINT_EVTE_SHA256 = 'https://softwareauthorisations.evte.ato.gov.au/R3.0/S007v1.3/service.svc';
     const ENDPOINT_PRODUCTION_SHA1 = 'https://softwareauthorisations.ato.gov.au/R3.0/S007v1.2/service.svc';
     const ENDPOINT_EVTE_SHA1 = 'https://softwareauthorisations.evte.ato.gov.au/R3.0/S007v1.2/service.svc';
     
-    const USI_REGISTRY_ENDPOINT = 'https://3pt.portal.usi.gov.au/service/v5/usiservice.svc';
+    // ENDPOINT FIX (v6.3.0): this constant held the 3PT TEST endpoint, at v4, in the wrong
+    // case — while being named as if it were production. v6.2.61 recorded that these constants
+    // were kept "for reference so the platform mirrors it", which made a test-environment URL
+    // into a de facto specification. Corrected to the verified PRODUCTION v5 value, taken from
+    // the wsa10:Address in the live WSDL at portal.usi.gov.au/service/v5/usiservice.wsdl.
+    const USI_REGISTRY_ENDPOINT = 'https://portal.usi.gov.au/service/v5/usiservice.svc';
     const USI_REGISTRY_EVTE = 'https://3pt.evte.usi.gov.au/Service/UsiService.svc';
     
     const TOKEN_LIFETIME_MINUTES = 30;
@@ -517,6 +525,9 @@ XML;
         
         $xpath = new \DOMXPath($doc);
         $xpath->registerNamespace('s', self::NS_SOAP12);
+        // NAMESPACE FIX (v6.3.0): USI v5 uses the 2022 namespace for messages and SOAP
+        // actions. The 2020 namespace survives in v5 ONLY for the ErrorInfo and
+        // ArrayOfErrorInfo fault types. Using 2020 here was a v4-era error.
         $xpath->registerNamespace('usi', 'http://usi.gov.au/2022/ws');
         
         $fault = $xpath->query('//s:Fault');

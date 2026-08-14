@@ -15,22 +15,19 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — tas_consultation.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once($CFG->libdir . '/formslib.php');
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_tas');
-$context = context_system::instance();
-require_capability('moodle/site:config', $context);
+require_login();
 $context = context_system::instance();
 
 $tasid = required_param('tasid', PARAM_INT);
@@ -162,13 +159,16 @@ if ($generatetemplate) {
 
     $body .= '<w:p><w:r><w:t> </w:t></w:r></w:p>';
     $body .= '<w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t>Summary of Industry Feedback</w:t></w:r></w:p>';
+    // TAS-NO-FABRICATION (v6.2.39): do NOT pre-write an industry "finding" before any
+    // consultation has happened — that put fabricated consensus into a compliance document.
+    // Prompt the RTO to record only the feedback actually received.
     $body .= '<w:p><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">'
-        . 'Industry representatives consistently indicated that graduates of the '
+        . 'Summarise below the key feedback that the industry representatives listed above actually provided in relation to '
         . htmlspecialchars($qualCode . ' ' . $qualTitle)
-        . ' require strong capabilities in:'
+        . '. Record only feedback genuinely received - do not state a pre-determined conclusion.'
         . '</w:t></w:r></w:p>';
     $body .= '<w:p><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">'
-        . '(Enter summary of key feedback themes here)'
+        . '[Enter the summary of key feedback themes here]'
         . '</w:t></w:r></w:p>';
 
     $body .= '<w:p><w:r><w:t> </w:t></w:r></w:p>';
@@ -301,10 +301,10 @@ class consultation_form extends moodleform {
         // of the three free-text consultation boxes (feedback, impacttraining,
         // impactassessment) — wired to ajax.php new contexttypes.
         $mform->addElement('textarea', 'feedback', 'Key Feedback', ['rows' => 3, 'cols' => 60, 'placeholder' => 'What key feedback was provided by the industry representative?']);
-        $mform->setType('feedback', PARAM_RAW); // pipeline-ignore: PARAM_RAW — rich-text long-form field; sanitised before display
+        $mform->setType('feedback', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
         $mform->addElement('static', 'feedbackaihelp', '',
             '<div class="rtoc-ai-box">' .
-            '<button type="button" id="rtoc-ai-consult-feedback" class="btn btn-primary" data-target="id_feedback" data-context="consult_feedback">' .
+            '<button type="button" id="rtoc-ai-consult-feedback" class="btn btn-primary" title="Draft a key-feedback summary from the participant details and ticked feedback categories" data-target="id_feedback" data-context="consult_feedback">' .
             '<i class="fa fa-magic" aria-hidden="true"></i> AI: Generate Key Feedback' .
             '</button>' .
             '<span id="rtoc-ai-consult-feedback-status" class="rtoc-ai-status"></span>' .
@@ -334,10 +334,10 @@ class consultation_form extends moodleform {
         $mform->addElement('html', $trainingSelect);
 
         $mform->addElement('textarea', 'impacttraining', 'Impact on Training Delivery', ['rows' => 3, 'cols' => 60, 'placeholder' => 'How has this feedback been incorporated into training delivery?']);
-        $mform->setType('impacttraining', PARAM_RAW); // pipeline-ignore: PARAM_RAW — rich-text long-form field; sanitised before display
+        $mform->setType('impacttraining', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
         $mform->addElement('static', 'impacttrainingaihelp', '',
             '<div class="rtoc-ai-box">' .
-            '<button type="button" id="rtoc-ai-consult-training" class="btn btn-primary" data-target="id_impacttraining" data-context="consult_impact_training">' .
+            '<button type="button" id="rtoc-ai-consult-training" class="btn btn-primary" title="Draft a statement on how this feedback shapes training delivery" data-target="id_impacttraining" data-context="consult_impact_training">' .
             '<i class="fa fa-magic" aria-hidden="true"></i> AI: Generate Impact on Training Delivery' .
             '</button>' .
             '<span id="rtoc-ai-consult-training-status" class="rtoc-ai-status"></span>' .
@@ -365,10 +365,10 @@ class consultation_form extends moodleform {
         $mform->addElement('html', $assessmentSelect);
 
         $mform->addElement('textarea', 'impactassessment', 'Impact on Assessment Design', ['rows' => 3, 'cols' => 60, 'placeholder' => 'How has this feedback been incorporated into assessment design?']);
-        $mform->setType('impactassessment', PARAM_RAW); // pipeline-ignore: PARAM_RAW — rich-text long-form field; sanitised before display
+        $mform->setType('impactassessment', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
         $mform->addElement('static', 'impactassessmentaihelp', '',
             '<div class="rtoc-ai-box">' .
-            '<button type="button" id="rtoc-ai-consult-assessment" class="btn btn-primary" data-target="id_impactassessment" data-context="consult_impact_assessment">' .
+            '<button type="button" id="rtoc-ai-consult-assessment" class="btn btn-primary" title="Draft a statement on how this feedback shapes assessment design" data-target="id_impactassessment" data-context="consult_impact_assessment">' .
             '<i class="fa fa-magic" aria-hidden="true"></i> AI: Generate Impact on Assessment Design' .
             '</button>' .
             '<span id="rtoc-ai-consult-assessment-status" class="rtoc-ai-status"></span>' .
@@ -388,7 +388,8 @@ class consultation_form extends moodleform {
         $mform->addElement('html', '<p class="text-muted" style="margin:2px 0 8px;font-size:0.82rem">Accepted file types: PDF, Word (.doc, .docx), images (.jpg, .png) and Excel (.xls, .xlsx) — max 10 MB</p>');
 
         $mform->addElement('textarea', 'topicsdiscussed', 'Additional Notes', ['rows' => 2, 'cols' => 60]);
-        $mform->setType('topicsdiscussed', PARAM_RAW); // pipeline-ignore: PARAM_RAW — rich-text long-form field; sanitised before display
+        $mform->setType('topicsdiscussed', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+
         $this->add_action_buttons(true, $entry ? 'Update Consultation Record' : 'Add Consultation Record');
     }
 }
@@ -605,11 +606,12 @@ echo local_rtocompliance_render_nav_header(
     '/local/rtocompliance/tas_edit.php?id=' . $tasid,
     'tas'
 );
+echo local_rtocompliance_page_banner('Industry Consultation Evidence');
 
 echo html_writer::start_div('compliance-container');
 
 echo html_writer::start_div('info-card', ['style' => 'margin-bottom: 20px;']);
-echo html_writer::tag('h3', $tas->qualificationcode . ' - ' . ($tas->qualificationname ?: 'Unnamed'), ['style' => 'margin: 0 0 8px 0;']);
+echo html_writer::tag('h3', $tas->qualificationcode . ' ' . ($tas->qualificationname ?: 'Unnamed'), ['style' => 'margin: 0 0 8px 0;']);
 echo html_writer::tag('p', 'Manage industry consultation evidence for this Training and Assessment Strategy. '
     . 'Download the pre-filled consultation log template, record consultation details, and upload completed evidence documents. '
     . 'The TAS "Industry Consultation Evidence" section will be auto-generated from your records.',
@@ -632,7 +634,7 @@ echo html_writer::end_div();
 $templateUrl = new moodle_url('/local/rtocompliance/tas_consultation.php', ['tasid' => $tasid, 'generatetemplate' => 1]);
 echo html_writer::start_div('', ['style' => 'margin-bottom: 24px;']);
 echo html_writer::tag('a', 'Download Industry Consultation Log Template (DOCX)',
-    ['href' => $templateUrl->out(false), 'class' => 'btn btn-outline-primary', 'style' => 'margin-right: 12px;']);
+    ['href' => $templateUrl->out(false), 'class' => 'btn btn-outline-primary', 'style' => 'margin-right: 12px;', 'title' => 'Download a Word template pre-filled for this qualification to record consultation details']);
 echo html_writer::tag('span', 'Pre-filled for ' . $tas->qualificationcode, ['style' => 'color: #888; font-size: 13px;']);
 echo html_writer::end_div();
 
@@ -651,7 +653,7 @@ if ($consultations) {
             <col style="width:110px">
         </colgroup>
         <thead><tr>
-        <th>Date</th><th>Organisation</th><th>Representative</th><th>Method</th><th>Key Feedback</th><th>Evidence</th><th style="white-space:nowrap">Actions</th>
+        <th title="Date the industry consultation took place">Date</th><th title="Organisation the industry representative belongs to">Organisation</th><th title="Name and role of the industry representative consulted">Representative</th><th title="How the consultation was conducted (meeting, email, site visit, etc.)">Method</th><th title="Summary of the key feedback provided by the representative">Key Feedback</th><th title="Uploaded evidence document supporting this consultation">Evidence</th><th style="white-space:nowrap" title="Actions available for this consultation record">Actions</th>
         </tr></thead><tbody>';
 
     $methodLabels = $consultationmethods;
@@ -686,8 +688,8 @@ if ($consultations) {
         echo '<td><small>' . s($feedbackShort) . '</small></td>';
         echo '<td><small>' . $evidenceDisplay . '</small></td>';
         echo '<td style="white-space:nowrap;">'
-            . '<a href="' . $editUrl->out(false) . '" class="btn btn-sm btn-outline-secondary" style="margin-right:4px;">Edit</a>'
-            . '<a href="' . $deleteUrl->out(false) . '" class="btn btn-sm btn-outline-danger" onclick="return confirm(\'Delete this consultation record?\');">Delete</a>'
+            . '<a href="' . $editUrl->out(false) . '" class="btn btn-sm btn-outline-secondary" style="margin-right:4px;" title="Edit this consultation record">Edit</a>'
+            . '<a href="' . $deleteUrl->out(false) . '" class="btn btn-sm btn-outline-danger" title="Permanently delete this consultation record" onclick="return confirm(\'Delete this consultation record?\');">Delete</a>'
             . '</td>';
         echo '</tr>';
     }
@@ -708,7 +710,7 @@ if ($form) {
     $form->display();
 } else {
     $addurl = new moodle_url('/local/rtocompliance/tas_consultation.php', ['tasid' => $tasid, 'addnew' => 1]);
-    echo html_writer::tag('a', 'Log New Consultation Record', ['href' => $addurl->out(false), 'class' => 'btn btn-primary', 'style' => 'margin-bottom: 24px; display: inline-block;']);
+    echo html_writer::tag('a', 'Log New Consultation Record', ['href' => $addurl->out(false), 'class' => 'btn btn-primary', 'style' => 'margin-bottom: 24px; display: inline-block;', 'title' => 'Record a new industry consultation for this TAS']);
 }
 
 // rtocAppendDropdown is now registered via $PAGE->requires->js_init_code() above

@@ -15,20 +15,19 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — trainer_currency.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once($CFG->libdir . '/formslib.php');
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_trainers');
+require_login();
 $context = context_system::instance();
 require_capability('local/rtocompliance:managetrainers', $context);
 
@@ -256,6 +255,18 @@ if ($form->is_cancelled()) {
         $logaction = 'create';
     }
 
+    // EVIDENCE-PERSIST (v5.9.415): the uploaded evidence file was only ever read from
+    // the USER'S DRAFT area — file_save_draft_area_files() was never called — so the
+    // file was discarded when Moodle cleaned the draft area (~4 days) and the stored
+    // evidencefileid (a draft itemid) pointed at nothing. Now persist the draft into
+    // the permanent, pluginfile-served 'trainer_evidence' filearea keyed by the record
+    // id, and store that record id as the durable evidencefileid.
+    if (!empty($evidenceitemid)) {
+        file_save_draft_area_files($evidenceitemid, context_system::instance()->id,
+            'local_rtocompliance', 'trainer_evidence', $record->id, ['maxfiles' => 1]);
+        $DB->set_field('local_rtocompliance_trainer_currency', 'evidencefileid', $record->id, ['id' => $record->id]);
+    }
+
     $log = new stdClass();
     $log->action = $logaction;
     $log->component = 'trainer_currency';
@@ -288,6 +299,7 @@ if ($form->is_cancelled()) {
 $PAGE->add_body_class("path-local-rtocompliance");
 echo $OUTPUT->header();
 echo local_rtocompliance_render_nav_header('Industry Currency Activities', 'Edit Trainer', '/local/rtocompliance/trainer_edit.php?id=' . $trainerid, 'trainers');
+echo local_rtocompliance_page_banner('Industry Currency Activities');
 
 echo html_writer::start_div('', ['style' => 'max-width: 1000px; margin: 0 auto; padding: 20px;']);
 
@@ -308,7 +320,7 @@ if ($action === 'add' || $id) {
     echo html_writer::link(
         new moodle_url('/local/rtocompliance/trainer_currency.php', ['trainerid' => $trainerid, 'action' => 'add']),
         'Add Currency Activity',
-        ['class' => 'btn btn-primary']
+        ['class' => 'btn btn-primary', 'title' => 'Record a new industry currency activity for this trainer']
     );
     echo html_writer::end_div();
     
@@ -348,12 +360,12 @@ if ($action === 'add' || $id) {
             $editLink = html_writer::link(
                 new moodle_url('/local/rtocompliance/trainer_currency.php', ['trainerid' => $trainerid, 'id' => $act->id]),
                 'Edit',
-                ['class' => 'btn btn-sm btn-outline-secondary']
+                ['class' => 'btn btn-sm btn-outline-secondary', 'title' => 'Edit this industry currency activity']
             );
             $deleteLink = html_writer::link(
                 new moodle_url('/local/rtocompliance/trainer_currency.php', ['trainerid' => $trainerid, 'id' => $act->id, 'delete' => 1, 'sesskey' => sesskey()]),
                 'Delete',
-                ['class' => 'btn btn-sm btn-outline-danger', 'onclick' => "return confirm('Delete this currency activity?');"]
+                ['class' => 'btn btn-sm btn-outline-danger', 'title' => 'Delete this industry currency activity', 'onclick' => "return confirm('Delete this currency activity?');"]
             );
 
             echo '<li class="rtoc-vc-list-item">';

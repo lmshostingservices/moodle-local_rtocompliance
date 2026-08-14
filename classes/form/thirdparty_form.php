@@ -15,13 +15,12 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — thirdparty_form.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 namespace local_rtocompliance\form;
 
 defined('MOODLE_INTERNAL') || die();
@@ -97,7 +96,7 @@ class thirdparty_form extends \moodleform {
         $mform->addHelpButton('agreementenddate', 'agreementenddate', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'qualificationscovered', get_string('qualifications_covered', 'local_rtocompliance'), ['rows' => 4, 'cols' => 80]);
-        $mform->setType('qualificationscovered', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+        $mform->setType('qualificationscovered', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
         $mform->addHelpButton('qualificationscovered', 'qualificationscovered', 'local_rtocompliance');
 
         $mform->addElement('header', 'asqanotification', 'ASQA Notification (30-Day Requirement)');
@@ -169,8 +168,8 @@ class thirdparty_form extends \moodleform {
 
         // Hidden field stores the extra clauses as JSON for DB persistence
         $mform->addElement('hidden', 'mandatoryclausesextra');
-        $mform->setType('mandatoryclausesextra', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
- // pipeline-ignore: PARAM_RAW — rich-text/JSON field sanitised before display or decoded immediately
+        $mform->setType('mandatoryclausesextra', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+
         // Copy of Agreement document
         $mform->addElement('header', 'agreementdocheader', 'Copy of Agreement');
         $mform->addElement('text', 'agreementdocument', 'Agreement Document Link / Reference',
@@ -236,7 +235,7 @@ class thirdparty_form extends \moodleform {
         $mform->addElement('header', 'additionalinfo', get_string('additional_information', 'local_rtocompliance'));
 
         $mform->addElement('textarea', 'notes', get_string('notes', 'local_rtocompliance'), ['rows' => 4, 'cols' => 80]);
-        $mform->setType('notes', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+        $mform->setType('notes', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
         $mform->addHelpButton('notes', 'thirdparty_notes', 'local_rtocompliance');
 
         $this->add_action_buttons(true, get_string('savechanges'));

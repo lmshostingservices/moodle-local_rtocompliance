@@ -15,21 +15,18 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — insurance.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_insurance');
-$context = context_system::instance();
-require_capability('moodle/site:config', $context);
+require_login();
 $PAGE->set_title(get_string('insurance', 'local_rtocompliance'));
 $PAGE->set_heading(get_string('insurance', 'local_rtocompliance'));
 
@@ -46,7 +43,7 @@ echo html_writer::tag('h2', 'Insurance Register');
 echo html_writer::link(
     new moodle_url('/local/rtocompliance/insurance_edit.php'),
     'Add Insurance Policy',
-    ['class' => 'btn btn-primary']
+    ['class' => 'btn btn-primary', 'title' => 'Add a new insurance policy to the register']
 );
 echo html_writer::end_div();
 
@@ -94,13 +91,13 @@ if ($policies) {
     echo html_writer::start_tag('table', ['class' => 'data-table']);
     echo html_writer::start_tag('thead');
     echo html_writer::start_tag('tr');
-    echo html_writer::tag('th', 'Type');
-    echo html_writer::tag('th', 'Provider');
-    echo html_writer::tag('th', 'Policy Number');
-    echo html_writer::tag('th', 'Coverage');
-    echo html_writer::tag('th', 'Expiry Date');
-    echo html_writer::tag('th', 'Status');
-    echo html_writer::tag('th', 'Actions');
+    echo html_writer::tag('th', 'Type', ['title' => 'Type of insurance policy']);
+    echo html_writer::tag('th', 'Provider', ['title' => 'Insurer providing the policy']);
+    echo html_writer::tag('th', 'Policy Number', ['title' => 'Insurer policy reference number']);
+    echo html_writer::tag('th', 'Coverage', ['title' => 'Amount of cover provided by the policy']);
+    echo html_writer::tag('th', 'Expiry Date', ['title' => 'Date the policy expires']);
+    echo html_writer::tag('th', 'Status', ['title' => 'Whether the policy is current, expiring soon or expired']);
+    echo html_writer::tag('th', 'Actions', ['title' => 'Actions available for this record']);
     echo html_writer::end_tag('tr');
     echo html_writer::end_tag('thead');
     echo html_writer::start_tag('tbody');
@@ -134,7 +131,7 @@ if ($policies) {
             html_writer::link(
                 new moodle_url('/local/rtocompliance/insurance_edit.php', ['id' => $policy->id]),
                 'Edit',
-                ['class' => 'btn btn-sm btn-secondary']
+                ['class' => 'btn btn-sm btn-secondary', 'title' => 'Edit this insurance policy']
             )
         );
         echo html_writer::end_tag('tr');
@@ -150,7 +147,7 @@ if ($policies) {
     echo html_writer::link(
         new moodle_url('/local/rtocompliance/insurance_edit.php'),
         'Add Insurance Policy',
-        ['class' => 'btn btn-primary']
+        ['class' => 'btn btn-primary', 'title' => 'Add a new insurance policy to the register']
     );
     echo html_writer::end_div();
 }

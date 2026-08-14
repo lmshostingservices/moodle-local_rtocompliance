@@ -15,13 +15,12 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — validation_form.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 namespace local_rtocompliance\form;
 
 defined('MOODLE_INTERNAL') || die();
@@ -56,7 +55,7 @@ class validation_form extends \moodleform {
         $mform->addHelpButton('productname', 'validation_productname', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'unitcodes', get_string('unit_codes', 'local_rtocompliance'), ['rows' => 3, 'cols' => 80]);
-        $mform->setType('unitcodes', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+        $mform->setType('unitcodes', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
         $mform->addHelpButton('unitcodes', 'validation_unitcodes', 'local_rtocompliance');
 
         $typeoptions = [
@@ -105,8 +104,8 @@ class validation_form extends \moodleform {
         $mform->addHelpButton('riskfactorsgroup', 'risk_factors', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'riskfactors', 'Additional Risk Notes', ['rows' => 2, 'cols' => 80, 'placeholder' => 'Add any additional risk factors not listed above...']);
-        $mform->setType('riskfactors', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
- // pipeline-ignore: PARAM_RAW — rich-text/JSON field sanitised before display or decoded immediately
+        $mform->setType('riskfactors', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+
         $mform->addElement('header', 'schedule', 'Schedule');
         $mform->addHelpButton('schedule', 'schedule_header', 'local_rtocompliance');
 
@@ -172,8 +171,8 @@ class validation_form extends \moodleform {
         $mform->addHelpButton('panelmemberids', 'panelmembers', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'panelmembers', get_string('panel_members', 'local_rtocompliance') . ' (Additional)', ['rows' => 2, 'cols' => 80]);
-        $mform->setType('panelmembers', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
- // pipeline-ignore: PARAM_RAW — rich-text/JSON field sanitised before display or decoded immediately
+        $mform->setType('panelmembers', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+
         $mform->addElement('header', 'methodology', 'Methodology');
         $mform->addHelpButton('methodology', 'methodology_header', 'local_rtocompliance');
 
@@ -200,8 +199,8 @@ class validation_form extends \moodleform {
         $mform->addHelpButton('methodologiesgroup', 'methodology_samples', 'local_rtocompliance');
 
         $mform->addElement('textarea', 'methodologies', 'Additional Methodology Notes', ['rows' => 2, 'cols' => 80, 'placeholder' => 'Describe any additional methodologies used...']);
-        $mform->setType('methodologies', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
- // pipeline-ignore: PARAM_RAW — rich-text/JSON field sanitised before display or decoded immediately
+        $mform->setType('methodologies', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+
         $mform->addElement('text', 'samplesize', get_string('sample_size', 'local_rtocompliance'), ['size' => 10]);
         $mform->setType('samplesize', PARAM_INT);
         $mform->addHelpButton('samplesize', 'samplesize', 'local_rtocompliance');
@@ -219,6 +218,23 @@ class validation_form extends \moodleform {
         $mform->addElement('select', 'samplingmethod', get_string('sampling_method', 'local_rtocompliance'), $samplingmethods);
         $mform->addHelpButton('samplingmethod', 'samplingmethod', 'local_rtocompliance');
 
+        // Standard 1.5 (T-P1-1): Validator independence.
+        $mform->addElement('header', 'independence', 'Independence (Standard 1.5)');
+
+        $mform->addElement('static', 'independencehelp', '',
+            '<div class="alert alert-info" style="margin-bottom: 12px;">Standard 1.5 requires that the validation outcome is not solely determined by a person who designed or delivered the assessment being validated. Confirm independence before marking a validation as <strong>Completed</strong>.</div>');
+
+        $mform->addElement('advcheckbox', 'independenceconfirmed',
+            'Validator independence',
+            'I confirm the validation outcome was NOT solely determined by a person who designed or delivered the assessment being validated (Standard 1.5)',
+            [], ['0', '1']);
+        $mform->setDefault('independenceconfirmed', 0);
+
+        $mform->addElement('textarea', 'independencedeclaration',
+            'Independence declaration',
+            ['rows' => 3, 'cols' => 80, 'placeholder' => 'Describe how independence was assured — who validated, and who made the final judgement']);
+        $mform->setType('independencedeclaration', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
+
         $mform->addElement('header', 'outcomes', 'Outcomes');
         $mform->addHelpButton('outcomes', 'outcomes_header', 'local_rtocompliance');
 
@@ -227,6 +243,19 @@ class validation_form extends \moodleform {
             <strong>Findings Count:</strong> Total number of issues/improvements identified during validation.<br>
             <strong>Report Document URL:</strong> Paste the full URL to the validation report (Google Drive, SharePoint, OneDrive, or any accessible link). The URL will appear as a "View Report" button in the Validation Schedule and Completed Events lists.<br>
             <strong>ADC Linked:</strong> Check if validation evidence is attached to Annual Declaration of Compliance documentation.</div>');
+
+        // Standard 1.5 (P2-2): Validation outcome and rectification actions.
+        $outcomeoptions = [
+            '' => 'Not yet determined',
+            'compliant' => 'Compliant',
+            'improvements_required' => 'Improvements required',
+            'noncompliant' => 'Non-compliant',
+        ];
+        $mform->addElement('select', 'outcome', 'Validation Outcome', $outcomeoptions);
+
+        $mform->addElement('textarea', 'improvements', 'Improvements / Rectification Actions',
+            ['rows' => 4, 'cols' => 80, 'placeholder' => 'Document improvements required and rectification actions arising from this validation (what, who, by when).']);
+        $mform->setType('improvements', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
 
         $mform->addElement('text', 'findingscount', 'Number of Findings', ['size' => 10]);
         $mform->setType('findingscount', PARAM_INT);
@@ -239,7 +268,7 @@ class validation_form extends \moodleform {
 - Recommended action
 - Responsible person
 - Due date for action']);
-        $mform->setType('findings', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+        $mform->setType('findings', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
         $mform->addHelpButton('findings', 'findings', 'local_rtocompliance');
 
         $mform->addElement('text', 'reportdocument', 'Report Document URL', ['size' => 80, 'maxlength' => 500, 'placeholder' => 'https://drive.google.com/... or https://sharepoint.com/...']);
@@ -253,9 +282,24 @@ class validation_form extends \moodleform {
         $mform->addElement('header', 'additionalinfo', get_string('additional_information', 'local_rtocompliance'));
 
         $mform->addElement('textarea', 'notes', get_string('notes', 'local_rtocompliance'), ['rows' => 4, 'cols' => 80]);
-        $mform->setType('notes', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- rich-text/JSON field; sanitised before display or decoded immediately
+        $mform->setType('notes', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-text textarea/editor field; output is always rendered through format_text()/s(), never echoed raw.
         $mform->addHelpButton('notes', 'validation_notes', 'local_rtocompliance');
 
         $this->add_action_buttons(true, get_string('savechanges'));
+    }
+
+    /**
+     * Standard 1.5 (T-P1-1): a validation cannot be marked Completed unless the
+     * validator-independence declaration checkbox has been ticked. When it is
+     * not, the form is rejected here so the record's status is never persisted.
+     */
+    public function validation($data, $files) {
+        $errors = parent::validation($data, $files);
+
+        if (($data['status'] ?? '') === 'completed' && empty($data['independenceconfirmed'])) {
+            $errors['independenceconfirmed'] = 'You must confirm validator independence (Standard 1.5) before a validation can be marked as Completed.';
+        }
+
+        return $errors;
     }
 }

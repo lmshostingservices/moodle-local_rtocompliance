@@ -15,13 +15,12 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — soa_ajax.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 // v4.6.101 MULTI-UNIT-SOA — AJAX handler for soa_issue.php.
 // Actions: getstudent | getunits | generatesoa
 
@@ -80,7 +79,7 @@ try {
             global $DB, $USER;
 
             $userid    = required_param('userid', PARAM_INT);
-            $courseids = required_param('courseids', PARAM_RAW); // pipeline-ignore: PARAM_RAW -- JSON array decoded immediately
+            $courseids = required_param('courseids', PARAM_RAW); // JSON array of ints // pipeline-ignore: PARAM_RAW — free-text payload; sanitised/validated immediately after read, never echoed raw.
             $audience  = optional_param('audience', 'default', PARAM_ALPHA);
             $qualcode  = optional_param('qualcode', '', PARAM_ALPHANUMEXT);
             $qualname  = optional_param('qualname', '', PARAM_TEXT);
@@ -125,6 +124,30 @@ try {
                 }
             }
 
+            // NO-GATE-BYPASS (v5.9.414): the multi-unit SoA path used to insert the
+            // certificate directly, skipping the hard compliance gates that
+            // local_rtocompliance_programmatic_issue_cert() enforces for every other
+            // cert type. Apply them here too — BEFORE consuming credits — so a
+            // Statement of Attainment can no longer be issued to a student with no /
+            // unverified USI or with mandatory RTO identity unset. These gates are
+            // deliberately NOT covered by the compliance $bypass (which only overrides
+            // unit-level checks): USI (Clause 12) and RTO identity are non-negotiable.
+            $stusi   = $DB->get_record('local_rtocompliance_students', ['userid' => $userid], 'usi, usiverified');
+            $studusi = trim((string)($stusi->usi ?? ''));
+            if ($studusi === '') {
+                echo json_encode(['ok' => false, 'error' => 'Cannot issue — no USI is recorded for this student. A verified USI is required before issuing a Statement of Attainment (or mark the student USI-exempt).']);
+                break;
+            }
+            if (!local_rtocompliance_usi_is_verified($stusi->usiverified)) {
+                echo json_encode(['ok' => false, 'error' => 'Cannot issue — the USI on file has not been verified with the USI Registry. Verify the USI before issuing this Statement of Attainment.']);
+                break;
+            }
+            $missingset = local_rtocompliance_missing_cert_settings();
+            if (!empty($missingset)) {
+                echo json_encode(['ok' => false, 'error' => 'Cannot issue — required RTO details are not configured: ' . implode(', ', $missingset) . '. Set them in RTO Settings before issuing.']);
+                break;
+            }
+
             // Credit deduction (5 credits per certificate)
             $platformclient = new usi_platform_client();
             $creditresult   = $platformclient->consume_credits(
@@ -143,8 +166,8 @@ try {
             // Build units JSON (immutable snapshot inline on cert row)
             // SOA-CLEAN-UNITNAME (v5.9.281): strip unit-code prefix from the Moodle
             // course fullname before storage.  Moodle courses are commonly named
-            // "TLIE5020 Apply knowledge…" or "TLIE5020 - Apply knowledge…"; without
-            // this strip the rendered line becomes "TLIE5020 — TLIE5020 Apply
+            // "ABC12345 Apply knowledge…" or "ABC12345 - Apply knowledge…"; without
+            // this strip the rendered line becomes "ABC12345 — ABC12345 Apply
             // knowledge…" (code shown twice).  resolve_payload() has a matching strip
             // as a safety net for certs already in the DB.
             $unitsJson = [];
@@ -154,22 +177,27 @@ try {
                 if ($_unitcode !== '' && $_unitname !== '' && strpos($_unitname, $_unitcode) === 0) {
                     $_unitname = ltrim(substr($_unitname, strlen($_unitcode)), " \t-\xe2\x80\x94\xe2\x80\x93");
                 }
+                // v5.9.367 SOA-DATE-FIX: derive a Semester/Year value from the actual
+                // completion date. The renderer's Record-of-Results/date column reads
+                // 'semester' (or 'year'), never 'date' — so without this the column fell
+                // back to a semester derived from the cert ISSUE date instead of when the
+                // unit was actually completed. Keep 'date' too for any template using it.
+                $_cdate = (int) ($u->completiondate ?? 0);
+                $_semester = '';
+                if ($_cdate > 0) {
+                    $_semester = ((int) date('n', $_cdate) <= 6 ? 'Sem 1 ' : 'Sem 2 ') . date('Y', $_cdate);
+                }
                 $unitsJson[] = [
-                    'code'    => $_unitcode,
-                    'name'    => $_unitname,
-                    'outcome' => $u->outcomeidentifier,
-                    'date'    => date('d/m/Y', $u->completiondate),
+                    'code'     => $_unitcode,
+                    'name'     => $_unitname,
+                    'outcome'  => $u->outcomeidentifier,
+                    'date'     => $_cdate > 0 ? date('d/m/Y', $_cdate) : '',
+                    'semester' => $_semester,
                 ];
             }
 
-            // Generate unique cert number
-            $prefix   = get_config('local_rtocompliance', 'certprefix') ?: 'CERT';
-            $year     = date('Y');
-            $sequence = (int)$DB->count_records_sql(
-                "SELECT COUNT(*) FROM {local_rtocompliance_certs} WHERE certnumber LIKE ?",
-                [$prefix . '-' . $year . '-%']
-            ) + 1;
-            $certnumber = sprintf('%s-%s-%05d', $prefix, $year, $sequence);
+            // SoA is always 'statement' → ABC-SOA-YYYY-NNNN. v5.9.361.
+            $certnumber = local_rtocompliance_generate_cert_number('statement');
 
             // Resolve cert template
             require_once(__DIR__ . '/classes/cert_template.php');
@@ -200,12 +228,31 @@ try {
             $cert->notes             = $notes;
             $cert->emailsent         = 0;
             $cert->certtmplid        = $certtmplid;
+            // AS-ISSUED INTEGRITY (v5.9.414): snapshot the verified USI and the RTO
+            // identity settings at issue time so a later settings change cannot
+            // retroactively rewrite this already-issued SoA (matches every other path).
+            $cert->usi               = $studusi;
+            if (function_exists('local_rtocompliance_cert_issue_snapshot')) {
+                $cert->issuesnapshot = local_rtocompliance_cert_issue_snapshot();
+            }
             $cert->timecreated       = time();
             $cert->timemodified      = time();
             $cert->id = $DB->insert_record('local_rtocompliance_certs', $cert);
 
             // Write immutable compliance snapshot
             soa_compliance_engine::save_soa_snapshot($cert->id, $userid, $USER->id, $selectedUnits);
+
+            // REGISTRY-PUBLISH (v5.9.414): publish to the central verification registry
+            // (best-effort; no-op when the platform registry isn't configured) so the
+            // SoA's QR verifies centrally like every other issued certificate.
+            if (function_exists('local_rtocompliance_publish_cert_to_registry')) {
+                try {
+                    $certpublishuser = $DB->get_record('user', ['id' => $userid]);
+                    if ($certpublishuser) {
+                        local_rtocompliance_publish_cert_to_registry($cert, $certpublishuser);
+                    }
+                } catch (\Throwable $e) { /* non-fatal */ }
+            }
 
             // Audit log
             $log = new stdClass();

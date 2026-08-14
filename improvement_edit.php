@@ -15,23 +15,22 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — improvement_edit.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
+require_once(__DIR__ . '/classes/audit_logger.php');
 
 use local_rtocompliance\form\improvement_form;
+use local_rtocompliance\audit_logger;
 
 admin_externalpage_setup('local_rtocompliance_complaints');
-$context = context_system::instance();
-require_capability('moodle/site:config', $context);
+require_login();
 $context = context_system::instance();
 
 $id = optional_param('id', 0, PARAM_INT);
@@ -55,6 +54,19 @@ if ($id) {
 
 if ($delete && $id && confirm_sesskey()) {
     $DB->delete_records('local_rtocompliance_improvements', ['id' => $id]);
+    // ASQA compliance-evidence: record deletion of the continuous-improvement register entry.
+    try {
+        if (class_exists('\\local_rtocompliance\\audit_logger')) {
+            audit_logger::log_delete(
+                'improvement',
+                $id,
+                'Improvement #' . $id . ' deleted' . (!empty($improvement->title) ? ': ' . $improvement->title : ''),
+                $improvement ? (array) $improvement : null
+            );
+        }
+    } catch (\Throwable $e) {
+        debugging('Improvement audit log (delete) failed: ' . $e->getMessage(), DEBUG_DEVELOPER);
+    }
     redirect(
         new moodle_url('/local/rtocompliance/complaints.php'),
         get_string('improvement_deleted', 'local_rtocompliance'),
@@ -111,11 +123,38 @@ if ($form->is_cancelled()) {
     if (!empty($data->id)) {
         $record->id = $data->id;
         $DB->update_record('local_rtocompliance_improvements', $record);
+        // ASQA compliance-evidence: record update of the continuous-improvement register entry.
+        try {
+            if (class_exists('\\local_rtocompliance\\audit_logger')) {
+                audit_logger::log_update(
+                    'improvement',
+                    $record->id,
+                    'Improvement #' . $record->id . ' updated: ' . $record->title . ' (' . $record->status . ')',
+                    null,
+                    ['reference' => $record->reference, 'title' => $record->title, 'status' => $record->status]
+                );
+            }
+        } catch (\Throwable $e) {
+            debugging('Improvement audit log (update) failed: ' . $e->getMessage(), DEBUG_DEVELOPER);
+        }
         $message = get_string('improvement_updated', 'local_rtocompliance');
     } else {
         $record->timecreated = $now;
         $record->createdby = $USER->id;
         $record->id = $DB->insert_record('local_rtocompliance_improvements', $record);
+        // ASQA compliance-evidence: record creation of the continuous-improvement register entry.
+        try {
+            if (class_exists('\\local_rtocompliance\\audit_logger')) {
+                audit_logger::log_create(
+                    'improvement',
+                    $record->id,
+                    'Improvement #' . $record->id . ' created: ' . $record->title . ' (' . $record->status . ')',
+                    ['reference' => $record->reference, 'title' => $record->title, 'status' => $record->status]
+                );
+            }
+        } catch (\Throwable $e) {
+            debugging('Improvement audit log (create) failed: ' . $e->getMessage(), DEBUG_DEVELOPER);
+        }
         $message = get_string('improvement_created', 'local_rtocompliance');
     }
 
@@ -130,7 +169,7 @@ if ($form->is_cancelled()) {
 $PAGE->add_body_class("path-local-rtocompliance");
 echo $OUTPUT->header();
 echo local_rtocompliance_render_nav_header($id ? get_string('edit_improvement', 'local_rtocompliance') : get_string('new_improvement', 'local_rtocompliance'), get_string('complaints_appeals', 'local_rtocompliance'), '/local/rtocompliance/complaints.php', 'complaints');
-echo $OUTPUT->heading($id ? get_string('edit_improvement', 'local_rtocompliance') : get_string('new_improvement', 'local_rtocompliance'));
+echo local_rtocompliance_page_banner($id ? get_string('edit_improvement', 'local_rtocompliance') : get_string('new_improvement', 'local_rtocompliance'));
 
 $form->display();
 

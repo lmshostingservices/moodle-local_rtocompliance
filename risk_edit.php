@@ -15,15 +15,13 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — risk_edit.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
@@ -33,8 +31,7 @@ $allowed_categories = ['operational', 'financial', 'conflict_of_interest', 'unde
 $category = in_array($category, $allowed_categories, true) ? $category : 'operational';
 
 admin_externalpage_setup('local_rtocompliance_risk');
-$context = context_system::instance();
-require_capability('moodle/site:config', $context);
+require_login();
 $PAGE->set_url('/local/rtocompliance/risk_edit.php', ['id' => $id]);
 $PAGE->set_title($id ? 'Edit Risk' : 'Add Risk');
 $PAGE->set_heading($id ? 'Edit Risk' : 'Add Risk');

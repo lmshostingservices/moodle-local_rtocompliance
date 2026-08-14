@@ -13,12 +13,11 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
-
 /**
  * Scheduled task to clean up expired certificate verification codes.
  *
  * @package    local_rtocompliance
- * @copyright  2024 Essay Grader AI
+ * @copyright  2024 LMS Labs
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 

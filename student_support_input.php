@@ -15,21 +15,23 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — student_support_input.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 require_once(__DIR__ . '/../../config.php');
-require_login();
 require_once($CFG->libdir . '/adminlib.php');
 require_once(__DIR__ . '/lib.php');
 
 admin_externalpage_setup('local_rtocompliance_student_support_input');
+require_login();
+
+// Capability gate — consistent with the rest of the plugin (manage).
 $context = context_system::instance();
-require_capability('moodle/site:config', $context);
+require_capability('local/rtocompliance:manage', $context);
+
 $PAGE->set_url('/local/rtocompliance/student_support_input.php');
 $PAGE->set_title('Trainer Support Input');
 $PAGE->set_heading('Trainer Support Input');
@@ -39,6 +41,121 @@ $_rtoc_apikey  = function_exists('local_aiconfig_get_apikey')
     ? (local_aiconfig_get_apikey('local_rtocompliance') ?: get_config('local_rtocompliance', 'apikey') ?: '')
     : (get_config('local_rtocompliance', 'apikey') ?: '');
 $_rtoc_apibase = rtrim(get_config('local_rtocompliance', 'apiurl') ?: 'https://lms-labs.com', '/');
+
+// =====================================================================
+// Allowed value sets (mirror the local_rtocompliance_supportnotes schema).
+// =====================================================================
+$NOTETYPES = [
+    'lln'                  => 'LLN observation & support (Standard 2.3)',
+    'reasonable_adjustment'=> 'Reasonable adjustment (Standard 2.4)',
+    'diversity'            => 'Diversity & inclusion (Standard 2.5)',
+    'wellbeing'            => 'Wellbeing (Standard 2.6)',
+    'referral'             => 'Support service referral',
+    'at_risk'              => 'At-risk intervention',
+    'support'              => 'General training support',
+    'other'                => 'Other',
+];
+$OUTCOMES = [
+    'open'       => 'Open',
+    'inprogress' => 'In progress',
+    'closed'     => 'Closed',
+];
+
+// Currently selected student (per-student records).
+$studentid = optional_param('studentid', 0, PARAM_INT);
+
+$returnurl = new moodle_url('/local/rtocompliance/student_support_input.php',
+    $studentid ? ['studentid' => $studentid] : []);
+
+// =====================================================================
+// POST handlers (server-side persistence) — sesskey guarded.
+// =====================================================================
+$action = optional_param('action', '', PARAM_ALPHA);
+
+if ($action === 'save' && confirm_sesskey()) {
+    $sid = required_param('studentid', PARAM_INT);
+    $student = $DB->get_record('local_rtocompliance_students', ['id' => $sid], '*', MUST_EXIST);
+
+    $notetype     = optional_param('notetype', 'other', PARAM_ALPHAEXT);
+    $category     = trim(optional_param('category', '', PARAM_TEXT));
+    $detail       = trim(optional_param('detail', '', PARAM_TEXT));
+    $actiontaken  = trim(optional_param('actiontaken', '', PARAM_TEXT));
+    $outcomestatus= optional_param('outcomestatus', '', PARAM_ALPHA);
+    $confidential = optional_param('confidential', 0, PARAM_INT) ? 1 : 0;
+
+    if (!isset($NOTETYPES[$notetype])) {
+        $notetype = 'other';
+    }
+    if ($outcomestatus !== '' && !isset($OUTCOMES[$outcomestatus])) {
+        $outcomestatus = '';
+    }
+
+    if ($detail === '') {
+        redirect(new moodle_url('/local/rtocompliance/student_support_input.php', ['studentid' => $sid]),
+            'A detail note is required — nothing was saved.', null,
+            \core\output\notification::NOTIFY_ERROR);
+    }
+
+    $record = new stdClass();
+    $record->studentid    = $sid;
+    $record->userid       = !empty($student->userid) ? $student->userid : null;
+    $record->notetype     = $notetype;
+    $record->category     = $category !== '' ? $category : null;
+    $record->detail       = $detail;
+    $record->actiontaken  = $actiontaken !== '' ? $actiontaken : null;
+    $record->outcomestatus= $outcomestatus !== '' ? $outcomestatus : null;
+    $record->confidential = $confidential;
+    $record->recordedby   = $USER->id;
+    $record->timecreated  = time();
+    $record->timemodified = time();
+    $DB->insert_record('local_rtocompliance_supportnotes', $record);
+
+    redirect(new moodle_url('/local/rtocompliance/student_support_input.php', ['studentid' => $sid]),
+        'Support record saved securely.', null,
+        \core\output\notification::NOTIFY_SUCCESS);
+}
+
+if ($action === 'delete' && confirm_sesskey()) {
+    $sid    = required_param('studentid', PARAM_INT);
+    $noteid = required_param('noteid', PARAM_INT);
+    // Ensure the note belongs to this student before deleting.
+    if ($DB->record_exists('local_rtocompliance_supportnotes', ['id' => $noteid, 'studentid' => $sid])) {
+        $DB->delete_records('local_rtocompliance_supportnotes', ['id' => $noteid, 'studentid' => $sid]);
+    }
+    redirect(new moodle_url('/local/rtocompliance/student_support_input.php', ['studentid' => $sid]),
+        'Support record deleted.', null,
+        \core\output\notification::NOTIFY_SUCCESS);
+}
+
+// =====================================================================
+// Build the student list for the selector.
+// =====================================================================
+$studentoptions = [];
+$studentrows = $DB->get_records_sql(
+    "SELECT s.id, s.userid, s.firstname AS sfn, s.lastname AS sln,
+            u.firstname AS ufn, u.lastname AS uln
+       FROM {local_rtocompliance_students} s
+       LEFT JOIN {user} u ON u.id = s.userid
+   ORDER BY COALESCE(NULLIF(s.lastname, ''), u.lastname),
+            COALESCE(NULLIF(s.firstname, ''), u.firstname)"
+);
+foreach ($studentrows as $row) {
+    $first = $row->sfn !== null && $row->sfn !== '' ? $row->sfn : $row->ufn;
+    $last  = $row->sln !== null && $row->sln !== '' ? $row->sln : $row->uln;
+    $name  = trim($first . ' ' . $last);
+    if ($name === '') {
+        $name = 'Student #' . $row->id;
+    }
+    $studentoptions[$row->id] = $name;
+}
+
+// Resolve the selected student record.
+$selectedstudent = null;
+$selectedname = '';
+if ($studentid && isset($studentoptions[$studentid])) {
+    $selectedstudent = $DB->get_record('local_rtocompliance_students', ['id' => $studentid]);
+    $selectedname = $studentoptions[$studentid];
+}
 
 $PAGE->requires->css('/local/rtocompliance/styles.css');
 $PAGE->add_body_class("path-local-rtocompliance");
@@ -56,82 +173,194 @@ echo html_writer::start_div('info-card');
 echo html_writer::tag('h4', 'Per-student support record');
 echo html_writer::tag('p', '
     Use this form to capture an individual student\'s support, adjustments, referrals, interventions,
-    diversity considerations and wellbeing notes. Records are saved against the student name and form
-    the per-student evidence trail for Standards 2.3 (Training Support) and 2.4 (Reasonable Adjustment).
+    diversity considerations and wellbeing notes. Records are stored securely on the server against the
+    selected student and retained as the per-student evidence trail for Standards 2.3 (Training Support),
+    2.4 (Reasonable Adjustment) and 2.6 (Wellbeing). They are visible to authorised staff and auditors —
+    nothing is kept only in your browser.
     Use the <strong>Auto Fill (AI)</strong> button to draft compliance-aligned text from the LLN level
     and risk dropdowns — review and edit before saving.
 ');
 echo html_writer::end_div();
 
 // =====================================================================
-// FORM
+// STUDENT SELECTOR
 // =====================================================================
 echo html_writer::start_div('info-card', ['style' => 'margin-top:1.5rem;']);
-echo html_writer::tag('h4', 'New / Update Student Support Record');
-
-echo '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin-top:0.75rem;">';
-echo '<div><label for="studentName" style="display:block;font-weight:600;margin-bottom:0.25rem;">Student name</label>';
-echo '<input type="text" id="studentName" placeholder="e.g. Jane Smith" style="width:100%;padding:6px 10px;border:1px solid #cbd5e1;border-radius:6px;"></div>';
-
-echo '<div><label for="llnLevel" style="display:block;font-weight:600;margin-bottom:0.25rem;">LLN level (ACSF)</label>';
-echo '<select id="llnLevel" style="width:100%;padding:6px 10px;border:1px solid #cbd5e1;border-radius:6px;">';
-echo '<option value="">Not assessed</option>';
-echo '<option value="Below ACSF 3">Below ACSF 3</option>';
-echo '<option value="ACSF 3">ACSF 3 (course level)</option>';
-echo '<option value="Above ACSF 3">Above ACSF 3</option>';
-echo '</select></div>';
-
-echo '<div><label for="risk" style="display:block;font-weight:600;margin-bottom:0.25rem;">Risk level</label>';
-echo '<select id="risk" style="width:100%;padding:6px 10px;border:1px solid #cbd5e1;border-radius:6px;">';
-echo '<option value="Low">Low</option>';
-echo '<option value="Medium">Medium</option>';
-echo '<option value="High">High</option>';
-echo '</select></div>';
-echo '</div>';
-
-echo '<div style="margin-top:1rem;" id="rtocSupportInputConfig"'
-    . ' data-api-key="' . s($_rtoc_apikey) . '"'
-    . ' data-api-base="' . s($_rtoc_apibase) . '">';
-echo '<button type="button" id="autoFillBtn" class="btn btn-primary btn-sm" style="margin-right:0.5rem;">&#9889; Auto Fill (AI)</button>';
-echo '<button type="button" id="clearBtn" class="btn btn-outline-secondary btn-sm">Clear all fields</button>';
-echo '<span style="margin-left:0.75rem;font-size:0.82rem;color:#9ca3af;">50 credits (&frac12;&cent;)</span>';
-echo '<span id="autofillStatus" style="margin-left:0.75rem;font-size:0.88rem;color:#6b7280;"></span>';
-echo '</div>';
-
-// Textareas — populated by autoFillSupport().
-$fields = [
-    'lln'          => ['LLN observations & support (Standard 2.3)',           'Reading / writing / numeracy / oral concerns observed; support provided.'],
-    'adjustments'  => ['Reasonable adjustments made (Standard 2.4)',           'Specific adjustments such as extended time, alternative format, assistive tech.'],
-    'referrals'    => ['Support service referrals',                            'Internal academic support, wellbeing services, external counselling, LLN specialists.'],
-    'interventions'=> ['Intervention strategies (at-risk students)',           'Increased trainer contact, progress monitoring, tailored sessions.'],
-    'diversity'    => ['Diversity & inclusion considerations (Standard 2.5)',  'Cultural safety adjustments, CALD considerations, accessibility.'],
-    'wellbeing'    => ['Wellbeing notes (Standard 2.6)',                       'Wellbeing plans, flexible study arrangements, counselling referrals.'],
-];
-
-echo '<div style="margin-top:1.25rem;display:grid;gap:1rem;">';
-foreach ($fields as $key => $info) {
-    echo '<div>';
-    echo '<label for="ta_' . s($key) . '" style="display:block;font-weight:600;margin-bottom:0.25rem;">' . s($info[0]) . '</label>';
-    echo '<textarea id="ta_' . s($key) . '" rows="3" placeholder="' . s($info[1]) . '" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-family:inherit;line-height:1.5;"></textarea>';
-    echo '</div>';
+echo html_writer::tag('h4', 'Select student');
+echo '<form method="get" action="' . (new moodle_url('/local/rtocompliance/student_support_input.php'))->out() . '" style="margin-top:0.5rem;display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">';
+echo '<label for="studentid" style="font-weight:600;">Student</label>';
+echo html_writer::select($studentoptions, 'studentid', $studentid, ['' => 'Choose a student…'],
+    ['id' => 'studentid', 'onchange' => 'this.form.submit();']);
+echo '<noscript><button type="submit" class="btn btn-primary btn-sm">Go</button></noscript>';
+echo '</form>';
+if (!$selectedstudent) {
+    echo html_writer::tag('p', 'Choose a student above to view and add their support records.',
+        ['style' => 'margin-top:0.75rem;color:#6b7280;']);
 }
-echo '</div>';
-
-echo '<div style="margin-top:1.25rem;">';
-echo '<button type="button" id="saveRecordBtn" class="btn btn-primary">Save Support Record</button>';
-echo '<span id="saveStatus" style="margin-left:0.75rem;font-size:0.9rem;"></span>';
-echo '</div>';
-
-echo html_writer::end_div(); // info-card
-
-// =====================================================================
-// SAVED RECORDS TABLE
-// =====================================================================
-echo html_writer::start_div('info-card', ['style' => 'margin-top:1.5rem;']);
-echo html_writer::tag('h4', 'Saved Support Records (this browser)');
-echo html_writer::tag('p', 'Records below are saved locally in this browser and form the per-student evidence trail. For permanent storage, copy text into the student profile in the Student Records register.', ['style' => 'font-size:0.88rem;color:#6b7280;']);
-echo html_writer::div('', '', ['id' => 'savedRecordsTable']);
 echo html_writer::end_div();
+
+if ($selectedstudent) {
+    // =====================================================================
+    // FORM — add a new support record for the selected student.
+    // =====================================================================
+    echo html_writer::start_div('info-card', ['style' => 'margin-top:1.5rem;']);
+    echo html_writer::tag('h4', 'New Support Record for ' . s($selectedname));
+
+    echo '<form method="post" action="' . (new moodle_url('/local/rtocompliance/student_support_input.php'))->out() . '">';
+    echo '<input type="hidden" name="sesskey" value="' . s(sesskey()) . '">';
+    echo '<input type="hidden" name="action" value="save">';
+    echo '<input type="hidden" name="studentid" value="' . (int)$studentid . '">';
+
+    echo '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin-top:0.75rem;">';
+
+    // Note type.
+    echo '<div><label for="notetype" style="display:block;font-weight:600;margin-bottom:0.25rem;">Record type</label>';
+    echo '<select id="notetype" name="notetype" style="width:100%;padding:6px 10px;border:1px solid #cbd5e1;border-radius:6px;">';
+    foreach ($NOTETYPES as $val => $lbl) {
+        echo '<option value="' . s($val) . '">' . s($lbl) . '</option>';
+    }
+    echo '</select></div>';
+
+    // Category (free text).
+    echo '<div><label for="category" style="display:block;font-weight:600;margin-bottom:0.25rem;">Category (optional)</label>';
+    echo '<input type="text" id="category" name="category" placeholder="e.g. Extended time, LLN" style="width:100%;padding:6px 10px;border:1px solid #cbd5e1;border-radius:6px;"></div>';
+
+    // Outcome status.
+    echo '<div><label for="outcomestatus" style="display:block;font-weight:600;margin-bottom:0.25rem;">Outcome status</label>';
+    echo '<select id="outcomestatus" name="outcomestatus" style="width:100%;padding:6px 10px;border:1px solid #cbd5e1;border-radius:6px;">';
+    echo '<option value="">Not set</option>';
+    foreach ($OUTCOMES as $val => $lbl) {
+        echo '<option value="' . s($val) . '">' . s($lbl) . '</option>';
+    }
+    echo '</select></div>';
+
+    // LLN level (AI context only — not stored).
+    echo '<div><label for="llnLevel" style="display:block;font-weight:600;margin-bottom:0.25rem;">LLN level (ACSF) — AI context</label>';
+    echo '<select id="llnLevel" style="width:100%;padding:6px 10px;border:1px solid #cbd5e1;border-radius:6px;">';
+    echo '<option value="">Not assessed</option>';
+    echo '<option value="Below ACSF 3">Below ACSF 3</option>';
+    echo '<option value="ACSF 3">ACSF 3 (course level)</option>';
+    echo '<option value="Above ACSF 3">Above ACSF 3</option>';
+    echo '</select></div>';
+
+    // Risk level (AI context only — not stored).
+    echo '<div><label for="risk" style="display:block;font-weight:600;margin-bottom:0.25rem;">Risk level — AI context</label>';
+    echo '<select id="risk" style="width:100%;padding:6px 10px;border:1px solid #cbd5e1;border-radius:6px;">';
+    echo '<option value="Low">Low</option>';
+    echo '<option value="Medium">Medium</option>';
+    echo '<option value="High">High</option>';
+    echo '</select></div>';
+    echo '</div>';
+
+    // Detail (required).
+    echo '<div style="margin-top:1rem;">';
+    echo '<label for="detail" style="display:block;font-weight:600;margin-bottom:0.25rem;">Support / adjustment / wellbeing detail <span style="color:#b91c1c;">*</span></label>';
+    echo '<textarea id="detail" name="detail" rows="5" required placeholder="Observations, support provided, adjustments made, referrals, diversity considerations or wellbeing notes." style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-family:inherit;line-height:1.5;"></textarea>';
+    echo '</div>';
+
+    // Action taken.
+    echo '<div style="margin-top:1rem;">';
+    echo '<label for="actiontaken" style="display:block;font-weight:600;margin-bottom:0.25rem;">Action taken (optional)</label>';
+    echo '<textarea id="actiontaken" name="actiontaken" rows="3" placeholder="What was actioned, by whom, and any follow-up scheduled." style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-family:inherit;line-height:1.5;"></textarea>';
+    echo '</div>';
+
+    // Confidential.
+    echo '<div style="margin-top:1rem;">';
+    echo '<label style="display:flex;align-items:center;gap:0.5rem;font-weight:600;">';
+    echo '<input type="checkbox" name="confidential" value="1" checked> Mark as confidential';
+    echo '</label>';
+    echo '</div>';
+
+    // AI Auto-Fill controls.
+    echo '<div style="margin-top:1rem;" id="rtocSupportInputConfig"'
+        . ' data-api-key="' . s($_rtoc_apikey) . '"'
+        . ' data-api-base="' . s($_rtoc_apibase) . '"'
+        . ' data-student-name="' . s($selectedname) . '">';
+    echo '<button type="button" id="autoFillBtn" class="btn btn-outline-primary btn-sm" style="margin-right:0.5rem;">&#9889; Auto Fill (AI)</button>';
+    echo '<span style="margin-left:0.25rem;font-size:0.82rem;color:#9ca3af;">50 credits (&frac12;&cent;)</span>';
+    echo '<span id="autofillStatus" style="margin-left:0.75rem;font-size:0.88rem;color:#6b7280;"></span>';
+    echo '</div>';
+
+    echo '<div style="margin-top:1.25rem;">';
+    echo '<button type="submit" class="btn btn-primary">Save Support Record</button>';
+    echo '</div>';
+
+    echo '</form>';
+    echo html_writer::end_div(); // info-card
+
+    // =====================================================================
+    // SAVED RECORDS — loaded from the server, most recent first.
+    // =====================================================================
+    echo html_writer::start_div('info-card', ['style' => 'margin-top:1.5rem;']);
+    echo html_writer::tag('h4', 'Saved Support Records for ' . s($selectedname));
+    echo html_writer::tag('p',
+        'These records are stored securely on the server and retained as the per-student evidence trail for Standards 2.3–2.6. They are visible to authorised staff and auditors.',
+        ['style' => 'font-size:0.88rem;color:#6b7280;']);
+
+    $notes = $DB->get_records('local_rtocompliance_supportnotes',
+        ['studentid' => $studentid], 'timecreated DESC');
+
+    if (!$notes) {
+        echo html_writer::tag('p', 'No records saved yet for this student.',
+            ['style' => 'color:#6b7280;font-style:italic;']);
+    } else {
+        $usercache = [];
+        echo '<table style="width:100%;border-collapse:collapse;font-size:0.92rem;margin-top:0.5rem;">';
+        echo '<thead><tr style="background:#f3f4f6;text-align:left;">';
+        echo '<th style="padding:8px 10px;border-bottom:2px solid #e5e7eb;white-space:nowrap;">Date</th>';
+        echo '<th style="padding:8px 10px;border-bottom:2px solid #e5e7eb;">Type</th>';
+        echo '<th style="padding:8px 10px;border-bottom:2px solid #e5e7eb;">Detail</th>';
+        echo '<th style="padding:8px 10px;border-bottom:2px solid #e5e7eb;">Outcome</th>';
+        echo '<th style="padding:8px 10px;border-bottom:2px solid #e5e7eb;">Recorded by</th>';
+        echo '<th style="padding:8px 10px;border-bottom:2px solid #e5e7eb;">Actions</th>';
+        echo '</tr></thead><tbody>';
+
+        foreach ($notes as $note) {
+            if (!array_key_exists($note->recordedby, $usercache)) {
+                $usercache[$note->recordedby] = $DB->get_record('user',
+                    ['id' => $note->recordedby], '*', IGNORE_MISSING);
+            }
+            $rbname = $usercache[$note->recordedby]
+                ? fullname($usercache[$note->recordedby]) : 'Unknown user';
+
+            $typelabel = isset($NOTETYPES[$note->notetype]) ? $NOTETYPES[$note->notetype] : $note->notetype;
+            $outlabel  = ($note->outcomestatus !== null && isset($OUTCOMES[$note->outcomestatus]))
+                ? $OUTCOMES[$note->outcomestatus] : '—';
+
+            $detailhtml = format_text($note->detail, FORMAT_PLAIN);
+            if ($note->category) {
+                $detailhtml = '<div style="font-size:0.82rem;color:#6b7280;margin-bottom:0.2rem;">'
+                    . s($note->category) . '</div>' . $detailhtml;
+            }
+            if ($note->actiontaken) {
+                $detailhtml .= '<div style="margin-top:0.4rem;font-size:0.86rem;color:#374151;"><strong>Action:</strong> '
+                    . format_text($note->actiontaken, FORMAT_PLAIN) . '</div>';
+            }
+            if ((int)$note->confidential === 1) {
+                $detailhtml .= '<div style="margin-top:0.3rem;"><span style="font-size:0.72rem;background:#fee2e2;color:#b91c1c;padding:1px 6px;border-radius:4px;">Confidential</span></div>';
+            }
+
+            echo '<tr style="border-bottom:1px solid #e5e7eb;vertical-align:top;">';
+            echo '<td style="padding:8px 10px;white-space:nowrap;">' . s(userdate($note->timecreated, '%d %b %Y')) . '</td>';
+            echo '<td style="padding:8px 10px;">' . s($typelabel) . '</td>';
+            echo '<td style="padding:8px 10px;color:#1f2937;">' . $detailhtml . '</td>';
+            echo '<td style="padding:8px 10px;white-space:nowrap;">' . s($outlabel) . '</td>';
+            echo '<td style="padding:8px 10px;white-space:nowrap;">' . s($rbname) . '</td>';
+            echo '<td style="padding:8px 6px;white-space:nowrap;">';
+            echo '<form method="post" action="' . (new moodle_url('/local/rtocompliance/student_support_input.php'))->out() . '" onsubmit="return confirm(\'Delete this support record permanently?\');" style="display:inline;">';
+            echo '<input type="hidden" name="sesskey" value="' . s(sesskey()) . '">';
+            echo '<input type="hidden" name="action" value="delete">';
+            echo '<input type="hidden" name="studentid" value="' . (int)$studentid . '">';
+            echo '<input type="hidden" name="noteid" value="' . (int)$note->id . '">';
+            echo '<button type="submit" class="btn btn-outline-danger btn-sm">Delete</button>';
+            echo '</form>';
+            echo '</td>';
+            echo '</tr>';
+        }
+        echo '</tbody></table>';
+    }
+    echo html_writer::end_div();
+}
 
 // Related.
 echo html_writer::start_div('', ['style' => 'margin-top:2rem;padding:1.5rem;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;']);
@@ -148,31 +377,16 @@ echo html_writer::end_div(); // compliance-container
 (function () {
     'use strict';
 
-    var STORAGE_KEY = 'rto_support_records_v1';
-
-    function escapeHtml(s) {
-        return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-            return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
-        });
-    }
-    function nl2br(s) { return escapeHtml(s).replace(/\n/g, '<br>'); }
-
-    function loadRecords() {
-        try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
-        catch (e) { return []; }
-    }
-    function saveRecords(arr) {
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); } catch (e) {}
-    }
-
     // ---------------------------------------------------------------
     // AI Auto-Fill — calls /api/rto/ai-support-autofill (50 credits).
-    // Generates ASQA-compliant draft text for all 6 support fields.
-    // Trainer reviews and edits before saving.
+    // Drafts ASQA-compliant text and drops it into the detail field.
+    // Trainer reviews and edits before saving to the server.
     // ---------------------------------------------------------------
     var _rtocCfg = document.getElementById('rtocSupportInputConfig');
-    var API_KEY  = _rtocCfg ? (_rtocCfg.getAttribute('data-api-key')  || '') : '';
-    var API_BASE = _rtocCfg ? (_rtocCfg.getAttribute('data-api-base') || 'https://lms-labs.com') : 'https://lms-labs.com';
+    if (!_rtocCfg) { return; }
+    var API_KEY  = _rtocCfg.getAttribute('data-api-key')  || '';
+    var API_BASE = _rtocCfg.getAttribute('data-api-base') || 'https://lms-labs.com';
+    var STUDENT  = _rtocCfg.getAttribute('data-student-name') || '';
 
     function stripMd(s) {
         return String(s)
@@ -187,31 +401,21 @@ echo html_writer::end_div(); // compliance-container
     }
 
     function autoFillSupport() {
-        var student  = (document.getElementById('studentName').value || '').trim();
         var llnLevel = document.getElementById('llnLevel').value;
         var risk     = document.getElementById('risk').value;
-
-        if (!student) {
-            var st = document.getElementById('autofillStatus');
-            st.textContent = 'Enter a student name before using Auto Fill.';
-            st.style.color = '#b91c1c';
-            setTimeout(function () { st.textContent = ''; }, 4000);
-            return;
-        }
+        var status   = document.getElementById('autofillStatus');
 
         if (!API_KEY) {
-            var st = document.getElementById('autofillStatus');
-            st.textContent = 'API key not configured — check Plugin Settings.';
-            st.style.color = '#b91c1c';
-            setTimeout(function () { st.textContent = ''; }, 5000);
+            status.textContent = 'API key not configured — check Plugin Settings.';
+            status.style.color = '#b91c1c';
+            setTimeout(function () { status.textContent = ''; }, 5000);
             return;
         }
 
-        var btn    = document.getElementById('autoFillBtn');
-        var status = document.getElementById('autofillStatus');
+        var btn = document.getElementById('autoFillBtn');
         btn.disabled    = true;
-        btn.textContent = 'Generating\u2026';
-        status.textContent = 'Calling AI (50 credits)\u2026';
+        btn.textContent = 'Generating…';
+        status.textContent = 'Calling AI (50 credits)…';
         status.style.color  = '#6b7280';
 
         fetch(API_BASE + '/api/rto/ai-support-autofill', {
@@ -219,7 +423,7 @@ echo html_writer::end_div(); // compliance-container
             headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
             body: JSON.stringify({
                 apiKey:      API_KEY,
-                studentName: student,
+                studentName: STUDENT,
                 llnLevel:    llnLevel,
                 riskLevel:   risk
             })
@@ -227,7 +431,7 @@ echo html_writer::end_div(); // compliance-container
         .then(function (r) { return r.json(); })
         .then(function (data) {
             btn.disabled    = false;
-            btn.textContent = '\u26A1 Auto Fill (AI)';
+            btn.textContent = '⚡ Auto Fill (AI)';
             if (!data.success) {
                 status.textContent = data.error || 'Auto-fill failed. Please try again.';
                 status.style.color  = '#b91c1c';
@@ -235,307 +439,43 @@ echo html_writer::end_div(); // compliance-container
                 return;
             }
             var f = data.fields || {};
-            if (f.lln)           document.getElementById('ta_lln').value           = stripMd(f.lln);
-            if (f.adjustments)   document.getElementById('ta_adjustments').value   = stripMd(f.adjustments);
-            if (f.referrals)     document.getElementById('ta_referrals').value     = stripMd(f.referrals);
-            if (f.interventions) document.getElementById('ta_interventions').value = stripMd(f.interventions);
-            if (f.diversity)     document.getElementById('ta_diversity').value     = stripMd(f.diversity);
-            if (f.wellbeing)     document.getElementById('ta_wellbeing').value     = stripMd(f.wellbeing);
+            var labels = {
+                lln:           'LLN observations & support (Standard 2.3)',
+                adjustments:   'Reasonable adjustments (Standard 2.4)',
+                referrals:     'Support service referrals',
+                interventions: 'Intervention strategies',
+                diversity:     'Diversity & inclusion considerations (Standard 2.5)',
+                wellbeing:     'Wellbeing notes (Standard 2.6)'
+            };
+            var parts = [];
+            ['lln','adjustments','referrals','interventions','diversity','wellbeing'].forEach(function (k) {
+                if (f[k]) { parts.push(labels[k] + ':\n' + stripMd(f[k])); }
+            });
+            if (parts.length) {
+                document.getElementById('detail').value = parts.join('\n\n');
+            }
 
             var credMsg = '';
             if (data.creditsRemaining !== undefined && data.creditsRemaining !== -1) {
-                credMsg = ' \u2022 ' + data.creditsRemaining + ' credits remaining';
+                credMsg = ' • ' + data.creditsRemaining + ' credits remaining';
             } else if (data.creditsRemaining === -1) {
-                credMsg = ' \u2022 Unlimited credits';
+                credMsg = ' • Unlimited credits';
             }
-            status.textContent = '50 credits used' + credMsg + ' \u2014 review and edit before saving.';
+            status.textContent = '50 credits used' + credMsg + ' — review and edit before saving.';
             status.style.color  = '#166534';
             setTimeout(function () { status.textContent = ''; }, 8000);
         })
         .catch(function () {
             btn.disabled    = false;
-            btn.textContent = '\u26A1 Auto Fill (AI)';
+            btn.textContent = '⚡ Auto Fill (AI)';
             status.textContent = 'Connection error. Check your internet connection and try again.';
             status.style.color  = '#b91c1c';
             setTimeout(function () { status.textContent = ''; }, 6000);
         });
     }
 
-    function clearForm() {
-        ['studentName','ta_lln','ta_adjustments','ta_referrals','ta_interventions','ta_diversity','ta_wellbeing']
-            .forEach(function (id) { var el = document.getElementById(id); if (el) el.value = ''; });
-        document.getElementById('llnLevel').value = '';
-        document.getElementById('risk').value = 'Low';
-    }
-
-    function saveRecord() {
-        var name = (document.getElementById('studentName').value || '').trim();
-        if (!name) {
-            var st = document.getElementById('saveStatus');
-            st.textContent = 'Student name is required.';
-            st.style.color = '#b91c1c';
-            return;
-        }
-        var vals = {
-            student:       name,
-            llnLevel:      document.getElementById('llnLevel').value,
-            risk:          document.getElementById('risk').value,
-            lln:           document.getElementById('ta_lln').value,
-            adjustments:   document.getElementById('ta_adjustments').value,
-            referrals:     document.getElementById('ta_referrals').value,
-            interventions: document.getElementById('ta_interventions').value,
-            diversity:     document.getElementById('ta_diversity').value,
-            wellbeing:     document.getElementById('ta_wellbeing').value
-        };
-        var records = loadRecords();
-        var msg;
-        if (_editingId) {
-            // Update existing record — preserve original id and date.
-            records = records.map(function (r) {
-                if (r.id !== _editingId) return r;
-                return Object.assign({}, r, vals);
-            });
-            saveRecords(records);
-            msg = '\u2713 Record updated for ' + name + '.';
-            _editingId = null;
-            resetSaveBtn();
-        } else {
-            var rec = Object.assign({ id: Date.now(), date: new Date().toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) }, vals);
-            records.unshift(rec);
-            saveRecords(records);
-            msg = '\u2713 Record saved for ' + name + '.';
-        }
-        var st = document.getElementById('saveStatus');
-        st.textContent = msg;
-        st.style.color = '#166534';
-        renderRecords();
-        setTimeout(function () { st.textContent = ''; }, 5000);
-    }
-
-    // ---------------------------------------------------------------
-    // Edit-mode state — set when loading a record back into the form.
-    // ---------------------------------------------------------------
-    var _editingId = null;
-
-    function deleteRecord(id) {
-        var records = loadRecords().filter(function (r) { return r.id !== id; });
-        saveRecords(records);
-        if (_editingId === id) { _editingId = null; resetSaveBtn(); clearForm(); }
-        renderRecords();
-    }
-    window.rtoDeleteSupportRecord = deleteRecord;
-
-    // ---------------------------------------------------------------
-    // Edit record — load back into form; Save becomes Update.
-    // ---------------------------------------------------------------
-    function editRecord(id) {
-        var records = loadRecords();
-        var rec = null;
-        for (var i = 0; i < records.length; i++) { if (records[i].id === id) { rec = records[i]; break; } }
-        if (!rec) return;
-        _editingId = id;
-        document.getElementById('studentName').value      = rec.student    || '';
-        document.getElementById('llnLevel').value         = rec.llnLevel   || '';
-        document.getElementById('risk').value             = rec.risk       || 'Low';
-        document.getElementById('ta_lln').value           = rec.lln        || '';
-        document.getElementById('ta_adjustments').value   = rec.adjustments|| '';
-        document.getElementById('ta_referrals').value     = rec.referrals  || '';
-        document.getElementById('ta_interventions').value = rec.interventions || '';
-        document.getElementById('ta_diversity').value     = rec.diversity  || '';
-        document.getElementById('ta_wellbeing').value     = rec.wellbeing  || '';
-        var btn = document.getElementById('saveRecordBtn');
-        btn.textContent = 'Update Support Record';
-        btn.className   = 'btn btn-warning';
-        var st = document.getElementById('saveStatus');
-        st.textContent = 'Editing existing record — click Update to save changes.';
-        st.style.color  = '#92400e';
-        document.getElementById('studentName').focus();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-    window.rtoEditSupportRecord = editRecord;
-
-    function resetSaveBtn() {
-        var btn = document.getElementById('saveRecordBtn');
-        btn.textContent = 'Save Support Record';
-        btn.className   = 'btn btn-primary';
-        var st = document.getElementById('saveStatus');
-        st.textContent = '';
-    }
-
-    // ---------------------------------------------------------------
-    // View record — modal with all 6 fields.
-    // ---------------------------------------------------------------
-    var FIELD_LABELS = {
-        lln:           'LLN Observations & Support (Standard 2.3)',
-        adjustments:   'Reasonable Adjustments (Standard 2.4)',
-        referrals:     'Support Service Referrals',
-        interventions: 'Intervention Strategies',
-        diversity:     'Diversity & Inclusion Considerations (Standard 2.5)',
-        wellbeing:     'Wellbeing Notes (Standard 2.6)'
-    };
-
-    function viewRecord(id) {
-        var records = loadRecords();
-        var rec = null;
-        for (var i = 0; i < records.length; i++) { if (records[i].id === id) { rec = records[i]; break; } }
-        if (!rec) return;
-        var overlay = document.getElementById('rtoViewModal');
-        var body = '';
-        body += '<div style="display:grid;grid-template-columns:auto auto auto;gap:0.35rem 1.5rem;margin-bottom:1.25rem;font-size:0.92rem;">';
-        body += '<span style="color:#6b7280;">Date</span><span style="color:#6b7280;">LLN Level</span><span style="color:#6b7280;">Risk</span>';
-        body += '<strong>' + escapeHtml(rec.date) + '</strong><strong>' + escapeHtml(rec.llnLevel || '\u2014') + '</strong>';
-        var riskCol = rec.risk === 'High' ? '#dc2626' : (rec.risk === 'Medium' ? '#d97706' : '#16a34a');
-        body += '<strong style="color:' + riskCol + ';">' + escapeHtml(rec.risk || '\u2014') + '</strong>';
-        body += '</div>';
-        var fields = ['lln','adjustments','referrals','interventions','diversity','wellbeing'];
-        fields.forEach(function (f) {
-            var val = (rec[f] || '').trim();
-            if (!val) return;
-            body += '<div style="margin-bottom:1rem;">' +
-                '<div style="font-weight:600;font-size:0.88rem;color:#374151;margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.03em;">' + FIELD_LABELS[f] + '</div>' +
-                '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:0.65rem 0.85rem;font-size:0.92rem;line-height:1.6;color:#1f2937;">' + nl2br(val) + '</div>' +
-                '</div>';
-        });
-        overlay.querySelector('#rtoViewModalTitle').textContent = 'Support Record — ' + rec.student;
-        overlay.querySelector('#rtoViewModalBody').innerHTML = body;
-        overlay.querySelector('#rtoViewModalPdfBtn').setAttribute('data-rec-id', id);
-        overlay.querySelector('#rtoViewModalEditBtn').setAttribute('data-rec-id', id);
-        overlay.style.display = 'flex';
-    }
-    window.rtoViewSupportRecord = viewRecord;
-
-    function closeViewModal() {
-        var overlay = document.getElementById('rtoViewModal');
-        if (overlay) overlay.style.display = 'none';
-    }
-    window.rtoCloseViewModal = closeViewModal;
-
-    // ---------------------------------------------------------------
-    // Download PDF — opens a print-ready window with formatted record.
-    // ---------------------------------------------------------------
-    function downloadPdf(id) {
-        var records = loadRecords();
-        var rec = null;
-        for (var i = 0; i < records.length; i++) { if (records[i].id === id) { rec = records[i]; break; } }
-        if (!rec) return;
-        var fields = ['lln','adjustments','referrals','interventions','diversity','wellbeing'];
-        var sections = '';
-        fields.forEach(function (f) {
-            var val = (rec[f] || '').trim();
-            sections +=
-                '<div style="margin-bottom:18px;page-break-inside:avoid;">' +
-                '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#374151;margin-bottom:5px;border-bottom:1px solid #d1d5db;padding-bottom:3px;">' + FIELD_LABELS[f] + '</div>' +
-                '<div style="font-size:11px;line-height:1.65;color:#111827;">' + (val ? val.replace(/\n/g, '<br>') : '<em style="color:#9ca3af;">Not recorded.</em>') + '</div>' +
-                '</div>';
-        });
-        var riskBg = rec.risk === 'High' ? '#fef2f2' : (rec.risk === 'Medium' ? '#fffbeb' : '#f0fdf4');
-        var riskFg = rec.risk === 'High' ? '#dc2626' : (rec.risk === 'Medium' ? '#d97706' : '#16a34a');
-        var html =
-            '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">' +
-            '<title>Student Support Record — ' + rec.student + '</title>' +
-            '<style>*{box-sizing:border-box;}body{font-family:Arial,sans-serif;margin:0;padding:24px 32px;color:#111827;background:#fff;}' +
-            '@media print{body{padding:16px 20px;}button{display:none!important;}@page{margin:15mm;}}' +
-            '</style></head><body>' +
-            '<div style="border-bottom:2px solid #1d4ed8;margin-bottom:16px;padding-bottom:10px;display:flex;justify-content:space-between;align-items:flex-end;">' +
-            '<div><div style="font-size:18px;font-weight:700;color:#1d4ed8;">Student Support Record</div>' +
-            '<div style="font-size:11px;color:#6b7280;margin-top:2px;">ASQA Standards 2.3, 2.4, 2.5 &amp; 2.6 — RTO Compliance</div></div>' +
-            '<div style="font-size:10px;color:#6b7280;text-align:right;">Generated: ' + new Date().toLocaleDateString('en-AU', {day:'2-digit',month:'short',year:'numeric'}) + '</div>' +
-            '</div>' +
-            '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:18px;">' +
-            '<div style="border:1px solid #e5e7eb;border-radius:6px;padding:10px;"><div style="font-size:9px;color:#6b7280;text-transform:uppercase;font-weight:600;margin-bottom:3px;">Student Name</div><div style="font-size:13px;font-weight:700;">' + escapeHtml(rec.student) + '</div></div>' +
-            '<div style="border:1px solid #e5e7eb;border-radius:6px;padding:10px;"><div style="font-size:9px;color:#6b7280;text-transform:uppercase;font-weight:600;margin-bottom:3px;">LLN Level (ACSF)</div><div style="font-size:13px;font-weight:600;">' + escapeHtml(rec.llnLevel || '\u2014') + '</div></div>' +
-            '<div style="border:1px solid #e5e7eb;border-radius:6px;padding:10px;background:' + riskBg + ';"><div style="font-size:9px;color:#6b7280;text-transform:uppercase;font-weight:600;margin-bottom:3px;">Risk Level</div><div style="font-size:13px;font-weight:700;color:' + riskFg + ';">' + escapeHtml(rec.risk || '\u2014') + '</div></div>' +
-            '</div>' +
-            '<div style="font-size:9px;color:#6b7280;margin-bottom:14px;">Record Date: ' + escapeHtml(rec.date) + ' &nbsp;|&nbsp; Record ID: ' + rec.id + '</div>' +
-            sections +
-            '<div style="margin-top:28px;border-top:1px solid #e5e7eb;padding-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:20px;">' +
-            '<div><div style="font-size:9px;color:#9ca3af;margin-bottom:18px;">Trainer Signature</div><div style="border-top:1px solid #374151;width:180px;margin-top:2px;"></div></div>' +
-            '<div><div style="font-size:9px;color:#9ca3af;margin-bottom:18px;">Date</div><div style="border-top:1px solid #374151;width:120px;margin-top:2px;"></div></div>' +
-            '</div>' +
-            '<div style="margin-top:16px;font-size:8px;color:#9ca3af;text-align:center;">This record forms part of the per-student evidence trail for ASQA Standards 2.3–2.6. Retain securely in compliance with the Privacy Act 1988.</div>' +
-            '<div style="margin-top:16px;text-align:center;">' +
-            '<button onclick="window.print()" style="background:#1d4ed8;color:#fff;border:none;padding:8px 22px;border-radius:5px;font-size:12px;cursor:pointer;margin-right:8px;">Print / Save as PDF</button>' +
-            '<button onclick="window.close()" style="background:#f3f4f6;color:#374151;border:1px solid #d1d5db;padding:8px 18px;border-radius:5px;font-size:12px;cursor:pointer;">Close</button>' +
-            '</div></body></html>';
-        var win = window.open('', '_blank', 'width=800,height=900,scrollbars=yes');
-        if (win) { win.document.write(html); win.document.close(); }
-    }
-    window.rtoDownloadSupportPdf = downloadPdf;
-
-    // ---------------------------------------------------------------
-    // Render records table with View / Edit / PDF / Delete actions.
-    // ---------------------------------------------------------------
-    function renderRecords() {
-        var el = document.getElementById('savedRecordsTable');
-        if (!el) return;
-        var records = loadRecords();
-        if (records.length === 0) {
-            el.innerHTML = '<p style="color:#6b7280;font-style:italic;margin:0;">No records saved yet.</p>';
-            return;
-        }
-        var html = '<table style="width:100%;border-collapse:collapse;font-size:0.92rem;">' +
-            '<thead><tr style="background:#f3f4f6;text-align:left;">' +
-            '<th style="padding:8px 10px;border-bottom:2px solid #e5e7eb;">Date</th>' +
-            '<th style="padding:8px 10px;border-bottom:2px solid #e5e7eb;">Student</th>' +
-            '<th style="padding:8px 10px;border-bottom:2px solid #e5e7eb;">LLN</th>' +
-            '<th style="padding:8px 10px;border-bottom:2px solid #e5e7eb;">Risk</th>' +
-            '<th style="padding:8px 10px;border-bottom:2px solid #e5e7eb;">Summary</th>' +
-            '<th style="padding:8px 10px;border-bottom:2px solid #e5e7eb;min-width:190px;">Actions</th>' +
-            '</tr></thead><tbody>';
-        records.forEach(function (r) {
-            var summary = (r.lln || '').substring(0, 100) + ((r.lln || '').length > 100 ? '\u2026' : '');
-            var riskStyle = r.risk === 'High' ? 'color:#dc2626;font-weight:600;' : (r.risk === 'Medium' ? 'color:#d97706;font-weight:600;' : 'color:#16a34a;');
-            html += '<tr style="border-bottom:1px solid #e5e7eb;vertical-align:top;">' +
-                '<td style="padding:8px 10px;white-space:nowrap;">' + escapeHtml(r.date) + '</td>' +
-                '<td style="padding:8px 10px;white-space:nowrap;font-weight:600;">' + escapeHtml(r.student) + '</td>' +
-                '<td style="padding:8px 10px;white-space:nowrap;font-size:0.85rem;">' + escapeHtml(r.llnLevel || '\u2014') + '</td>' +
-                '<td style="padding:8px 10px;white-space:nowrap;' + riskStyle + '">' + escapeHtml(r.risk || '\u2014') + '</td>' +
-                '<td style="padding:8px 10px;color:#6b7280;font-size:0.88rem;">' + nl2br(summary) + '</td>' +
-                '<td style="padding:8px 6px;white-space:nowrap;">' +
-                '<button type="button" class="btn btn-outline-primary btn-sm" style="margin-right:3px;" onclick="rtoViewSupportRecord(' + r.id + ')" title="View full record">View</button>' +
-                '<button type="button" class="btn btn-outline-secondary btn-sm" style="margin-right:3px;" onclick="rtoEditSupportRecord(' + r.id + ')" title="Load into form to edit">Edit</button>' +
-                '<button type="button" class="btn btn-outline-success btn-sm" style="margin-right:3px;" onclick="rtoDownloadSupportPdf(' + r.id + ')" title="Download / print as PDF">PDF</button>' +
-                '<button type="button" class="btn btn-outline-danger btn-sm" onclick="rtoDeleteSupportRecord(' + r.id + ')" title="Delete record">Delete</button>' +
-                '</td></tr>';
-        });
-        html += '</tbody></table>';
-        el.innerHTML = html;
-    }
-
-    // ---------------------------------------------------------------
-    // View Modal — injected once into DOM.
-    // ---------------------------------------------------------------
-    function buildModal() {
-        if (document.getElementById('rtoViewModal')) return;
-        var m = document.createElement('div');
-        m.id = 'rtoViewModal';
-        m.style.cssText = 'display:none;position:fixed;inset:0;z-index:99999;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);padding:16px;';
-        m.innerHTML =
-            '<div style="background:#fff;border-radius:10px;max-width:720px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.25);">' +
-            '<div style="padding:16px 20px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">' +
-            '<h3 id="rtoViewModalTitle" style="margin:0;font-size:1.05rem;font-weight:700;color:#111827;"></h3>' +
-            '<div style="display:flex;gap:8px;align-items:center;">' +
-            '<button type="button" id="rtoViewModalPdfBtn" class="btn btn-outline-success btn-sm" onclick="rtoDownloadSupportPdf(Number(this.getAttribute(\'data-rec-id\')))">Download PDF</button>' +
-            '<button type="button" id="rtoViewModalEditBtn" class="btn btn-outline-secondary btn-sm" onclick="rtoCloseViewModal();rtoEditSupportRecord(Number(this.getAttribute(\'data-rec-id\')))">Edit</button>' +
-            '<button type="button" class="btn btn-outline-secondary btn-sm" onclick="rtoCloseViewModal()">&times; Close</button>' +
-            '</div></div>' +
-            '<div id="rtoViewModalBody" style="overflow-y:auto;padding:20px;flex:1;"></div>' +
-            '</div>';
-        m.addEventListener('click', function (e) { if (e.target === m) closeViewModal(); });
-        document.body.appendChild(m);
-    }
-
-    function init() {
-        buildModal();
-        document.getElementById('autoFillBtn').addEventListener('click', autoFillSupport);
-        document.getElementById('clearBtn').addEventListener('click', function () { _editingId = null; resetSaveBtn(); clearForm(); });
-        document.getElementById('saveRecordBtn').addEventListener('click', saveRecord);
-        renderRecords();
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else { init(); }
+    var afBtn = document.getElementById('autoFillBtn');
+    if (afBtn) { afBtn.addEventListener('click', autoFillSupport); }
 })();
 </script>
 <?php

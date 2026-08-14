@@ -15,13 +15,12 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * local_rtocompliance file.
+ * RTO Compliance plugin — delete_cert.php.
  *
  * @package    local_rtocompliance
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
+ * @copyright  2025 LMS Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 // v5.2.69 CERT-DELETE — Soft-deletes (revokes) a certificate record.
 //
 // Sets the certificate status to 'revoked' so it no longer appears in the
@@ -60,6 +59,14 @@ if (!$cert) {
 // Idempotent: if already revoked, treat as success (no double-error).
 if ($cert->status !== 'revoked') {
     $DB->set_field('local_rtocompliance_certs', 'status', 'revoked', ['id' => $certid]);
+
+    // FIX-REVOKE-REGISTRY (v5.9.406): keep the external certificate registry in
+    // sync so a revoked cert's public QR verifies as "Revoked" rather than
+    // continuing to show "Valid". Best-effort and a no-op when no registry is
+    // configured (mirrors the publish-on-issue call in programmatic_issue_cert()).
+    if (!empty($cert->verifytoken)) {
+        local_rtocompliance_update_registry_status($cert->verifytoken, 'revoked');
+    }
 }
 
 // FIX-DELETE-AUDIT (v5.9.274): write to the plugin's structured audit log so
