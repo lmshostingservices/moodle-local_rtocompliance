@@ -3622,3 +3622,12 @@ $string['cachedef_trainer_status'] = 'Trainer credential and currency status';
 $string['cachedef_course_settings'] = 'Per-course RTO settings (nationally recognised flag, qualification code, nominal hours)';
 $string['cachedef_compliance_summary'] = 'Compliance Health summary figures';
 $string['cachedef_avetmiss_codes'] = 'AVETMISS reference code lists (states, countries, languages, outcome codes)';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// STRANDED VERSION SELF-REPAIR (v6.3.9)
+// ═══════════════════════════════════════════════════════════════════════════
+$string['versionrepair_title'] = 'Repair recorded plugin version';
+$string['versionrepair_done'] = 'Recorded version corrected from {$a->from} to {$a->to}. Moodle can now upgrade this plugin normally.';
+$string['versionrepair_notneeded'] = 'Nothing to repair — the recorded version already matches the installed files.';
+$string['versionrepair_next'] = 'Now go to Site administration → Notifications and run the upgrade. It will bring the plugin up to the version of the files already installed, and apply anything this site had missed.';
+$string['versionrepair_gotonotifications'] = 'Go to Notifications';

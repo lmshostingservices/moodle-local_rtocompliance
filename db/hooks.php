@@ -31,6 +31,16 @@ $callbacks = [
         'priority' => 500,
     ],
     [
+        // STRANDED-VERSION BANNER (v6.3.9): shown to site administrators on every page
+        // while the recorded plugin version is higher than the installed files declare.
+        // Registered at the top of the body rather than on the plugin's own pages because
+        // an admin who never opens RTO Compliance still needs to know why Moodle is
+        // refusing their updates.
+        'hook' => \core\hook\output\before_standard_top_of_body_html_generation::class,
+        'callback' => \local_rtocompliance\hook\before_standard_top_of_body_html_generation::class . '::callback',
+        'priority' => 500,
+    ],
+    [
         'hook' => \core\hook\output\before_footer_html_generation::class,
         'callback' => \local_rtocompliance\hook\before_footer_html_generation::class . '::callback',
         'priority' => 500,

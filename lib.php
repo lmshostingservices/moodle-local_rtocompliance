@@ -6792,6 +6792,157 @@ function local_rtocompliance_get_user_nationally_recognised_courses($userid) {
     return $DB->get_records_sql($sql, ['userid' => $userid]);
 }
 
+
+// ═════════════════════════════════════════════════════════════════════════════
+// STRANDED VERSION SELF-REPAIR (v6.3.9)
+//
+// A Moodle plugin version must be YYYYMMDDXX — 10 digits. Builds of this plugin
+// before v6.3.0 used 13-digit savepoints, which are ~1000x larger numerically.
+// Any site that ran those steps has a stored version HIGHER than the one
+// version.php declares, and Moodle then refuses to ever upgrade the plugin again:
+//
+//     "A higher version of this plugin is already installed"
+//
+// The plugin cannot repair this during an upgrade, because Moodle compares the
+// two versions BEFORE it runs a single line of plugin code. But a higher stored
+// version does NOT put the site into upgrade mode — moodle_needs_upgrading()
+// only reacts when the stored version is LOWER — so the site runs normally and
+// this plugin's own code executes on every page. That is the window used here.
+//
+// Deliberately NOT automatic. Lowering a version number puts the site into
+// "upgrade pending", and doing that silently to a production site mid-morning is
+// not a decision a plugin should make for an administrator. Instead the condition
+// is detected, a red banner is shown to site administrators only, and the repair
+// happens when they click the button — sesskey-protected, capability-checked, and
+// logged. It replaces having to SSH in and run SQL on every affected site.
+// ═════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Is this site's stored plugin version stranded above what version.php declares?
+ *
+ * @return array|false ['stored' => string, 'declared' => int, 'target' => int]
+ *                     or false when everything is healthy.
+ */
+function local_rtocompliance_version_is_stranded() {
+    global $CFG;
+
+    static $cached = null;
+    if ($cached !== null) {
+        return $cached;
+    }
+    $cached = false;
+
+    $stored = get_config('local_rtocompliance', 'version');
+    if ($stored === false || $stored === null || $stored === '') {
+        return $cached;   // Not installed yet — nothing to repair.
+    }
+
+    // Read what version.php on disk actually declares, without disturbing globals.
+    $plugin = new stdClass();
+    $versionfile = $CFG->dirroot . '/local/rtocompliance/version.php';
+    if (!is_readable($versionfile)) {
+        return $cached;
+    }
+    include($versionfile);
+    if (empty($plugin->version)) {
+        return $cached;
+    }
+
+    $declared = (int) $plugin->version;
+
+    // Stranded when the stored value exceeds what the files declare. Comparing as
+    // strings first guards against any float rounding on a 32-bit PHP build, where
+    // a 13-digit integer overflows and comparisons stop being exact.
+    $isstranded = (strlen((string) $stored) > strlen((string) $declared))
+        || ((string) $stored !== (string) $declared && (float) $stored > (float) $declared);
+
+    if (!$isstranded) {
+        return $cached;
+    }
+
+    // Target one below the declared version, so the normal Moodle upgrade still
+    // runs afterwards and applies anything the site missed — rather than simply
+    // asserting "we are up to date" and skipping the schema reconciliation step.
+    $cached = [
+        'stored'   => (string) $stored,
+        'declared' => $declared,
+        'target'   => $declared - 1,
+    ];
+    return $cached;
+}
+
+/**
+ * Repair a stranded version. Caller MUST have already checked sesskey and capability.
+ *
+ * @return array ['ok' => bool, 'from' => string, 'to' => int, 'message' => string]
+ */
+function local_rtocompliance_repair_stranded_version() {
+    $state = local_rtocompliance_version_is_stranded();
+    if ($state === false) {
+        return ['ok' => false, 'from' => '', 'to' => 0,
+                'message' => get_string('versionrepair_notneeded', 'local_rtocompliance')];
+    }
+
+    set_config('version', $state['target'], 'local_rtocompliance');
+
+    // The plugin manager caches version information hard; without this the admin
+    // would click the button, see no change, and reasonably conclude it failed.
+    purge_all_caches();
+
+    try {
+        require_once(__DIR__ . '/classes/audit_logger.php');
+        \local_rtocompliance\audit_logger::log_update(
+            'system', 0,
+            'Repaired stranded plugin version: ' . $state['stored'] . ' -> ' . $state['target'],
+            ['version' => $state['stored']],
+            ['version' => $state['target']]
+        );
+    } catch (\Throwable $e) {
+        // Never let audit logging stop the repair itself.
+        debugging('Version repair audit log failed: ' . $e->getMessage(), DEBUG_DEVELOPER);
+    }
+
+    return ['ok' => true, 'from' => $state['stored'], 'to' => $state['target'],
+            'message' => get_string('versionrepair_done', 'local_rtocompliance',
+                (object) ['from' => $state['stored'], 'to' => $state['target']])];
+}
+
+/**
+ * The red banner shown to site administrators while the version is stranded.
+ *
+ * @return string HTML, or '' when there is nothing to say.
+ */
+function local_rtocompliance_version_banner() {
+    global $CFG;
+
+    if (!is_siteadmin()) {
+        return '';   // Only an administrator can act on this, so only they see it.
+    }
+    $state = local_rtocompliance_version_is_stranded();
+    if ($state === false) {
+        return '';
+    }
+
+    $url = new moodle_url('/local/rtocompliance/version_repair.php', ['sesskey' => sesskey()]);
+
+    $html  = '<div style="margin:12px;padding:14px 16px;border:2px solid #dc2626;border-radius:8px;'
+           . 'background:#fef2f2;color:#7f1d1d;font-size:14px;line-height:1.6;">';
+    $html .= '<strong style="font-size:15px;">RTO Compliance cannot be updated on this site</strong><br>';
+    $html .= 'Moodle has recorded version <code>' . s($state['stored']) . '</code> for this plugin, which is '
+           . 'higher than the <code>' . $state['declared'] . '</code> the installed files declare. That is a '
+           . 'legacy numbering fault, not a real newer version — Moodle will refuse every future update with '
+           . '<em>"A higher version of this plugin is already installed"</em>.';
+    $html .= '<div style="margin-top:10px;">';
+    $html .= '<a href="' . s($url->out(false)) . '" style="display:inline-block;padding:8px 16px;'
+           . 'background:#dc2626;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">'
+           . 'Fix this now</a>';
+    $html .= '<span style="margin-left:12px;font-size:13px;">Sets the recorded version to <code>'
+           . $state['target'] . '</code> so the normal upgrade can run. No student data is touched.</span>';
+    $html .= '</div></div>';
+
+    return $html;
+}
+
 function local_rtocompliance_get_avetmiss_fields() {
     return \local_rtocompliance\avetmiss_fields::get_all();
 }
