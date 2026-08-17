@@ -14832,5 +14832,34 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026081400, 'local', 'rtocompliance');
     }
 
+    if ($oldversion < 2026081700) {
+        // v6.3.10 PRE-1970 DATE OF BIRTH FIX. A DOB before 1 Jan 1970 is a
+        // NEGATIVE unix timestamp, but the shared "answered?" rule
+        // (local_rtocompliance_avetmiss_value_missing) treated any value <= 0
+        // as missing. Self-service students could not save a pre-1970 DOB at
+        // all, and staff-entered/imported pre-1970 DOBs were saved but left
+        // the student stamped profilecomplete = 0 forever. The rule is fixed
+        // in lib.php; this step heals the stored flag for students whose only
+        // blocker was a negative-timestamp DOB. Additive only — flips 0 -> 1
+        // when the full recompute now passes, never the reverse.
+        require_once($CFG->dirroot . '/local/rtocompliance/lib.php');
+        $rs = $DB->get_recordset_select('local_rtocompliance_students',
+            'dateofbirth < 0 AND (profilecomplete = 0 OR profilecomplete IS NULL)');
+        $healed = 0;
+        foreach ($rs as $row) {
+            if (local_rtocompliance_calculate_profilecomplete($row) === 1) {
+                $DB->set_field('local_rtocompliance_students', 'profilecomplete', 1, ['id' => $row->id]);
+                $healed++;
+            }
+        }
+        $rs->close();
+        if ($healed > 0) {
+            upgrade_log(UPGRADE_LOG_NORMAL, 'local_rtocompliance',
+                "Pre-1970 DOB fix: {$healed} student profile(s) recomputed as complete.");
+        }
+
+        upgrade_plugin_savepoint(true, 2026081700, 'local', 'rtocompliance');
+    }
+
     return true;
 }

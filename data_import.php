@@ -7435,7 +7435,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
             $yy = (int)substr($dobStr, 4, 4);
             if ($dd < 1 || $dd > 31 || $mm < 1 || $mm > 12 || $yy < 1900 || $yy > 2100) continue;
             $ts = gmmktime(12, 0, 0, $mm, $dd, $yy);
-            if ($ts === false || $ts <= 0) continue;
+            if ($ts === false) continue; // v6.3.10: negative (pre-1970) is valid.
             $existing = $DB->get_record('local_rtocompliance_students', ['userid' => $uid], 'id, dateofbirth');
             if ($existing && (empty($existing->dateofbirth) || (int)$existing->dateofbirth === 0)) {
                 $DB->update_record('local_rtocompliance_students', (object)[

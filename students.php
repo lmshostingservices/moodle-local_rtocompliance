@@ -127,14 +127,16 @@ if ($action === 'sync_dobs_from_nat' && confirm_sesskey()) {
         $yy = (int)substr($dobStr, 4, 4);
         if ($dd < 1 || $dd > 31 || $mm < 1 || $mm > 12 || $yy < 1900 || $yy > 2100) return 0;
         $ts = gmmktime(12, 0, 0, $mm, $dd, $yy);
-        return ($ts === false || $ts <= 0) ? 0 : (int)$ts;
+        // v6.3.10: pre-1970 DOBs are NEGATIVE timestamps and valid — the
+        // 1900-2100 year gate above bounds the range; only false is invalid.
+        return ($ts === false) ? 0 : (int)$ts;
     };
 
     // Step 2: Build clientid -> timestamp map (validate + convert DDMMYYYY -> Unix).
     $clientToTs = [];
     foreach ($clientToDob as $clientid => $dobStr) {
         $ts = $dobToTs($dobStr);
-        if ($ts > 0) $clientToTs[$clientid] = $ts;
+        if ($ts !== 0) $clientToTs[$clientid] = $ts;
     }
 
     $filledById = 0;        // Path A: local_rtocompliance_students.clientid
@@ -155,7 +157,7 @@ if ($action === 'sync_dobs_from_nat' && confirm_sesskey()) {
             );
             foreach ($rowsA as $row) {
                 $ts = $clientToTs[$row->clientid] ?? 0;
-                if ($ts <= 0) continue;
+                if ($ts === 0) continue;
                 $DB->update_record('local_rtocompliance_students', (object)[
                     'id'           => $row->id,
                     'dateofbirth'  => $ts,
@@ -178,11 +180,11 @@ if ($action === 'sync_dobs_from_nat' && confirm_sesskey()) {
             );
             foreach ($userRows as $ur) {
                 $ts = $clientToTs[trim($ur->idnumber)] ?? 0;
-                if ($ts <= 0) continue;
+                if ($ts === 0) continue;
                 $stud = $DB->get_record('local_rtocompliance_students',
                     ['userid' => (int)$ur->userid], 'id, clientid, dateofbirth');
                 if (!$stud) continue;
-                if (!empty($stud->dateofbirth) && (int)$stud->dateofbirth > 0) continue;
+                if (!empty($stud->dateofbirth) && (int)$stud->dateofbirth !== 0) continue;
                 // Also backfill clientid so future syncs can use Path A.
                 $upd = (object)['id' => $stud->id, 'dateofbirth' => $ts, 'timemodified' => time()];
                 if (empty($stud->clientid)) {
@@ -216,7 +218,7 @@ if ($action === 'sync_dobs_from_nat' && confirm_sesskey()) {
     $nameToTsSet = [];
     foreach ($nameRs as $nr) {
         $ts = $dobToTs($nr->dob);
-        if ($ts <= 0) continue;
+        if ($ts === 0) continue;
         $first = (string)($nr->firstname ?? '');
         $last  = (string)($nr->familyname ?? '');
         if (trim($first . $last) === '' && !empty($nr->name)) {
@@ -367,7 +369,7 @@ if ($action === 'upload_nat_dobs' && confirm_sesskey()) {
         $yy = (int)substr($dobStr, 4, 4);
         if ($dd < 1 || $dd > 31 || $mm < 1 || $mm > 12 || $yy < 1900 || $yy > 2100) continue;
         $ts = gmmktime(12, 0, 0, $mm, $dd, $yy);
-        if ($ts === false || $ts <= 0) continue;
+        if ($ts === false) continue; // v6.3.10: negative (pre-1970) is valid.
         $clientToTs[$clientid] = (int)$ts;
     }
 
@@ -384,7 +386,7 @@ if ($action === 'upload_nat_dobs' && confirm_sesskey()) {
             );
             foreach ($rowsA as $row) {
                 $ts = $clientToTs[$row->clientid] ?? 0;
-                if ($ts <= 0) continue;
+                if ($ts === 0) continue;
                 $DB->update_record('local_rtocompliance_students', (object)[
                     'id' => $row->id, 'dateofbirth' => $ts, 'timemodified' => time(),
                 ]);
@@ -400,10 +402,10 @@ if ($action === 'upload_nat_dobs' && confirm_sesskey()) {
             );
             foreach ($userRows as $ur) {
                 $ts = $clientToTs[trim($ur->idnumber)] ?? 0;
-                if ($ts <= 0) continue;
+                if ($ts === 0) continue;
                 $stud = $DB->get_record('local_rtocompliance_students',
                     ['userid' => (int)$ur->userid], 'id, clientid, dateofbirth');
-                if (!$stud || (!empty($stud->dateofbirth) && (int)$stud->dateofbirth > 0)) continue;
+                if (!$stud || (!empty($stud->dateofbirth) && (int)$stud->dateofbirth !== 0)) continue;
                 $upd = (object)['id' => $stud->id, 'dateofbirth' => $ts, 'timemodified' => time()];
                 if (empty($stud->clientid)) {
                     $upd->clientid = trim($ur->idnumber); // backfill clientid for future Path A
@@ -482,7 +484,7 @@ if ($action === 'upload_dob_csv' && confirm_sesskey()) {
         }
         if ($d < 1 || $d > 31 || $m < 1 || $m > 12 || $y < 1900 || $y > 2100) { return 0; }
         $ts = gmmktime(12, 0, 0, $m, $d, $y);
-        return ($ts === false || $ts <= 0) ? 0 : (int) $ts;
+        return ($ts === false) ? 0 : (int) $ts; // v6.3.10: negative (pre-1970) is valid.
     };
 
     $handle = @fopen($upload['tmp_name'], 'r');
@@ -514,7 +516,7 @@ if ($action === 'upload_dob_csv' && confirm_sesskey()) {
     while (($row = fgetcsv($handle)) !== false) {
         if (count(array_filter($row, fn($v) => trim((string) $v) !== '')) === 0) { continue; }
         $ts = $parsedob($col_dob !== null ? ($row[$col_dob] ?? '') : '');
-        if ($ts <= 0) { $baddate++; continue; }
+        if ($ts === 0) { $baddate++; continue; } // v6.3.10: negative (pre-1970) is valid.
 
         $stud = null;
         if ($col_client !== null && trim((string) ($row[$col_client] ?? '')) !== '') {
@@ -533,7 +535,7 @@ if ($action === 'upload_dob_csv' && confirm_sesskey()) {
             }
         }
         if (!$stud) { $nomatch++; continue; }
-        if (!empty($stud->dateofbirth) && (int) $stud->dateofbirth > 0) { $skipped++; continue; }
+        if (!empty($stud->dateofbirth) && (int) $stud->dateofbirth !== 0) { $skipped++; continue; }
 
         $DB->update_record('local_rtocompliance_students',
             (object) ['id' => $stud->id, 'dateofbirth' => $ts, 'timemodified' => time()]);
@@ -1530,7 +1532,7 @@ foreach ($students as $student) {
             // DOB-MISSING-USI-FIX (v5.2.88): if DOB is absent, USI verification will
             // silently skip this student. Show a specific warning + "Add DOB" link
             // instead of the misleading "Verify" button that does nothing.
-            $hasdob = !empty($student->dateofbirth) && (int)$student->dateofbirth > 0;
+            $hasdob = !empty($student->dateofbirth) && (int)$student->dateofbirth !== 0;
             if (!$hasdob) {
                 $usicell .= '<span class="rtoc-usi-badge rtoc-usi-nodob" title="A date of birth is needed before this USI can be checked against usi.gov.au. Add one to the learner profile.">'
                     . '<svg class="rtoc-usi-icon-svg" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v3.5M8 10h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>'

@@ -511,7 +511,7 @@ if ($usiexport === 'csv' || $usiexport === 'nodob') {
         fputcsv($out, ['Family name', 'Given name', 'Email', 'Client identifier', 'USI',
                        'Date of birth', 'USI verification status', 'Verified date']);
         foreach ($rows as $r) {
-            $dob = (!empty($r->dateofbirth) && (int) $r->dateofbirth > 0)
+            $dob = (!empty($r->dateofbirth) && (int) $r->dateofbirth !== 0)
                 ? userdate((int) $r->dateofbirth, '%d/%m/%Y') : '';
             $vdate = (!empty($r->usiverifieddate) && (int) $r->usiverifieddate > 0)
                 ? userdate((int) $r->usiverifieddate, '%d/%m/%Y') : '';
@@ -621,7 +621,7 @@ if ($usiexport === 'pdf') {
         . '<th width="17%">USI status</th><th width="12%">Verified date</th>'
         . '</tr></thead><tbody>';
     foreach ($prows as $r) {
-        $dob = (!empty($r->dateofbirth) && (int) $r->dateofbirth > 0)
+        $dob = (!empty($r->dateofbirth) && (int) $r->dateofbirth !== 0)
             ? userdate((int) $r->dateofbirth, '%d/%m/%Y') : 'MISSING';
         $vdate = (!empty($r->usiverifieddate) && (int) $r->usiverifieddate > 0)
             ? userdate((int) $r->usiverifieddate, '%d/%m/%Y') : '-';
@@ -847,7 +847,7 @@ if ($usiaction === 'uploaddob' && confirm_sesskey()) {
             continue;
         }
 
-        if (!empty($stud->dateofbirth) && (int) $stud->dateofbirth > 0) {
+        if (!empty($stud->dateofbirth) && (int) $stud->dateofbirth !== 0) {
             // Already has one. Report a DIFFERENT date separately from a matching one:
             // a conflict means either the sheet or the record is wrong and a human has to
             // decide, whereas a repeat of the same date is a harmless re-upload.
@@ -1794,7 +1794,7 @@ if (empty($rows)) {
     foreach ($rows as $r) {
         $name = s(trim($r->firstname . ' ' . $r->lastname));
         $studenturl = new moodle_url('/local/rtocompliance/student_profile.php', ['userid' => $r->userid]);
-        $dob = (!empty($r->dateofbirth) && (int) $r->dateofbirth > 0)
+        $dob = (!empty($r->dateofbirth) && (int) $r->dateofbirth !== 0)
             ? userdate((int) $r->dateofbirth, '%d/%m/%Y')
             : '<span style="color:#b45309;font-weight:600;">Missing</span>';
         $vdate = (!empty($r->usiverifieddate) && (int) $r->usiverifieddate > 0)

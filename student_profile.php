@@ -672,7 +672,7 @@ if (!$isnewprofile && function_exists('local_rtocompliance_preenrolment_readines
 }
 
 // --- DEMOGRAPHICS (b) ------------------------------------------------------
-$dobval = !empty($student->dateofbirth) && (int)$student->dateofbirth > 0
+$dobval = !empty($student->dateofbirth) && (int)$student->dateofbirth !== 0
     ? ['text' => userdate((int)$student->dateofbirth, get_string('strftimedate', 'langconfig')), 'muted' => false]
     : ['text' => 'Not stated', 'muted' => true];
 

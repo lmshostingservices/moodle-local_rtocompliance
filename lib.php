@@ -6525,7 +6525,16 @@ function local_rtocompliance_avetmiss_mandatory_fields(): array {
  */
 function local_rtocompliance_avetmiss_value_missing(string $field, $value): bool {
     if ($field === 'dateofbirth') {
-        return empty($value) || (int)$value <= 0;
+        // v6.3.10 PRE-1970 DOB FIX: the DOB is a unix timestamp, and anyone born
+        // before 1 Jan 1970 has a NEGATIVE one (the form offers years back to
+        // 1920). The old "(int)$value <= 0" rule therefore treated every
+        // pre-1970 date of birth as unanswered — the student would enter their
+        // DOB and the profile gate/form would still insist it was missing.
+        // Only null, '', a non-numeric value, or exactly 0 mean "not answered".
+        if ($value === null || !is_numeric($value)) {
+            return true;
+        }
+        return (int)$value === 0;
     }
 
     if ($value === null) {

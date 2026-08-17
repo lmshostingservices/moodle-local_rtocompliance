@@ -203,7 +203,10 @@ if ($DB->get_manager()->table_exists($studenttable)) {
             }
 
             // Date of birth ----------------------------------------------------
-            if (natval_blank($s->dateofbirth) || !is_numeric($s->dateofbirth) || (int)$s->dateofbirth <= 0 || (int)$s->dateofbirth > time()) {
+            // v6.3.10: pre-1970 DOBs are NEGATIVE timestamps and are valid; only
+            // 0, a pre-1900 date (clearly bad data) or a future date is an error.
+            if (natval_blank($s->dateofbirth) || !is_numeric($s->dateofbirth) || (int)$s->dateofbirth === 0
+                    || (int)$s->dateofbirth < -2208988800 || (int)$s->dateofbirth > time()) {
                 $add('ERROR', 'Date of birth', $ref, 'dateofbirth', 'Date of birth is empty or invalid — NCVER requires a real date of birth.');
             }
 
