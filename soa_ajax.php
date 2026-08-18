@@ -187,12 +187,21 @@ try {
                 if ($_cdate > 0) {
                     $_semester = ((int) date('n', $_cdate) <= 6 ? 'Sem 1 ' : 'Sem 2 ') . date('Y', $_cdate);
                 }
+                // v6.3.11 SOA-EPOCH-DATE-FIX: store the completion date as a UNIX
+                // TIMESTAMP, not a formatted 'd/m/Y' string. Every consumer of the
+                // units JSON (cert_template_renderer, and certificate_validator which
+                // already wrote a timestamp) treats 'date' as an integer timestamp, so
+                // the formatted string was cast with (int) — (int)'03/07/2026' === 3 —
+                // and every unit row on a multi-unit SoA printed "01 Jan 1970".
+                // 'datetext' keeps the human-readable form for anything that wants it.
                 $unitsJson[] = [
-                    'code'     => $_unitcode,
-                    'name'     => $_unitname,
-                    'outcome'  => $u->outcomeidentifier,
-                    'date'     => $_cdate > 0 ? date('d/m/Y', $_cdate) : '',
-                    'semester' => $_semester,
+                    'code'           => $_unitcode,
+                    'name'           => $_unitname,
+                    'outcome'        => $u->outcomeidentifier,
+                    'date'           => $_cdate > 0 ? $_cdate : '',
+                    'completiondate' => $_cdate > 0 ? $_cdate : '',
+                    'datetext'       => $_cdate > 0 ? date('d/m/Y', $_cdate) : '',
+                    'semester'       => $_semester,
                 ];
             }
 

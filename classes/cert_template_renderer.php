@@ -965,6 +965,59 @@ class cert_template_renderer {
     }
 
     /**
+     * SOA-EPOCH-DATE-FIX (v6.3.11): normalise a per-unit date value taken from the
+     * stored units JSON into a UNIX timestamp.
+     *
+     * The units JSON is written by several paths and they did not agree on a
+     * format: certificate_validator stores a raw timestamp, while the multi-unit
+     * SoA issuer (soa_ajax.php) stored a formatted 'd/m/Y' display string. The
+     * renderer used a bare (int) cast, and (int)'03/07/2026' === 3 — i.e. three
+     * seconds after the epoch — so every unit on a multi-unit Statement of
+     * Attainment printed "01 Jan 1970". Accept both, plus the other display
+     * formats certs in the wild may already hold, and return 0 when the value is
+     * empty or unparseable so the caller's register backfill/blank path applies.
+     *
+     * Day-first is assumed for slash/dot separated values ('03/07/2026' is
+     * 3 July 2026, Australian convention, never 7 March) — strtotime() would read
+     * a slash date as US month-first, so those are parsed explicitly.
+     *
+     * @param mixed $value raw value from the stored units JSON
+     * @return int UNIX timestamp, or 0 when not determinable
+     */
+    private static function normalise_unit_date($value): int {
+        if ($value === null || $value === '' || is_array($value)) {
+            return 0;
+        }
+        if (is_int($value) || is_float($value)) {
+            return (int) $value;
+        }
+        $raw = trim((string) $value);
+        if ($raw === '') {
+            return 0;
+        }
+        // Pure digits (optionally negative — pre-1970 dates) = already a timestamp.
+        if (preg_match('/^-?\d+$/', $raw)) {
+            return (int) $raw;
+        }
+        // Day-first numeric dates: d/m/Y, d-m-Y, d.m.Y (2- or 4-digit year).
+        if (preg_match('#^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2}|\d{4})$#', $raw, $m)) {
+            $day   = (int) $m[1];
+            $month = (int) $m[2];
+            $year  = (int) $m[3];
+            if ($year < 100) {
+                $year += ($year < 70) ? 2000 : 1900;
+            }
+            if ($month >= 1 && $month <= 12 && $day >= 1 && $day <= 31) {
+                return (int) mktime(0, 0, 0, $month, $day, $year);
+            }
+            return 0;
+        }
+        // ISO (Y-m-d) and textual forms ('05 Jan 2024', '5 January 2024').
+        $ts = strtotime($raw);
+        return ($ts === false) ? 0 : (int) $ts;
+    }
+
+    /**
      * Build the dynamic-data payload used to resolve fields at render
      * time.  Pulls from the cert row, the user row, the qualification
      * (if linked), and the per-tenant USI/RTO config.
@@ -1342,22 +1395,28 @@ class cert_template_renderer {
                     // Completion date is the per-unit timestamp captured at issue
                     // time ('date'), or a legacy 'completiondate', else the register
                     // backfill map, else blank. Title is the code-stripped name.
+                    // v6.3.11: normalise_unit_date() instead of a bare (int) cast —
+                    // stored values may be timestamps OR 'd/m/Y' strings (see helper).
                     $_uts = 0;
                     if (!empty($u['date'])) {
-                        $_uts = (int)$u['date'];
-                    } elseif (!empty($u['completiondate'])) {
-                        $_uts = (int)$u['completiondate'];
-                    } elseif ($code !== '' && isset($_unitDateMap[strtoupper($code)])) {
+                        $_uts = self::normalise_unit_date($u['date']);
+                    }
+                    if ($_uts <= 0 && !empty($u['completiondate'])) {
+                        $_uts = self::normalise_unit_date($u['completiondate']);
+                    }
+                    if ($_uts <= 0 && $code !== '' && isset($_unitDateMap[strtoupper($code)])) {
                         $_uts = (int)$_unitDateMap[strtoupper($code)];
                     }
                     // ENROL-DATE (v6.2.51): per-unit enrolment (activity start) date for the
                     // Record of Results "Enrolment Date" column — stored key, else start map.
                     $_ets = 0;
                     if (!empty($u['enroldate'])) {
-                        $_ets = (int)$u['enroldate'];
-                    } elseif (!empty($u['activitystartdate'])) {
-                        $_ets = (int)$u['activitystartdate'];
-                    } elseif ($code !== '' && isset($_unitStartMap[strtoupper($code)])) {
+                        $_ets = self::normalise_unit_date($u['enroldate']);
+                    }
+                    if ($_ets <= 0 && !empty($u['activitystartdate'])) {
+                        $_ets = self::normalise_unit_date($u['activitystartdate']);
+                    }
+                    if ($_ets <= 0 && $code !== '' && isset($_unitStartMap[strtoupper($code)])) {
                         $_ets = (int)$_unitStartMap[strtoupper($code)];
                     }
                     $_tableRows[] = [
@@ -1438,14 +1497,20 @@ class cert_template_renderer {
                             $_name    = isset($_u['name'])     ? trim((string)$_u['name'])    : '';
                             $_outcome = isset($_u['outcome'])  ? trim((string)$_u['outcome']) : '20';
                             $_sem     = isset($_u['semester']) ? trim((string)$_u['semester']): $_certSemester;
-                            $_uts2    = !empty($_u['date']) ? (int)$_u['date']
-                                      : (($_code !== '' && isset($_unitDateMap[strtoupper($_code)]))
-                                            ? (int)$_unitDateMap[strtoupper($_code)] : 0);
+                            // v6.3.11: normalise_unit_date() — see helper; stored values
+                            // may be timestamps or formatted strings.
+                            $_uts2 = !empty($_u['date']) ? self::normalise_unit_date($_u['date']) : 0;
+                            if ($_uts2 <= 0 && $_code !== '' && isset($_unitDateMap[strtoupper($_code)])) {
+                                $_uts2 = (int)$_unitDateMap[strtoupper($_code)];
+                            }
                             // ENROL-DATE (v6.2.51): enrolment (activity start) date for this unit.
-                            $_ets2    = !empty($_u['enroldate']) ? (int)$_u['enroldate']
-                                      : (!empty($_u['activitystartdate']) ? (int)$_u['activitystartdate']
-                                      : (($_code !== '' && isset($_unitStartMap[strtoupper($_code)]))
-                                            ? (int)$_unitStartMap[strtoupper($_code)] : 0));
+                            $_ets2 = !empty($_u['enroldate']) ? self::normalise_unit_date($_u['enroldate']) : 0;
+                            if ($_ets2 <= 0 && !empty($_u['activitystartdate'])) {
+                                $_ets2 = self::normalise_unit_date($_u['activitystartdate']);
+                            }
+                            if ($_ets2 <= 0 && $_code !== '' && isset($_unitStartMap[strtoupper($_code)])) {
+                                $_ets2 = (int)$_unitStartMap[strtoupper($_code)];
+                            }
                             // SOA-DUPCODE-UNIT-FIX (v5.9.264): strip code prefix from name (same as primary branch).
                             if ($_code !== '' && $_name !== '' && strpos($_name, $_code) === 0) {
                                 $_name = ltrim(substr($_name, strlen($_code)), " \t-\xe2\x80\x94\xe2\x80\x93");
