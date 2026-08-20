@@ -5160,7 +5160,7 @@ function local_rtocompliance_get_qualbuilder_unit_list_with_outcomes(int $qualbu
     $unitcodes = array_column(array_values($rows), 'unitcode');
     list($insql, $inparams) = $DB->get_in_or_equal($unitcodes, SQL_PARAMS_NAMED, 'uc');
     $enrolmentrows = $DB->get_records_sql(
-        "SELECT unitcode, outcomeidentifier
+        "SELECT id, unitcode, outcomeidentifier, supersededfrom
            FROM {local_rtocompliance_enrolments}
           WHERE studentid = :studentid
             AND unitcode $insql
@@ -5169,10 +5169,36 @@ function local_rtocompliance_get_qualbuilder_unit_list_with_outcomes(int $qualbu
         array_merge(['studentid' => $studentid], $inparams)
     );
     $outcomeMap = [];
+    $sourceMap  = [];
     foreach ($enrolmentrows as $row) {
         // First-seen = best outcome (competent before continuing/fail), then most recent.
         if (!isset($outcomeMap[$row->unitcode]) && !empty($row->outcomeidentifier)) {
             $outcomeMap[$row->unitcode] = $row->outcomeidentifier;
+            if (!empty($row->supersededfrom)) {
+                $sourceMap[$row->unitcode] = (int) $row->supersededfrom;
+            }
+        }
+    }
+
+    // CREDITED-UNIT-SOURCE (v6.3.16): a transcript must name the unit the student was
+    // ASSESSED IN. Where an enrolment row carries a supersededfrom link to another
+    // enrolment row, the credited unit was not delivered to this student and the source
+    // unit is printed in its place. Substituting the code here is sufficient for the whole
+    // document: the certificate renderer resolves enrolment and completion dates by unit
+    // code, so the source unit's real dates follow with it.
+    $substitute = [];
+    if (!empty($sourceMap)) {
+        list($srcsql, $srcparams) = $DB->get_in_or_equal(array_values($sourceMap), SQL_PARAMS_NAMED, 'src');
+        $srcrows = $DB->get_records_sql(
+            "SELECT id, unitcode, unitname, outcomeidentifier
+               FROM {local_rtocompliance_enrolments}
+              WHERE id $srcsql",
+            $srcparams
+        );
+        foreach ($sourceMap as $creditedunit => $srcid) {
+            if (isset($srcrows[$srcid]) && !empty($srcrows[$srcid]->unitcode)) {
+                $substitute[$creditedunit] = $srcrows[$srcid];
+            }
         }
     }
 
@@ -5194,6 +5220,18 @@ function local_rtocompliance_get_qualbuilder_unit_list_with_outcomes(int $qualbu
                 . ' Query was already programcode-free; this is a genuine missing enrolment row.',
                 DEBUG_DEVELOPER
             );
+        }
+        // CREDITED-UNIT-SOURCE (v6.3.16): print the unit the student was assessed in.
+        if (isset($substitute[$row->unitcode])) {
+            $src = $substitute[$row->unitcode];
+            $units[] = [
+                'code'         => $src->unitcode,
+                'name'         => $src->unitname ?: $row->unitname,
+                'outcome'      => $src->outcomeidentifier ?: ($outcomeMap[$row->unitcode] ?? '20'),
+                'creditedas'   => $row->unitcode,
+                'creditedname' => $row->unitname,
+            ];
+            continue;
         }
         $units[] = [
             'code'    => $row->unitcode,

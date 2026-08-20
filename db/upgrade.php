@@ -14888,5 +14888,12 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026081903, 'local', 'rtocompliance');
     }
 
+    if ($oldversion < 2026082000) {
+        // v6.3.16 — code-only release. lib.php prints the source unit on transcripts
+        // where an enrolment row carries a supersededfrom link, and the qualification
+        // picker distinguishes semester intakes. No schema change.
+        upgrade_plugin_savepoint(true, 2026082000, 'local', 'rtocompliance');
+    }
+
     return true;
 }

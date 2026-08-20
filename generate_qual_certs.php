@@ -72,12 +72,22 @@ if (!$qualid) {
     );
     echo local_rtocompliance_page_banner(get_string('generate_qual_certs', 'local_rtocompliance'));
 
+    // The same qualification code is legitimately held more than once — one row per
+    // semester intake, distinguished by streamname (e.g. "26 DCB S1" / "26 DCB S2").
+    // Select streamname and the linked unit count so the picker can tell them apart;
+    // code + name alone renders identical options.
     $quals = $DB->get_records_sql(
-        "SELECT id, qualificationcode, qualificationname
-         FROM {local_rtocompliance_qualbuilder}
-         WHERE producttype = 'qualification'
-           AND status = 'active'
-         ORDER BY qualificationname ASC"
+        "SELECT q.id, q.qualificationcode, q.qualificationname, q.streamname,
+                q.totalunits,
+                (SELECT COUNT(1)
+                   FROM {local_rtocompliance_qualunits} qu
+                  WHERE qu.qualbuilderid = q.id
+                    AND qu.selected = 1
+                    AND qu.status = 'active') AS linkedunits
+         FROM {local_rtocompliance_qualbuilder} q
+         WHERE q.producttype = 'qualification'
+           AND q.status = 'active'
+         ORDER BY q.qualificationcode ASC, q.streamname ASC, q.qualificationname ASC"
     );
 
     echo html_writer::start_div('certificates-container');
@@ -103,7 +113,24 @@ if (!$qualid) {
         ]);
         $options = [];
         foreach ($quals as $q) {
-            $options[$q->id] = $q->qualificationcode . ' ' . format_string($q->qualificationname);
+            $label = $q->qualificationcode . ' ' . format_string($q->qualificationname);
+            // Intake/stream is what actually separates two rows sharing a code.
+            $stream = trim((string) ($q->streamname ?? ''));
+            if ($stream !== '') {
+                $label .= ' — ' . format_string($stream);
+            }
+            // Unit count makes an unpopulated or short-linked intake obvious before selection.
+            $units = (int) ($q->linkedunits ?? 0);
+            $total = (int) ($q->totalunits ?? 0);
+            $label .= ' (' . $units . ' unit' . ($units === 1 ? '' : 's');
+            if ($total > 0 && $total !== $units) {
+                $label .= ' of ' . $total;
+            }
+            $label .= ')';
+            if ($stream === '') {
+                $label .= ' #' . (int) $q->id;
+            }
+            $options[$q->id] = $label;
         }
         echo '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">';
         echo html_writer::select($options, 'qualid', '', ['0' => 'Select a qualification...'], ['class' => 'custom-select', 'id' => 'gq-qual-picker', 'style' => 'min-width:320px;flex:1;']);
@@ -637,9 +664,16 @@ echo html_writer::tag('span', 'Qualification', ['style' => 'font-size:0.7rem;fon
 echo html_writer::tag('span', 'Testamur + Record of Results Generation', ['style' => 'font-size:1rem;font-weight:700;color:#1e3a5f;']);
 echo html_writer::end_div();
 
-echo html_writer::tag('p',
-    html_writer::tag('strong', htmlspecialchars($qual->qualificationcode), ['style' => 'color:#1e40af;'])
-    . ' — ' . format_string($qual->qualificationname),
+// Confirm the intake on the detail page too: with several active streams per code,
+// the heading alone cannot tell the admin which one they picked.
+$qualheading = html_writer::tag('strong', htmlspecialchars($qual->qualificationcode), ['style' => 'color:#1e40af;'])
+    . ' — ' . format_string($qual->qualificationname);
+if (trim((string) ($qual->streamname ?? '')) !== '') {
+    $qualheading .= html_writer::tag('span', format_string($qual->streamname),
+        ['style' => 'margin-left:10px;background:#eef2ff;color:#3730a3;padding:2px 8px;'
+                  . 'border-radius:4px;font-size:0.85rem;font-weight:600;']);
+}
+echo html_writer::tag('p', $qualheading,
     ['style' => 'margin:0 0 8px;font-size:0.95rem;color:#374151;']
 );
 
