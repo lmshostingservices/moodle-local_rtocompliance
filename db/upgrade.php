@@ -14895,5 +14895,41 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026082000, 'local', 'rtocompliance');
     }
 
+    if ($oldversion < 2026082001) {
+        // v6.3.17 — code-only release. Multi-page Record of Results no longer strands
+        // the student identity block on the final page, and the "Notify students"
+        // checkbox can now actually be turned off. No schema change.
+        upgrade_plugin_savepoint(true, 2026082001, 'local', 'rtocompliance');
+    }
+
+    if ($oldversion < 2026082002) {
+        // v6.3.18 — code-only. Corrects the v6.3.17 approach to the missing page-1
+        // student identity block: the render-time identity-table transform now inserts
+        // the replacement field at the position of the block it replaces instead of
+        // appending it after the units table. No schema change.
+        upgrade_plugin_savepoint(true, 2026082002, 'local', 'rtocompliance');
+    }
+
+    if ($oldversion < 2026082003) {
+        // v6.3.19 — USI EXEMPTION FOR OFFSHORE INTERNATIONAL STUDENTS.
+        // The USI Registrar exempts a student who completes all study outside Australia
+        // from holding a USI. Until now the certificate gate hard-blocked issuance for any
+        // student without a verified USI, with no exemption pathway, which prevented lawful
+        // issuance for those students. Four columns record the exemption and who granted it.
+        $usitable = new xmldb_table('local_rtocompliance_students');
+        $usifields = [
+            new xmldb_field('usiexempt', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0', 'usiverifieddate'),
+            new xmldb_field('usiexemptreason', XMLDB_TYPE_CHAR, '255', null, null, null, null, 'usiexempt'),
+            new xmldb_field('usiexemptby', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'usiexemptreason'),
+            new xmldb_field('usiexemptdate', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'usiexemptby'),
+        ];
+        foreach ($usifields as $usifield) {
+            if (!$dbman->field_exists($usitable, $usifield)) {
+                $dbman->add_field($usitable, $usifield);
+            }
+        }
+        upgrade_plugin_savepoint(true, 2026082003, 'local', 'rtocompliance');
+    }
+
     return true;
 }

@@ -926,7 +926,9 @@ echo <<<'HTML'
       }
       var d = r.data;
       var usiHtml;
-      if (!d.usi) {
+      if (d.usiexempt && !d.usiverified) {
+        usiHtml = '<span style="color:#1d4ed8;font-weight:600;">&#10003; USI exempt</span>';
+      } else if (!d.usi) {
         usiHtml = '<span style="color:#dc2626;font-weight:600;">&#10007; USI not recorded</span>';
       } else if (!d.usiverified) {
         usiHtml = '<span style="color:#d97706;font-weight:600;">&#9888; USI not verified</span>';

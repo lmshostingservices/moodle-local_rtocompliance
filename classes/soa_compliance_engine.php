@@ -158,7 +158,7 @@ class soa_compliance_engine {
         $student = null;
         if ($dbman->table_exists('local_rtocompliance_students')) {
             $student = $DB->get_record('local_rtocompliance_students',
-                ['userid' => $userid], 'id, usi, usiverified', IGNORE_MISSING);
+                ['userid' => $userid], 'id, usi, usiverified, usiexempt', IGNORE_MISSING);
         }
 
         $moodleuser  = \core_user::get_user($userid);
@@ -427,7 +427,13 @@ class soa_compliance_engine {
         }
 
         if ($student) {
-            if (empty($student->usi)) {
+            if (!empty($student->usiexempt)
+                && (empty($student->usi) || (int) $student->usiverified !== 1)) {
+                // USI-EXEMPTION (v6.3.19): a student recorded as exempt from the USI
+                // requirement (e.g. all study completed outside Australia) does not fail
+                // the Clause 12 check. Noted as a warning so it stays visible on screen.
+                $warnings[] = 'Student is recorded as exempt from the USI requirement';
+            } else if (empty($student->usi)) {
                 $errors[] = 'USI not recorded — Clause 12 requires a verified USI';
             } else {
                 // USI_STATUS: 0=UNVERIFIED, 1=VERIFIED, 2=FAILED, 3=PENDING, 4=MANUAL_REVIEW.
@@ -561,14 +567,16 @@ class soa_compliance_engine {
             'active'       => !$moodleuser->deleted && !$moodleuser->suspended,
             'usi'          => null,
             'usiverified'  => false,
+            'usiexempt'    => false,
         ];
 
         if ($dbman->table_exists('local_rtocompliance_students')) {
             $stud = $DB->get_record('local_rtocompliance_students',
-                ['userid' => $userid], 'id, usi, usiverified', IGNORE_MISSING);
+                ['userid' => $userid], 'id, usi, usiverified, usiexempt', IGNORE_MISSING);
             if ($stud) {
                 $result['usi']         = $stud->usi;
                 $result['usiverified'] = (int)$stud->usiverified === 1; // STATUS_VERIFIED only
+                $result['usiexempt']   = !empty($stud->usiexempt);      // USI-EXEMPTION (v6.3.19)
             }
         }
 

@@ -582,13 +582,17 @@ class cert_template {
             $maxr = ($maxr === null) ? ($fx + $fw) : max($maxr, $fx + $fw);
         }
 
-        $out = [];
-        foreach ($fields as $i => $f) {
-            if (!isset($group[$i])) {
-                $out[] = $f;
-            }
-        }
-        $out[] = [
+        // IDENTITY-BLOCK-POSITION (v6.3.17): the replacement field must take the
+        // POSITION of the block it replaces, not be appended to the end of the array.
+        // render() paints fields in array order, and a ror_table that overflows adds
+        // continuation pages — which leaves the cursor on the last page. Appending the
+        // identity table put it AFTER the ror_table, so on any Record of Results long
+        // enough to need a second page the student's name, USI and qualification painted
+        // onto that second page while page 1 kept a blank gap where the block should be.
+        // Page 1 alone was unattributable to anyone. Reported 20 Aug 2026 against
+        // CBF-ROR-2026-0002 and CBF-ROR-2026-0007 (both two pages).
+        $insertat = min(array_keys($group));
+        $newfield = [
             'id'         => 'sdtauto',
             'kind'       => 'dynamic',
             'dynamickey' => 'student.detailstable',
@@ -602,6 +606,16 @@ class cert_template {
             'align'      => 'L',
             'color'      => '#000000',
         ];
+
+        $out = [];
+        foreach ($fields as $i => $f) {
+            if ($i === $insertat) {
+                $out[] = $newfield;   // identity table lands where the stacked block was
+            }
+            if (!isset($group[$i])) {
+                $out[] = $f;
+            }
+        }
         $design['fields'] = $out;
         return $design;
     }

@@ -888,6 +888,9 @@ echo html_writer::end_div(); // clause-banner
 // Email toggle
 echo html_writer::start_div('d-flex align-items-center gap-2 mb-3');
 echo html_writer::tag('label', 'Email certificates to students:', ['for' => 'sendemail', 'class' => 'mb-0 mr-2']);
+// SENDEMAIL-UNCHECKED-FIX (v6.3.16): see generate_qual_certs.php. An unchecked
+// checkbox submits nothing, so the optional_param default of 1 re-enabled email.
+echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sendemail', 'value' => '0']);
 echo html_writer::tag('input', '', [
     'type'    => 'checkbox',
     'name'    => 'sendemail',

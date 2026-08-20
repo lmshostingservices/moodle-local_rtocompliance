@@ -943,6 +943,13 @@ echo html_writer::tag('label',
     . 'Force regenerate (void existing)',
     ['for' => 'gq-forceregen', 'style' => 'font-size:0.87rem;color:#374151;cursor:pointer;margin:0;font-weight:400;']
 );
+// SENDEMAIL-UNCHECKED-FIX (v6.3.16): an unchecked checkbox submits NOTHING, so
+// optional_param('sendemail', 1) fell back to its default of 1 and the certificate
+// was emailed even when the admin had deliberately unticked the box. The hidden
+// field below always submits 0; when the box IS ticked its value is submitted after
+// the hidden one and wins. Reported 20 Aug 2026 by an admin who unticked "Notify
+// students" and found the register showing the students as emailed.
+echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sendemail', 'value' => '0']);
 echo html_writer::tag('label',
     html_writer::empty_tag('input', ['type' => 'checkbox', 'name' => 'sendemail', 'value' => '1', 'id' => 'gq-sendemail', 'checked' => 'checked', 'style' => 'margin-right:6px;'])
     . 'Notify students',

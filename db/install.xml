@@ -11,6 +11,10 @@
         <FIELD NAME="usi" TYPE="char" LENGTH="15" NOTNULL="false" COMMENT="Unique Student Identifier (10–12 chars per AVETMISS 8.0; field sized to 15 for vendor tolerance)"/>
         <FIELD NAME="usiverified" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="USI verified with USI Registry"/>
         <FIELD NAME="usiverifieddate" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Timestamp when USI was verified"/>
+        <FIELD NAME="usiexempt" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="v6.3.19: 1 = student is exempt from holding a USI (e.g. an offshore international student who completed all study outside Australia, per the USI Registrar's international student exemption). Certificate issuance is permitted without a verified USI when this is set."/>
+        <FIELD NAME="usiexemptreason" TYPE="char" LENGTH="255" NOTNULL="false" COMMENT="v6.3.19: exemption ground recorded by the staff member who granted it."/>
+        <FIELD NAME="usiexemptby" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="v6.3.19: Moodle userid of the staff member who recorded the exemption."/>
+        <FIELD NAME="usiexemptdate" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="v6.3.19: timestamp the exemption was recorded."/>
         <FIELD NAME="firstname" TYPE="char" LENGTH="100" NOTNULL="false" COMMENT="Student first name for USI verification"/>
         <FIELD NAME="lastname" TYPE="char" LENGTH="100" NOTNULL="false" COMMENT="Student last name for USI verification"/>
         <FIELD NAME="dateofbirth" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Date of birth timestamp"/>

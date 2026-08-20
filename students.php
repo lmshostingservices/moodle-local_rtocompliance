@@ -1287,7 +1287,7 @@ $suspendedfilter = ($filter === 'suspended') ? 1 : 0;
 $sql = "SELECT u.id, u.firstname, u.lastname, u.email,
                u.firstnamephonetic, u.lastnamephonetic, u.middlename, u.alternatename,
                u.suspended,
-               s.id as profileid, s.usi, s.usiverified, s.usiverifieddate, s.profilecomplete,
+               s.id as profileid, s.usi, s.usiverified, s.usiverifieddate, s.usiexempt, s.profilecomplete,
                s.statecode, s.postcode, s.suburb, s.dateofbirth,
                suit.id as suitabilityid, suit.status as suitabilitystatus
         FROM {user} u
@@ -1547,6 +1547,12 @@ foreach ($students as $student) {
                     . ($student->profileid ? ' <button type="button" class="rtoc-usi-verify-btn" data-profileid="' . $student->profileid . '" title="Run USI verification against usi.gov.au for this learner">Verify via usi.gov.au &#x2192;</button>' : '');
             }
         }
+    } else if (!empty($student->usiexempt)) {
+        // USI-EXEMPTION (v6.3.19): this learner is recorded as exempt from the USI
+        // requirement, so a blank USI is not a gap to chase.
+        $usicell = '<span class="rtoc-usi-badge rtoc-usi-exempt" style="background:#dbeafe;color:#1d4ed8;" title="Recorded as exempt from the USI requirement — for example an international student who completed all study outside Australia. Certificates can be issued without a USI.">'
+            . 'USI exempt'
+            . '</span>';
     } else {
         $usicell = '<span class="rtoc-usi-missing" title="No USI on file for this learner. Collect their USI number before issuing any certificate.">'
             . '<svg style="width:11px;height:11px;vertical-align:middle;margin-right:3px" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 2C4.7 2 2 4.7 2 8s2.7 6 6 6 6-2.7 6-6-2.7-6-6-6zm0 3v3.5M8 11h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>'

@@ -102,6 +102,64 @@ if (!$student) {
     $student->timemodified = 0;
 }
 
+// USI-EXEMPTION (v6.3.19) ---------------------------------------------------
+// The USI Registrar exempts a student who completes all of their study outside
+// Australia from holding a USI. Before this release the certificate gate refused
+// every student without a verified USI and offered no exemption pathway, which
+// blocked lawful issuance for offshore international students. The exemption is a
+// deliberate, attributed act, so it is handled as its own posted action rather
+// than as a checkbox buried in the AVETMISS form.
+$usiexemptaction = optional_param('usiexemptaction', '', PARAM_ALPHA);
+if ($usiexemptaction !== '' && confirm_sesskey()) {
+    if (!has_capability('local/rtocompliance:manage', $context)) {
+        throw new moodle_exception('nopermissions', 'error', '',
+            'Recording a USI exemption requires the manage capability.');
+    }
+    if (empty($student->id)) {
+        throw new moodle_exception('invalidrecord', 'error', '',
+            'Save this student profile before recording a USI exemption.');
+    }
+    $upd = new stdClass();
+    $upd->id = $student->id;
+    if ($usiexemptaction === 'grant') {
+        $reason = trim(optional_param('usiexemptreason', '', PARAM_TEXT));
+        if ($reason === '') {
+            $reason = 'International student — all study completed outside Australia.';
+        }
+        $upd->usiexempt       = 1;
+        $upd->usiexemptreason = core_text::substr($reason, 0, 255);
+        $upd->usiexemptby     = $USER->id;
+        $upd->usiexemptdate   = time();
+        $exemptmsg = 'USI exemption recorded. Certificates can now be issued for this student.';
+    } else {
+        $upd->usiexempt       = 0;
+        $upd->usiexemptreason = null;
+        $upd->usiexemptby     = null;
+        $upd->usiexemptdate   = null;
+        $exemptmsg = 'USI exemption removed. This student again requires a verified USI before '
+            . 'a testamur, record of results or statement of attainment can be issued.';
+    }
+    $upd->timemodified = time();
+    $DB->update_record('local_rtocompliance_students', $upd);
+    audit_logger::log_update(
+        audit_logger::ENTITY_STUDENT,
+        (int) $student->id,
+        ($usiexemptaction === 'grant'
+            ? 'USI exemption granted for user ' . $userid . ': ' . $upd->usiexemptreason
+            : 'USI exemption removed for user ' . $userid),
+        ['usiexempt' => (int)($student->usiexempt ?? 0),
+         'usiexemptreason' => (string)($student->usiexemptreason ?? '')],
+        ['usiexempt' => (int) $upd->usiexempt,
+         'usiexemptreason' => (string) ($upd->usiexemptreason ?? '')]
+    );
+    redirect(
+        new moodle_url('/local/rtocompliance/student_profile.php', ['userid' => $userid]),
+        $exemptmsg,
+        null,
+        \core\output\notification::NOTIFY_SUCCESS
+    );
+}
+
 $form = new student_profile_form(null, ['student' => $student]);
 $form->set_data($student);
 
@@ -162,7 +220,7 @@ if ($form->is_cancelled()) {
         'profilecomplete' => $student->profilecomplete ?? 0,
     ];
 
-    $validationerrors = validate_student_profile($data);
+    $validationerrors = validate_student_profile($data, !empty($student->usiexempt));
     $data->validationerrors = !empty($validationerrors) ? json_encode($validationerrors) : null;
     $data->timemodified = $now;
 
@@ -328,11 +386,16 @@ if ($form->is_cancelled()) {
     }
 }
 
-function validate_student_profile($data) {
+function validate_student_profile($data, $usiexempt = false) {
     $errors = [];
 
     if (empty($data->usi)) {
-        $errors[] = ['field' => 'usi', 'message' => get_string('error_usi_required', 'local_rtocompliance')];
+        // USI-EXEMPTION (v6.3.19): a student recorded as exempt from the USI requirement
+        // (e.g. an offshore international student who completed all study outside
+        // Australia) is not incomplete for want of a USI.
+        if (empty($usiexempt)) {
+            $errors[] = ['field' => 'usi', 'message' => get_string('error_usi_required', 'local_rtocompliance')];
+        }
     } else {
         $result = avetmiss_codes::validate_usi($data->usi);
         if (!$result['valid']) {
@@ -496,6 +559,7 @@ echo '<style>
 .rtoc-pill-green { background:#dcfce7; color:#166534; }
 .rtoc-pill-amber { background:#fef3c7; color:#92400e; }
 .rtoc-pill-grey  { background:#e2e8f0; color:#475569; }
+.rtoc-pill-blue  { background:#dbeafe; color:#1d4ed8; }
 .rtoc-pill-white { background:rgba(255,255,255,.9); color:#1e3a8a; }
 .rtoc-missing-list { margin:14px 0 0; padding:12px 16px; background:#fffbeb; border:1px solid #fcd34d; border-radius:8px; }
 .rtoc-missing-list strong { color:#92400e; font-size:13px; }
@@ -586,7 +650,11 @@ if ($initials === '') {
 
 $usi       = trim((string)($student->usi ?? ''));
 $usiverified = (int)($student->usiverified ?? 0);
-if ($usi === '') {
+$usiexempt = !empty($student->usiexempt);
+if ($usiexempt && ($usi === '' || $usiverified !== 1)) {
+    // USI-EXEMPTION (v6.3.19).
+    $usibadge = '<span class="rtoc-pill rtoc-pill-blue">&#10003; USI exempt</span>';
+} else if ($usi === '') {
     $usibadge = '<span class="rtoc-pill rtoc-pill-grey">No USI recorded</span>';
 } else if ($usiverified === 1) {
     $vdate = !empty($student->usiverifieddate)
@@ -633,6 +701,74 @@ if (!$isnewprofile && !empty($missingmessages)) {
     }
     echo '</ul>';
     echo '</div>';
+}
+
+// --- USI EXEMPTION (v6.3.19) ----------------------------------------------
+// Shown only when it is relevant: the student is already exempt, or they have no
+// verified USI and so are currently blocked from certificate issuance. A student
+// with a verified USI needs no exemption and is not offered one.
+if (!$isnewprofile && ($usiexempt || $usi === '' || $usiverified !== 1)) {
+    $canexempt = has_capability('local/rtocompliance:manage', $context);
+    echo '<div class="card">';
+    echo '<div class="card-header">USI exemption '
+        . ($usiexempt ? '<span class="rtoc-pill rtoc-pill-blue">Exempt</span>'
+                      : '<span class="rtoc-pill rtoc-pill-grey">Not exempt</span>')
+        . '</div>';
+    echo '<div class="card-body">';
+
+    if ($usiexempt) {
+        $byname = '';
+        if (!empty($student->usiexemptby)) {
+            $byuser = $DB->get_record('user', ['id' => $student->usiexemptby], '*', IGNORE_MISSING);
+            $byname = $byuser ? fullname($byuser) : ('user ' . (int) $student->usiexemptby);
+        }
+        echo '<p style="margin:0 0 10px;">This student is recorded as <strong>exempt from the USI '
+            . 'requirement</strong>. Testamurs, records of results and statements of attainment can '
+            . 'be issued without a verified USI, and the USI shows as &ldquo;Exempt&rdquo; on the '
+            . 'certificate.</p>';
+        echo '<table class="table" style="margin-bottom:12px;"><tbody>';
+        echo '<tr><th style="width:160px;">Reason</th><td>'
+            . s(trim((string)($student->usiexemptreason ?? ''))) . '</td></tr>';
+        echo '<tr><th>Recorded by</th><td>' . ($byname !== '' ? s($byname) : '&mdash;') . '</td></tr>';
+        echo '<tr><th>Recorded on</th><td>'
+            . (!empty($student->usiexemptdate)
+                ? userdate($student->usiexemptdate, get_string('strftimedatetime', 'langconfig'))
+                : '&mdash;')
+            . '</td></tr>';
+        echo '</tbody></table>';
+        if ($canexempt) {
+            echo '<form method="post" action="">';
+            echo '<input type="hidden" name="sesskey" value="' . sesskey() . '">';
+            echo '<input type="hidden" name="userid" value="' . (int) $userid . '">';
+            echo '<input type="hidden" name="usiexemptaction" value="revoke">';
+            echo '<button type="submit" class="btn btn-outline-secondary">Remove exemption</button>';
+            echo '</form>';
+        }
+    } else {
+        echo '<p style="margin:0 0 10px;">This student has no verified USI, so certificate issuance '
+            . 'is currently blocked. Record an exemption only where one genuinely applies &mdash; the '
+            . 'common case is an international student who completed all of their study outside '
+            . 'Australia and therefore does not need a USI. The exemption is recorded against your '
+            . 'name and dated.</p>';
+        if ($canexempt) {
+            echo '<form method="post" action="">';
+            echo '<input type="hidden" name="sesskey" value="' . sesskey() . '">';
+            echo '<input type="hidden" name="userid" value="' . (int) $userid . '">';
+            echo '<input type="hidden" name="usiexemptaction" value="grant">';
+            echo '<label for="usiexemptreason" style="display:block;font-weight:600;margin-bottom:4px;">'
+                . 'Reason for exemption</label>';
+            echo '<input type="text" id="usiexemptreason" name="usiexemptreason" maxlength="255" '
+                . 'class="form-control" style="max-width:640px;margin-bottom:10px;" '
+                . 'value="International student &mdash; all study completed outside Australia.">';
+            echo '<button type="submit" class="btn btn-primary">Record USI exemption</button>';
+            echo '</form>';
+        } else {
+            echo '<p style="margin:0;color:#64748b;">You do not have permission to record a USI '
+                . 'exemption for this student.</p>';
+        }
+    }
+
+    echo '</div></div>';
 }
 
 // --- PRE-ENROLMENT READINESS (v5.9.423) -----------------------------------

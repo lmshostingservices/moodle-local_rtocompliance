@@ -235,7 +235,9 @@ if ($studentsTableExists) {
     $usimissing = (int)$DB->count_records_sql(
         "SELECT COUNT(*) FROM {local_rtocompliance_certs} c
          LEFT JOIN {local_rtocompliance_students} s ON s.userid = c.userid
-         WHERE c.status = 'issued' AND c.certtype IN ('testamur','statement') AND (s.usi IS NULL OR s.usiverified = 0)"
+         WHERE c.status = 'issued' AND c.certtype IN ('testamur','statement')
+           AND (s.usi IS NULL OR s.usiverified = 0)
+           AND COALESCE(s.usiexempt, 0) = 0"
     );
 }
 
@@ -339,6 +341,7 @@ echo '<select name="usistatus" class="form-control form-control-sm" style="width
 echo '<option value="">All</option>';
 echo '<option value="verified"'   . ($usistatus === 'verified'   ? ' selected' : '') . '>USI verified</option>';
 echo '<option value="unverified"' . ($usistatus === 'unverified' ? ' selected' : '') . '>USI not verified</option>';
+echo '<option value="exempt"'     . ($usistatus === 'exempt'     ? ' selected' : '') . '>USI exempt</option>';
 echo '</select></div>';
 
 // Email status
@@ -408,7 +411,10 @@ if ($usistatus !== '' && $studentsTableExists) {
     if ($usistatus === 'verified') {
         $where[] = 's.usiverified = 1';
     } else if ($usistatus === 'unverified') {
-        $where[] = '(s.usiverified IS NULL OR s.usiverified = 0)';
+        // USI-EXEMPTION (v6.3.19): an exempt student is not an unverified-USI problem.
+        $where[] = '(s.usiverified IS NULL OR s.usiverified = 0) AND COALESCE(s.usiexempt, 0) = 0';
+    } else if ($usistatus === 'exempt') {
+        $where[] = 'COALESCE(s.usiexempt, 0) = 1';
     }
 }
 if ($emailstatus !== '') {
@@ -424,7 +430,7 @@ if ($studentsTableExists) {
                  LEFT JOIN {local_rtocompliance_students} s ON s.userid = c.userid";
     $selectCols = "c.*, u.firstname, u.lastname, u.email,
                    u.firstnamephonetic, u.lastnamephonetic, u.middlename, u.alternatename,
-                   s.usi, s.usiverified, s.usiverifieddate";
+                   s.usi, s.usiverified, s.usiverifieddate, s.usiexempt";
 } else {
     $baseFrom = "FROM {local_rtocompliance_certs} c
                  JOIN {user} u ON u.id = c.userid";
@@ -704,7 +710,9 @@ if (!$certs) {
     foreach ($certs as $cert) {
         $requiresUsi = in_array($cert->certtype, ['testamur', 'statement']);
         $usiVerified = local_rtocompliance_usi_is_verified($cert->usiverified);
-        $usiMissing  = $studentsTableExists && $requiresUsi && !$usiVerified;
+        // USI-EXEMPTION (v6.3.19): an exempt student is not missing a USI.
+        $usiMissing  = $studentsTableExists && $requiresUsi && !$usiVerified
+            && empty($cert->usiexempt);
         $isReplacedOriginal = !empty($cert->reissued_at);
         $isReissue          = !empty($cert->replacement_of);
         $rowStyle = $isReplacedOriginal ? 'opacity:0.6;' : '';
@@ -748,6 +756,9 @@ if (!$certs) {
                 echo '<td><span class="text-muted">n/a</span></td>';
             } else if ($usiVerified) {
                 echo '<td><span class="badge badge-success" data-testid="badge-usi-' . $cert->id . '">Verified</span></td>';
+            } else if (!empty($cert->usiexempt)) {
+                // USI-EXEMPTION (v6.3.19).
+                echo '<td><span class="badge badge-info" title="Recorded as exempt from the USI requirement." data-testid="badge-usi-' . $cert->id . '">Exempt</span></td>';
             } else {
                 echo '<td><span class="badge badge-danger" data-testid="badge-usi-' . $cert->id . '">Not verified</span></td>';
             }
@@ -772,7 +783,9 @@ if (!$certs) {
     foreach ($certs as $cert) {
         $requiresUsi = in_array($cert->certtype, ['testamur', 'statement']);
         $usiVerified = local_rtocompliance_usi_is_verified($cert->usiverified);
-        $usiMissing  = $studentsTableExists && $requiresUsi && !$usiVerified;
+        // USI-EXEMPTION (v6.3.19): an exempt student is not missing a USI.
+        $usiMissing  = $studentsTableExists && $requiresUsi && !$usiVerified
+            && empty($cert->usiexempt);
         $isReplacedOriginal = !empty($cert->reissued_at);
         $isReissue          = !empty($cert->replacement_of);
 
@@ -812,6 +825,11 @@ if (!$certs) {
                 $usiVerifiedDate = !empty($cert->usiverifieddate) ? ' (' . userdate($cert->usiverifieddate, '%d %b %Y') . ')' : '';
                 echo html_writer::tag('p',
                     html_writer::tag('span', 'USI Verified' . $usiVerifiedDate, ['class' => 'badge badge-success', 'title' => 'The student USI (the student ID number) has been checked against the USI Registry, so this certificate meets Clause 12.'])
+                );
+            } else if (!empty($cert->usiexempt)) {
+                // USI-EXEMPTION (v6.3.19).
+                echo html_writer::tag('p',
+                    html_writer::tag('span', 'USI Exempt', ['class' => 'badge badge-info', 'title' => 'This student is recorded as exempt from the USI requirement — for example an international student who completed all study outside Australia.'])
                 );
             } else {
                 echo html_writer::tag('p',

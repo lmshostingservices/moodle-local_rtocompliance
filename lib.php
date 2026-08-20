@@ -2853,7 +2853,7 @@ function local_rtocompliance_usi_issue_status_map(array $userids): array {
         "userid $insql",
         $params,
         'userid ASC, id ASC',
-        'id, userid, usi, usiverified'
+        'id, userid, usi, usiverified, usiexempt, usiexemptreason'
     );
 
     $seen = [];
@@ -2874,6 +2874,23 @@ function local_rtocompliance_usi_issue_status_map(array $userids): array {
         }
         $seen[$uid] = true;
         $usi = trim((string) ($r->usi ?? ''));
+        // USI-EXEMPTION (v6.3.19): the USI Registrar exempts a student who completes all
+        // of their study outside Australia from holding a USI. An exemption recorded on the
+        // student's profile clears the gate; a USI on file still wins if one exists and is
+        // verified, so an exemption recorded in error never suppresses a real USI.
+        $isexempt = !empty($r->usiexempt);
+        if ($isexempt && ($usi === '' || !local_rtocompliance_usi_is_verified($r->usiverified))) {
+            $out[$uid] = [
+                'usi'      => $usi,
+                'status'   => 'exempt',
+                'canissue' => true,
+                'label'    => 'USI exempt',
+                'reason'   => trim((string) ($r->usiexemptreason ?? '')) !== ''
+                    ? trim((string) $r->usiexemptreason)
+                    : 'Recorded as exempt from the USI requirement.',
+            ];
+            continue;
+        }
         if ($usi === '') {
             $out[$uid] = [
                 'usi'      => '',
@@ -2915,6 +2932,7 @@ function local_rtocompliance_usi_issue_status_map(array $userids): array {
 function local_rtocompliance_usi_status_badge(array $st): string {
     $map = [
         'verified'   => ['#dcfce7', '#15803d', 'Verified'],
+        'exempt'     => ['#dbeafe', '#1d4ed8', 'USI exempt'],
         'unverified' => ['#fef3c7', '#b45309', 'Not verified'],
         'missing'    => ['#fee2e2', '#b91c1c', 'Missing'],
         'norecord'   => ['#fee2e2', '#b91c1c', 'No student record'],
@@ -6068,11 +6086,17 @@ function local_rtocompliance_preenrolment_readiness(int $userid): array {
 
     // --- USI verified (student record) ---
     if ($DB->get_manager()->table_exists('local_rtocompliance_students')) {
-        $stu = $DB->get_record('local_rtocompliance_students', ['userid' => $userid], 'id, usi, usiverified');
+        $stu = $DB->get_record('local_rtocompliance_students', ['userid' => $userid],
+            'id, usi, usiverified, usiexempt');
         if ($stu) {
             if (local_rtocompliance_usi_is_verified($stu->usiverified)) {
                 $gates['usi']['ok'] = true;
                 $gates['usi']['detail'] = 'Verified with USI Registry';
+            } else if (!empty($stu->usiexempt)) {
+                // USI-EXEMPTION (v6.3.19): an exempt student meets this gate.
+                $gates['usi']['ok'] = true;
+                $gates['usi']['label'] = 'USI verified or exempt';
+                $gates['usi']['detail'] = 'Exempt from the USI requirement';
             } else if (!empty($stu->usi)) {
                 $gates['usi']['warn'] = true;
                 $gates['usi']['detail'] = 'USI recorded but not yet verified';
@@ -6445,9 +6469,17 @@ function local_rtocompliance_programmatic_issue_cert(
     // 'statement' as well, so a programmatically issued SoA can no longer bypass the
     // gate, and it hard-blocks the UNVERIFIED state (previously presence-only).
     if (!$bypassusi && in_array($certtype, ['testamur', 'record', 'statement'], true)) {
-        $stusi = $DB->get_record('local_rtocompliance_students', ['userid' => $userid], 'usi, usiverified');
+        $stusi = $DB->get_record('local_rtocompliance_students', ['userid' => $userid],
+            'usi, usiverified, usiexempt');
         $studusi = trim((string)($stusi->usi ?? ''));
-        if ($studusi === '') {
+        // USI-EXEMPTION (v6.3.19): a student recorded as exempt clears the gate. The USI
+        // Registrar exempts a student who completed all study outside Australia, and until
+        // this release the gate had no exemption pathway at all — it blocked issuance that
+        // is lawful. The exemption is recorded, attributed and dated on the student profile.
+        $usiexempt = !empty($stusi) && !empty($stusi->usiexempt);
+        if ($usiexempt) {
+            // Fall through — no USI required for this student.
+        } else if ($studusi === '') {
             return [
                 'ok'         => false,
                 'certid'     => null,
@@ -6457,8 +6489,7 @@ function local_rtocompliance_programmatic_issue_cert(
                 'reason'     => 'Refused to issue ' . $certtype . ' — no USI recorded for this student. '
                     . 'A verified USI is required before issuing (or mark the student USI-exempt / override).',
             ];
-        }
-        if (!local_rtocompliance_usi_is_verified($stusi->usiverified)) {
+        } else if (!local_rtocompliance_usi_is_verified($stusi->usiverified)) {
             return [
                 'ok'         => false,
                 'certid'     => null,

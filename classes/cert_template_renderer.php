@@ -39,6 +39,19 @@ require_once(__DIR__ . '/cert_template.php');
 
 class cert_template_renderer {
     /**
+     * CONTINUATION-TOP (v6.3.19): where a units table resumes on a continuation page.
+     *
+     * The table field's y_mm leaves room for the logo, heading and student identity
+     * block — content that only exists on page 1. Reusing that y on every continuation
+     * page wasted the whole top third of each sheet: a 14-unit Statement of Attainment
+     * fitted only six rows per page and ran to three pages. Continuation pages now
+     * resume near the top of the sheet while keeping the field's ORIGINAL bottom
+     * limit (y + h), so the extra rows can never run into the signature, seal, QR or
+     * certificate number that paint below the table on the last page.
+     */
+    private const CONTINUATION_TOP_MM = 20.0;
+
+    /**
      * ROR-PAGE-COUNT (v5.9.350): how many pages the ror_table field occupied in
      * the most recently rendered certificate.  Reset to 1 at the start of every
      * render() call so callers can read it immediately after render() returns.
@@ -181,7 +194,86 @@ class cert_template_renderer {
             self::render_field($pdf, $field, $payload, $width, $height, $page, $bg_to_paint);
         }
 
+        // MULTI-PAGE-FURNITURE (v6.3.19): identify every sheet of a multi-page document.
+        self::stamp_page_furniture($pdf, $payload, $rendercerttype, $width, $height);
+
         return $pdf->Output('certificate.pdf', 'S');
+    }
+
+    /**
+     * MULTI-PAGE-FURNITURE (v6.3.19) — stamp every page of a multi-page certificate with
+     * a page number, and every page after the first with a compact identity strip.
+     *
+     * Only the units table paginates. Everything else — logo, heading, student identity
+     * block, signature, certificate number, QR — paints once, on whichever page the cursor
+     * happens to be on. That left the middle sheet of a three-page transcript completely
+     * anonymous: no logo, no name, no certificate number, no page number. Nothing on it
+     * said whose results they were or which document it belonged to, and a reader could
+     * not tell a complete document from one with a sheet missing.
+     *
+     * Runs after all fields are painted, so getNumPages() is final and "of N" is correct.
+     * SINGLE-PAGE CERTIFICATES ARE LEFT COMPLETELY UNTOUCHED — the overwhelming majority
+     * of output must look exactly as it did before.
+     *
+     * The USI is deliberately omitted from the strip on certificate types where it is
+     * forbidden (testamur, statement), mirroring the render-time block list.
+     *
+     * @param \pdf   $pdf       active TCPDF instance
+     * @param array  $payload   resolved certificate payload
+     * @param string $certtype  testamur | record | statement | completion | attendance
+     * @param float  $pagew     page width in mm
+     * @param float  $pageh     page height in mm
+     */
+    private static function stamp_page_furniture(\pdf $pdf, array $payload, string $certtype, float $pagew, float $pageh): void {
+        $total = (int) $pdf->getNumPages();
+        if ($total < 2) {
+            return; // Single page: nothing to identify, nothing to number.
+        }
+
+        $name    = trim((string) ($payload['student.fullname'] ?? ''));
+        $certno  = trim((string) ($payload['cert.number'] ?? ''));
+        $qual    = trim((string) ($payload['qualification.code'] ?? ''));
+        $usi     = trim((string) ($payload['student.usi'] ?? ''));
+        $usiok   = !in_array($certtype, ['testamur', 'statement'], true);
+
+        $bits = [];
+        if ($name !== '')                  { $bits[] = $name; }
+        if ($usiok && $usi !== '') {
+            // USI-EXEMPTION (v6.3.19): the payload carries a sentence for an exempt
+            // student; the strip wants a label, not a sentence.
+            $bits[] = (stripos($usi, 'exempt') === 0) ? 'USI exempt' : ('USI ' . $usi);
+        }
+        if ($qual !== '')                  { $bits[] = $qual; }
+        if ($certno !== '')                { $bits[] = $certno; }
+        $strip = implode("   \u{2022}   ", $bits);
+
+        $margin = 15.0;
+        $wid    = max(40.0, $pagew - (2 * $margin));
+
+        $pdf->setCellPaddings(0, 0, 0, 0);
+        for ($p = 1; $p <= $total; $p++) {
+            $pdf->setPage($p);
+
+            // Identity strip — continuation sheets only. Page 1 already carries the
+            // full identity block the template author positioned.
+            if ($p > 1 && $strip !== '') {
+                $pdf->SetFont('helvetica', '', 7.5);
+                $pdf->SetTextColor(100, 116, 139);   // slate-500
+                $pdf->MultiCell($wid, 4.0, $strip, 0, 'L', false, 1, $margin, 8.0, true, 0, false, true, 4.0, 'M', false);
+                $pdf->SetDrawColor(203, 213, 225);   // slate-300 hairline under the strip
+                $pdf->SetLineWidth(0.15);
+                $pdf->Line($margin, 12.6, $margin + $wid, 12.6);
+            }
+
+            // Page number — every page of a multi-page document, bottom centre.
+            $pdf->SetFont('helvetica', '', 7.5);
+            $pdf->SetTextColor(100, 116, 139);
+            $pdf->MultiCell($wid, 4.0, 'Page ' . $p . ' of ' . $total, 0, 'C', false, 1,
+                $margin, $pageh - 9.5, true, 0, false, true, 4.0, 'M', false);
+        }
+
+        $pdf->SetTextColor(0, 0, 0);
+        $pdf->setPage($total);   // leave the cursor on the last page for Output()
     }
 
     /**
@@ -524,7 +616,10 @@ class cert_template_renderer {
                 $pdf->AddPage('', [$pagew, $pageh]);
                 self::$last_ror_page_count++;
                 self::paint_page_background($pdf, $page, $bg_to_paint, $pagew, $pageh);
-                $curY = $y;
+                // CONTINUATION-TOP (v6.3.19): resume near the top of the sheet. The
+                // bottom limit ($maxY) is unchanged, so nothing can reach the footer
+                // fields that paint below the table on the final page.
+                $curY = min($y, self::CONTINUATION_TOP_MM);
                 $drawHeader();
             }
 
@@ -715,7 +810,10 @@ class cert_template_renderer {
                 $pdf->AddPage('', [$pagew, $pageh]);
                 self::$last_ror_page_count++;
                 self::paint_page_background($pdf, $page, $bg_to_paint, $pagew, $pageh);
-                $curY = $y;
+                // CONTINUATION-TOP (v6.3.19): resume near the top of the sheet. The
+                // bottom limit ($maxY) is unchanged, so nothing can reach the footer
+                // fields that paint below the table on the final page.
+                $curY = min($y, self::CONTINUATION_TOP_MM);
                 $drawHeader();
             }
 
@@ -742,6 +840,17 @@ class cert_template_renderer {
         $keyfs = max(8.0, $bodyfs - 1.5);
         $keyH  = $keyfs * 0.3528 * 1.15 + 2.4;
         $keyY  = $curY + 2.0;
+        // RESULT-KEY-BOUNDS (v6.3.19): the legend was printed wherever $curY landed with
+        // no bounds check. When the final page's table filled its box the legend ran to
+        // roughly 230.2mm against a signature field starting at 231mm — under 1mm of
+        // clearance, and any increase in body font size put the legend through the
+        // signature. It now moves to a continuation page rather than overrun the box.
+        if ($keyY + $keyH > $maxY + 0.5) {
+            $pdf->AddPage('', [$pagew, $pageh]);
+            self::$last_ror_page_count++;
+            self::paint_page_background($pdf, $page, $bg_to_paint, $pagew, $pageh);
+            $keyY = min($y, self::CONTINUATION_TOP_MM);
+        }
         $keytext = 'Result key:   C = Competent      NYC = Not Yet Competent      '
                  . 'CT = Credit Transfer      RPL = Recognition of Prior Learning';
         $pdf->setCellPaddings(1.4, 1.0, 1.4, 1.0);
@@ -1095,6 +1204,11 @@ class cert_template_renderer {
             $student = $DB->get_record('local_rtocompliance_students', ['userid' => $user->id]);
             if ($student && !empty($student->usi)) {
                 $usi = $student->usi;
+            } else if ($student && !empty($student->usiexempt)) {
+                // USI-EXEMPTION (v6.3.19): an exempt student has no USI to print. Leaving
+                // the field blank on a Record of Results reads as an omission; say plainly
+                // that no USI is required rather than printing nothing.
+                $usi = 'Exempt';
             }
         }
 
