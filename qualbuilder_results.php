@@ -1726,8 +1726,22 @@ echo '<script>
                 (data.skipped || []).forEach(function (c) {
                     badges += "<span class=\"badge badge-info\" title=\"" + ucfirst(c.certtype) + " already existed " + c.issuedate + "\">" + escHtml(c.certnumber) + "</span> ";
                 });
+                // PARTIAL-REFUSAL-VISIBILITY (v6.3.13): the server returns success when at
+                // least ONE certificate was issued, and puts every refusal in data.errors.
+                // That array was rendered nowhere, so a Testamur that issued alongside a
+                // Record of Results the USI gate refused showed a single green badge and no
+                // hint that half the job did not happen. Show them, and leave the button
+                // usable so the admin can retry once the USI is verified.
+                var certerrors = data.errors || [];
+                certerrors.forEach(function (e) {
+                    badges += "<span style=\"color:#b45309;font-size:12px;\">\u26A0 " + escHtml(e) + "<\/span> ";
+                });
                 if (rowDiv) {
                     rowDiv.innerHTML = badges || "<span class=\"badge badge-secondary\">Issued<\/span>";
+                }
+                if (certerrors.length) {
+                    btn.disabled    = false;
+                    btn.textContent = "\u{1F3C5} Issue Certificate";
                 }
             } else {
                 btn.disabled    = false;
@@ -1784,7 +1798,16 @@ echo '<script>
                     (data.skipped || []).forEach(function (c) {
                         badges += "<span class=\"badge badge-info\">" + escHtml(c.certnumber) + "<\/span> ";
                     });
+                    // PARTIAL-REFUSAL-VISIBILITY (v6.3.13): see the single-issue handler.
+                    var bulkerrors = data.errors || [];
+                    bulkerrors.forEach(function (e) {
+                        badges += "<span style=\"color:#b45309;font-size:12px;\">\u26A0 " + escHtml(e) + "<\/span> ";
+                    });
                     if (rowDiv) rowDiv.innerHTML = badges || "<span class=\"badge badge-secondary\">Issued<\/span>";
+                    if (bulkerrors.length) {
+                        btn.disabled    = false;
+                        btn.textContent = "\u{1F3C5} Issue Certificate";
+                    }
                 } else {
                     btn.disabled    = false;
                     btn.textContent = "\u{1F3C5} Issue Certificate";

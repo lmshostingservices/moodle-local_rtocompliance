@@ -181,7 +181,7 @@ echo html_writer::tag('div',
     '<strong>Units</strong> — how many units make up this qualification (from its packaging rules).<br>' .
     '<strong>Linked Courses</strong> — of those units, how many have a Moodle delivery course attached here in the Builder. This is what tells the system “completing <em>this course</em> = completing <em>this unit</em>”.<br>' .
     '<strong>Course Map</strong> — of those units, how many are confirmed in the Course → Unit → Qualification map. The map also recognises completions in <em>archive / semester copies</em> of a course, and is what the SoA and certificate tools use to find completers.<br>' .
-    '<strong>Status</strong> — <em>Draft</em> while you build it; <em>Active</em> once it’s live for automatic certificates. A green tick = packaging rules validated.',
+    '<strong>Status</strong> — <em>Draft</em> while you build it; <em>Active</em> once it’s live and students completing it are queued for certificates. A green tick = packaging rules validated.',
     ['style' => 'line-height:1.6;']);
 echo html_writer::tag('div',
     'For reliable auto-certificates, aim to get both <strong>Linked Courses</strong> and <strong>Course Map</strong> to the full count (green), then set the product to <strong>Active</strong>.',
@@ -230,7 +230,7 @@ $statusbadges = [
 // Plain-English tooltip for each product status badge.
 $statustips = [
     'draft' => 'Draft: still being set up and not yet issuing certificates automatically.',
-    'active' => 'Active: live and used for automatic certificate issuance.',
+    'active' => 'Active: live; completing students are queued for certificate issue.',
     'superseded' => 'Superseded: replaced by a newer version on the national register. Move learners to the current version.',
 ];
 
@@ -264,7 +264,7 @@ if (empty($products)) {
         $hcell('Course Map',
             'How many units are confirmed in the Course → Unit → Qualification map. This recognises completions even across semester / archive copies of a course, and is what the SoA and certificate generators rely on.'),
         $hcell(get_string('status'),
-            'Draft = still being set up. Active = live for automatic certificate issuance. A green tick means the packaging rules passed validation.'),
+            'Draft = still being set up. Active = live; completing students are queued for certificate issue. A green tick means the packaging rules passed validation.'),
         get_string('actions'),
     ];
     $table->attributes['class'] = 'generaltable qualbuilder-table';

@@ -446,22 +446,14 @@ function qch_issue_batch(stdClass $qual, array $userids, array $det, int $sendem
                 ['userid' => $userid, 'certtype' => $certtype, 'qualcode' => $qual->qualificationcode]
             );
 
-            if ($existingcert) {
-                if (!$forceregen) {
-                    $skipped++;
-                    continue;
-                }
-                $DB->update_record('local_rtocompliance_certs', (object)[
-                    'id'           => $existingcert->id,
-                    'reissued_at'  => time(),
-                    'notes'        => trim(($existingcert->notes ?? '') . "\n[Superseded by force-regenerate — Qual Cert Hub]"),
-                    'timemodified' => time(),
-                ]);
-                if (!empty($existingcert->verifytoken)) {
-                    local_rtocompliance_update_registry_status($existingcert->verifytoken, 'superseded');
-                }
-                $voided++;
+            if ($existingcert && !$forceregen) {
+                $skipped++;
+                continue;
             }
+            // VOID-AFTER-ISSUE (v6.3.13): the old certificate used to be superseded here,
+            // BEFORE the issuance gate ran — so a refused replacement left the student
+            // holding nothing while $voided reported the loss as a success. Moved below,
+            // to run only once the replacement actually exists.
 
             // Earliest criterion completion timestamp across all linked courses.
             $initialTimecompleted = 0;
@@ -501,6 +493,20 @@ function qch_issue_batch(stdClass $qual, array $userids, array $det, int $sendem
             );
 
             if ($result['ok']) {
+                // VOID-AFTER-ISSUE (v6.3.13): safe now that the replacement exists.
+                if ($forceregen && $existingcert) {
+                    $DB->update_record('local_rtocompliance_certs', (object)[
+                        'id'           => $existingcert->id,
+                        'reissued_at'  => time(),
+                        'notes'        => trim(($existingcert->notes ?? '')
+                            . "\n[Superseded by force-regenerate — Qual Cert Hub]"),
+                        'timemodified' => time(),
+                    ]);
+                    if (!empty($existingcert->verifytoken)) {
+                        local_rtocompliance_update_registry_status($existingcert->verifytoken, 'superseded');
+                    }
+                    $voided++;
+                }
                 $issued++;
                 $issuedThisStudent++;
                 $messages[] = fullname($user) . ' — ' . $certtype . ' issued (' . $result['certnumber'] . ')';
@@ -521,8 +527,10 @@ function qch_issue_batch(stdClass $qual, array $userids, array $det, int $sendem
                 break; // break inner cert-type loop; outer loop checks flag
             } elseif (!empty($result['skipped']) || ($result['error'] ?? '') === 'NO_USI') {
                 // v5.9.383: a Clause-12 USI skip is NOT a failure. Count it
-                // separately, surface the reason, and (below) leave the autocert
-                // row PENDING so it re-issues automatically once a USI is added.
+                // separately, surface the reason, and (below) leave the autocert row PENDING
+                // so it can be re-run once a USI is verified. NB (v6.3.14): pending does not
+                // mean automatic — no scheduled task issues certificates. An admin runs
+                // Process Queue or a generation page.
                 $usiskipped++;
                 $usiskipThisStudent++;
                 $messages[] = fullname($user) . ' — SKIPPED: '
@@ -548,8 +556,19 @@ function qch_issue_batch(stdClass $qual, array $userids, array $det, int $sendem
                 'status'        => 'pending',
             ]);
             if ($autocertrow) {
-                if ($issuedThisStudent > 0) {
-                    // At least one cert was issued — mark complete.
+                // ORDER MATTERS (v6.3.13): a pre-issue refusal outranks a partial success.
+                // A student whose Testamur issued but whose Record of Results was refused
+                // for want of a verified USI used to close the row as 'complete', and
+                // process_enrolment_task.php never re-queues a complete row — so the missing
+                // Record could never self-heal. Leave it pending instead.
+                if ($usiskipThisStudent > 0) {
+                    $DB->update_record('local_rtocompliance_autocerts', (object)[
+                        'id'           => $autocertrow->id,
+                        'status'       => 'pending',
+                        'timemodified' => time(),
+                    ]);
+                } elseif ($issuedThisStudent > 0) {
+                    // Every cert this student needed was issued — mark complete.
                     $DB->update_record('local_rtocompliance_autocerts', (object)[
                         'id'           => $autocertrow->id,
                         'status'       => 'complete',
@@ -617,12 +636,14 @@ if ($action === 'issue' && confirm_sesskey() && $qualid > 0) {
     if ($result['creditsExhausted']) {
         $summary .= ' ⚠ Credits exhausted — please top up and retry remaining students.';
     }
-    $ntype = $result['failed'] > 0
+    $ntype = ($result['failed'] > 0 || !empty($result['usiskipped']))
         ? \core\output\notification::NOTIFY_WARNING
         : \core\output\notification::NOTIFY_SUCCESS;
+    // GEN-SUMMARY-STASH (v6.3.13): qch_issue_batch() calls write_close(), so redirect()'s
+    // message could never reach $SESSION->notifications. Stash it instead.
+    local_rtocompliance_stash_gen_summary('qualhub_' . (int)($USER->id ?? 0) . '_' . $qualid, $summary, $ntype);
     redirect(
-        new moodle_url('/local/rtocompliance/qual_cert_hub.php', ['qualid' => $qualid, 'tab' => 'issued']),
-        $summary, null, $ntype
+        new moodle_url('/local/rtocompliance/qual_cert_hub.php', ['qualid' => $qualid, 'tab' => 'issued'])
     );
 }
 
@@ -645,22 +666,46 @@ if ($action === 'issue_all_pending' && confirm_sesskey() && $qualid > 0) {
             array_merge(['qc' => $qual->qualificationcode], $uidparams)
         );
         $pending = array_values(array_diff($completerIds, array_map('intval', $issuedIds)));
+
+        // USI-PREFLIGHT (v6.3.13): this one-click action posts no form, so the disabled tick
+        // boxes on the Ready tab cannot protect it. Drop students the issuance gate would
+        // refuse before we even try, and say how many, so the count in the summary is honest.
+        $missingsettings = local_rtocompliance_missing_cert_settings();
+        if (!empty($missingsettings)) {
+            // Every gated certificate is refused while these are unset — attempt none.
+            $preheld     = $pending;
+            $pending     = [];
+            $preheldnote = ' No certificate was attempted — required RTO details are not configured: '
+                . implode(', ', $missingsettings) . '.';
+        } else {
+            $usiMapAll   = local_rtocompliance_usi_issue_status_map($pending);
+            $preheld     = array_values(array_filter($pending, function ($uid) use ($usiMapAll) {
+                return empty($usiMapAll[(int)$uid]['canissue']);
+            }));
+            $pending     = array_values(array_diff($pending, $preheld));
+            $preheldnote = !empty($preheld)
+                ? ' ' . count($preheld) . ' student(s) were not attempted — no verified USI (no credits charged).'
+                : '';
+        }
     } else {
-        $pending = [];
+        $pending     = [];
+        $preheld     = [];
+        $preheldnote = '';
     }
 
     $result  = qch_issue_batch($qual, $pending, $det, $sendemail, 0);
     $usinote2 = !empty($result['usiskipped']) ? " Skipped (no USI): {$result['usiskipped']}." : '';
-    $summary = "Issued: {$result['issued']} cert(s). Skipped (already exists): {$result['skipped']}.{$usinote2} Failed: {$result['failed']}.";
+    $summary = "Issued: {$result['issued']} cert(s). Skipped (already exists): {$result['skipped']}.{$usinote2} Failed: {$result['failed']}.{$preheldnote}";
     if ($result['creditsExhausted']) {
         $summary .= ' ⚠ Credits exhausted — some students not processed.';
     }
-    $ntype = $result['failed'] > 0
+    $ntype = ($result['failed'] > 0 || !empty($result['usiskipped']) || !empty($preheld))
         ? \core\output\notification::NOTIFY_WARNING
         : \core\output\notification::NOTIFY_SUCCESS;
+    // GEN-SUMMARY-STASH (v6.3.13): see above.
+    local_rtocompliance_stash_gen_summary('qualhub_' . (int)($USER->id ?? 0) . '_' . $qualid, $summary, $ntype);
     redirect(
-        new moodle_url('/local/rtocompliance/qual_cert_hub.php', ['qualid' => $qualid, 'tab' => 'issued']),
-        $summary, null, $ntype
+        new moodle_url('/local/rtocompliance/qual_cert_hub.php', ['qualid' => $qualid, 'tab' => 'issued'])
     );
 }
 
@@ -880,6 +925,12 @@ echo local_rtocompliance_render_nav_header(
     'certificates'
 );
 echo local_rtocompliance_page_banner($pagetitle);
+
+// GEN-SUMMARY-STASH (v6.3.13): show the result of a batch we just redirected from.
+$qchStashed = local_rtocompliance_pop_gen_summary('qualhub_' . (int)($USER->id ?? 0) . '_' . $qualid);
+if ($qchStashed !== null) {
+    echo $OUTPUT->notification($qchStashed['summary'], $qchStashed['type']);
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // HUB HOME — qualification list with funnel stats
@@ -1135,9 +1186,9 @@ HUBCASCADE;
             . '<div><strong>Complete</strong> — students who have passed every unit.</div>'
             . '<div><strong>Issued</strong> — students who already have their certificate.</div>'
             . '<div><strong>Pending</strong> — completed students who do <em>not</em> have a certificate yet. Click <strong>Issue Pending</strong> to generate them (5 credits each).</div>'
-            . '<div><strong>Queue</strong> — students waiting for <em>automatic</em> certificate issue. These are picked up by the autocert process (or click <strong>Process Queue</strong> on the Detail page); a dash means nothing is queued.</div>'
+            . '<div><strong>Queue</strong> — completed students lined up for certificate issue. Nothing issues them on its own: click <strong>Process Queue</strong> on the Detail page. A dash means nothing is queued.</div>'
             . '</div>';
-        echo '<div style="margin-top:8px;font-size:12px;color:#64748b;">Every certificate — pending or automatic — costs 5 credits (&#8776; A$0.50); nothing is issued for free.</div>';
+        echo '<div style="margin-top:8px;font-size:12px;color:#64748b;">Every certificate — issued from this page or from the queue — costs 5 credits (&#8776; A$0.50); nothing is issued for free.</div>';
         echo '</div>';
 
         // FULL-WIDTH-TABLE (v6.2.37): use the shared .rtoc-table-wrapper so this table fills
@@ -1151,7 +1202,7 @@ HUBCASCADE;
         echo '<th style="text-align:center;" title="Students who have passed every unit in this qualification">Complete</th>';
         echo '<th style="text-align:center;" title="Students who already have their qualification certificate (Testamur)">Issued</th>';
         echo '<th style="text-align:center;" title="Students who have finished but do not have a certificate yet — click Issue Pending to generate them">Pending</th>';
-        echo '<th style="text-align:center;" title="Students lined up for automatic certificate issue">Queue</th>';
+        echo '<th style="text-align:center;" title="Completed students lined up for certificate issue — run Process Queue on the Detail page to issue them">Queue</th>';
         echo '<th style="text-align:center;">Actions</th>';
         echo '</tr></thead><tbody>';
 
@@ -1212,7 +1263,9 @@ HUBCASCADE;
             echo '<a href="' . s($detailurl) . '" class="btn btn-primary btn-sm" style="margin-right:4px;">Detail</a>';
             if ($pendingCount > 0) {
                 echo '<a href="' . s($issueAllUrl) . '" class="btn btn-success btn-sm" style="margin-right:4px;"'
-                    . ' onclick="return confirm(\'Issue certificates for all ' . (int)$pendingCount . ' pending student(s) of ' . s(addslashes($q->qualificationcode)) . '?\\n\\nEach certificate costs 5 credits (about A$0.50). This will charge up to ' . ((int)$pendingCount * 10) . ' credits (about A$' . number_format((int)$pendingCount * 1.0, 2) . ') in total.\\n\\nContinue?\');"'
+                    // The quoted charge is an UPPER BOUND: students without a verified USI are
+                    // dropped server-side before anything is issued and cost nothing.
+                    . ' onclick="return confirm(\'Issue certificates for all ' . (int)$pendingCount . ' pending student(s) of ' . s(addslashes($q->qualificationcode)) . '?\\n\\nEach certificate costs 5 credits (about A$0.50). This will charge AT MOST ' . ((int)$pendingCount * 10) . ' credits (about A$' . number_format((int)$pendingCount * 1.0, 2) . ') in total — students without a verified USI are skipped and cost nothing.\\n\\nContinue?\');"'
                     . '>Issue Pending</a>';
             }
             echo '<a href="' . s($refreshRowUrl) . '" class="btn btn-outline-secondary btn-sm"'
@@ -1356,9 +1409,55 @@ if ($activeTab === 'ready') {
         }
 
         if (!empty($pendingStudents)) {
+            // ── USI PREFLIGHT (v6.3.13) ──────────────────────────────────────────
+            // Same hold as the two Generate pages: a Testamur / Record of Results cannot be
+            // issued without a USI verified with the USI Registry, and the gate refuses it
+            // before any credit is consumed. Show the status, and make an ineligible student
+            // physically unselectable instead of silently refused after a charge is confirmed.
+            $qchMissingSettings = local_rtocompliance_missing_cert_settings();
+            $qchUsiMap  = local_rtocompliance_usi_issue_status_map(array_map('intval', array_keys($pendingStudents)));
+            $qchHeld    = [];
+            $qchReasons = [];
+            $qchBlocked = 0;
+            foreach ($pendingStudents as $qchUid => $qchComp) {
+                $qchReason = '';
+                if (!empty($qchMissingSettings)) {
+                    $qchReason = 'Required RTO details are not configured: '
+                        . implode(', ', $qchMissingSettings) . '. Set them in RTO Settings before issuing.';
+                } else if (empty($qchUsiMap[(int)$qchUid]['canissue'])) {
+                    $qchReason = $qchUsiMap[(int)$qchUid]['reason'] ?? 'No verified USI.';
+                }
+                $qchReasons[(int)$qchUid] = $qchReason;
+                $qchHeld[(int)$qchUid]    = ($qchReason !== '');
+                if ($qchReason !== '') {
+                    $qchBlocked++;
+                }
+            }
+
             echo '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:0.88rem;color:#166534;">';
             echo '<strong>' . count($pendingStudents) . ' student(s)</strong> have completed this qualification but have no active Testamur yet.';
             echo '</div>';
+
+            if (!empty($qchMissingSettings)) {
+                echo '<div style="background:#fef2f2;border:1px solid #fecaca;border-left:4px solid #dc2626;'
+                    . 'border-radius:8px;padding:14px 18px;margin-bottom:14px;">'
+                    . '<div style="font-weight:700;color:#991b1b;margin-bottom:6px;font-size:15px;">'
+                    . 'No certificate can be issued — required RTO details are missing</div>'
+                    . '<div style="font-size:14px;color:#7f1d1d;line-height:1.55;">'
+                    . 'These AQF-required fields are not configured: <strong>'
+                    . s(implode(', ', $qchMissingSettings)) . '</strong>. '
+                    . '<a href="' . s((new moodle_url('/local/rtocompliance/plugin_settings.php',
+                        ['section' => 'local_rtocompliance_settings']))->out(false))
+                    . '" style="font-weight:600;">Open RTO Settings &rarr;</a></div></div>';
+            }
+
+            echo local_rtocompliance_usi_blocked_callout(
+                $qchBlocked,
+                count($pendingStudents),
+                !empty($qchMissingSettings)
+                    ? 'Every student is currently held because the RTO details above are not set.'
+                    : null
+            );
 
             $issuanceUrl = (new moodle_url('/local/rtocompliance/qual_cert_hub.php', [
                 'qualid'  => $qualid,
@@ -1380,8 +1479,8 @@ if ($activeTab === 'ready') {
             echo '<input type="checkbox" name="forceregen" value="1"> Force-regenerate (void &amp; reissue)';
             echo '</label>';
             echo '<button type="submit" class="btn btn-success"'
-                . ' onclick="var n=document.querySelectorAll(\'.hub-student-cb:checked\').length;'
-                . 'if(!n){alert(\'Select at least one student first.\');return false;}'
+                . ' onclick="var n=document.querySelectorAll(\'.hub-student-cb:not(:disabled):checked\').length;'
+                . 'if(!n){alert(\'Select at least one student with a verified USI first.\');return false;}'
                 . 'var cr=n*10;'
                 . 'return confirm(\'Issue certificates for \'+n+\' selected student(s)?\\n\\nEach certificate costs 5 credits (about A$0.50); a full qualification issues a Testamur + Record of Results (2 certificates) per student.\\n\\nThis will charge up to \'+cr+\' credits (about A$\'+(cr*0.10).toFixed(2)+\') in total.\\n\\nContinue?\');"'
                 . '>Issue Selected Certificates</button>';
@@ -1394,6 +1493,8 @@ if ($activeTab === 'ready') {
             echo '<th>Student</th>';
             echo '<th>Email</th>';
             echo '<th>Completion Date</th>';
+            // USI-PREFLIGHT (v6.3.13)
+            echo '<th title="A USI verified with the USI Registry is required before a Testamur or Record of Results can be issued">USI</th>';
             echo '<th>Account</th>';
             echo '</tr></thead><tbody>';
 
@@ -1410,11 +1511,31 @@ if ($activeTab === 'ready') {
                 $tc    = (int)($comp->timecompleted ?? 0);
                 $tcStr = $tc > 0 ? userdate($tc, get_string('strftimedatetimeshort', 'langconfig')) : 'Unknown';
 
-                echo '<tr>';
-                echo '<td><input type="checkbox" class="hub-student-cb" name="userids[]" value="' . (int)$uid . '" checked></td>';
+                // USI-PREFLIGHT (v6.3.13)
+                $uHeld   = !empty($qchHeld[(int)$uid]);
+                $uStatus = $qchUsiMap[(int)$uid] ?? ['status' => 'norecord', 'canissue' => false, 'usi' => '', 'reason' => ''];
+                $uReason = $qchReasons[(int)$uid] ?? '';
+                $uCell   = local_rtocompliance_usi_status_badge($uStatus);
+                if ($uHeld && $uReason !== '') {
+                    $uCell .= '<div style="font-size:0.75rem;color:#92400e;margin-top:4px;max-width:300px;line-height:1.4;">'
+                        . s($uReason) . '</div>';
+                    // Only offer the USI link when the USI is what is actually wrong.
+                    if (empty($uStatus['canissue'])) {
+                        $uCell .= '<div style="margin-top:4px;">' . local_rtocompliance_usi_fix_link((int)$uid) . '</div>';
+                    }
+                }
+
+                echo '<tr' . ($uHeld && !$isSuspended ? ' style="background:#fffbeb;"' : '') . '>';
+                echo '<td><input type="checkbox" class="hub-student-cb" name="userids[]" value="' . (int)$uid . '"'
+                    . ($uHeld
+                        ? ' disabled title="' . s('Cannot be issued — '
+                            . ($uReason !== '' ? $uReason : 'refused by a pre-issue check')) . '"'
+                        : ' checked')
+                    . '></td>';
                 echo '<td>' . s(fullname($comp)) . $badge . '</td>';
                 echo '<td>' . s($comp->email ?? '') . '</td>';
                 echo '<td>' . $tcStr . '</td>';
+                echo '<td>' . $uCell . '</td>';
                 echo '<td>' . $activateBox . '</td>';
                 echo '</tr>';
             }
@@ -1447,7 +1568,7 @@ if ($activeTab === 'ready') {
     echo 'var sa=document.getElementById("hub-select-all");';
     echo 'if(!sa)return;';
     echo 'sa.addEventListener("change",function (){';
-    echo '  document.querySelectorAll(".hub-student-cb").forEach(function (c){c.checked=sa.checked;});';
+    echo '  document.querySelectorAll(".hub-student-cb:not(:disabled)").forEach(function (c){c.checked=sa.checked;});';
     echo '});';
     echo '})();</script>';
 }
@@ -1797,9 +1918,9 @@ if ($activeTab === 'queue') {
                 'failed'   => 'background:#fef2f2;color:#991b1b;',
             ];
             $statusTips = [
-                'pending'  => 'Waiting in the queue for the automatic run to issue this certificate.',
-                'complete' => 'The certificate was issued successfully by the automatic run.',
-                'failed'   => 'The automatic run could not issue this certificate. Use Retry to try again.',
+                'pending'  => 'Waiting in the queue. Nothing issues it on its own — run Process Queue, or a generation page, to issue it.',
+                'complete' => 'The certificate was issued successfully.',
+                'failed'   => 'The last attempt could not issue this certificate. Use Retry to try again.',
             ];
             foreach ($queueRows as $row) {
                 $ss    = $statusStyles[$row->status] ?? 'background:#f3f4f6;color:#374151;';

@@ -90,6 +90,8 @@ $string['assistant_heading'] = 'AI Assistant';
 $string['assistant_heading_desc'] = 'A floating, Claude-powered help assistant appears bottom-right on every plugin page. It is grounded on this plugin\'s own knowledge base (which updates automatically each version), so it can answer how to do anything in the software. Questions are answered through the lms-labs.com platform and use one credit each.';
 $string['assistant_enabled'] = 'Show the AI assistant';
 $string['assistant_enabled_desc'] = 'Show the floating assistant to staff on plugin pages. Each question uses one platform credit.';
+$string['assistant_site_context'] = 'Let the assistant see this site\'s data';
+$string['assistant_site_context_desc'] = 'Send a short read-only summary of this site with each question — which required RTO details are unset, how many students hold a verified USI, what is waiting in the certificate queue, and the record on the page being viewed. Without it the assistant can only describe the software in general and cannot tell you why a particular student cannot be issued. Nothing is written and no student list is sent; only the student whose page you are on.';
 $string['assistant_claude_key'] = 'Direct Claude API key (optional)';
 $string['assistant_claude_key_desc'] = 'Leave blank to use the lms-labs.com platform (recommended — one credit per question). Only set this on a self-hosted install that bills Anthropic directly on its own key; when set, questions call the Anthropic API with this key instead of the platform.';
 $string['assistant_model'] = 'Claude model (direct key only)';
@@ -3622,6 +3624,10 @@ $string['cachedef_trainer_status'] = 'Trainer credential and currency status';
 $string['cachedef_course_settings'] = 'Per-course RTO settings (nationally recognised flag, qualification code, nominal hours)';
 $string['cachedef_compliance_summary'] = 'Compliance Health summary figures';
 $string['cachedef_avetmiss_codes'] = 'AVETMISS reference code lists (states, countries, languages, outcome codes)';
+$string['cachedef_assistant_kb'] = 'Parsed AI assistant knowledge (documentation tree, release notes and live site facts)';
+$string['privacy:metadata:assistant'] = 'Questions asked of the AI assistant are sent to the lms-labs.com platform, which brokers them to the AI model and bills one credit per question.';
+$string['privacy:metadata:assistant:question'] = 'The question the staff member typed, and the recent conversation with the assistant.';
+$string['privacy:metadata:assistant:sitefacts'] = 'A short read-only summary of this site sent with the question so the assistant can give a specific answer: which required RTO details are unset, how many students hold a verified USI, and — when a staff member is viewing one student\'s page — that student\'s name and whether their USI is verified. Sent only while "Let the assistant see this site\'s data" is enabled.';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // STRANDED VERSION SELF-REPAIR (v6.3.9)

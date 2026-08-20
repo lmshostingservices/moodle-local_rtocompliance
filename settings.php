@@ -1092,6 +1092,15 @@ if ($canviewfull) {
             get_string('assistant_enabled_desc', 'local_rtocompliance'),
             1
         ));
+        // v6.3.14: let the assistant see this site's own data. Without it the assistant can
+        // describe how the software works but cannot answer "why can't I issue for this
+        // student" — the question admins actually ask. Read-only; nothing is written.
+        $apisettings->add(new admin_setting_configcheckbox(
+            'local_rtocompliance/assistant_site_context',
+            get_string('assistant_site_context', 'local_rtocompliance'),
+            get_string('assistant_site_context_desc', 'local_rtocompliance'),
+            1
+        ));
         // Optional: a direct Anthropic key for self-hosted installs that do NOT bill
         // through the lms-labs.com platform. Leave blank to use the platform (recommended;
         // 1 credit per question). When set, questions call Anthropic directly on your key.

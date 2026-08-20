@@ -687,6 +687,9 @@ if ($action === 'issue_cert_from_results') {
     $issued  = [];
     $skipped = [];
     $errors  = [];
+    // AUTOCERT-FALSE-COMPLETE-FIX (v6.3.13)
+    $issuedcount = 0;
+    $heldcount   = 0;
 
     foreach ($certtypes as $certtype) {
         // Skip if a non-superseded cert already exists for this qual + type.
@@ -729,27 +732,44 @@ if ($action === 'issue_cert_from_results') {
                 'certid'     => $result['certid'],
                 'issuedate'  => userdate(time(), get_string('strftimedate', 'core_langconfig')),
             ];
-            // Mark autocert queue row complete if one exists.
-            if ($studentrec) {
-                $autocertrow = $DB->get_record('local_rtocompliance_autocerts', [
-                    'studentid'     => $studentrec->id,
-                    'qualbuilderid' => $qualbuilderid,
-                    'status'        => 'pending',
-                ]);
-                if ($autocertrow) {
-                    $DB->update_record('local_rtocompliance_autocerts', (object)[
-                        'id'            => $autocertrow->id,
-                        'status'        => 'complete',
-                        'timeprocessed' => time(),
-                        'certsissued'   => ($autocertrow->certsissued ?? 0) + 1,
-                    ]);
-                }
-            }
+            // AUTOCERT-FALSE-COMPLETE-FIX (v6.3.13): this used to close the queue row as
+            // soon as the FIRST certificate succeeded, inside the per-certtype loop. A
+            // Testamur that issued followed by a Record of Results the USI gate refused
+            // therefore left a 'complete' row that process_enrolment_task.php will never
+            // re-queue — the missing Record could never self-heal. The row is now closed
+            // after the loop, and only when nothing was refused. See below.
+            $issuedcount++;
         } elseif ($result['error'] === 'INSUFFICIENT_CREDITS') {
             echo json_encode(['success' => false, 'error' => 'Insufficient credits to issue certificate']);
             exit;
+        } elseif (!empty($result['skipped'])) {
+            // Refused before any credit was consumed (no verified USI, missing RTO details,
+            // or an empty unit list). Report the plain-English reason, not the error code.
+            $heldcount++;
+            $errors[] = $certtype . ': ' . ($result['reason'] ?? 'refused by a pre-issue check (no credits charged)');
         } else {
             $errors[] = $certtype . ': ' . ($result['error'] ?? 'unknown error');
+        }
+    }
+
+    // AUTOCERT-FALSE-COMPLETE-FIX (v6.3.13): close the queue row only when every certificate
+    // this student needed was actually issued. A held student stays 'pending' so the row is not
+    // closed over a certificate that was never produced — note that nothing issues it on its
+    // own; the queue is processed by an admin (Qual Cert Hub -> Process Queue) or by re-running
+    // a generation page.
+    if ($studentrec && $issuedcount > 0 && $heldcount === 0) {
+        $autocertrow = $DB->get_record('local_rtocompliance_autocerts', [
+            'studentid'     => $studentrec->id,
+            'qualbuilderid' => $qualbuilderid,
+            'status'        => 'pending',
+        ]);
+        if ($autocertrow) {
+            $DB->update_record('local_rtocompliance_autocerts', (object)[
+                'id'            => $autocertrow->id,
+                'status'        => 'complete',
+                'timeprocessed' => time(),
+                'certsissued'   => ($autocertrow->certsissued ?? 0) + $issuedcount,
+            ]);
         }
     }
 

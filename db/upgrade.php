@@ -12916,7 +12916,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         // restriction is removed so both variant (0) and archive (1) courses trigger
         // AVETMISS enrolment record creation and qualification-completion detection.
         // Net effect: students in any teacher-cohort variant of a unit (CD/EL/ND) get
-        // their enrolment recorded and their certificate issued automatically.
+        // their enrolment recorded and their certificate queued for issue.
         //
         // No DB schema changes — qualunit_courses table already exists (v5.2.37).
         upgrade_plugin_savepoint(true, 2026072822, 'local', 'rtocompliance');
@@ -14859,6 +14859,33 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         }
 
         upgrade_plugin_savepoint(true, 2026081700, 'local', 'rtocompliance');
+    }
+
+    if ($oldversion < 2026081901) {
+        // v6.3.13 CERTIFICATE GENERATION USI PREFLIGHT. No schema change: the fix is
+        // entirely in the generation pages (a USI column, disabled tick boxes for students
+        // the issuance gate would refuse, honest skip reporting, and a summary banner that
+        // survives write_close()), plus an autocert queue row that no longer marks itself
+        // complete when nothing was issued.
+        //
+        // This savepoint exists so the recorded savepoint stays equal to $plugin->version.
+        // v6.3.11 shipped version 2026081800 with its last savepoint at 2026081700, leaving
+        // the two out of step; this step closes that gap as well.
+        upgrade_plugin_savepoint(true, 2026081901, 'local', 'rtocompliance');
+    }
+
+    if ($oldversion < 2026081902) {
+        // v6.3.14 ASSISTANT KNOWLEDGE SOURCES. No schema change: the assistant gains a
+        // docs/*.md tree, release notes parsed from version.php, and read-only live site
+        // facts. The only persistent artefact is the new 'assistant_kb' cache definition,
+        // which Moodle creates from db/caches.php during the upgrade.
+        upgrade_plugin_savepoint(true, 2026081902, 'local', 'rtocompliance');
+    }
+
+    if ($oldversion < 2026081903) {
+        // v6.3.15 ASSISTANT REQUEST PARAMETER TIGHTENING. No schema change and no stored data
+        // touched: the change is entirely in how the assistant widget's request is typed.
+        upgrade_plugin_savepoint(true, 2026081903, 'local', 'rtocompliance');
     }
 
     return true;

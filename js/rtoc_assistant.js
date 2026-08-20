@@ -173,6 +173,28 @@
         body.appendChild(chips);
     }
 
+    // ---- page context -----------------------------------------------------
+    // Send only the ids of the record on screen, never the raw query string: the server has
+    // no use for anything else, and a whitelist built here means nothing free-form from the
+    // address bar is transmitted at all. Read back with PARAM_INT server-side.
+    var PAGE_PARAM_KEYS = ['qualid', 'courseid', 'userid', 'studentid', 'certid'];
+
+    function pageParams() {
+        var out = {};
+        try {
+            var qs = new URLSearchParams(window.location.search || '');
+            PAGE_PARAM_KEYS.forEach(function (key) {
+                var val = parseInt(qs.get(key), 10);
+                if (!isNaN(val) && val > 0) {
+                    out[key] = val;
+                }
+            });
+        } catch (e) {
+            return {};
+        }
+        return out;
+    }
+
     // ---- send flow --------------------------------------------------------
     function setBusy(v) {
         busy = v;
@@ -206,7 +228,7 @@
         fetch(ENDPOINT, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sesskey: SESSKEY, page: PAGE, messages: history })
+            body: JSON.stringify({ sesskey: SESSKEY, page: PAGE, pageparams: pageParams(), messages: history })
         }).then(function (r) { return r.json(); }).then(function (data) {
             typing.remove();
             setBusy(false);

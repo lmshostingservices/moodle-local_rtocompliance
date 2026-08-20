@@ -45,7 +45,8 @@ if (!has_capability('local/rtocompliance:viewall', $context)
 
 header('Content-Type: application/json; charset=utf-8');
 
-// Read the JSON body: { sesskey, messages: [{role, content}], page: 'students.php' }.
+// Read the JSON body: { sesskey, messages: [{role, content}], page: 'students.php',
+//                      pageparams: {qualid: 12} }.
 $raw = file_get_contents('php://input');
 $in  = json_decode((string) $raw, true);
 if (!is_array($in)) {
@@ -54,13 +55,28 @@ if (!is_array($in)) {
 
 // Sesskey travels in the JSON body (the request is application/json, so it is not a
 // normal POST param). Validate it against this user's session.
-$sesskey = isset($in['sesskey']) ? (string) $in['sesskey'] : optional_param('sesskey', '', PARAM_ALPHANUMEXT);
+$sesskey = (isset($in['sesskey']) && is_string($in['sesskey']))
+    ? $in['sesskey']
+    : optional_param('sesskey', '', PARAM_ALPHANUMEXT);
 if (!confirm_sesskey($sesskey)) {
     echo json_encode(['ok' => false, 'error' => 'Your session expired — please reload the page.']);
     exit;
 }
 $messages = isset($in['messages']) && is_array($in['messages']) ? $in['messages'] : [];
-$page     = isset($in['page']) ? clean_param((string) $in['page'], PARAM_FILE) : '';
+// is_string(): a JSON array here would raise 'Array to string conversion' and corrupt the
+// JSON response on developer sites.
+$page     = isset($in['page']) && is_string($in['page']) ? clean_param($in['page'], PARAM_FILE) : '';
+
+// v6.3.15: the widget sends the ids of the record on screen, so the assistant can answer
+// "why can't I issue for this student?" about that student rather than in the abstract.
+//
+// v6.3.14 sent the whole query string and parsed it server-side, which forced an untyped
+// request parameter. It never needed to be untyped: the only values ever used are a handful of
+// positive integer ids, so the widget now sends just those and each one is read with
+// PARAM_INT. Nothing free-form from the address bar reaches the server at all.
+$pageparams = (isset($in['pageparams']) && is_array($in['pageparams']))
+    ? \local_rtocompliance\assistant\knowledge::filter_page_params($in['pageparams'])
+    : [];
 
 if (empty($messages)) {
     echo json_encode(['ok' => false, 'error' => 'Please type a question.']);
@@ -82,7 +98,7 @@ if ($bucket['count'] >= 20) {
 $bucket['count']++;
 $cache->set($rlkey, $bucket);
 
-$result = local_rtocompliance_assistant_ask($messages, $page);
+$result = local_rtocompliance_assistant_ask($messages, $page, $pageparams);
 
 echo json_encode([
     'ok'      => (bool) $result['ok'],

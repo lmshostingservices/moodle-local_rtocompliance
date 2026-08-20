@@ -472,7 +472,8 @@ $supportModules = [
                          "Each QB record is a blueprint: select a semester, choose your units, link each unit to a primary Moodle course, " .
                          "and optionally attach teacher-cohort variant courses (e.g. EL, CD, ND delivery streams of the same unit). " .
                          "When a student completes all units — in any linked course — their AVETMISS enrolment record is created and " .
-                         "their Testamur is issued automatically. Use the Stream / Variant Name field to distinguish multiple QB records " .
+                         "they are queued for their Testamur. Nothing issues it on its own: an admin runs Process Queue on the " .
+                         "qualification's Detail page, or a generation page. Use the Stream / Variant Name field to distinguish multiple QB records " .
                          "for the same qualification code (e.g. evening intake vs day class).",
         'clause_ref'  => 'Standard QA1.1',
         'clause_text' => 'RTOs must develop and implement training and assessment strategies for each qualification and skill set on their scope of registration',
@@ -488,8 +489,8 @@ $supportModules = [
             'Nominal hours resolve automatically from the plugin\'s authoritative reference table (training.gov.au does not publish them) and roll up to a qualification total; the compliance card flags any unit still missing a value. They flow into your AVETMISS NAT00120 export and the TAS volume of learning',
             'Optionally fill in the Stream / Variant Name field to distinguish this QB record from others with the same qualification code',
             'Click "Validate Packaging" to confirm the unit mix meets training package rules (core count, elective count, prerequisites)',
-            'Click "Save" — the reconciler is now watching all linked and variant courses; AVETMISS records and certificates are created automatically',
-            'After creating or importing products, click "Build Course Map from Links" at the top of the Qualification Builder to populate the Course Map from the courses already linked to each unit — this is what turns the Course Map column from "None"/partial into "All" so completion detection and automatic certificate/SoA issuance can find completers. It only adds missing mappings, changes nothing else, and is safe to run repeatedly',
+            'Click "Save" — the reconciler is now watching all linked and variant courses; AVETMISS records are created automatically and certificates are queued',
+            'After creating or importing products, click "Build Course Map from Links" at the top of the Qualification Builder to populate the Course Map from the courses already linked to each unit — this is what turns the Course Map column from "None"/partial into "All" so completion detection and queued certificate/SoA issuance can find completers. It only adds missing mappings, changes nothing else, and is safe to run repeatedly',
         ],
     ],
     [
@@ -501,7 +502,7 @@ $supportModules = [
         'description' => "The main table your RTO looks at. It opens on the Master Roster — every student across every qualification in one place, with search (name, email, USI, client ID) and filters by qualification, category, status and USI health, plus summary pivots and a full-field CSV export. " .
                          "Click any student to open their qualification's unit-by-unit grid (C / NYC / RPL / CT). Results come from both live Moodle completions and imported history. " .
                          "Use \"Sync results from Moodle completions\" to pull in completions across every delivery course (any category, including archived/semester-copy courses), and \"Download unmapped completions\" to see any courses that could not be matched to a unit. " .
-                         "When all of a qualification's units are Competent (C, RPL, or CT), the system automatically queues a Testamur — no manual trigger required. The 30-day issuance clock starts from the final unit completion date.",
+                         "When all of a qualification's units are Competent (C, RPL, or CT), the system automatically queues a Testamur; issuing it still needs Process Queue or a generation page. The 30-day issuance clock starts from the final unit completion date.",
         'clause_ref'  => 'Compliance Requirements Clause 9(2)',
         'clause_text' => 'RTOs must issue AQF qualifications and statements of attainment only to learners who have been assessed as meeting all requirements',
         'url'         => new moodle_url('/local/rtocompliance/qualbuilder_results.php'),
@@ -512,7 +513,7 @@ $supportModules = [
             'Click "Sync results from Moodle completions" to record competent outcomes from Moodle course completions (safe to run repeatedly; writes only to the plugin register)',
             'Click "Download unmapped completions" to get a CSV of courses the sync could not match to a unit — link or rename those, then sync again',
             'Click a student\'s "Units" (or open a qualification) to see the unit-by-unit grid: C = Competent (20), NYC = Not Yet Competent (30), RPL = Prior Learning (51/52), CT = Credit Transfer (60)',
-            'Students with all units complete can be issued a Testamur automatically (if autocert is on) or manually via the "Issue Certificate" button',
+            'Students with all units complete can be queued for a Testamur, then issued when you run Process Queue or manually via the "Issue Certificate" button',
         ],
     ],
 

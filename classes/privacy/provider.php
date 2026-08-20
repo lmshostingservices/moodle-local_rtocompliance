@@ -37,6 +37,22 @@ class provider implements
     \core_privacy\local\request\core_userlist_provider {
 
     public static function get_metadata(collection $collection): collection {
+        // v6.3.14: the AI assistant sends the staff member's question to the lms-labs.com
+        // broker, and — when "Let the assistant see this site's data" is on — a short
+        // read-only summary of this site with it. That summary can name the ONE student whose
+        // page the staff member is viewing, together with whether their USI is verified, so
+        // the assistant can explain why a certificate cannot be issued for them. No student
+        // list and no other personal field is sent, and nothing is stored at the broker on
+        // this plugin's behalf. Turning the setting off removes it entirely.
+        $collection->add_external_location_link(
+            'lms_labs_assistant',
+            [
+                'question'  => 'privacy:metadata:assistant:question',
+                'sitefacts' => 'privacy:metadata:assistant:sitefacts',
+            ],
+            'privacy:metadata:assistant'
+        );
+
         // Bug 26: Declare ALL personal data fields stored in the students table.
         // The previous declaration was missing: firstname, lastname, sex, address
         // fields, phone, email — all of which are sensitive AVETMISS personal data.

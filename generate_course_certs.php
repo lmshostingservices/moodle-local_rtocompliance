@@ -245,18 +245,20 @@ if ($action === 'generate' && confirm_sesskey()) {
     // cert generation. Without write_close() a concurrent request (e.g. the page reload
     // triggered by the redirect) blocks waiting for the session file lock and Moodle
     // returns a 500. Without raise() the 30s PHP default causes a fatal on large cohorts.
-    \core\session\manager::write_close();
-    \core_php_time_limit::raise(300);
-    raise_memory_limit(MEMORY_HUGE);
-
     $userids          = optional_param_array('userids',          [], PARAM_INT);
     $activate_userids = optional_param_array('activate_userids', [], PARAM_INT);
     $forceregen       = optional_param('forceregen', 0, PARAM_INT);
     $sendemail        = optional_param('sendemail',  1, PARAM_INT);
 
+    // Must run BEFORE write_close(), or this message is queued into a session that can no
+    // longer be written and the admin sees a bare page reload.
     if (empty($userids)) {
         redirect($PAGE->url, 'No students selected.', null, \core\output\notification::NOTIFY_WARNING);
     }
+
+    \core\session\manager::write_close();
+    \core_php_time_limit::raise(300);
+    raise_memory_limit(MEMORY_HUGE);
 
     // NO-CORE-WRITES (v5.9.411): the plugin no longer unsuspends Moodle {user}
     // accounts as a side-effect of certificate generation. Toggling core
@@ -312,32 +314,32 @@ if ($action === 'generate' && confirm_sesskey()) {
         ) ?? 0);
 
         foreach ($resolution['certtypes'] as $certtype) {
-            $existingparams = ['userid' => $userid, 'certtype' => $certtype, 'status' => 'issued'];
+            // SUPERSEDED-LOOKUP-FIX (v6.3.13): this was the only existing-cert lookup in the
+            // plugin without the "(reissued_at IS NULL OR reissued_at = 0)" guard that
+            // generate_qual_certs.php, qual_cert_hub.php and ajax.php all carry. Without it a
+            // second force-regenerate run re-finds the ALREADY superseded certificate (and
+            // emits a "found more than one record" debugging notice), stamps reissued_at over
+            // it again, appends the supersede note a second time, and points the new cert's
+            // replacement_of at the original instead of the one it actually replaces.
+            $existingsql    = "userid = :userid AND certtype = :certtype AND status = 'issued'
+                               AND (reissued_at IS NULL OR reissued_at = 0)";
+            $existingparams = ['userid' => $userid, 'certtype' => $certtype];
             if (!empty($resolution['qualificationcode'])) {
-                $existingparams['qualificationcode'] = $resolution['qualificationcode'];
+                $existingsql .= " AND qualificationcode = :qualcode";
+                $existingparams['qualcode'] = $resolution['qualificationcode'];
             }
-            $existingcert = $DB->get_record('local_rtocompliance_certs', $existingparams);
+            $existingcert = $DB->get_record_select(
+                'local_rtocompliance_certs', $existingsql, $existingparams, '*', IGNORE_MULTIPLE);
 
-            if ($existingcert) {
-                if (!$forceregen) {
-                    // Issue-missing mode: skip already-issued.
-                    $skipped++;
-                    continue;
-                }
-                // Force-regenerate: void the old cert so audit trail shows it was superseded.
-                $DB->update_record('local_rtocompliance_certs', (object)[
-                    'id'           => $existingcert->id,
-                    'reissued_at'  => time(),
-                    'notes'        => trim(($existingcert->notes ?? '') . "\n[Superseded by force-regenerate — Generate Course Certs]"),
-                    'timemodified' => time(),
-                ]);
-                // Update the old cert's registry entry so scanning its QR
-                // shows "Superseded" instead of "Valid".
-                if (!empty($existingcert->verifytoken)) {
-                    local_rtocompliance_update_registry_status($existingcert->verifytoken, 'superseded');
-                }
-                $voided++;
+            if ($existingcert && !$forceregen) {
+                // Issue-missing mode: skip already-issued.
+                $skipped++;
+                continue;
             }
+            // VOID-AFTER-ISSUE (v6.3.13): the old certificate used to be superseded here,
+            // BEFORE the issuance gate ran — so a refused replacement left the student
+            // holding nothing while $voided reported the loss as a success. Moved below,
+            // to run only once the replacement actually exists.
 
             // INITIAL-COMPLETION-DATE-FIX (v5.9.232): pass the MIN'd timecompleted
             // from $allcompleters (sourced from course_completion_crit_compl)
@@ -356,6 +358,22 @@ if ($action === 'generate' && confirm_sesskey()) {
             );
 
             if ($result['ok']) {
+                // VOID-AFTER-ISSUE (v6.3.13): safe now that the replacement exists.
+                if ($forceregen && $existingcert) {
+                    $DB->update_record('local_rtocompliance_certs', (object)[
+                        'id'           => $existingcert->id,
+                        'reissued_at'  => time(),
+                        'notes'        => trim(($existingcert->notes ?? '')
+                            . "\n[Superseded by force-regenerate — Generate Course Certs]"),
+                        'timemodified' => time(),
+                    ]);
+                    // Update the old cert's registry entry so scanning its QR shows
+                    // "Superseded" instead of "Valid".
+                    if (!empty($existingcert->verifytoken)) {
+                        local_rtocompliance_update_registry_status($existingcert->verifytoken, 'superseded');
+                    }
+                    $voided++;
+                }
                 $issued++;
                 $messages[] = fullname($user) . ' — ' . $certtype . ' issued (' . $result['certnumber'] . ')';
 
@@ -397,7 +415,9 @@ if ($action === 'generate' && confirm_sesskey()) {
     $modeLabel = $forceregen ? 'Force-regenerated' : 'Issued';
     $usinote   = $usiskipped > 0 ? " Skipped (no USI): {$usiskipped}." : '';
     $summary   = "{$modeLabel}: {$issued} certificate(s). Voided (superseded): {$voided}. Skipped: {$skipped}.{$usinote} Failed: {$failed}.";
-    $notiftype = $failed > 0 ? \core\output\notification::NOTIFY_WARNING : \core\output\notification::NOTIFY_SUCCESS;
+    $notiftype = ($failed > 0 || $usiskipped > 0)
+        ? \core\output\notification::NOTIFY_WARNING
+        : \core\output\notification::NOTIFY_SUCCESS;
 
     // Redirect back preserving group/student filter.
     $redirectparams = ['courseid' => $courseid];
@@ -405,7 +425,15 @@ if ($action === 'generate' && confirm_sesskey()) {
     $postStudentid = optional_param('studentid', 0, PARAM_INT);
     if ($postGroupid)   { $redirectparams['groupid']   = $postGroupid; }
     if ($postStudentid) { $redirectparams['studentid'] = $postStudentid; }
-    redirect(new moodle_url('/local/rtocompliance/generate_course_certs.php', $redirectparams), $summary, null, $notiftype);
+    // GEN-SUMMARY-STASH (v6.3.13): \core\session\manager::write_close() was called at the
+    // top of this handler, so redirect()'s message could never be written to the session and
+    // the admin saw a bare page reload with no result. Stash it and render it on the GET.
+    local_rtocompliance_stash_gen_summary(
+        'coursecerts_' . (int)($USER->id ?? 0) . '_' . $courseid,
+        $summary,
+        $notiftype
+    );
+    redirect(new moodle_url('/local/rtocompliance/generate_course_certs.php', $redirectparams));
 }
 
 // ── GET: display generation UI ────────────────────────────────────────────────
@@ -425,6 +453,14 @@ echo local_rtocompliance_render_nav_header(
     'certificates'
 );
 echo local_rtocompliance_page_banner(get_string('generate_course_certs', 'local_rtocompliance'));
+
+// GEN-SUMMARY-STASH (v6.3.13): show the result of the generation run we just redirected from.
+// Must live in the real display section, NOT the no-courseid picker branch above — the POST
+// handler always stashes under the real courseid, so a key built from courseid 0 never matches.
+$gccStashed = local_rtocompliance_pop_gen_summary('coursecerts_' . (int)($USER->id ?? 0) . '_' . $courseid);
+if ($gccStashed !== null) {
+    echo $OUTPUT->notification($gccStashed['summary'], $gccStashed['type']);
+}
 
 // ── Course summary card ───────────────────────────────────────────────────────
 $dummyresolution = local_rtocompliance_resolve_cert_types_for_course($courseid, 0);
@@ -862,22 +898,99 @@ echo html_writer::tag('input', '', [
 ]);
 echo html_writer::end_div();
 
+// ── USI PREFLIGHT (v6.3.13) ───────────────────────────────────────────────────
+// A Statement of Attainment / Testamur / Record of Results cannot be issued without a USI
+// verified with the USI Registry — the issuance gate refuses them before any credit is
+// consumed. A Completion Certificate for a non-accredited course is NOT gated, which is why
+// this page appeared to work while Generate by Qualification did not. Resolve the cert types
+// and the USI status for every listed student up front, so an ineligible row is visibly
+// unselectable instead of silently refused after the admin confirms a charge.
+$gccMissingSettings = local_rtocompliance_missing_cert_settings();
+$gccUsiMap    = local_rtocompliance_usi_issue_status_map(array_map(function ($c) {
+    return (int) $c->userid;
+}, array_values($completers)));
+$gccTypes     = [];
+$gccBlockedBy = [];
+$gccReasons   = [];
+$gccBlocked   = 0;
+$gccEligible  = 0;
+foreach ($completers as $gccComp) {
+    $gccUid            = (int) $gccComp->userid;
+    $gccRes            = local_rtocompliance_resolve_cert_types_for_course($courseid, $gccUid);
+    $gccTypes[$gccUid] = $gccRes;
+    $gccGated          = local_rtocompliance_usi_certtypes_are_gated($gccRes['certtypes']);
+    // The gate has THREE pre-credit refusals, not one. Model all of them, or the page keeps
+    // a path where the admin confirms a charge and gets a silent no-op:
+    //   NO_USI / USI_UNVERIFIED   — no verified USI
+    //   MISSING_RTO_SETTINGS      — RTO legal name / provider code / signatory unset
+    //   NO_UNITS                  — a statement/record with no units AND no qualification code
+    $gccEmptyDoc = !empty(array_intersect($gccRes['certtypes'], ['statement', 'record']))
+        && empty($gccRes['units'])
+        && trim((string) ($gccRes['qualificationcode'] ?? '')) === '';
+
+    $gccReason = '';
+    if ($gccGated && !empty($gccMissingSettings)) {
+        $gccReason = 'Required RTO details are not configured: ' . implode(', ', $gccMissingSettings)
+            . '. Set them in RTO Settings before issuing.';
+    } else if ($gccGated && $gccEmptyDoc) {
+        $gccReason = 'This course has no unit list and no qualification code, so the certificate would '
+            . 'be an empty compliance document. Link the course to its unit in the Qualification Builder, '
+            . 'or set the qualification code in the course settings.';
+    } else if ($gccGated && empty($gccUsiMap[$gccUid]['canissue'])) {
+        $gccReason = $gccUsiMap[$gccUid]['reason'] ?? 'No verified USI.';
+    }
+
+    $gccOk                 = ($gccReason === '');
+    $gccReasons[$gccUid]   = $gccReason;
+    $gccBlockedBy[$gccUid] = !$gccOk;
+    if ($gccOk) {
+        $gccEligible++;
+    } else {
+        $gccBlocked++;
+    }
+}
+
+if (!empty($gccMissingSettings)) {
+    echo '<div style="background:#fef2f2;border:1px solid #fecaca;border-left:4px solid #dc2626;'
+        . 'border-radius:8px;padding:14px 18px;margin-bottom:16px;">'
+        . '<div style="font-weight:700;color:#991b1b;margin-bottom:6px;font-size:15px;">'
+        . 'Nationally recognised certificates cannot be issued — required RTO details are missing</div>'
+        . '<div style="font-size:14px;color:#7f1d1d;line-height:1.55;">'
+        . 'These AQF-required fields are not configured: <strong>'
+        . s(implode(', ', $gccMissingSettings)) . '</strong>. '
+        . '<a href="' . s((new moodle_url('/local/rtocompliance/plugin_settings.php',
+            ['section' => 'local_rtocompliance_settings']))->out(false))
+        . '" style="font-weight:600;">Open RTO Settings &rarr;</a></div></div>';
+}
+
+echo local_rtocompliance_usi_blocked_callout(
+    $gccBlocked,
+    count($completers),
+    'Students whose course only warrants a Completion Certificate are not affected — that is not AQF certification '
+        . 'and needs no USI. The USI column gives the exact reason for each held row.'
+);
+
 // Select all / Generate buttons
 echo html_writer::start_div('d-flex gap-2 mb-3 flex-wrap align-items-center');
+if ($gccBlocked > 0) {
+    echo html_writer::tag('span',
+        $gccEligible . ' of ' . count($completers) . ' selectable',
+        ['class' => 'text-muted mr-2', 'style' => 'font-size:0.87rem;font-weight:600;']);
+}
 echo html_writer::tag('button', 'Select All Needing Certs', [
     'type'    => 'button',
     'class'   => 'btn btn-sm btn-outline-secondary',
-    'onclick' => 'document.querySelectorAll(".cert-checkbox.needs-cert").forEach(c => c.checked = true)',
+    'onclick' => 'document.querySelectorAll(".cert-checkbox.needs-cert:not(:disabled)").forEach(c => c.checked = true)',
 ]);
 echo html_writer::tag('button', 'Select All Shown', [
     'type'    => 'button',
     'class'   => 'btn btn-sm btn-outline-secondary',
-    'onclick' => 'document.querySelectorAll(".cert-checkbox").forEach(c => c.checked = true)',
+    'onclick' => 'document.querySelectorAll(".cert-checkbox:not(:disabled)").forEach(c => c.checked = true)',
 ]);
 echo html_writer::tag('button', 'Deselect All', [
     'type'    => 'button',
     'class'   => 'btn btn-sm btn-outline-secondary',
-    'onclick' => 'document.querySelectorAll(".cert-checkbox").forEach(c => c.checked = false)',
+    'onclick' => 'document.querySelectorAll(".cert-checkbox:not(:disabled)").forEach(c => c.checked = false)',
 ]);
 echo html_writer::start_div('ml-auto');
 echo html_writer::tag('button', 'Generate / Regenerate Selected', [
@@ -927,15 +1040,15 @@ function rtocBulkCertConfirm() {
     // Count selected checkboxes.
     // Issue-missing mode: only need-cert boxes that are checked will actually incur a cost.
     // Force-regen mode:   every checked box will incur a cost.
-    var allChecked     = document.querySelectorAll('.cert-checkbox:checked');
-    var needsCertChecked = document.querySelectorAll('.cert-checkbox.needs-cert:checked');
+    var allChecked     = document.querySelectorAll('.cert-checkbox:not(:disabled):checked');
+    var needsCertChecked = document.querySelectorAll('.cert-checkbox.needs-cert:not(:disabled):checked');
 
     var billableCount = isRegen ? allChecked.length : needsCertChecked.length;
     var selectedCount = allChecked.length;
     var totalCost     = billableCount * RTOC_GCP_COST_PER_CERT;
 
     if (selectedCount === 0) {
-        alert('Please select at least one student before generating.');
+        alert('Please select at least one student before generating.\\n\\nStudents without a verified USI cannot be ticked \u2014 a nationally recognised certificate cannot be issued without one.');
         return;
     }
 
@@ -1075,10 +1188,14 @@ echo html_writer::start_tag('tr');
 echo html_writer::tag('th', html_writer::tag('input', '', [
     'type'    => 'checkbox',
     'title'   => 'Select all',
-    'onclick' => 'document.querySelectorAll(".cert-checkbox").forEach(c => c.checked = this.checked)',
+    'onclick' => 'document.querySelectorAll(".cert-checkbox:not(:disabled)").forEach(c => c.checked = this.checked)',
 ]));
 echo html_writer::tag('th', 'Student');
 echo html_writer::tag('th', 'Completed');
+// USI-PREFLIGHT (v6.3.13)
+echo html_writer::tag('th', 'USI', [
+    'title' => 'A USI verified with the USI Registry is required before a nationally recognised certificate can be issued',
+]);
 echo html_writer::tag('th', 'Cert Type');
 echo html_writer::tag('th', 'Status');
 echo html_writer::tag('th', 'Cert No.');
@@ -1087,7 +1204,8 @@ echo html_writer::end_tag('thead');
 echo html_writer::start_tag('tbody');
 
 foreach ($completers as $comp) {
-    $res    = local_rtocompliance_resolve_cert_types_for_course($courseid, $comp->userid);
+    // USI-PREFLIGHT (v6.3.13): resolved once in the preflight pass above.
+    $res    = $gccTypes[(int)$comp->userid] ?? local_rtocompliance_resolve_cert_types_for_course($courseid, $comp->userid);
     $types  = $res['certtypes'];
     $labels = array_map(function ($t) use ($certtypelabels) { return $certtypelabels[$t] ?? $t; }, $types);
 
@@ -1106,14 +1224,46 @@ foreach ($completers as $comp) {
         : html_writer::tag('span', 'Needs Certificate', ['class' => 'badge badge-warning']);
 
     // In force-regen mode all rows are selectable; in issue-missing mode only unchecked by default
+    // USI-PREFLIGHT (v6.3.13): hold students whose certificate types require a verified USI.
+    $usiStatus  = $gccUsiMap[(int)$comp->userid] ?? ['status' => 'norecord', 'canissue' => false, 'usi' => '', 'reason' => ''];
+    $usiGated   = local_rtocompliance_usi_certtypes_are_gated($types);
+    $usiHeld    = !empty($gccBlockedBy[(int)$comp->userid]);
+
+    $holdReason = $gccReasons[(int)$comp->userid] ?? '';
     $checkboxattrs = [
         'type'  => 'checkbox',
         'name'  => 'userids[]',
         'value' => $comp->userid,
         'class' => 'cert-checkbox' . ($allissued ? '' : ' needs-cert'),
+        'title' => $usiHeld
+            ? 'Cannot be issued — ' . ($holdReason !== '' ? $holdReason : 'refused by a pre-issue check')
+            : 'Select this student',
     ];
-    if (!$allissued) {
+    if ($usiHeld) {
+        $checkboxattrs['disabled'] = 'disabled';
+    } else if (!$allissued) {
         $checkboxattrs['checked'] = 'checked';
+    }
+
+    if (!$usiGated) {
+        $usiCell = html_writer::tag('span', 'Not required', [
+            'style' => 'background:#f1f5f9;color:#475569;padding:2px 8px;border-radius:4px;'
+                . 'font-size:0.78rem;font-weight:600;white-space:nowrap;',
+            'title' => 'This course warrants a Completion Certificate, which is not AQF certification and needs no USI',
+        ]);
+    } else {
+        $usiCell = local_rtocompliance_usi_status_badge($usiStatus);
+        if ($usiHeld && $holdReason !== '') {
+            $usiCell .= html_writer::tag('div', s($holdReason), [
+                'style' => 'font-size:0.75rem;color:#92400e;margin-top:4px;max-width:300px;line-height:1.4;',
+            ]);
+            // Only offer the USI fix link when the USI is actually what is wrong — telling an
+            // admin to fix a USI that is already verified is worse than saying nothing.
+            if (empty($usiStatus['canissue'])) {
+                $usiCell .= html_writer::tag('div', local_rtocompliance_usi_fix_link((int)$comp->userid),
+                    ['style' => 'margin-top:4px;']);
+            }
+        }
     }
 
     $profileurl    = new moodle_url('/user/profile.php', ['id' => $comp->userid]);
@@ -1133,7 +1283,11 @@ foreach ($completers as $comp) {
 
     // Highlight rows with existing certs differently if we might regenerate them
     $rowclass = $isSuspended ? 'table-danger' : '';
-    if (!$isSuspended) {
+    if ($usiHeld && !$isSuspended) {
+        // Suspended keeps its own (stronger) tint; the USI hold is still conveyed by the
+        // disabled tick box, the badge and the reason text in the USI column.
+        $rowclass = 'table-warning';
+    } else if (!$isSuspended) {
         if (!$allissued) {
             $rowclass = 'table-warning';
         } elseif ($alreadydone > 0) {
@@ -1145,6 +1299,7 @@ foreach ($completers as $comp) {
     echo html_writer::tag('td', html_writer::tag('input', '', $checkboxattrs));
     echo html_writer::tag('td', $namelink . $suspendBadge . $activateCb . html_writer::tag('small', ' ' . $comp->email, ['class' => 'text-muted']));
     echo html_writer::tag('td', userdate($comp->timecompleted, '%d %b %Y'));
+    echo html_writer::tag('td', $usiCell);
     echo html_writer::tag('td', implode(' + ', $labels));
     echo html_writer::tag('td', $statusbadge);
     echo html_writer::tag('td', $certnums ? implode(', ', $certnums) : '—');

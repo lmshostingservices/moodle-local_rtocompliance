@@ -428,7 +428,7 @@ function local_rtocompliance_render_nav_header($current_page, $parent_page = nul
     $html .= '<div class="rtoc-nav-right">';
     // FAQ link — on every page so users are always one click from the 100-question FAQ.
     $faqurl = (new moodle_url('/local/rtocompliance/faq.php'))->out();
-    $html .= '<a href="' . $faqurl . '" class="rtoc-nav-help-btn rtoc-nav-faq-btn" title="Frequently Asked Questions — 100 plain-English answers">';
+    $html .= '<a href="' . $faqurl . '" class="rtoc-nav-help-btn rtoc-nav-faq-btn" title="Frequently Asked Questions — plain-English answers">';
     $html .= '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="rtoc-nav-icon"><path d="M8 10h8M8 14h5"/><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
     $html .= '<span>FAQ</span>';
     $html .= '</a>';
@@ -742,7 +742,7 @@ function local_rtocompliance_page_help_overlay() {
                 'Use the "View Results", "Certs" or "Delete" row actions to open the student progress grid, issue certificates, or remove a product.',
             ],
             'features' => [
-                ['title' => 'See what is ready', 'desc' => 'The Units, Linked Courses, and Course Map columns show in one row how much of each product is set up for automatic certificates.'],
+                ['title' => 'See what is ready', 'desc' => 'The Units, Linked Courses, and Course Map columns show in one row how much of each product is set up for certificate issue.'],
                 ['title' => 'Fill the map in one click', 'desc' => 'The Build Course Map from Links button fills in the Course Map from links you already have, so you do not map each unit by hand.'],
                 ['title' => 'Rules pass tick', 'desc' => 'A green tick next to the status shows the product\'s unit rules have passed the check before you make it Active.'],
             ],
@@ -943,14 +943,14 @@ function local_rtocompliance_page_help_overlay() {
                 'On the hub home, use the search box and the cascading Parent category, Sub-category and Course filters, then click "Search" to find a qualification, reading its Enrolled / Complete / Issued / Pending / Queue funnel columns. The cascade narrows the list to qualifications delivered in the chosen category or course.',
                 'Click "Issue Pending" on a qualification row to bulk-issue Testamurs to every completed student who lacks one, or click "Detail" to open its tabs.',
                 'In the qualification detail, work the "Ready to Issue" tab: tick students, optionally set the email checkbox, and click the issue button to generate Testamur + Record of Results.',
-                'Open the "Autocert Queue" tab and click "Process Queue", "Retry", or "Retry all failed" to handle automatic issuance entries.',
+                'Open the "Autocert Queue" tab and click "Process Queue", "Retry", or "Retry all failed" — this is what actually issues queued certificates; nothing does it on a schedule entries.',
                 'Click "Run Global Scan" (or "Scan This Qual" on the queue tab) to catch historical completers and add them to the pending queue.',
                 'Click "Refresh All Stats" after recording new results to update the cached funnel numbers.',
             ],
             'features' => [
                 ['title' => 'See who is ready', 'desc' => 'Counts of enrolled, complete, issued and pending students show instantly who has finished but is still waiting on a certificate.'],
                 ['title' => 'Finds every finisher', 'desc' => 'It spots finished students from both course results and prior-skills records (RPL, meaning credit for skills students already have), so no one is missed.'],
-                ['title' => 'Waits for the student ID', 'desc' => 'When issuing in bulk, it skips anyone without a recorded USI (the student\'s unique ID number) and issues their certificate automatically once the ID is added.'],
+                ['title' => 'Waits for the student ID', 'desc' => 'When issuing in bulk, it holds back anyone whose USI (the student\'s unique ID number) is not verified, and leaves them in the queue so nothing is lost. Nothing is issued on its own — once the USI is verified, run Process Queue or the generation page again.'],
             ],
         ],
         'soa_issue.php' => [
@@ -1270,13 +1270,17 @@ function local_rtocompliance_page_help_overlay() {
             'how' => [
                 'Choose an active qualification from the \'Select a qualification\' dropdown and click \'Go\' (or use \'Generate by Unit\' for the single-course generator).',
                 'Review the qualification summary banner showing linked unit-course count, total units, and that Testamur + Record of Results will be issued.',
-                'Check the student table listing everyone who completed every unit, noting any SUSPENDED badges.',
+                'Read the amber notice if one appears: it says how many students cannot be issued because they have no verified USI.',
+                'Check the student table listing everyone who completed every unit, noting any SUSPENDED badges and the USI column.',
+                'For any student shown as Missing or Not verified, click \'Add / verify USI\' on their row to fix their profile — their tick box stays disabled until the USI is verified.',
                 'Tick \'Force regenerate (void existing)\' to replace existing certs, and leave \'Notify students\' ticked.',
-                'Select students using the per-row checkboxes or the \'Select all\' / \'None\' links.',
+                'Select students using the per-row checkboxes or the \'Select all eligible\' / \'None\' links (held students are never selected).',
                 'Click \'Generate Testamur + Record of Results\' and confirm to issue both certificates for each selected student.',
+                'Read the summary banner after the page reloads: it reports what was issued, what was skipped, and anything refused with the reason.',
             ],
             'features' => [
                 ['title' => 'Genuine finishers only', 'desc' => 'The list only shows students who have actually completed every unit, so you never certify someone by mistake.'],
+                ['title' => 'Cannot certify someone illegally', 'desc' => 'A student without a USI verified with the USI Registry cannot be ticked at all. The row says why and links straight to their profile, so you never pay for a certificate that will be refused.'],
                 ['title' => 'Both documents together', 'desc' => 'Each student gets their full certificate (the Testamur) and their Record of Results made together in one go.'],
                 ['title' => 'Long-list warning', 'desc' => 'If a student\'s list of units is too long for one page, you get a warning so you can adjust the design first.'],
             ],
@@ -2000,7 +2004,7 @@ function local_rtocompliance_page_help_overlay() {
     // ─────────────────────────────────────────────────────────────────────────────
     $howrewrite = [
         'usi_settings.php' => [
-                'This page only shows the status of your student ID number checking (USI is the student ID number); you do not enter anything here.',
+                'This page shows how your whole cohort is tracking on student ID (USI) checking and lets you work through the gaps — filter, re-verify and export. Record an individual student\'s USI on their own profile.',
                 'Check that the "Current status" panel has no "API Connection required" warning; if it does, add the Platform API details (API URL, Site ID, API Key) in Plugin Settings first.',
                 'Read the status panel to see whether your checking credential is set up and the connection is working.',
                 'To add or update the credential, sign in to the lms-labs.com admin panel; for security it is kept only there and never in Moodle.',
@@ -2783,6 +2787,250 @@ function local_rtocompliance_usi_is_verified($usiverified): bool {
     return (int) $usiverified === \local_rtocompliance\usi\usi_verification_service::STATUS_VERIFIED;
 }
 
+/**
+ * USI-PREFLIGHT (v6.3.13) — the certificate types that cannot be issued without a
+ * VERIFIED USI.  Single source of truth, mirrored by the runtime gate inside
+ * local_rtocompliance_programmatic_issue_cert().  'completion' is deliberately absent:
+ * a Completion Certificate for a non-accredited course is not AQF certification.
+ *
+ * @return string[]
+ */
+function local_rtocompliance_usi_gated_certtypes(): array {
+    return ['testamur', 'record', 'statement'];
+}
+
+/**
+ * USI-PREFLIGHT (v6.3.13) — does this set of certificate types require a verified USI?
+ *
+ * @param string[] $certtypes
+ * @return bool
+ */
+function local_rtocompliance_usi_certtypes_are_gated(array $certtypes): bool {
+    return !empty(array_intersect($certtypes, local_rtocompliance_usi_gated_certtypes()));
+}
+
+/**
+ * USI-PREFLIGHT (v6.3.13) — batched USI issuance status for a list of Moodle user ids.
+ *
+ * Answers, for every student in one query, the question the generation pages previously
+ * never asked: "would the USI gate refuse this student?"  Before this existed the admin
+ * could tick a student with no USI, confirm a credit charge, and get a silent no-op —
+ * the refusal happened server-side with nothing on screen to explain it.
+ *
+ * @param  int[] $userids Moodle user ids
+ * @return array userid => ['usi'=>string,'status'=>string,'canissue'=>bool,'label'=>string,'reason'=>string]
+ */
+function local_rtocompliance_usi_issue_status_map(array $userids): array {
+    global $DB;
+
+    $out     = [];
+    $userids = array_values(array_unique(array_filter(array_map('intval', $userids))));
+    if (empty($userids)) {
+        return $out;
+    }
+
+    // Default for anyone with no local_rtocompliance_students row at all.
+    foreach ($userids as $uid) {
+        $out[$uid] = [
+            'usi'      => '',
+            'status'   => 'norecord',
+            'canissue' => false,
+            'label'    => 'No student record',
+            'reason'   => 'This student has no RTO Compliance student record, so no USI is on file. '
+                . 'Open Student Records, add the student, and record a verified USI.',
+        ];
+    }
+
+    list($insql, $params) = $DB->get_in_or_equal($userids, SQL_PARAMS_NAMED, 'usipf');
+    // DUPLICATE-ROW SAFETY: install.xml declares userid as a foreign-unique key, so this
+    // should be unreachable. It is defence in depth for a site whose index was lost in a
+    // hand-run migration: without it, the answer would be whichever row the DB happened to
+    // return last, while the runtime gate's get_record() takes the first and emits a
+    // debugging warning — two different answers to the same question, which is precisely
+    // the class of drift this release exists to remove.
+    $rows = $DB->get_records_select(
+        'local_rtocompliance_students',
+        "userid $insql",
+        $params,
+        'userid ASC, id ASC',
+        'id, userid, usi, usiverified'
+    );
+
+    $seen = [];
+    foreach ($rows as $r) {
+        $uid = (int) $r->userid;
+        if (isset($seen[$uid])) {
+            // Second row for the same user: hold them rather than guess which USI is real.
+            $out[$uid] = [
+                'usi'      => '',
+                'status'   => 'ambiguous',
+                'canissue' => false,
+                'label'    => 'Duplicate student record',
+                'reason'   => 'This user has more than one RTO Compliance student record, so their USI '
+                    . 'cannot be resolved reliably. Merge or remove the duplicate in Student Records '
+                    . 'before issuing.',
+            ];
+            continue;
+        }
+        $seen[$uid] = true;
+        $usi = trim((string) ($r->usi ?? ''));
+        if ($usi === '') {
+            $out[$uid] = [
+                'usi'      => '',
+                'status'   => 'missing',
+                'canissue' => false,
+                'label'    => 'Missing',
+                'reason'   => 'No USI recorded. Under the Student Identifiers Act a verified USI is required '
+                    . 'before a Testamur, Record of Results or Statement of Attainment can be issued.',
+            ];
+        } else if (!local_rtocompliance_usi_is_verified($r->usiverified)) {
+            $out[$uid] = [
+                'usi'      => $usi,
+                'status'   => 'unverified',
+                'canissue' => false,
+                'label'    => 'Not verified',
+                'reason'   => 'The USI on file has not been verified with the USI Registry. '
+                    . 'Verify it on the USI Verification page before issuing.',
+            ];
+        } else {
+            $out[$uid] = [
+                'usi'      => $usi,
+                'status'   => 'verified',
+                'canissue' => true,
+                'label'    => 'Verified',
+                'reason'   => '',
+            ];
+        }
+    }
+
+    return $out;
+}
+
+/**
+ * USI-PREFLIGHT (v6.3.13) — render a USI status badge for a generation worklist row.
+ *
+ * @param  array $st one entry from local_rtocompliance_usi_issue_status_map()
+ * @return string HTML
+ */
+function local_rtocompliance_usi_status_badge(array $st): string {
+    $map = [
+        'verified'   => ['#dcfce7', '#15803d', 'Verified'],
+        'unverified' => ['#fef3c7', '#b45309', 'Not verified'],
+        'missing'    => ['#fee2e2', '#b91c1c', 'Missing'],
+        'norecord'   => ['#fee2e2', '#b91c1c', 'No student record'],
+        'ambiguous'  => ['#fee2e2', '#b91c1c', 'Duplicate student record'],
+    ];
+    $key = isset($st['status'], $map[$st['status']]) ? $st['status'] : 'norecord';
+    list($bg, $fg, $text) = $map[$key];
+
+    $html = html_writer::tag('span', $text, [
+        'style' => "background:$bg;color:$fg;padding:2px 8px;border-radius:4px;"
+            . "font-size:0.78rem;font-weight:600;white-space:nowrap;display:inline-block;",
+    ]);
+    if ($key === 'verified' && !empty($st['usi'])) {
+        $html .= html_writer::tag('div', s($st['usi']), [
+            'style' => 'font-size:0.72rem;color:#6b7280;margin-top:2px;font-family:monospace;',
+        ]);
+    }
+    return $html;
+}
+
+/**
+ * USI-PREFLIGHT (v6.3.13) — a direct "add / verify the USI" link for one student, so the
+ * admin can fix a blocked row without hunting through Student Records.
+ *
+ * @param  int    $userid Moodle user id
+ * @param  string $label  link text
+ * @return string HTML
+ */
+function local_rtocompliance_usi_fix_link(int $userid, string $label = 'Add / verify USI'): string {
+    $url = new moodle_url('/local/rtocompliance/student_profile.php', ['userid' => $userid]);
+    return html_writer::link($url, $label . ' &rarr;', [
+        'style'  => 'font-size:0.78rem;font-weight:600;color:#b45309;text-decoration:underline;white-space:nowrap;',
+        'title'  => 'Open this student\'s AVETMISS profile to record and verify their USI',
+        'target' => '_blank',
+        'rel'    => 'noopener',
+    ]);
+}
+
+/**
+ * USI-PREFLIGHT (v6.3.13) — a standard "these students cannot be issued" callout.
+ *
+ * @param  int         $blocked number of students held back
+ * @param  int         $total   number of students in the worklist
+ * @param  string|null $extra   optional extra sentence
+ * @return string HTML ('' when nothing is blocked)
+ */
+function local_rtocompliance_usi_blocked_callout(int $blocked, int $total, ?string $extra = null): string {
+    if ($blocked <= 0) {
+        return '';
+    }
+    $usiurl = (new moodle_url('/local/rtocompliance/usi_settings.php'))->out(false);
+    $html  = '<div style="background:#fffbeb;border:1px solid #fcd34d;border-left:4px solid #f59e0b;'
+        . 'border-radius:8px;padding:14px 18px;margin-bottom:16px;">';
+    $html .= '<div style="font-weight:700;color:#92400e;margin-bottom:6px;font-size:15px;">'
+        . $blocked . ' of ' . $total . ' student' . ($total === 1 ? '' : 's')
+        . ' cannot be issued — no verified USI</div>';
+    $html .= '<div style="font-size:14px;color:#78350f;line-height:1.55;">'
+        . 'These students are listed below with their tick box disabled, so they cannot be selected. '
+        . 'A Testamur, Record of Results or Statement of Attainment cannot be issued without a USI that has '
+        . 'been verified with the USI Registry — the certificate would be refused and nothing would be created. '
+        . 'No credits are charged for a refused certificate.'
+        . ($extra ? ' ' . $extra : '')
+        . ' <a href="' . s($usiurl) . '" style="font-weight:600;">Open USI Verification &rarr;</a></div>';
+    $html .= '</div>';
+    return $html;
+}
+
+/**
+ * GEN-SUMMARY-STASH (v6.3.13) — carry a bulk-generation summary across the post-generate
+ * redirect.
+ *
+ * The generation pages call \core\session\manager::write_close() before the bulk loop (a
+ * long POST otherwise holds the session lock and the redirected page reload 500s waiting
+ * for it).  redirect() with a message then queues that message into $SESSION->notifications
+ * for the NEXT request — but the session can no longer be written, so the message was
+ * silently discarded and the admin saw a bare page reload with no result at all.  Stash it
+ * in the application cache instead, keyed per user, and pop it on the following GET.
+ *
+ * @param string $key      cache key (caller supplies a per-user, per-page key)
+ * @param string $summary  the summary text
+ * @param string $notiftype a \core\output\notification::NOTIFY_* constant
+ * @return void
+ */
+function local_rtocompliance_stash_gen_summary(string $key, string $summary, string $notiftype): void {
+    try {
+        $cache = cache::make_from_params(cache_store::MODE_APPLICATION, 'local_rtocompliance', 'gensummary');
+        $cache->set($key, ['summary' => $summary, 'type' => $notiftype, 'time' => time()]);
+    } catch (\Throwable $e) {
+        debugging('stash_gen_summary failed: ' . $e->getMessage(), DEBUG_DEVELOPER);
+    }
+}
+
+/**
+ * GEN-SUMMARY-STASH (v6.3.13) — read and clear a stashed generation summary.
+ *
+ * @param  string $key cache key used by local_rtocompliance_stash_gen_summary()
+ * @return array|null ['summary'=>string,'type'=>string] or null
+ */
+function local_rtocompliance_pop_gen_summary(string $key): ?array {
+    try {
+        $cache = cache::make_from_params(cache_store::MODE_APPLICATION, 'local_rtocompliance', 'gensummary');
+        $val   = $cache->get($key);
+        if ($val === false || !is_array($val) || empty($val['summary'])) {
+            return null;
+        }
+        $cache->delete($key);
+        // Never resurrect a stale summary (e.g. the admin navigated away and came back tomorrow).
+        if (!empty($val['time']) && (time() - (int) $val['time']) > 600) {
+            return null;
+        }
+        return ['summary' => (string) $val['summary'], 'type' => (string) ($val['type'] ?? 'info')];
+    } catch (\Throwable $e) {
+        return null;
+    }
+}
+
 function local_rtocompliance_practice_guide_url($script) {
     // page script => practice-guide key (resolved to an official ASQA PDF below)
     $map = [
@@ -3068,7 +3316,7 @@ function local_rtocompliance_page_help_content() {
             'how' => [
                 'Search a qualification and review the Ready column.',
                 'Issue individually or in bulk; students missing a USI are skipped (not failed).',
-                'Add the USI, and the queued student issues automatically.',
+                'Once the USI is verified, run Process Queue or the generation page again — nothing issues on its own.',
             ],
         ],
         'soa_issue.php' => [
@@ -3785,8 +4033,8 @@ function local_rtocompliance_page_help_content() {
             'why' => 'It issues certificates quickly while only allowing genuinely finished, USI-verified students through.',
             'how' => [
                 'Select the qualification and review who is ready.',
-                'Students missing a USI are skipped and issue later automatically.',
-                'Generate; the register and verification update.',
+                'Check the USI column: a student without a verified USI cannot be ticked, and their row says why and links to their profile.',
+                'Generate; the register and verification update. Refused certificates cost nothing.',
             ],
         ],
 
@@ -10291,7 +10539,7 @@ function local_rtocompliance_create_semester_intakes(array $intakes): array {
  * @param string $currentscript the basename of the page the user is on (e.g. 'students.php')
  * @return string knowledge-base text for the assistant's system context
  */
-function local_rtocompliance_assistant_kb(string $currentscript = ''): string {
+function local_rtocompliance_assistant_kb(string $currentscript = '', array $pageparams = []): string {
     global $CFG;
     $siteurl = rtrim((string) ($CFG->wwwroot ?? ''), '/');
     $base = local_rtocompliance_page_help_content();
@@ -10373,7 +10621,26 @@ function local_rtocompliance_assistant_kb(string $currentscript = ''): string {
             }
         }
         if (!empty($cur['features']) && is_array($cur['features'])) {
-            $lines[] = 'Key features: ' . implode('; ', array_map('strval', $cur['features']));
+            // v6.3.14: each feature is ['title'=>..,'desc'=>..], so strval() produced
+            // "Array; Array; Array" plus one "Array to string conversion" warning per feature
+            // — emitted before assistant.php's json_encode(), which corrupts the JSON response
+            // on any site with debugdisplay on. Flatten properly.
+            $featurelines = [];
+            foreach ($cur['features'] as $feature) {
+                if (is_array($feature)) {
+                    $ftitle = trim((string) ($feature['title'] ?? ''));
+                    $fdesc  = trim((string) ($feature['desc'] ?? ''));
+                    $joined = trim($ftitle . ($ftitle !== '' && $fdesc !== '' ? ' — ' : '') . $fdesc);
+                } else {
+                    $joined = trim((string) $feature);
+                }
+                if ($joined !== '') {
+                    $featurelines[] = $joined;
+                }
+            }
+            if (!empty($featurelines)) {
+                $lines[] = 'Key features: ' . implode('; ', $featurelines);
+            }
         }
     }
 
@@ -10438,7 +10705,96 @@ function local_rtocompliance_assistant_kb(string $currentscript = ''): string {
     $lines[] = '- Commonwealth/national — Fee-Free TAFE (National Skills Agreement; made ongoing by the Free TAFE Act 2024) WAIVES the student tuition fee on eligible state-subsidised places at public providers; and the Australian Apprenticeships Incentive System (AAIS) pays cash incentives to employers/apprentices (rates changed 1 Jan 2026), claimed through an Australian Apprenticeship Support Services provider — separate from the state training subsidy.';
     $lines[] = 'AVETMISS funding-source fields: "Funding source - national" is a standard 2-digit NCVER classification (e.g. 11/13/15 government, 20 domestic fee-for-service, 30 international); "Funding source - state training authority" is a state-defined code identifying the specific program/contract, which maps up to a national code. A subsidised enrolment carries both; a purely fee-for-service enrolment uses the national field only. The plugin\'s State Funding code lists are indicative — confirm the exact current code with the STA.';
 
-    // ── FAQ — the 100 plain-English answers shown on the FAQ page, so the assistant gives the
+    // ── v6.3.14: THIS SITE, RIGHT NOW ────────────────────────────────────────────
+    // Everything above describes the software in general. Without this block the assistant
+    // could explain how the USI gate works but could never answer "why can't I issue for
+    // THIS student" — which is the question admins actually ask. Read-only, cached, and
+    // switchable off in Plugin Settings.
+    if (\local_rtocompliance\assistant\knowledge::site_context_enabled()) {
+        $sitefacts = \local_rtocompliance\assistant\knowledge::site_facts();
+        $pagefacts = \local_rtocompliance\assistant\knowledge::page_facts($currentscript, $pageparams);
+        if (!empty($sitefacts) || !empty($pagefacts)) {
+            $lines[] = '';
+            $lines[] = '## This site right now (live, read directly from this Moodle site)';
+            $lines[] = 'These facts are about THIS RTO\'s own site. Prefer them over general statements —'
+                . ' if a fact here explains the user\'s problem, say so directly and concretely.';
+            foreach ($sitefacts as $fact) {
+                $lines[] = '- ' . $fact;
+            }
+            foreach ($pagefacts as $fact) {
+                $lines[] = '- ' . $fact;
+            }
+        }
+    }
+
+    // ── v6.3.14: REFERENCE DOCUMENTATION (docs/*.md) ─────────────────────────────
+    // The authoritative narrative documentation. The document(s) associated with the page the
+    // admin is on are included IN FULL; everything else contributes a one-line summary, so the
+    // library can grow without every question carrying every word.
+    $docs = \local_rtocompliance\assistant\knowledge::docs();
+    if (!empty($docs)) {
+        $full  = [];
+        $index = [];
+        foreach ($docs as $doc) {
+            if ($currentscript !== '' && in_array($currentscript, $doc['pages'], true)) {
+                $full[] = $doc;
+            } else {
+                $index[] = $doc;
+            }
+        }
+        // With no page context, lead with the certificate/USI material: it is what the
+        // overwhelming majority of questions are about.
+        if (empty($full)) {
+            foreach ($index as $k => $doc) {
+                if (strpos($doc['file'], 'certificates') === 0 || strpos($doc['file'], 'usi') === 0) {
+                    $full[] = $doc;
+                    unset($index[$k]);
+                }
+            }
+            $index = array_values($index);
+        }
+
+        $lines[] = '';
+        $lines[] = '## Reference documentation (authoritative — prefer this over any other section)';
+        foreach ($full as $doc) {
+            $lines[] = '';
+            $lines[] = $doc['body'];
+        }
+        if (!empty($index)) {
+            $lines[] = '';
+            $lines[] = '### Other reference documents available (ask the user to open the relevant page for full detail)';
+            foreach ($index as $doc) {
+                $lines[] = '- ' . $doc['title'] . ' — ' . $doc['summary'];
+            }
+        }
+    }
+
+    $lines[] = '';
+    $lines[] = '## How to answer';
+    $lines[] = 'Answer as a senior VET compliance adviser and former ASQA auditor who also knows this exact software inside-out. Be the RTO\'s personal expert: lead with a direct, specific answer, then give the concrete steps (naming the exact page, menu location and button/field). When a question is about compliance, reason from the RELEVANT 2025 Standard and its underlying outcome and practice guide — explain WHAT ASQA is looking for and WHY, then HOW this plugin helps evidence it, and the risk if it is not addressed. Tailor advice to the RTO\'s situation where the context gives it. ALWAYS give the user a clickable Markdown link to the exact plugin page your suggestion refers to, built from this site\'s base URL (e.g. "to issue a certificate, go to [Generate Qualification Certificates](<site>/local/rtocompliance/generate_qual_certs.php)") — one link per page you mention, using the direct links listed above; never show a bare page-file name without linking it. Do not merely regurgitate steps and do not invent features or clause numbers: if you are not certain of a specific clause or the latest practice-guide wording, say so and point to asqa.gov.au for the current text. If something is genuinely not a feature of this plugin, say so plainly. Keep every ASQA reference accurate. Be thorough but readable.';
+
+    // ── v6.3.14: RELEASE NOTES, PARSED FROM version.php ──────────────────────────
+    // This is what makes the assistant's knowledge auto-update with every build: the release
+    // note is already mandatory on every release, so parsing it means a new version explains
+    // its own changes the moment it is installed, with no documentation edit at all.
+    $relnotes = \local_rtocompliance\assistant\knowledge::release_notes();
+    if (!empty($relnotes)) {
+        $lines[] = '';
+        $lines[] = '## What changed, by version (newest first — parsed from this build)';
+        $lines[] = 'Use these when the user asks what is new, whether something was fixed, or why the'
+            . ' software now behaves differently from how they remember it.';
+        foreach ($relnotes as $rn) {
+            $lines[] = '- v' . $rn['version'] . ': ' . $rn['note'];
+        }
+    }
+
+    // ── FAQ + SUPPORT CENTRE, LAST ON PURPOSE (v6.3.14) ─────────────────────────
+    // These two blocks are ~100KB together — three quarters of the whole prompt — and they
+    // restate in short form what the reference documentation says properly. They used to sit
+    // in the middle, which meant any ceiling low enough to be a real guard cut the live site
+    // facts, the page's own documentation and the answering rules instead. Last is where the
+    // cheapest, most duplicative material belongs.
+    // ── FAQ — the plain-English answers shown on the FAQ page, so the assistant gives the
     // same simple answers a first-time user reads there (and can point them to the FAQ page).
     if (is_readable(__DIR__ . '/faq_content.php')) {
         require_once(__DIR__ . '/faq_content.php');
@@ -10472,10 +10828,23 @@ function local_rtocompliance_assistant_kb(string $currentscript = ''): string {
         }
     }
 
-    $lines[] = '## How to answer';
-    $lines[] = 'Answer as a senior VET compliance adviser and former ASQA auditor who also knows this exact software inside-out. Be the RTO\'s personal expert: lead with a direct, specific answer, then give the concrete steps (naming the exact page, menu location and button/field). When a question is about compliance, reason from the RELEVANT 2025 Standard and its underlying outcome and practice guide — explain WHAT ASQA is looking for and WHY, then HOW this plugin helps evidence it, and the risk if it is not addressed. Tailor advice to the RTO\'s situation where the context gives it. ALWAYS give the user a clickable Markdown link to the exact plugin page your suggestion refers to, built from this site\'s base URL (e.g. "to issue a certificate, go to [Generate Qualification Certificates](<site>/local/rtocompliance/generate_qual_certs.php)") — one link per page you mention, using the direct links listed above; never show a bare page-file name without linking it. Do not merely regurgitate steps and do not invent features or clause numbers: if you are not certain of a specific clause or the latest practice-guide wording, say so and point to asqa.gov.au for the current text. If something is genuinely not a feature of this plugin, say so plainly. Keep every ASQA reference accurate. Be thorough but readable.';
+    $kb = implode("\n", $lines);
 
-    return implode("\n", $lines);
+    // v6.3.14: the knowledge base is sent with EVERY question, so it needs a ceiling. Section
+    // order is deliberate and is what makes truncation safe: the live site facts, the
+    // documentation bound to the page the admin is actually on, and the answering instructions
+    // all come FIRST, and the release-note history — the least likely thing to be the answer,
+    // and the only section that grows without bound as versions accumulate — comes last. A cut
+    // therefore takes history rather than the answer, or the rules for how to give it.
+    $max = \local_rtocompliance\assistant\knowledge::KB_MAX_CHARS;
+    if (\core_text::strlen($kb) > $max) {
+        $kb = \core_text::substr($kb, 0, $max)
+            . "\n\n[Knowledge base truncated at " . $max . " characters. If the user's question needs a"
+            . " section that is not present, say what you do not have and point them at the relevant"
+            . " plugin page rather than guessing.]";
+    }
+
+    return $kb;
 }
 
 /**
@@ -10484,8 +10853,11 @@ function local_rtocompliance_assistant_kb(string $currentscript = ''): string {
  * ONE credit per question. A direct Anthropic key configured in plugin settings is
  * supported as a fallback for self-hosted installs (no platform credits then).
  *
- * @param array  $messages conversation as [['role'=>'user'|'assistant','content'=>'...'], ...]
- * @param string $page     basename of the current page (for context)
+ * @param array  $messages   conversation as [['role'=>'user'|'assistant','content'=>'...'], ...]
+ * @param string $page       basename of the current page (for context)
+ * @param array  $pageparams whitelisted integer ids for the record on screen (v6.3.14; sent
+ *                           by the widget and typed with PARAM_INT since v6.3.15), so the
+ *                           assistant can answer about that record rather than in general
  * @return array ['ok'=>bool, 'reply'=>string, 'credits'=>?int, 'mode'=>string, 'error'=>string]
  */
 /**
@@ -10543,7 +10915,12 @@ function local_rtocompliance_assistant_widget_html(): string {
     }
 
     $asst_endpoint = (new moodle_url('/local/rtocompliance/assistant.php'))->out(false);
-    $asst_js       = (new moodle_url('/local/rtocompliance/js/rtoc_assistant.js'))->out();
+    // CACHE-BUST (v6.3.15): the script tag carried no revision, so a browser holding the
+    // previous build's copy kept POSTing the old request shape after an upgrade — silently
+    // losing the page context until the file happened to be refetched. Stamping the plugin
+    // version means every upgrade serves a new URL.
+    $asst_js       = (new moodle_url('/local/rtocompliance/js/rtoc_assistant.js',
+        ['v' => (string) (get_config('local_rtocompliance', 'version') ?: '1')]))->out();
     $asst_page     = ($PAGE && $PAGE->url) ? basename((string) $PAGE->url->get_path()) : '';
     $asst_sk       = sesskey();
                 $asst_css = <<<CSS
@@ -10674,7 +11051,7 @@ function local_rtocompliance_assistant_creds(): array {
     ];
 }
 
-function local_rtocompliance_assistant_ask(array $messages, string $page = ''): array {
+function local_rtocompliance_assistant_ask(array $messages, string $page = '', array $pageparams = []): array {
     $creds = local_rtocompliance_assistant_creds();
     $apiurl    = $creds['apiurl'];
     $siteid    = $creds['siteid'];
@@ -10686,7 +11063,9 @@ function local_rtocompliance_assistant_ask(array $messages, string $page = ''): 
     $clean = [];
     foreach (array_slice($messages, -10) as $m) {
         $role = (isset($m['role']) && $m['role'] === 'assistant') ? 'assistant' : 'user';
-        $content = trim((string) ($m['content'] ?? ''));
+        // is_string(): the messages come from a JSON body, and an array here would raise
+        // 'Array to string conversion' before json_encode() runs, corrupting the response.
+        $content = (isset($m['content']) && is_string($m['content'])) ? trim($m['content']) : '';
         if ($content === '') {
             continue;
         }
@@ -10699,7 +11078,7 @@ function local_rtocompliance_assistant_ask(array $messages, string $page = ''): 
         return ['ok' => false, 'reply' => '', 'credits' => null, 'mode' => 'none', 'error' => 'Empty question'];
     }
 
-    $kb = local_rtocompliance_assistant_kb($page);
+    $kb = local_rtocompliance_assistant_kb($page, $pageparams);
 
     \core\session\manager::write_close();
 
