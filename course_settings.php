@@ -54,7 +54,8 @@ class course_settings_form extends moodleform {
 
         $mform->addElement('header', 'nationallyrecognisedheader', get_string('nationallyrecognised_header', 'local_rtocompliance'));
 
-        $mform->addElement('advcheckbox', 'nationallyrecognised', get_string('nationallyrecognised', 'local_rtocompliance'),
+        $mform->addElement(
+            'advcheckbox', 'nationallyrecognised', get_string('nationallyrecognised', 'local_rtocompliance'),
             get_string('nationallyrecognised_desc', 'local_rtocompliance'));
         $mform->addHelpButton('nationallyrecognised', 'nationallyrecognised', 'local_rtocompliance');
 
@@ -74,7 +75,8 @@ class course_settings_form extends moodleform {
 
         $mform->addElement('header', 'cricosheader', get_string('cricos_header', 'local_rtocompliance'));
 
-        $mform->addElement('advcheckbox', 'cricosregistered', get_string('cricosregistered', 'local_rtocompliance'),
+        $mform->addElement(
+            'advcheckbox', 'cricosregistered', get_string('cricosregistered', 'local_rtocompliance'),
             get_string('cricosregistered_desc', 'local_rtocompliance'));
         $mform->hideIf('cricosregistered', 'nationallyrecognised', 'notchecked');
 
@@ -136,7 +138,7 @@ echo html_writer::tag('p', get_string('rtocompliance_settings_desc', 'local_rtoc
 
 $form->display();
 
-// v4.7.104 BULK-COURSE-CERTS — quick-action link to bulk cert generation for this course
+// Version 4.7.104 BULK-COURSE-CERTS — quick-action link to bulk cert generation for this course
 echo html_writer::start_div('card mt-4');
 echo html_writer::start_div('card-body');
 echo html_writer::tag('h5', 'Certificate Actions', ['class' => 'card-title']);

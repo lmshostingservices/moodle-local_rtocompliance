@@ -246,23 +246,27 @@ function local_rtocompliance_qi_compute($surveys, $bank) {
     return ['respondents' => $respondents, 'scales' => $scales, 'indicators' => $indicators];
 }
 
-$learnercount = $DB->count_records('local_rtocompliance_surveys', [
-    'surveytype' => 'learner',
-    'year' => $year,
-    'status' => 'completed',
+$learnercount = $DB->count_records(
+    'local_rtocompliance_surveys', [
+        'surveytype' => 'learner',
+        'year' => $year,
+        'status' => 'completed',
 ]);
 
-$employercount = $DB->count_records('local_rtocompliance_surveys', [
-    'surveytype' => 'employer',
-    'year' => $year,
-    'status' => 'completed',
+$employercount = $DB->count_records(
+    'local_rtocompliance_surveys', [
+        'surveytype' => 'employer',
+        'year' => $year,
+        'status' => 'completed',
 ]);
 
-$learnersurveys = $DB->get_records('local_rtocompliance_surveys', [
-    'surveytype' => 'learner', 'year' => $year, 'status' => 'completed',
+$learnersurveys = $DB->get_records(
+    'local_rtocompliance_surveys', [
+        'surveytype' => 'learner', 'year' => $year, 'status' => 'completed',
 ]);
-$employersurveys = $DB->get_records('local_rtocompliance_surveys', [
-    'surveytype' => 'employer', 'year' => $year, 'status' => 'completed',
+$employersurveys = $DB->get_records(
+    'local_rtocompliance_surveys', [
+        'surveytype' => 'employer', 'year' => $year, 'status' => 'completed',
 ]);
 
 $learnerbank   = local_rtocompliance_qi_item_bank('learner');
@@ -318,8 +322,9 @@ function local_rtocompliance_qi_render_indicators($bank, $stats, $completed, $to
     // Per-indicator scale tables.
     foreach ($bank['indicators'] as $ik => $ilabel) {
         $ind = $stats['indicators'][$ik];
-        echo html_writer::tag('h4',
-            $ilabel . ' — indicator score: ' . $fmt($ind['avg']),
+        echo html_writer::tag(
+            'h4',
+                $ilabel . ' — indicator score: ' . $fmt($ind['avg']),
             ['style' => 'margin:1rem 0 0.5rem;']);
 
         $rows = '';
@@ -340,8 +345,9 @@ function local_rtocompliance_qi_render_indicators($bank, $stats, $completed, $to
             . html_writer::tag('th', 'Items', ['style' => 'text-align:center;', 'title' => 'Number of questionnaire items in this scale'])
             . html_writer::tag('th', 'Item Responses', ['style' => 'text-align:center;', 'title' => 'Total item responses pooled across all respondents for this scale'])
             . html_writer::end_tag('tr');
-        echo html_writer::tag('table',
-            html_writer::tag('thead', $head) . html_writer::tag('tbody', $rows),
+        echo html_writer::tag(
+            'table',
+                html_writer::tag('thead', $head) . html_writer::tag('tbody', $rows),
             ['class' => 'generaltable', 'style' => 'width:100%;margin-bottom:0.5rem;']);
     }
 }
@@ -374,8 +380,9 @@ echo html_writer::start_div('form-card');
 if ($learnercount > 0) {
     local_rtocompliance_qi_render_indicators($learnerbank, $learnerstats, $learnercount, $learnertotal, $learnerrate);
 } else {
-    echo html_writer::tag('p', 'No completed learner questionnaires for ' . $year . ' yet. Response rate: '
-        . $learnerrate . '% (' . $learnercount . ' of ' . $learnertotal . ' invited).',
+    echo html_writer::tag(
+        'p', 'No completed learner questionnaires for ' . $year . ' yet. Response rate: '
+            . $learnerrate . '% (' . $learnercount . ' of ' . $learnertotal . ' invited).',
         ['class' => 'text-muted']);
 }
 echo html_writer::start_div('rtoc-card-actions');
@@ -393,8 +400,9 @@ echo html_writer::start_div('form-card');
 if ($employercount > 0) {
     local_rtocompliance_qi_render_indicators($employerbank, $employerstats, $employercount, $employertotal, $employerrate);
 } else {
-    echo html_writer::tag('p', 'No completed employer questionnaires for ' . $year . ' yet. Response rate: '
-        . $employerrate . '% (' . $employercount . ' of ' . $employertotal . ' invited).',
+    echo html_writer::tag(
+        'p', 'No completed employer questionnaires for ' . $year . ' yet. Response rate: '
+            . $employerrate . '% (' . $employercount . ' of ' . $employertotal . ' invited).',
         ['class' => 'text-muted']);
 }
 echo html_writer::start_div('rtoc-card-actions');

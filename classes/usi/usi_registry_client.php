@@ -321,15 +321,16 @@ XML;
         ];
         
         $ch = curl_init($endpoint);
-        curl_setopt_array($ch, [
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $soapenvelope,
-            CURLOPT_HTTPHEADER => $headers,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => self::REQUEST_TIMEOUT_SECONDS,
-            CURLOPT_SSL_VERIFYPEER => true,
-            CURLOPT_SSL_VERIFYHOST => 2,
-            CURLOPT_SSLVERSION => CURL_SSLVERSION_TLSv1_2,
+        curl_setopt_array(
+            $ch, [
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => $soapenvelope,
+                CURLOPT_HTTPHEADER => $headers,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => self::REQUEST_TIMEOUT_SECONDS,
+                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_SSL_VERIFYHOST => 2,
+                CURLOPT_SSLVERSION => CURL_SSLVERSION_TLSv1_2,
         ]);
         
         // Configure TLS client certificate authentication for MAS-ST

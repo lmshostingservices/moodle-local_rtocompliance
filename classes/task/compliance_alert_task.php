@@ -71,7 +71,8 @@ class compliance_alert_task extends \core\task\scheduled_task {
         $alerts = [];
 
         // QA1 — validations overdue.
-        $n = $count('local_rtocompliance_validations',
+        $n = $count(
+            'local_rtocompliance_validations',
             'nextduedate IS NOT NULL AND nextduedate > 0 AND nextduedate < :now', ['now' => $now]);
         if ($n > 0) {
             $alerts[] = [$n, 'assessment validation(s) overdue for their five-year cycle',
@@ -79,8 +80,9 @@ class compliance_alert_task extends \core\task\scheduled_task {
         }
 
         // QA3 — working-towards trainers past their 2-year TAE deadline.
-        $n = $count('local_rtocompliance_trainers',
-            "taecredential = :wt AND wtdeadline IS NOT NULL AND wtdeadline > 0 AND wtdeadline < :now",
+        $n = $count(
+            'local_rtocompliance_trainers',
+                "taecredential = :wt AND wtdeadline IS NOT NULL AND wtdeadline > 0 AND wtdeadline < :now",
             ['wt' => 'Working Towards', 'now' => $now]);
         if ($n > 0) {
             $alerts[] = [$n, 'working-towards trainer(s) past their 2-year TAE completion deadline',
@@ -88,8 +90,9 @@ class compliance_alert_task extends \core\task\scheduled_task {
         }
 
         // QA3 — stale industry currency (older than 365 days).
-        $n = $count('local_rtocompliance_trainers',
-            "(industrycurrencydate IS NULL OR industrycurrencydate < :cut) AND (status IS NULL OR status <> :inactive)",
+        $n = $count(
+            'local_rtocompliance_trainers',
+                "(industrycurrencydate IS NULL OR industrycurrencydate < :cut) AND (status IS NULL OR status <> :inactive)",
             ['cut' => $now - (365 * 86400), 'inactive' => 'inactive']);
         if ($n > 0) {
             $alerts[] = [$n, 'trainer(s) whose industry currency is stale or unrecorded (>12 months)',
@@ -115,8 +118,9 @@ class compliance_alert_task extends \core\task\scheduled_task {
         }
 
         // Certification — certs past the 30-day issuance SLA.
-        $n = $count('local_rtocompliance_certs',
-            'timecompleted IS NOT NULL AND timecompleted > 0 AND timecompleted < :cut AND (timeissued IS NULL OR timeissued = 0)',
+        $n = $count(
+            'local_rtocompliance_certs',
+                'timecompleted IS NOT NULL AND timecompleted > 0 AND timecompleted < :cut AND (timeissued IS NULL OR timeissued = 0)',
             ['cut' => $now - (30 * 86400)]);
         if ($n > 0) {
             $alerts[] = [$n, 'certificate(s) past the ASQA 30-day issuance rule',

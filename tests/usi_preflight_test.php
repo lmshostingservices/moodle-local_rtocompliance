@@ -39,7 +39,6 @@ require_once($CFG->dirroot . '/local/rtocompliance/lib.php');
  * @coversDefaultClass \local_rtocompliance
  */
 final class usi_preflight_test extends \advanced_testcase {
-
     /**
      * Create a Moodle user plus an optional RTO Compliance student row.
      *
@@ -51,12 +50,13 @@ final class usi_preflight_test extends \advanced_testcase {
         global $DB;
         $user = $this->getDataGenerator()->create_user();
         if ($usi !== null) {
-            $DB->insert_record('local_rtocompliance_students', (object) [
-                'userid'       => $user->id,
-                'usi'          => $usi,
-                'usiverified'  => $usiverified,
-                'timecreated'  => time(),
-                'timemodified' => time(),
+            $DB->insert_record(
+                'local_rtocompliance_students', (object) [
+                    'userid'       => $user->id,
+                    'usi'          => $usi,
+                    'usiverified'  => $usiverified,
+                    'timecreated'  => time(),
+                    'timemodified' => time(),
             ]);
         }
         return (int) $user->id;

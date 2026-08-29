@@ -78,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && confirm_sesskey()) {
             ['tasid' => $tasid]
         );
     } else {
-        // bulk_send: POST'd list of user IDs from the students.php form
+        // The bulk_send action: POST'd list of user IDs from the students.php form
         $userids = optional_param_array('userids', [], PARAM_INT);
         $userids = array_filter(array_map('intval', $userids));
         if (empty($userids)) {
@@ -130,28 +130,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && confirm_sesskey()) {
             $suitabilityid = $existing->id;
         } else {
             $token = bin2hex(random_bytes(32));
-            $suitabilityid = $DB->insert_record('local_rtocompliance_suitability', (object)[
-                'tasid'        => $tasid,
-                'userid'       => $user->id,
-                'token'        => $token,
-                'status'       => 'pending',
-                'timesent'     => time(),
-                'timecreated'  => time(),
-                'timemodified' => time(),
+            $suitabilityid = $DB->insert_record(
+                'local_rtocompliance_suitability', (object)[
+                    'tasid'        => $tasid,
+                    'userid'       => $user->id,
+                    'token'        => $token,
+                    'status'       => 'pending',
+                    'timesent'     => time(),
+                    'timecreated'  => time(),
+                    'timemodified' => time(),
             ]);
         }
 
         foreach ($questions as $i => $q) {
-            $DB->insert_record('local_rtocompliance_suitability_answers', (object)[
-                'suitabilityid' => $suitabilityid,
-                'question'      => $q,
-                'answer'        => null,
-                'displayorder'  => $i,
+            $DB->insert_record(
+                'local_rtocompliance_suitability_answers', (object)[
+                    'suitabilityid' => $suitabilityid,
+                    'question'      => $q,
+                    'answer'        => null,
+                    'displayorder'  => $i,
             ]);
         }
 
         local_rtocompliance_send_suitability_email($user, $tas, $token);
-        local_rtocompliance_log_action('suitability_bulk_sent', 'suitability', $suitabilityid,
+        local_rtocompliance_log_action(
+            'suitability_bulk_sent', 'suitability', $suitabilityid,
             ['userid' => $user->id, 'tasid' => $tasid, 'action' => $action]);
         $sent++;
     }
@@ -206,34 +209,39 @@ if (empty($tas_records)) {
     echo html_writer::start_div('generalbox mb-4 p-4');
     echo html_writer::tag('p', get_string('suitability_fill_gaps_desc', 'local_rtocompliance'));
 
-    echo html_writer::start_tag('form', [
-        'method' => 'post',
-        'action' => (new moodle_url('/local/rtocompliance/suitability_bulk.php', [
-            'action'  => 'fill_gaps',
-            'sesskey' => sesskey(),
-        ]))->out(false),
+    echo html_writer::start_tag(
+        'form', [
+            'method' => 'post',
+            'action' => (new moodle_url(
+            '/local/rtocompliance/suitability_bulk.php', [
+                    'action'  => 'fill_gaps',
+                    'sesskey' => sesskey(),
+            ]))->out(false),
     ]);
 
-    echo html_writer::tag('label',
-        get_string('suitability_select_tas', 'local_rtocompliance'),
-        ['for' => 'tasid', 'class' => 'd-block mb-1 font-weight-bold']
+    echo html_writer::tag(
+        'label',
+            get_string('suitability_select_tas', 'local_rtocompliance'),
+            ['for' => 'tasid', 'class' => 'd-block mb-1 font-weight-bold']
     );
-    echo html_writer::select($tasoptions, 'tasid', '', false, [
-        'id'    => 'tasid',
-        'class' => 'form-control mb-2',
-        'style' => 'max-width:500px',
+    echo html_writer::select(
+        $tasoptions, 'tasid', '', false, [
+            'id'    => 'tasid',
+            'class' => 'form-control mb-2',
+            'style' => 'max-width:500px',
     ]);
 
     echo html_writer::tag('p', '', ['id' => 'gap-count', 'class' => 'text-muted small mt-1 mb-3']);
 
-    echo html_writer::tag('button',
-        get_string('suitability_fill_gaps_btn', 'local_rtocompliance'),
-        [
-            'type'    => 'submit',
-            'class'   => 'btn btn-warning',
-            'title'   => 'Email a Student Suitability Check to every student who has no record yet for the selected qualification',
-            'onclick' => 'return confirm("' . get_string('suitability_fill_gaps_confirm', 'local_rtocompliance') . '")',
-        ]
+    echo html_writer::tag(
+        'button',
+            get_string('suitability_fill_gaps_btn', 'local_rtocompliance'),
+            [
+                'type'    => 'submit',
+                'class'   => 'btn btn-warning',
+                'title'   => 'Email a Student Suitability Check to every student who has no record yet for the selected qualification',
+                'onclick' => 'return confirm("' . get_string('suitability_fill_gaps_confirm', 'local_rtocompliance') . '")',
+            ]
     );
     echo ' ';
     echo html_writer::link(
@@ -245,7 +253,8 @@ if (empty($tas_records)) {
     echo html_writer::end_tag('form');
     echo html_writer::end_div();
 
-    echo html_writer::script('(function () {
+    echo html_writer::script(
+        '(function () {
         var gaps = ' . json_encode($gapcount) . ';
         var sel  = document.getElementById("tasid");
         var cnt  = document.getElementById("gap-count");

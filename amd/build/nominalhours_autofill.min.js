@@ -1,5 +1,60 @@
-define([], function () {
+define(['core/str'], function (Str) {
     'use strict';
+
+    // AMD-STRINGS (v6.3.21): every user-facing string on this module comes from the language
+    // pack through core/str — none is written in this file — so an RTO that rewords or
+    // translates the plugin sees the change here too. The keys are declared empty and filled
+    // by loadStrings() before anything is rendered.
+    var S = {
+        nominalhours_lookup_btn: '',
+        nominalhours_lookup_btn_title: '',
+        nominalhours_lookup_busy: '',
+        nominalhours_lookup_searching: '',
+        nominalhours_lookup_found: '',
+        nominalhours_lookup_none: '',
+        nominalhours_lookup_failed: '',
+        nominalhours_lookup_timeout: '',
+        nominalhours_source_ncver: '',
+        nominalhours_source_local: ''
+    };
+
+    /**
+     * Load every string above from the language pack into S.
+     *
+     * @return {Promise} resolved once the strings are in place
+     */
+    function loadStrings() {
+        var keys = Object.keys(S).map(function (k) {
+            return {key: k, component: 'local_rtocompliance'};
+        });
+        return Str.get_strings(keys).then(function (values) {
+            Object.keys(S).forEach(function (k, i) {
+                if (values[i]) {
+                    S[k] = values[i];
+                }
+            });
+            return S;
+        });
+    }
+
+    /**
+     * Substitute a {$a} placeholder (or {$a->name} placeholders) in a resolved string.
+     *
+     * @param {String} template the string as returned by core/str
+     * @param {Object|String} a the replacement value, or an object of named values
+     * @return {String} the string with its placeholders filled in
+     */
+    function fill(template, a) {
+        if (a === null || a === undefined) {
+            return template;
+        }
+        if (typeof a !== 'object') {
+            return String(template).replace(/\{\$a\}/g, a);
+        }
+        return String(template).replace(/\{\$a->(\w+)\}/g, function (m, name) {
+            return a[name] !== undefined ? a[name] : m;
+        });
+    }
 
     var debounceTimer = null;
     // FIX-XHR-RACE (v5.9.277): track the in-flight XHR so we can abort it
@@ -32,7 +87,12 @@ define([], function () {
             return;
         }
 
-        injectLookupButton(codeField, titleField, hoursField);
+        // The lookup button is only injected once its label has resolved, so no English
+        // placeholder can ever be painted into the page.
+        loadStrings().then(function () {
+            injectLookupButton(codeField, titleField, hoursField);
+            return S;
+        });
 
         codeField.addEventListener('blur', function () {
             var code = codeField.value.trim();
@@ -69,8 +129,8 @@ define([], function () {
         var btn = document.createElement('button');
         btn.type = 'button';
         btn.id = 'btn-rtoc-lookup-nominalhours';
-        btn.textContent = 'Lookup NCVER Hours';
-        btn.title = 'Automatically fetch nominal hours from NCVER for this code';
+        btn.textContent = S.nominalhours_lookup_btn;
+        btn.title = S.nominalhours_lookup_btn_title;
         btn.style.cssText = [
             'margin-left:8px',
             'padding:3px 10px',
@@ -110,12 +170,12 @@ define([], function () {
         // NOMINAL-HOURS-INTERNAL (v5.9.418): query the internal endpoint by ?code=.
         var url = apiUrl + (apiUrl.indexOf('?') >= 0 ? '&' : '?') + 'code=' + encodeURIComponent(code);
 
-        showLookupStatus(hoursField, 'Looking up ' + code + '...', 'info');
+        showLookupStatus(hoursField, fill(S.nominalhours_lookup_searching, code), 'info');
 
         var btn = document.getElementById('btn-rtoc-lookup-nominalhours');
         if (btn) {
             btn.disabled = true;
-            btn.textContent = 'Looking up...';
+            btn.textContent = S.nominalhours_lookup_busy;
         }
 
         // Abort any in-flight request before starting a new one.
@@ -138,7 +198,7 @@ define([], function () {
 
             if (btn) {
                 btn.disabled = false;
-                btn.textContent = 'Lookup NCVER Hours';
+                btn.textContent = S.nominalhours_lookup_btn;
             }
 
             if (xhr.status === 200) {
@@ -151,23 +211,24 @@ define([], function () {
 
                     if (data.success && data.nominalHours) {
                         hoursField.value = data.nominalHours;
-                        var src = data.source === 'ncver'     ? 'NCVER'
-                               : data.source === 'database'   ? 'RTO Compliance'
-                               : 'NCVER';
+                        var src = (data.source === 'database')
+                            ? S.nominalhours_source_local
+                            : S.nominalhours_source_ncver;
                         showLookupStatus(hoursField,
-                            '\u2713 Found: ' + data.nominalHours + ' hours (' + src + ')', 'success');
+                            '\u2713 ' + fill(S.nominalhours_lookup_found,
+                                {hours: data.nominalHours, source: src}), 'success');
                         setTimeout(function () { hideLookupStatus(); }, 5000);
                     } else {
-                        var titleMsg = data.unitTitle ? ' (' + data.unitTitle + ')' : '';
+                        var titleMsg = data.unitTitle ? code + ' (' + data.unitTitle + ')' : code;
                         showLookupStatus(hoursField,
-                            'No NCVER hours found for ' + code + titleMsg + '. Enter manually.', 'warning');
+                            fill(S.nominalhours_lookup_none, titleMsg), 'warning');
                         setTimeout(function () { hideLookupStatus(); }, 6000);
                     }
                 } catch (e) {
                     hideLookupStatus();
                 }
             } else {
-                showLookupStatus(hoursField, 'Lookup failed. Enter hours manually.', 'warning');
+                showLookupStatus(hoursField, S.nominalhours_lookup_failed, 'warning');
                 setTimeout(function () { hideLookupStatus(); }, 5000);
             }
         };
@@ -175,9 +236,9 @@ define([], function () {
         xhr.ontimeout = function () {
             if (btn) {
                 btn.disabled = false;
-                btn.textContent = 'Lookup NCVER Hours';
+                btn.textContent = S.nominalhours_lookup_btn;
             }
-            showLookupStatus(hoursField, 'Lookup timed out. Enter hours manually.', 'warning');
+            showLookupStatus(hoursField, S.nominalhours_lookup_timeout, 'warning');
             setTimeout(function () { hideLookupStatus(); }, 5000);
         };
 

@@ -36,7 +36,7 @@ require_once(__DIR__ . '/usi_platform_client.php');
 class usi_verification_service {
     const CACHE_TTL_VERIFIED = 86400 * 365;
     const CACHE_TTL_FAILED = 86400;
-    const BATCH_SIZE = 25; // matches verify_usi_batch_task::BATCH_SIZE — keep in sync
+    const BATCH_SIZE = 25; // Matches verify_usi_batch_task::BATCH_SIZE — keep in sync
     const RATE_LIMIT_PER_MINUTE = 60;
     const RATE_LIMIT_CACHE_KEY = 'usi_rate_limit_count';
     const RATE_LIMIT_WINDOW_SECONDS = 60;
@@ -301,11 +301,12 @@ class usi_verification_service {
                 }
             } catch (\Exception $e) {
                 $failed++;
-                $this->log_verification_attempt($item['student_id'], $item['usi'], [
-                    'verified' => false,
-                    'status' => 'ERROR',
-                    'message' => $e->getMessage(),
-                    'details' => [],
+                $this->log_verification_attempt(
+                    $item['student_id'], $item['usi'], [
+                        'verified' => false,
+                        'status' => 'ERROR',
+                        'message' => $e->getMessage(),
+                        'details' => [],
                 ]);
             }
             

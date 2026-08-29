@@ -122,11 +122,12 @@ class local_rtocompliance_observer {
             }
         }
 
-        \local_rtocompliance\task\process_enrolment_task::queue_if_not_pending([
-            'action'   => 'create',
-            'userid'   => $event->relateduserid,
-            'courseid' => $event->courseid,
-            'enrolid'  => $event->objectid,
+        \local_rtocompliance\task\process_enrolment_task::queue_if_not_pending(
+            [
+                'action'   => 'create',
+                'userid'   => $event->relateduserid,
+                'courseid' => $event->courseid,
+                'enrolid'  => $event->objectid,
         ]);
 
         // Auto-send suitability checklist on enrolment if enabled in settings
@@ -191,18 +192,20 @@ class local_rtocompliance_observer {
             }
         }
 
-        \local_rtocompliance\task\process_enrolment_task::queue_if_not_pending([
-            'action' => 'delete',
-            'userid' => $event->relateduserid,
-            'courseid' => $event->courseid,
+        \local_rtocompliance\task\process_enrolment_task::queue_if_not_pending(
+            [
+                'action' => 'delete',
+                'userid' => $event->relateduserid,
+                'courseid' => $event->courseid,
         ]);
     }
 
     public static function course_completed(\core\event\course_completed $event) {
-        \local_rtocompliance\task\process_enrolment_task::queue_if_not_pending([
-            'action' => 'complete',
-            'userid' => $event->relateduserid,
-            'courseid' => $event->courseid,
+        \local_rtocompliance\task\process_enrolment_task::queue_if_not_pending(
+            [
+                'action' => 'complete',
+                'userid' => $event->relateduserid,
+                'courseid' => $event->courseid,
         ]);
     }
 
@@ -310,10 +313,11 @@ class local_rtocompliance_observer {
         // AVETMISS 2.3 positive codes: 20=Competent, 51=RPL granted, 60=Credit transfer, 81=Non-assessable satisfactory.
         // 30=Fail and 40=Withdrawn must NOT trigger qualification completion.
         if (in_array($outcome, ['20', '51', '60', '81'])) {
-            \local_rtocompliance\task\process_enrolment_task::queue_if_not_pending([
-                'action' => 'check_completion',
-                'userid' => $userid,
-                'courseid' => $courseid,
+            \local_rtocompliance\task\process_enrolment_task::queue_if_not_pending(
+                [
+                    'action' => 'check_completion',
+                    'userid' => $userid,
+                    'courseid' => $courseid,
             ]);
         }
     }

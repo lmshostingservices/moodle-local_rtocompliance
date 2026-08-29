@@ -66,7 +66,8 @@ class improvement_form extends \moodleform {
         $mform->addRule('sourcetype', get_string('required'), 'required', null, 'client');
         $mform->addHelpButton('sourcetype', 'source_type', 'local_rtocompliance');
         
-        $mform->addElement('static', 'linkinghelp', '', 
+        $mform->addElement(
+            'static', 'linkinghelp', '', 
             '<div class="alert alert-info" style="margin-bottom: 12px;">If this improvement action originated from a complaint, appeal or validation finding, you can link it below for audit trail purposes.</div>');
         
         $complaintsoptions = ['' => 'No linked complaint'];

@@ -63,11 +63,11 @@ if (!confirm_sesskey($sesskey)) {
     exit;
 }
 $messages = isset($in['messages']) && is_array($in['messages']) ? $in['messages'] : [];
-// is_string(): a JSON array here would raise 'Array to string conversion' and corrupt the
+// The is_string() guard: a JSON array here would raise 'Array to string conversion' and corrupt the
 // JSON response on developer sites.
 $page     = isset($in['page']) && is_string($in['page']) ? clean_param($in['page'], PARAM_FILE) : '';
 
-// v6.3.15: the widget sends the ids of the record on screen, so the assistant can answer
+// Version 6.3.15: the widget sends the ids of the record on screen, so the assistant can answer
 // "why can't I issue for this student?" about that student rather than in the abstract.
 //
 // v6.3.14 sent the whole query string and parsed it server-side, which forced an untyped
@@ -100,11 +100,12 @@ $cache->set($rlkey, $bucket);
 
 $result = local_rtocompliance_assistant_ask($messages, $page, $pageparams);
 
-echo json_encode([
-    'ok'      => (bool) $result['ok'],
-    'reply'   => (string) ($result['reply'] ?? ''),
-    'credits' => $result['credits'] ?? null,
-    'mode'    => (string) ($result['mode'] ?? ''),
-    'error'   => (string) ($result['error'] ?? ''),
+echo json_encode(
+    [
+        'ok'      => (bool) $result['ok'],
+        'reply'   => (string) ($result['reply'] ?? ''),
+        'credits' => $result['credits'] ?? null,
+        'mode'    => (string) ($result['mode'] ?? ''),
+        'error'   => (string) ($result['error'] ?? ''),
 ]);
 exit;

@@ -203,7 +203,9 @@ class cert_template {
      * @return array key => ['label','google','css','core']
      */
     public static function font_catalogue(): array {
-        $sans = 'helvetica'; $serif = 'times'; $mono = 'courier';
+        $sans = 'helvetica';
+        $serif = 'times';
+        $mono = 'courier';
         $mk = function ($label, $google, $stack, $core) {
             return ['label' => $label, 'google' => $google, 'css' => "'" . $google . "', " . $stack, 'core' => $core];
         };
@@ -399,13 +401,21 @@ class cert_template {
     public static function build_starter_design(string $certtype, ?string $orientation = null): array {
         $o = $orientation ?: self::default_orientation($certtype);
         switch ($certtype) {
-            case 'testamur':   $design = $o === 'P' ? self::starter_testamur_portrait()   : self::starter_testamur();    break;
-            case 'statement':  $design = $o === 'L' ? self::starter_statement_landscape() : self::starter_statement();   break;
-            case 'record':     $design = $o === 'L' ? self::starter_record_landscape()    : self::starter_record();      break;
-            case 'completion': $design = $o === 'P' ? self::starter_completion_portrait() : self::starter_completion();  break;
+            case 'testamur':
+                $design = $o === 'P' ? self::starter_testamur_portrait()   : self::starter_testamur();
+                break;
+            case 'statement':
+                $design = $o === 'L' ? self::starter_statement_landscape() : self::starter_statement();
+                break;
+            case 'record':
+                $design = $o === 'L' ? self::starter_record_landscape()    : self::starter_record();
+                break;
+            case 'completion':
+                $design = $o === 'P' ? self::starter_completion_portrait() : self::starter_completion();
+                break;
             default:           $design = self::blank_page('L');
         }
-        // v5.9.361: certificate number + verification QR are mandatory on every cert.
+        // Version 5.9.361: certificate number + verification QR are mandatory on every cert.
         return self::ensure_mandatory_fields($design);
     }
 
@@ -443,17 +453,19 @@ class cert_template {
 
         if (!$haskey('qrcode')) {
             $qs = 22.0;
-            $fields[] = self::mkf($nextid, 'dynamic', [
-                'dynamickey' => 'qrcode',
-                'x_mm' => round($pw - $qs - 8, 1), 'y_mm' => round($ph - $qs - 10, 1),
-                'w_mm' => $qs, 'h_mm' => $qs,
+            $fields[] = self::mkf(
+                $nextid, 'dynamic', [
+                    'dynamickey' => 'qrcode',
+                    'x_mm' => round($pw - $qs - 8, 1), 'y_mm' => round($ph - $qs - 10, 1),
+                    'w_mm' => $qs, 'h_mm' => $qs,
             ]);
         }
         if (!$haskey('cert.number')) {
-            $fields[] = self::mkf($nextid, 'dynamic', [
-                'dynamickey' => 'cert.number',
-                'x_mm' => 15, 'y_mm' => round($ph - 12, 1), 'w_mm' => round($pw - 45, 1), 'h_mm' => 5,
-                'fontsize' => 8, 'align' => 'R', 'color' => '#666666',
+            $fields[] = self::mkf(
+                $nextid, 'dynamic', [
+                    'dynamickey' => 'cert.number',
+                    'x_mm' => 15, 'y_mm' => round($ph - 12, 1), 'w_mm' => round($pw - 45, 1), 'h_mm' => 5,
+                    'fontsize' => 8, 'align' => 'R', 'color' => '#666666',
             ]);
         }
 
@@ -489,7 +501,7 @@ class cert_template {
             if ($kind === 'text') {
                 $t = strtoupper(trim((string) ($f['text'] ?? '')));
                 if ($t === 'DATE' || $t === 'AUTHORISED PERSON') {
-                    continue; // drop the caption label on every cert type
+                    continue; // Drop the caption label on every cert type
                 }
             }
             if ($kind === 'dynamic') {
@@ -512,6 +524,122 @@ class cert_template {
             }
             $out[] = $f;
         }
+        $design['fields'] = $out;
+        // DUPLICATE-TABLE-HEADER-STRIP (v6.3.20): drop the stale plain-text column caption row
+        // that older designs carry above a table which now draws its own shaded header.
+        return self::strip_legacy_table_headers($design);
+    }
+
+    /**
+     * DUPLICATE-TABLE-HEADER-STRIP (v6.3.20) — remove the legacy plain-text column caption row
+     * that older Record of Results / Statement of Attainment designs carry directly above the
+     * units table.
+     *
+     * History: the v4.2.59 starter drew the units list as a plain field and put a separate row
+     * of text fields above it for the column captions ("Semester / Year", "Units / modules
+     * enrolled", "Results"). From v5.9.447 the table draws its OWN shaded header bar, so those
+     * text fields became a second, stale header printed immediately above the real one — the
+     * certificate showed two header rows with different wording. v6.2.9 removed the captions
+     * from the starters, but every template already saved kept them.
+     *
+     * This strips them at render time (and on the editor canvas, since both call
+     * ensure_mandatory_fields()), so existing templates correct themselves without a rebuild.
+     * The saved design is never modified. Idempotent.
+     *
+     * Deliberately narrow, so a caption an author placed on purpose survives:
+     *   • only fires when a self-heading table field is present (ror_table, or the dynamic
+     *     qualification.units / student.detailstable field);
+     *   • never fires when the design uses the legacy per-column fields
+     *     (qualification.units_col_*), where the captions are the only headings there are;
+     *   • only removes a text field whose wording matches a known column caption AND which
+     *     sits within 30mm above the table and overlaps it horizontally.
+     *
+     * @param array $design canonical design array (page + fields)
+     * @return array design with stale caption rows removed
+     */
+    public static function strip_legacy_table_headers(array $design): array {
+        $fields = $design['fields'] ?? [];
+        if (!is_array($fields) || empty($fields)) {
+            return $design;
+        }
+
+        // Locate self-heading tables, keyed by which captions they make redundant, and bail
+        // out if a legacy per-column layout is in play.
+        $tables = ['units' => [], 'identity' => []];
+        foreach ($fields as $f) {
+            $kind = $f['kind'] ?? '';
+            if ($kind === 'ror_table') {
+                $tables['units'][] = $f;
+            } else if ($kind === 'dynamic') {
+                $dk = $f['dynamickey'] ?? '';
+                if ($dk === 'qualification.units') {
+                    $tables['units'][] = $f;
+                } else if ($dk === 'student.detailstable') {
+                    $tables['identity'][] = $f;
+                } else if (strpos($dk, 'qualification.units_col_') === 0) {
+                    return $design; // Legacy three-column layout — its captions are load-bearing.
+                }
+            }
+        }
+        if (empty($tables['units']) && empty($tables['identity'])) {
+            return $design;
+        }
+
+        // Wording that can only ever be a column caption, and the table that supersedes it.
+        // IDENTITY-CAPTION-SAFETY: the "Name of student:" / "USI:" captions are only stale once
+        // the shaded student details table is actually on the canvas — in the legacy stacked
+        // layout they are the only labels those values have, and upgrade_record_identity_to_table()
+        // still needs to see them to recognise the block it replaces.
+        $captions = [
+            'semester year' => 'units', 'semester' => 'units', 'year' => 'units',
+            'units modules enrolled' => 'units', 'units modules' => 'units',
+            'units enrolled' => 'units', 'modules enrolled' => 'units',
+            'unit code' => 'units', 'unit codes' => 'units', 'code' => 'units',
+            'unit title' => 'units', 'unit titles' => 'units',
+            'unit name' => 'units', 'unit names' => 'units', 'title' => 'units',
+            'result' => 'units', 'results' => 'units', 'outcome' => 'units', 'outcomes' => 'units',
+            'date' => 'units', 'dates' => 'units', 'completion date' => 'units',
+            'enrolment date' => 'units', 'enrollment date' => 'units',
+            'student name' => 'identity', 'name of student' => 'identity',
+            'usi' => 'identity', 'qualification' => 'identity',
+            'name of qualification' => 'identity',
+        ];
+
+        $out = [];
+        foreach ($fields as $f) {
+            if (($f['kind'] ?? '') !== 'text') {
+                $out[] = $f;
+                continue;
+            }
+            // Normalise: lower-case, drop separators and a trailing colon, collapse spaces.
+            $t = strtolower(trim((string) ($f['text'] ?? '')));
+            $t = trim(str_replace([':', '/', '|', '-'], ' ', $t));
+            $t = trim(preg_replace('/\s+/', ' ', $t));
+            if ($t === '' || !isset($captions[$t])) {
+                $out[] = $f;
+                continue;
+            }
+
+            $fx = (float) ($f['x_mm'] ?? 0);
+            $fy = (float) ($f['y_mm'] ?? 0);
+            $fw = (float) ($f['w_mm'] ?? 0);
+            $drop = false;
+            foreach ($tables[$captions[$t]] as $tf) {
+                $tx = (float) ($tf['x_mm'] ?? 0);
+                $ty = (float) ($tf['y_mm'] ?? 0);
+                $tw = (float) ($tf['w_mm'] ?? 0);
+                $above = ($fy >= $ty - 30.0) && ($fy <= $ty + 5.0);
+                $overlaps = ($fx < $tx + $tw) && ($fx + $fw > $tx);
+                if ($above && $overlaps) {
+                    $drop = true;
+                    break;
+                }
+            }
+            if (!$drop) {
+                $out[] = $f;
+            }
+        }
+
         $design['fields'] = $out;
         return $design;
     }
@@ -540,9 +668,9 @@ class cert_template {
         $identitykeys = ['student.fullname', 'student.usi', 'qualification.code', 'qualification.name'];
         $labeltexts   = ['name of student', 'usi', 'name of qualification'];
 
-        $group = [];        // indices of fields that form the legacy identity block.
-        $hasname = false;   // student.fullname dynamic field present?
-        $hasstdlabel = false; // the standard "Name of student:" caption present?
+        $group = [];        // Indices of fields that form the legacy identity block.
+        $hasname = false;   // Student.fullname dynamic field present?
+        $hasstdlabel = false; // The standard "Name of student:" caption present?
         foreach ($fields as $i => $f) {
             $kind = $f['kind'] ?? '';
             if ($kind === 'dynamic') {
@@ -572,7 +700,9 @@ class cert_template {
         }
 
         // Bounding box of the identity block so the table lands in the same place/width.
-        $minx = null; $miny = null; $maxr = null;
+        $minx = null;
+        $miny = null;
+        $maxr = null;
         foreach ($group as $f) {
             $fx = (float)($f['x_mm'] ?? 0);
             $fy = (float)($f['y_mm'] ?? 0);
@@ -610,7 +740,7 @@ class cert_template {
         $out = [];
         foreach ($fields as $i => $f) {
             if ($i === $insertat) {
-                $out[] = $newfield;   // identity table lands where the stacked block was
+                $out[] = $newfield;   // Identity table lands where the stacked block was
             }
             if (!isset($group[$i])) {
                 $out[] = $f;
@@ -723,7 +853,7 @@ class cert_template {
         // Qualification block.
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'qualification.code','x_mm' => 30,  'y_mm' => 103, 'w_mm' => 237, 'h_mm' => 7,  'fontsize' => 14, 'fontstyle' => 'B', 'align' => 'C']);
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'qualification.name','x_mm' => 30,  'y_mm' => 111, 'w_mm' => 237, 'h_mm' => 10, 'fontsize' => 18, 'fontstyle' => 'B', 'align' => 'C', 'font' => 'times']);
-        // v4.2.61 — Optional fact-sheet descriptors. Render blank when admin setting empty.
+        // Version 4.2.61 — Optional fact-sheet descriptors. Render blank when admin setting empty.
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'industry_descriptor',       'x_mm' => 30, 'y_mm' => 124, 'w_mm' => 237, 'h_mm' => 4, 'fontsize' => 9, 'fontstyle' => 'I', 'align' => 'C', 'color' => '#444444']);
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'occupational_stream',       'x_mm' => 30, 'y_mm' => 128, 'w_mm' => 237, 'h_mm' => 4, 'fontsize' => 9, 'fontstyle' => 'I', 'align' => 'C', 'color' => '#444444']);
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'australian_apprenticeship', 'x_mm' => 30, 'y_mm' => 132, 'w_mm' => 237, 'h_mm' => 4, 'fontsize' => 9, 'fontstyle' => 'I', 'align' => 'C', 'color' => '#444444']);
@@ -734,7 +864,7 @@ class cert_template {
         // Signature block bottom-left.
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'signatory.signature', 'x_mm' => 25, 'y_mm' => 175, 'w_mm' => 60, 'h_mm' => 14]);
         $fields[] = self::mkf($id, 'line',    ['x_mm' => 25, 'y_mm' => 189, 'w_mm' => 70, 'h_mm' => 0, 'linewidth' => 0.4]);
-        // v4.2.61 — fact sheet labels.
+        // Version 4.2.61 — fact sheet labels.
         $fields[] = self::mkf($id, 'text',    ['x_mm' => 25, 'y_mm' => 190, 'w_mm' => 70, 'h_mm' => 4, 'fontsize' => 7, 'fontstyle' => 'I', 'color' => '#888888', 'text' => 'AUTHORISED PERSON']);
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'signatory.name',    'x_mm' => 25, 'y_mm' => 194, 'w_mm' => 70, 'h_mm' => 6, 'fontsize' => 11, 'fontstyle' => 'B']);
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'signatory.title',   'x_mm' => 25, 'y_mm' => 200, 'w_mm' => 70, 'h_mm' => 5, 'fontsize' => 9, 'color' => '#666666']);
@@ -789,13 +919,13 @@ class cert_template {
         // now 10mm tall so a two-line qualification title wraps cleanly instead of
         // colliding with the descriptors below, and the descriptors are re-spaced.
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'qualification.partofstatement','x_mm' => 15, 'y_mm' => 191, 'w_mm' => 180, 'h_mm' => 10, 'fontsize' => 10, 'fontstyle' => 'I', 'align' => 'C']);
-        // v4.2.61 — Optional descriptors per fact sheet page 4. Render blank when unused.
+        // Version 4.2.61 — Optional descriptors per fact sheet page 4. Render blank when unused.
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'skill_set_statement',         'x_mm' => 15, 'y_mm' => 202, 'w_mm' => 180, 'h_mm' => 6, 'fontsize' => 9, 'fontstyle' => 'I', 'align' => 'C', 'color' => '#444444']);
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'language_statement',          'x_mm' => 15, 'y_mm' => 209, 'w_mm' => 180, 'h_mm' => 6, 'fontsize' => 9, 'fontstyle' => 'I', 'align' => 'C', 'color' => '#444444']);
         // Signature.
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'signatory.signature',         'x_mm' => 20, 'y_mm' => 220, 'w_mm' => 60, 'h_mm' => 14]);
         $fields[] = self::mkf($id, 'line',    ['x_mm' => 20, 'y_mm' => 234, 'w_mm' => 70, 'h_mm' => 0, 'linewidth' => 0.4]);
-        // v4.2.61 — fact sheet labels.
+        // Version 4.2.61 — fact sheet labels.
         $fields[] = self::mkf($id, 'text',    ['x_mm' => 20, 'y_mm' => 235, 'w_mm' => 70, 'h_mm' => 4, 'fontsize' => 7, 'fontstyle' => 'I', 'color' => '#888888', 'text' => 'AUTHORISED PERSON']);
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'signatory.name',              'x_mm' => 20, 'y_mm' => 239, 'w_mm' => 70, 'h_mm' => 5, 'fontsize' => 10, 'fontstyle' => 'B']);
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'signatory.title',             'x_mm' => 20, 'y_mm' => 244, 'w_mm' => 70, 'h_mm' => 5, 'fontsize' => 9, 'color' => '#666666']);
@@ -837,12 +967,12 @@ class cert_template {
         // full five-column ASQA layout — Enrolment Date | Unit Code | Unit Title | Result |
         // Completion Date — with a result-code legend (C / NYC / CT / RPL) printed beneath.
         $fields[] = self::mkf($id, 'ror_table', ['x_mm' => 15, 'y_mm' => 92, 'w_mm' => 180, 'h_mm' => 112, 'fontsize' => 10, 'col1_w' => 34, 'col2_w' => 110, 'col3_w' => 36, 'col3mode' => 'result']);
-        // v4.2.61 — Optional language statement.
+        // Version 4.2.61 — Optional language statement.
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'language_statement',        'x_mm' => 15, 'y_mm' => 220, 'w_mm' => 180, 'h_mm' => 5, 'fontsize' => 9, 'fontstyle' => 'I', 'align' => 'C', 'color' => '#444444']);
         // Signature + metadata.
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'signatory.signature',       'x_mm' => 20, 'y_mm' => 232, 'w_mm' => 60, 'h_mm' => 14]);
         $fields[] = self::mkf($id, 'line',    ['x_mm' => 20, 'y_mm' => 246, 'w_mm' => 70, 'h_mm' => 0, 'linewidth' => 0.4]);
-        // v4.2.61 — fact sheet labels.
+        // Version 4.2.61 — fact sheet labels.
         $fields[] = self::mkf($id, 'text',    ['x_mm' => 20, 'y_mm' => 247, 'w_mm' => 70, 'h_mm' => 4, 'fontsize' => 7, 'fontstyle' => 'I', 'color' => '#888888', 'text' => 'AUTHORISED PERSON']);
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'signatory.name',            'x_mm' => 20, 'y_mm' => 251, 'w_mm' => 70, 'h_mm' => 5, 'fontsize' => 10, 'fontstyle' => 'B']);
         // ASQA-RECORD-COMPLIANCE (v5.2.54): signatoryTitle added — ASQA p.3 shows AUTHORISED PERSON.
@@ -889,7 +1019,7 @@ class cert_template {
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'attained_statement', 'x_mm' => 15, 'y_mm' => 110, 'w_mm' => 180, 'h_mm' => 8, 'fontsize' => 13, 'fontstyle' => 'I', 'align' => 'C']);
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'qualification.code', 'x_mm' => 15, 'y_mm' => 122, 'w_mm' => 180, 'h_mm' => 7, 'fontsize' => 14, 'fontstyle' => 'B', 'align' => 'C']);
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'qualification.name', 'x_mm' => 15, 'y_mm' => 130, 'w_mm' => 180, 'h_mm' => 12, 'fontsize' => 18, 'fontstyle' => 'B', 'align' => 'C', 'font' => 'times']);
-        // v4.2.61 — Optional fact-sheet descriptors. Render blank when empty.
+        // Version 4.2.61 — Optional fact-sheet descriptors. Render blank when empty.
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'industry_descriptor',       'x_mm' => 15, 'y_mm' => 145, 'w_mm' => 180, 'h_mm' => 4, 'fontsize' => 9, 'fontstyle' => 'I', 'align' => 'C', 'color' => '#444444']);
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'occupational_stream',       'x_mm' => 15, 'y_mm' => 149, 'w_mm' => 180, 'h_mm' => 4, 'fontsize' => 9, 'fontstyle' => 'I', 'align' => 'C', 'color' => '#444444']);
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'australian_apprenticeship', 'x_mm' => 15, 'y_mm' => 153, 'w_mm' => 180, 'h_mm' => 4, 'fontsize' => 9, 'fontstyle' => 'I', 'align' => 'C', 'color' => '#444444']);
@@ -903,7 +1033,7 @@ class cert_template {
         // Signature bottom-left.
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'signatory.signature', 'x_mm' => 20, 'y_mm' => 220, 'w_mm' => 60, 'h_mm' => 14]);
         $fields[] = self::mkf($id, 'line',    ['x_mm' => 20, 'y_mm' => 234, 'w_mm' => 70, 'h_mm' => 0, 'linewidth' => 0.4]);
-        // v4.2.61 — fact sheet labels.
+        // Version 4.2.61 — fact sheet labels.
         $fields[] = self::mkf($id, 'text',    ['x_mm' => 20, 'y_mm' => 235, 'w_mm' => 70, 'h_mm' => 4, 'fontsize' => 7, 'fontstyle' => 'I', 'color' => '#888888', 'text' => 'AUTHORISED PERSON']);
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'signatory.name',     'x_mm' => 20, 'y_mm' => 239, 'w_mm' => 70, 'h_mm' => 5, 'fontsize' => 10, 'fontstyle' => 'B']);
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'signatory.title',    'x_mm' => 20, 'y_mm' => 244, 'w_mm' => 70, 'h_mm' => 5, 'fontsize' => 9, 'color' => '#666666']);
@@ -946,7 +1076,7 @@ class cert_template {
         // Redundant "completion of course" statement removed from the default
         // (still available in the palette). Descriptors re-spaced below it.
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'qualification.partofstatement',  'x_mm' => 30,  'y_mm' => 158, 'w_mm' => 237, 'h_mm' => 8, 'fontsize' => 10, 'fontstyle' => 'I', 'align' => 'C']);
-        // v4.2.61 — Optional descriptors per fact sheet page 4. Render blank when unused.
+        // Version 4.2.61 — Optional descriptors per fact sheet page 4. Render blank when unused.
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'skill_set_statement',         'x_mm' => 30, 'y_mm' => 167, 'w_mm' => 237, 'h_mm' => 5, 'fontsize' => 9, 'fontstyle' => 'I', 'align' => 'C', 'color' => '#444444']);
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'language_statement',          'x_mm' => 30, 'y_mm' => 172, 'w_mm' => 237, 'h_mm' => 5, 'fontsize' => 9, 'fontstyle' => 'I', 'align' => 'C', 'color' => '#444444']);
         // ASQA-ORG-SEAL (v5.2.55): organisation_seal required on statement — placed in the
@@ -956,7 +1086,7 @@ class cert_template {
         // Signature.
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'signatory.signature', 'x_mm' => 20, 'y_mm' => 180, 'w_mm' => 60, 'h_mm' => 12]);
         $fields[] = self::mkf($id, 'line',    ['x_mm' => 20, 'y_mm' => 192, 'w_mm' => 70, 'h_mm' => 0, 'linewidth' => 0.4]);
-        // v4.2.61 — fact sheet labels.
+        // Version 4.2.61 — fact sheet labels.
         $fields[] = self::mkf($id, 'text',    ['x_mm' => 20, 'y_mm' => 193, 'w_mm' => 70, 'h_mm' => 4, 'fontsize' => 7, 'fontstyle' => 'I', 'color' => '#888888', 'text' => 'AUTHORISED PERSON']);
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'signatory.name',     'x_mm' => 20, 'y_mm' => 197, 'w_mm' => 70, 'h_mm' => 5, 'fontsize' => 10, 'fontstyle' => 'B']);
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'signatory.title',    'x_mm' => 20, 'y_mm' => 202, 'w_mm' => 70, 'h_mm' => 4, 'fontsize' => 9, 'color' => '#666666']);
@@ -999,7 +1129,7 @@ class cert_template {
         // (Competent / Not Yet Competent) per the ASQA Record of Results sample. The duplicate
         // text-field header row is removed — the table draws its own header.
         $fields[] = self::mkf($id, 'ror_table', ['x_mm' => 15, 'y_mm' => 82, 'w_mm' => 267, 'h_mm' => 86, 'fontsize' => 10, 'col1_w' => 40, 'col2_w' => 175, 'col3_w' => 48, 'col3mode' => 'result']);
-        // v4.2.61 — Optional language statement.
+        // Version 4.2.61 — Optional language statement.
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'language_statement',        'x_mm' => 15, 'y_mm' => 171, 'w_mm' => 267, 'h_mm' => 4, 'fontsize' => 9, 'fontstyle' => 'I', 'align' => 'C', 'color' => '#444444']);
         // ASQA-AUDIT-DATE (v4.4.11): landscape footer was printing off the page.
         // A4 landscape = 210mm tall; old layout had cert.issuedate at y=202+5=207
@@ -1010,7 +1140,7 @@ class cert_template {
         // fits. "DATE" label → "Date of issue:" 8pt #444444. Date → 10pt bold.
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'signatory.signature',       'x_mm' => 20, 'y_mm' => 175, 'w_mm' => 60, 'h_mm' => 10]);
         $fields[] = self::mkf($id, 'line',    ['x_mm' => 20, 'y_mm' => 185, 'w_mm' => 70, 'h_mm' => 0, 'linewidth' => 0.4]);
-        // v4.2.61 — fact sheet labels.
+        // Version 4.2.61 — fact sheet labels.
         $fields[] = self::mkf($id, 'text',    ['x_mm' => 20, 'y_mm' => 186, 'w_mm' => 70, 'h_mm' => 4, 'fontsize' => 7, 'fontstyle' => 'I', 'color' => '#888888', 'text' => 'AUTHORISED PERSON']);
         $fields[] = self::mkf($id, 'dynamic', ['dynamickey' => 'signatory.name',            'x_mm' => 20, 'y_mm' => 190, 'w_mm' => 70, 'h_mm' => 4, 'fontsize' => 10, 'fontstyle' => 'B']);
         // ASQA-RECORD-COMPLIANCE (v5.2.54): signatoryTitle added — ASQA p.3 shows AUTHORISED PERSON.
@@ -1144,7 +1274,8 @@ class cert_template {
         if (!empty($settingfilearea)) {
             $fs = get_file_storage();
             $context = \context_system::instance();
-            $files = $fs->get_area_files($context->id, 'local_rtocompliance', $settingfilearea,
+            $files = $fs->get_area_files(
+                $context->id, 'local_rtocompliance', $settingfilearea,
                 0, 'sortorder, filename', false);
             foreach ($files as $f) {
                 if ($f->is_directory()) {
@@ -1169,7 +1300,8 @@ class cert_template {
     public static function get_branding_url(int $itemid): ?string {
         $fs = get_file_storage();
         $context = \context_system::instance();
-        $files = $fs->get_area_files($context->id, 'local_rtocompliance', self::FA_BRANDING,
+        $files = $fs->get_area_files(
+            $context->id, 'local_rtocompliance', self::FA_BRANDING,
             $itemid, 'sortorder, filename', false);
         foreach ($files as $f) {
             if ($f->is_directory()) {
@@ -1210,7 +1342,8 @@ class cert_template {
         if (!empty($settingfilearea)) {
             $fs = get_file_storage();
             $context = \context_system::instance();
-            $files = $fs->get_area_files($context->id, 'local_rtocompliance', $settingfilearea,
+            $files = $fs->get_area_files(
+                $context->id, 'local_rtocompliance', $settingfilearea,
                 0, 'sortorder, filename', false);
             foreach ($files as $f) {
                 if ($f->is_directory()) {
@@ -1236,7 +1369,8 @@ class cert_template {
     public static function get_branding_path(int $itemid): ?string {
         $fs = get_file_storage();
         $context = \context_system::instance();
-        $files = $fs->get_area_files($context->id, 'local_rtocompliance', self::FA_BRANDING,
+        $files = $fs->get_area_files(
+            $context->id, 'local_rtocompliance', self::FA_BRANDING,
             $itemid, 'sortorder, filename', false);
         foreach ($files as $f) {
             if ($f->is_directory()) {
@@ -1315,7 +1449,7 @@ class cert_template {
         if (!in_array($certtype, self::CERT_TYPES, true)) {
             throw new \invalid_parameter_exception('Unknown certtype: ' . $certtype);
         }
-        // v4.3.0 — coerce audience to a known value; unknown codes fall
+        // Version 4.3.0 — coerce audience to a known value; unknown codes fall
         // back to 'default' so a stale/typo'd POST never breaks creation.
         if (!in_array($audience, self::AUDIENCES, true)) {
             $audience = 'default';
@@ -1371,11 +1505,12 @@ class cert_template {
         }
         $label = ($audiencelabel !== null && trim($audiencelabel) !== '')
             ? trim($audiencelabel) : null;
-        $DB->update_record('local_rtocompliance_certtmpl', (object) [
-            'id'            => $id,
-            'audience'      => $audience,
-            'audiencelabel' => $label,
-            'timemodified'  => time(),
+        $DB->update_record(
+            'local_rtocompliance_certtmpl', (object) [
+                'id'            => $id,
+                'audience'      => $audience,
+                'audiencelabel' => $label,
+                'timemodified'  => time(),
         ]);
     }
 
@@ -1390,12 +1525,13 @@ class cert_template {
      */
     public static function pick_for_audience(string $certtype, string $audience): ?\stdClass {
         global $DB;
-        // v5.9.365: get_records so >1 active row can't fatal the render dispatcher.
-        $rs = $DB->get_records('local_rtocompliance_certtmpl', [
-            'certtype' => $certtype,
-            'audience' => $audience,
-            'status'   => 'approved',
-            'isactive' => 1,
+        // Version 5.9.365: get_records so >1 active row can't fatal the render dispatcher.
+        $rs = $DB->get_records(
+            'local_rtocompliance_certtmpl', [
+                'certtype' => $certtype,
+                'audience' => $audience,
+                'status'   => 'approved',
+                'isactive' => 1,
         ], 'timemodified DESC, id DESC', '*', 0, 1);
         return $rs ? reset($rs) : null;
     }
@@ -1433,7 +1569,8 @@ class cert_template {
             // would leak onto an already-issued certificate on re-download. If the
             // pinned template is no longer approved, fall through to the current
             // approved template for this certtype/audience.
-            $r = $DB->get_record('local_rtocompliance_certtmpl',
+            $r = $DB->get_record(
+                'local_rtocompliance_certtmpl',
                 ['id' => (int) $cert->certtmplid, 'status' => 'approved']);
             if ($r) {
                 return $r;
@@ -1531,11 +1668,12 @@ class cert_template {
      */
     public static function get_active_template(string $certtype): ?\stdClass {
         global $DB;
-        // v5.9.365: get_records so >1 active row can't fatal callers.
-        $rs = $DB->get_records('local_rtocompliance_certtmpl', [
-            'certtype' => $certtype,
-            'status'   => 'approved',
-            'isactive' => 1,
+        // Version 5.9.365: get_records so >1 active row can't fatal callers.
+        $rs = $DB->get_records(
+            'local_rtocompliance_certtmpl', [
+                'certtype' => $certtype,
+                'status'   => 'approved',
+                'isactive' => 1,
         ], 'timemodified DESC, id DESC', '*', 0, 1);
         return $rs ? reset($rs) : null;
     }
@@ -1606,21 +1744,23 @@ class cert_template {
 
         if (!empty($validation['errors'])) {
             // Persist the failed validation so the UI can show the errors.
-            $DB->update_record('local_rtocompliance_certtmpl', (object) [
-                'id'             => $id,
-                'lastvalidation' => json_encode($validation),
-                'timemodified'   => time(),
+            $DB->update_record(
+                'local_rtocompliance_certtmpl', (object) [
+                    'id'             => $id,
+                    'lastvalidation' => json_encode($validation),
+                    'timemodified'   => time(),
             ]);
             return ['ok' => false, 'validation' => $validation];
         }
 
-        $DB->update_record('local_rtocompliance_certtmpl', (object) [
-            'id'             => $id,
-            'status'         => 'approved',
-            'approvedby'     => $USER->id,
-            'timeapproved'   => time(),
-            'timemodified'   => time(),
-            'lastvalidation' => json_encode($validation),
+        $DB->update_record(
+            'local_rtocompliance_certtmpl', (object) [
+                'id'             => $id,
+                'status'         => 'approved',
+                'approvedby'     => $USER->id,
+                'timeapproved'   => time(),
+                'timemodified'   => time(),
+                'lastvalidation' => json_encode($validation),
         ]);
 
         return ['ok' => true, 'validation' => $validation];
@@ -1643,7 +1783,7 @@ class cert_template {
             return false;
         }
 
-        // v4.3.0 CERT-TEMPLATE-AUDIENCES — demotion is now scoped to the
+        // Version 4.3.0 CERT-TEMPLATE-AUDIENCES — demotion is now scoped to the
         // (certtype + audience) pair, not the certtype alone, so an
         // admin can keep separate active templates for default/apprentice/
         // school/etc. Older rows that were created before v4.3.0 carry
@@ -1680,29 +1820,32 @@ class cert_template {
                     ['certtype' => $template->certtype]
                 );
             } else {
-                $currentlyActive = $DB->get_records('local_rtocompliance_certtmpl', [
-                    'certtype' => $template->certtype,
-                    'audience' => $audience,
-                    'isactive' => 1,
+                $currentlyActive = $DB->get_records(
+                    'local_rtocompliance_certtmpl', [
+                        'certtype' => $template->certtype,
+                        'audience' => $audience,
+                        'isactive' => 1,
                 ]);
             }
             foreach ($currentlyActive as $_existing) {
                 if ((int) $_existing->id === $id) {
                     continue; // Skip the target template itself.
                 }
-                // v5.9.365 ACTIVATE-SINGLE-FIX: demote EVERY other active template for this
+                // Version 5.9.365 ACTIVATE-SINGLE-FIX: demote EVERY other active template for this
                 // (certtype+audience) regardless of orientation — exactly one may be active,
                 // else get_active_template()/pick_for_audience() throw dml_multiple_records.
-                $DB->update_record('local_rtocompliance_certtmpl', (object) [
-                    'id'           => (int) $_existing->id,
-                    'isactive'     => 0,
-                    'timemodified' => time(),
+                $DB->update_record(
+                    'local_rtocompliance_certtmpl', (object) [
+                        'id'           => (int) $_existing->id,
+                        'isactive'     => 0,
+                        'timemodified' => time(),
                 ]);
             }
-            $DB->update_record('local_rtocompliance_certtmpl', (object) [
-                'id'           => $id,
-                'isactive'     => 1,
-                'timemodified' => time(),
+            $DB->update_record(
+                'local_rtocompliance_certtmpl', (object) [
+                    'id'           => $id,
+                    'isactive'     => 1,
+                    'timemodified' => time(),
             ]);
             $transaction->allow_commit();
         } catch (\Throwable $e) {
@@ -1731,10 +1874,11 @@ class cert_template {
         if (!$template) {
             return false;
         }
-        $DB->update_record('local_rtocompliance_certtmpl', (object) [
-            'id'           => $id,
-            'isactive'     => 0,
-            'timemodified' => time(),
+        $DB->update_record(
+            'local_rtocompliance_certtmpl', (object) [
+                'id'           => $id,
+                'isactive'     => 0,
+                'timemodified' => time(),
         ]);
         return true;
     }
@@ -1747,11 +1891,12 @@ class cert_template {
      */
     public static function archive(int $id): void {
         global $DB;
-        $DB->update_record('local_rtocompliance_certtmpl', (object) [
-            'id'           => $id,
-            'status'       => 'archived',
-            'isactive'     => 0,
-            'timemodified' => time(),
+        $DB->update_record(
+            'local_rtocompliance_certtmpl', (object) [
+                'id'           => $id,
+                'status'       => 'archived',
+                'isactive'     => 0,
+                'timemodified' => time(),
         ]);
     }
 
@@ -1775,7 +1920,7 @@ class cert_template {
         if (!$isDraftNeverApproved && !$isArchived) {
             return false;
         }
-        // v4.2.49 BUG-MAY2-AUDIT2 — clean up uploaded files (background +
+        // Version 4.2.49 BUG-MAY2-AUDIT2 — clean up uploaded files (background +
         // any per-field images keyed by template id) so deleting a draft
         // does not orphan blobs in moodledata.
         try {
@@ -1850,10 +1995,11 @@ class cert_template {
         $design = json_decode($tpl->designjson ?? '', true);
         $orientation = $design['page']['orientation'] ?? null;
         $newdesign = self::build_starter_design($tpl->certtype, $orientation);
-        $DB->update_record('local_rtocompliance_certtmpl', (object) [
-            'id'           => $id,
-            'designjson'   => json_encode($newdesign, JSON_UNESCAPED_SLASHES),
-            'timemodified' => time(),
+        $DB->update_record(
+            'local_rtocompliance_certtmpl', (object) [
+                'id'           => $id,
+                'designjson'   => json_encode($newdesign, JSON_UNESCAPED_SLASHES),
+                'timemodified' => time(),
         ]);
         return true;
     }
@@ -1877,7 +2023,7 @@ class cert_template {
         $template->timemodified = $now;
         $newid = (int) $DB->insert_record('local_rtocompliance_certtmpl', $template);
 
-        // v5.9.366 DUPLICATE-FILE-COPY: previously the copy inherited the source's
+        // Version 5.9.366 DUPLICATE-FILE-COPY: previously the copy inherited the source's
         // bgitemid and per-field imageitemids verbatim, so both templates pointed at
         // the SAME stored files. Deleting the original then deleted the copy's images
         // too (delete() purges FA_BG/FA_IMAGE by itemid). Copy the files into the new
@@ -1885,7 +2031,7 @@ class cert_template {
         try {
             $fs = get_file_storage();
             $ctxid = \context_system::instance()->id;
-            $design = self::decode_design($template); // uses the (unchanged) source designjson.
+            $design = self::decode_design($template); // Uses the (unchanged) source designjson.
             $changed = false;
 
             // Background image — FA_BG itemid == template id.
@@ -1893,9 +2039,10 @@ class cert_template {
                 if ($bgf->is_directory()) {
                     continue;
                 }
-                $fs->create_file_from_storedfile([
-                    'contextid' => $ctxid, 'component' => 'local_rtocompliance', 'filearea' => self::FA_BG,
-                    'itemid' => $newid, 'filepath' => '/', 'filename' => $bgf->get_filename(),
+                $fs->create_file_from_storedfile(
+                    [
+                        'contextid' => $ctxid, 'component' => 'local_rtocompliance', 'filearea' => self::FA_BG,
+                        'itemid' => $newid, 'filepath' => '/', 'filename' => $bgf->get_filename(),
                 ], $bgf);
             }
             if (!empty($design['page']['bg_itemid'])) {
@@ -1915,9 +2062,10 @@ class cert_template {
                         if ($imf->is_directory()) {
                             continue;
                         }
-                        $fs->create_file_from_storedfile([
-                            'contextid' => $ctxid, 'component' => 'local_rtocompliance', 'filearea' => self::FA_IMAGE,
-                            'itemid' => $newitem, 'filepath' => '/', 'filename' => $imf->get_filename(),
+                        $fs->create_file_from_storedfile(
+                            [
+                                'contextid' => $ctxid, 'component' => 'local_rtocompliance', 'filearea' => self::FA_IMAGE,
+                                'itemid' => $newitem, 'filepath' => '/', 'filename' => $imf->get_filename(),
                         ], $imf);
                     }
                     $fld['imageitemid'] = $newitem;
@@ -1927,11 +2075,12 @@ class cert_template {
             }
 
             if ($changed) {
-                $DB->update_record('local_rtocompliance_certtmpl', (object) [
-                    'id'           => $newid,
-                    'designjson'   => json_encode($design, JSON_UNESCAPED_SLASHES),
-                    'bgitemid'     => !empty($design['page']['bg_itemid']) ? (int) $design['page']['bg_itemid'] : 0,
-                    'timemodified' => time(),
+                $DB->update_record(
+                    'local_rtocompliance_certtmpl', (object) [
+                        'id'           => $newid,
+                        'designjson'   => json_encode($design, JSON_UNESCAPED_SLASHES),
+                        'bgitemid'     => !empty($design['page']['bg_itemid']) ? (int) $design['page']['bg_itemid'] : 0,
+                        'timemodified' => time(),
                 ]);
             }
         } catch (\Throwable $e) {
@@ -1980,15 +2129,16 @@ class cert_template {
                 $design = self::build_starter_design($certtype, $orientation);
                 $isactive = ($orientation === $defaultorientation) ? 1 : 0;
                 $orientationlabel = ($orientation === 'L') ? 'Landscape' : 'Portrait';
-                $certtypelabel = ucfirst($certtype === 'statement' ? 'Statement of Attainment'
-                                       : ($certtype === 'record' ? 'Record of Results'
-                                       : ($certtype === 'completion' ? 'Certificate of Completion'
+                $certtypelabel = ucfirst(
+                    $certtype === 'statement' ? 'Statement of Attainment'
+                                           : ($certtype === 'record' ? 'Record of Results'
+                                           : ($certtype === 'completion' ? 'Certificate of Completion'
                                        : 'Testamur')));
 
                 $record = new \stdClass();
                 $record->name          = 'Default ' . $certtypelabel . ' (' . $orientationlabel . ')';
                 $record->certtype      = $certtype;
-                // v4.3.0 — system-seeded starters are always the 'default'
+                // Version 4.3.0 — system-seeded starters are always the 'default'
                 // audience template. Admins create per-audience variants
                 // via cert_templates.php once they need them.
                 $record->audience      = 'default';

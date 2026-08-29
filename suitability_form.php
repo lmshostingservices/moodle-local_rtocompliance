@@ -44,6 +44,10 @@
 // OLD 16-question form via suitability_form_legacy.php so in-flight
 // checklists are not broken by the upgrade.
 
+// Public token-gated page — no capability check by design.
+// pipeline-ignore: require_capability — the emailed suitability token IS
+// the authorisation and is validated below; a request without one falls through to require_login().
+// A capability check would lock out the prospective student this page exists for.
 require_once(__DIR__ . '/../../config.php');
 require_once(__DIR__ . '/lib.php');
 
@@ -81,8 +85,9 @@ $render_message = function (string $cls, string $icon, string $title, string $bo
 };
 
 if (!$suit) {
-    $render_message('rtoc-suit-error', '!', 'Link Not Found',
-        'This eligibility check link could not be found. It may have expired or been replaced with a newer link. '
+    $render_message(
+        'rtoc-suit-error', '!', 'Link Not Found',
+            'This eligibility check link could not be found. It may have expired or been replaced with a newer link. '
         . 'Please check your email for a more recent message from your training provider, or contact them directly for assistance.');
     echo $OUTPUT->footer();
     exit;
@@ -90,7 +95,8 @@ if (!$suit) {
 
 $student = core_user::get_user($suit->userid);
 if (!$student || $student->deleted) {
-    $render_message('rtoc-suit-error', '!', 'Account Not Found',
+    $render_message(
+        'rtoc-suit-error', '!', 'Account Not Found',
         get_string('suitability_student_not_found', 'local_rtocompliance'));
     echo $OUTPUT->footer();
     exit;
@@ -98,7 +104,8 @@ if (!$student || $student->deleted) {
 
 $tas = $DB->get_record('local_rtocompliance_tas', ['id' => $suit->tasid]);
 if (!$tas) {
-    $render_message('rtoc-suit-error', '!', 'Qualification Not Found',
+    $render_message(
+        'rtoc-suit-error', '!', 'Qualification Not Found',
         get_string('suitability_tas_not_found', 'local_rtocompliance'));
     echo $OUTPUT->footer();
     exit;
@@ -112,7 +119,8 @@ $rtoname = get_config('local_rtocompliance', 'rtoname') ?: 'Your RTO';
 // rows so the new Student Eligibility Checklist is shown instead of the old
 // 16-question form. Legacy routing is only preserved for non-pending records that
 // were genuinely submitted via the old form, so no completed data is lost.
-$legacyAnswers = $DB->get_records('local_rtocompliance_suitability_answers',
+$legacyAnswers = $DB->get_records(
+    'local_rtocompliance_suitability_answers',
     ['suitabilityid' => $suit->id], 'displayorder ASC');
 if (!empty($legacyAnswers) && $suit->status === 'pending') {
     $DB->delete_records('local_rtocompliance_suitability_answers', ['suitabilityid' => $suit->id]);
@@ -123,14 +131,15 @@ $isLegacy = !empty($legacyAnswers);
 // Already completed or submitted and awaiting trainer review?
 if (!in_array($suit->status, ['pending'], true)) {
     if ($suit->status === 'submitted') {
-        // v4.4.42: Student submitted but trainer has not yet made a decision.
+        // Version 4.4.42: Student submitted but trainer has not yet made a decision.
         echo html_writer::start_div('rtoc-suit-container');
         echo html_writer::start_div('rtoc-suit-card rtoc-suit-review');
         echo html_writer::tag('div', '&#9203;', ['class' => 'rtoc-suit-icon rtoc-suit-icon-review']);
         echo html_writer::tag('h2', 'Eligibility Check Submitted', ['class' => 'rtoc-suit-title']);
-        echo html_writer::tag('div',
-            '<p>Thank you for completing your Student Eligibility Check. Your trainer is currently reviewing your responses and will be in contact with you shortly regarding your enrolment.</p>'
-            . '<p>No further action is required from you at this stage.</p>',
+        echo html_writer::tag(
+            'div',
+                '<p>Thank you for completing your Student Eligibility Check. Your trainer is currently reviewing your responses and will be in contact with you shortly regarding your enrolment.</p>'
+                . '<p>No further action is required from you at this stage.</p>',
             ['class' => 'rtoc-suit-desc']);
         local_rtocompliance_render_signed_declaration_block($suit);
         echo html_writer::end_div();
@@ -144,14 +153,16 @@ if (!in_array($suit->status, ['pending'], true)) {
         echo html_writer::start_div('rtoc-suit-container');
         echo html_writer::start_div('rtoc-suit-card');
         echo html_writer::tag('h1', 'Student Eligibility Check Result', ['style' => 'font-size:1.35rem;color:#1a1a2e;margin:0 0 4px']);
-        echo html_writer::tag('p',
-            'Student: <strong>' . s(fullname($student)) . '</strong> &middot; ' .
-            s($tas->qualificationcode . ' ' . $tas->qualificationname),
+        echo html_writer::tag(
+            'p',
+                'Student: <strong>' . s(fullname($student)) . '</strong> &middot; ' .
+                s($tas->qualificationcode . ' ' . $tas->qualificationname),
             ['class' => 'text-muted', 'style' => 'margin-bottom:18px']);
         local_rtocompliance_render_outcome_block($suit);
         local_rtocompliance_render_signed_declaration_block($suit);
-        echo html_writer::tag('p',
-            'A copy of this review is on file with your training provider. If anything has changed since you submitted this, please contact them directly.',
+        echo html_writer::tag(
+            'p',
+                'A copy of this review is on file with your training provider. If anything has changed since you submitted this, please contact them directly.',
             ['class' => 'text-muted', 'style' => 'margin-top:18px;font-size:0.85rem']);
         echo html_writer::end_div();
         echo html_writer::tag('p', s($rtoname), ['class' => 'rtoc-suit-rto-footer']);
@@ -160,7 +171,8 @@ if (!in_array($suit->status, ['pending'], true)) {
         exit;
     }
     // Legacy completed or no advice yet — plain "thanks" message.
-    $render_message('rtoc-suit-success', '&#10003;', 'Already Submitted',
+    $render_message(
+        'rtoc-suit-success', '&#10003;', 'Already Submitted',
         'Your Pre-Enrolment Suitability Review has already been submitted. Your training provider has your responses on file.');
     echo $OUTPUT->footer();
     exit;
@@ -275,11 +287,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $suit->timemodified              = time();
         $DB->update_record('local_rtocompliance_suitability', $suit);
 
-        local_rtocompliance_log_action('suitability_submitted', 'suitability', $suit->id, [
-            'digital_literacy' => $form['digital_literacy'],
-            'prior_skills'     => $form['prior_skills'],
-            'support_needs'    => count($form['support_needs']),
-            'declared_by'      => $form['declaration_name'],
+        local_rtocompliance_log_action(
+            'suitability_submitted', 'suitability', $suit->id, [
+                'digital_literacy' => $form['digital_literacy'],
+                'prior_skills'     => $form['prior_skills'],
+                'support_needs'    => count($form['support_needs']),
+                'declared_by'      => $form['declaration_name'],
         ]);
 
         // ASYNC-EMAIL (v4.4.52): Queue an adhoc task so cron delivers the admin
@@ -377,14 +390,16 @@ if ($submitted) {
     echo html_writer::start_div('rtoc-suit-review', ['style' => 'text-align:center;padding:12px 0 20px']);
     echo html_writer::tag('div', '&#9203;', ['class' => 'rtoc-suit-icon rtoc-suit-icon-review']);
     echo html_writer::tag('h2', 'Eligibility Check Submitted', ['class' => 'rtoc-suit-title']);
-    echo html_writer::tag('div',
-        '<p>Thank you for completing your Student Eligibility Check. Your trainer will review your responses and will be in contact with you shortly regarding your enrolment.</p>'
-        . '<p>No further action is required from you at this stage.</p>',
+    echo html_writer::tag(
+        'div',
+            '<p>Thank you for completing your Student Eligibility Check. Your trainer will review your responses and will be in contact with you shortly regarding your enrolment.</p>'
+            . '<p>No further action is required from you at this stage.</p>',
         ['class' => 'rtoc-suit-desc']);
     echo html_writer::end_div();
     local_rtocompliance_render_signed_declaration_block($suit);
-    echo html_writer::tag('p',
-        'A copy of this check has been sent to your training provider.',
+    echo html_writer::tag(
+        'p',
+            'A copy of this check has been sent to your training provider.',
         ['class' => 'text-muted', 'style' => 'margin-top:18px;font-size:0.85rem']);
     echo html_writer::end_div();
     echo html_writer::tag('p', s($rtoname), ['class' => 'rtoc-suit-rto-footer']);
@@ -489,7 +504,8 @@ foreach ($supportNeedsOptions as $key => $label) {
 }
 echo html_writer::end_div();
 echo html_writer::end_div();
-$PAGE->requires->js_init_code('(function () {
+$PAGE->requires->js_init_code(
+    '(function () {
     var cb = document.getElementById("rtoc-suit-disability-cb");
     var detail = document.getElementById("rtoc-suit-disability-detail");
     if (!cb || !detail) { return; }
@@ -541,7 +557,7 @@ echo $OUTPUT->footer();
 
 // ─── Helper: render the outcome / reasons / advice block ─────────────────────
 function local_rtocompliance_render_outcome_block(stdClass $suit): void {
-    // v4.4.42: trainer-decided records use different labels.
+    // Version 4.4.42: trainer-decided records use different labels.
     $isTrainerDecision = !empty($suit->trainer_decision);
     $labels = [
         'suitable'              => $isTrainerDecision
@@ -597,9 +613,10 @@ function local_rtocompliance_render_signed_declaration_block(stdClass $suit): vo
     if (empty($suit->declaration_name)) {
         return;
     }
-    echo html_writer::start_div('rtoc-suit-signed', [
-        'style' => 'background:#f7f9fc;border:1px solid #dee2e6;border-left:4px solid #28a745;'
-                 . 'border-radius:4px;padding:14px 18px;margin-top:14px;font-size:0.9rem;line-height:1.5'
+    echo html_writer::start_div(
+        'rtoc-suit-signed', [
+            'style' => 'background:#f7f9fc;border:1px solid #dee2e6;border-left:4px solid #28a745;'
+                     . 'border-radius:4px;padding:14px 18px;margin-top:14px;font-size:0.9rem;line-height:1.5'
     ]);
     echo '<strong>Signed declaration on file</strong><br>';
     echo 'Signed by: <strong>' . s($suit->declaration_name) . '</strong>';

@@ -106,10 +106,11 @@ if (!$qualid) {
             'no-deadlines'
         );
     } else {
-        echo html_writer::start_tag('form', [
-            'method' => 'get',
-            'action' => (new moodle_url('/local/rtocompliance/generate_qual_certs.php'))->out(false),
-            'class'  => 'form-inline mb-3',
+        echo html_writer::start_tag(
+            'form', [
+                'method' => 'get',
+                'action' => (new moodle_url('/local/rtocompliance/generate_qual_certs.php'))->out(false),
+                'class'  => 'form-inline mb-3',
         ]);
         $options = [];
         foreach ($quals as $q) {
@@ -196,8 +197,9 @@ if ($dbman_gcq->table_exists('local_rtocompliance_qualunit_courses')) {
         ['qbid' => $qualid]
     );
     if ($variantCourseids) {
-        $alllinkedcourseids = array_values(array_unique(
-            array_merge($alllinkedcourseids, array_map('intval', $variantCourseids))
+        $alllinkedcourseids = array_values(
+            array_unique(
+                array_merge($alllinkedcourseids, array_map('intval', $variantCourseids))
         ));
     }
 }
@@ -295,8 +297,9 @@ if ($dbman_gcq->table_exists('local_rtocompliance_qualunit_courses')) {
 }
 if (!empty($catTreePairs)) {
     $catTreeQids             = array_values(array_unique(array_column($catTreePairs, 'quid')));
-    $effectiveLinkedUnitQids = array_values(array_unique(
-        array_merge($effectiveLinkedUnitQids, array_map('intval', $catTreeQids))
+    $effectiveLinkedUnitQids = array_values(
+        array_unique(
+            array_merge($effectiveLinkedUnitQids, array_map('intval', $catTreeQids))
     ));
 }
 $effectiveLinkedUnitCount = count($effectiveLinkedUnitQids);
@@ -464,12 +467,14 @@ if ($action === 'generate' && confirm_sesskey()) {
                 // VOID-AFTER-ISSUE (v6.3.13): the replacement exists, so it is now safe to
                 // supersede the certificate it replaces.
                 if ($forceregen && $existingcert) {
-                    $DB->update_record('local_rtocompliance_certs', (object)[
-                        'id'           => $existingcert->id,
-                        'reissued_at'  => time(),
-                        'notes'        => trim(($existingcert->notes ?? '')
-                            . "\n[Superseded by force-regenerate — Generate Qualification Certificates]"),
-                        'timemodified' => time(),
+                    $DB->update_record(
+                        'local_rtocompliance_certs', (object)[
+                            'id'           => $existingcert->id,
+                            'reissued_at'  => time(),
+                            'notes'        => trim(
+                            ($existingcert->notes ?? '')
+                                . "\n[Superseded by force-regenerate — Generate Qualification Certificates]"),
+                            'timemodified' => time(),
                     ]);
                     if (!empty($existingcert->verifytoken)) {
                         local_rtocompliance_update_registry_status($existingcert->verifytoken, 'superseded');
@@ -503,11 +508,12 @@ if ($action === 'generate' && confirm_sesskey()) {
                     }
                 }
                 if ($forceregen && $existingcert && !empty($result['certid'])) {
-                    $DB->update_record('local_rtocompliance_certs', (object)[
-                        'id'             => $result['certid'],
-                        'replacement_of' => $existingcert->id,
-                        'notes'          => 'Force-regenerated via Generate Qualification Certificates',
-                        'timemodified'   => time(),
+                    $DB->update_record(
+                        'local_rtocompliance_certs', (object)[
+                            'id'             => $result['certid'],
+                            'replacement_of' => $existingcert->id,
+                            'notes'          => 'Force-regenerated via Generate Qualification Certificates',
+                            'timemodified'   => time(),
                     ]);
                 }
             } elseif ($result['error'] === 'INSUFFICIENT_CREDITS') {
@@ -517,7 +523,7 @@ if ($action === 'generate' && confirm_sesskey()) {
                 $messages[] = fullname($user) . ' — SKIPPED: insufficient credits';
                 $failed++;
                 $creditsExhausted = true;
-                break; // break inner (cert-type) loop only; outer loop checks flag
+                break; // Break inner (cert-type) loop only; outer loop checks flag
             } elseif (!empty($result['skipped'])
                 || in_array(($result['error'] ?? ''), ['NO_USI', 'USI_UNVERIFIED', 'MISSING_RTO_SETTINGS', 'NO_UNITS'], true)) {
                 // USI-SKIP-REPORTING (v6.3.13): a Clause-12 USI refusal is not a failure and it
@@ -551,10 +557,11 @@ if ($action === 'generate' && confirm_sesskey()) {
         if ($studentrec && !$creditsExhausted
             && ($issuedThisStudent > 0 || $skippedThisStudent > 0
                 || $heldThisStudent > 0 || $failedThisStudent > 0)) {
-            $autocertrow = $DB->get_record('local_rtocompliance_autocerts', [
-                'studentid'     => $studentrec->id,
-                'qualbuilderid' => $qualid,
-                'status'        => 'pending',
+            $autocertrow = $DB->get_record(
+                'local_rtocompliance_autocerts', [
+                    'studentid'     => $studentrec->id,
+                    'qualbuilderid' => $qualid,
+                    'status'        => 'pending',
             ]);
             if ($autocertrow) {
                 $autocertupdate = (object)[
@@ -669,29 +676,35 @@ echo html_writer::end_div();
 $qualheading = html_writer::tag('strong', htmlspecialchars($qual->qualificationcode), ['style' => 'color:#1e40af;'])
     . ' — ' . format_string($qual->qualificationname);
 if (trim((string) ($qual->streamname ?? '')) !== '') {
-    $qualheading .= html_writer::tag('span', format_string($qual->streamname),
-        ['style' => 'margin-left:10px;background:#eef2ff;color:#3730a3;padding:2px 8px;'
+    $qualheading .= html_writer::tag(
+        'span', format_string($qual->streamname),
+            ['style' => 'margin-left:10px;background:#eef2ff;color:#3730a3;padding:2px 8px;'
                   . 'border-radius:4px;font-size:0.85rem;font-weight:600;']);
 }
-echo html_writer::tag('p', $qualheading,
-    ['style' => 'margin:0 0 8px;font-size:0.95rem;color:#374151;']
+echo html_writer::tag(
+    'p', $qualheading,
+        ['style' => 'margin:0 0 8px;font-size:0.95rem;color:#374151;']
 );
 
 echo html_writer::start_div('', ['style' => 'display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:8px;']);
-echo html_writer::tag('span', 'Certificate Types: Testamur + Record of Results',
+echo html_writer::tag(
+    'span', 'Certificate Types: Testamur + Record of Results',
     ['style' => 'background:#dbeafe;color:#1d4ed8;padding:4px 10px;border-radius:6px;font-size:0.85rem;font-weight:600;']);
-echo html_writer::tag('span', $effectiveLinkedUnitCount . ' linked unit-course(s)',
+echo html_writer::tag(
+    'span', $effectiveLinkedUnitCount . ' linked unit-course(s)',
     ['style' => 'background:#dcfce7;color:#16a34a;padding:4px 10px;border-radius:6px;font-size:0.85rem;font-weight:600;']);
-echo html_writer::tag('span', count($allunits) . ' unit(s) of competency',
+echo html_writer::tag(
+    'span', count($allunits) . ' unit(s) of competency',
     ['style' => 'background:#fef9c3;color:#92400e;padding:4px 10px;border-radius:6px;font-size:0.85rem;font-weight:600;']);
 echo html_writer::end_div();
 
 if ($effectiveLinkedUnitCount === 0) {
-    echo html_writer::tag('p',
-        'No Moodle courses are linked to any units in this qualification (via direct link, variant, or category tree). '
-        . 'Open the Qualification Builder, select each unit, and link it to its Moodle course. '
-        . 'Completion is also detected automatically from the qualification\'s Moodle category tree.',
-        ['style' => 'color:#dc2626;font-size:0.87rem;margin:0;']
+    echo html_writer::tag(
+        'p',
+            'No Moodle courses are linked to any units in this qualification (via direct link, variant, or category tree). '
+            . 'Open the Qualification Builder, select each unit, and link it to its Moodle course. '
+            . 'Completion is also detected automatically from the qualification\'s Moodle category tree.',
+            ['style' => 'color:#dc2626;font-size:0.87rem;margin:0;']
     );
 }
 echo html_writer::end_div();
@@ -763,7 +776,7 @@ if ($effectiveLinkedUnitCount > 0) {
     // If no primary-linked courses exist but category-tree courses were found, $alllinkedcourseids
     // may only contain cat-tree courseids. get_in_or_equal handles a non-empty array fine.
     if (empty($alllinkedcourseids)) {
-        $alllinkedcourseids = [0]; // safe sentinel — no real course has id=0
+        $alllinkedcourseids = [0]; // Safe sentinel — no real course has id=0
     }
     list($insql, $inparams) = $DB->get_in_or_equal($alllinkedcourseids, SQL_PARAMS_NAMED, 'cid');
 
@@ -857,10 +870,11 @@ if ($numunits > 0
     }
 
     // Re-sort merged results alphabetically by lastname, firstname.
-    uasort($allcompleters, function ($a, $b) {
-        $c = strcmp($a->lastname ?? '', $b->lastname ?? '');
-        return $c !== 0 ? $c : strcmp($a->firstname ?? '', $b->firstname ?? '');
-    });
+    uasort(
+        $allcompleters, function ($a, $b) {
+            $c = strcmp($a->lastname ?? '', $b->lastname ?? '');
+            return $c !== 0 ? $c : strcmp($a->firstname ?? '', $b->firstname ?? '');
+        });
 }
 
 if (empty($allcompleters)) {
@@ -907,7 +921,9 @@ if (!empty($gqMissingSettings)) {
         . 'These AQF-required fields are not configured: <strong>'
         . s(implode(', ', $gqMissingSettings)) . '</strong>. '
         . 'Every certificate will be refused until they are set. '
-        . '<a href="' . s((new moodle_url('/local/rtocompliance/plugin_settings.php',
+        . '<a href="' . s(
+            (new moodle_url(
+            '/local/rtocompliance/plugin_settings.php',
             ['section' => 'local_rtocompliance_settings']))->out(false))
         . '" style="font-weight:600;">Open RTO Settings &rarr;</a></div></div>';
 }
@@ -921,27 +937,30 @@ echo local_rtocompliance_usi_blocked_callout(
 );
 
 // ── Generation form ───────────────────────────────────────────────────────────
-$formurl = new moodle_url('/local/rtocompliance/generate_qual_certs.php', [
-    'qualid'  => $qualid,
-    'action'  => 'generate',
-    'sesskey' => sesskey(),
+$formurl = new moodle_url(
+    '/local/rtocompliance/generate_qual_certs.php', [
+        'qualid'  => $qualid,
+        'action'  => 'generate',
+        'sesskey' => sesskey(),
 ]);
 
 echo html_writer::start_tag('form', ['method' => 'post', 'action' => $formurl->out(false)]);
 
 // Controls bar
 echo html_writer::start_div('', ['style' => 'display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin-bottom:16px;padding:12px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;']);
-echo html_writer::tag('span',
-    count($allcompleters) . ' student(s) completed all ' . $effectiveLinkedUnitCount . ' unit-course(s)'
-    . ($gqBlocked > 0
-        ? ' — ' . $gqEligible . ' can be issued, ' . $gqBlocked . ' held (no verified USI)'
-        : ''),
-    ['style' => 'font-weight:600;color:#1e3a5f;flex:1 1 auto;']
+echo html_writer::tag(
+    'span',
+        count($allcompleters) . ' student(s) completed all ' . $effectiveLinkedUnitCount . ' unit-course(s)'
+        . ($gqBlocked > 0
+            ? ' — ' . $gqEligible . ' can be issued, ' . $gqBlocked . ' held (no verified USI)'
+            : ''),
+        ['style' => 'font-weight:600;color:#1e3a5f;flex:1 1 auto;']
 );
-echo html_writer::tag('label',
-    html_writer::empty_tag('input', ['type' => 'checkbox', 'name' => 'forceregen', 'value' => '1', 'id' => 'gq-forceregen', 'style' => 'margin-right:6px;'])
-    . 'Force regenerate (void existing)',
-    ['for' => 'gq-forceregen', 'style' => 'font-size:0.87rem;color:#374151;cursor:pointer;margin:0;font-weight:400;']
+echo html_writer::tag(
+    'label',
+        html_writer::empty_tag('input', ['type' => 'checkbox', 'name' => 'forceregen', 'value' => '1', 'id' => 'gq-forceregen', 'style' => 'margin-right:6px;'])
+        . 'Force regenerate (void existing)',
+        ['for' => 'gq-forceregen', 'style' => 'font-size:0.87rem;color:#374151;cursor:pointer;margin:0;font-weight:400;']
 );
 // SENDEMAIL-UNCHECKED-FIX (v6.3.16): an unchecked checkbox submits NOTHING, so
 // optional_param('sendemail', 1) fell back to its default of 1 and the certificate
@@ -950,21 +969,24 @@ echo html_writer::tag('label',
 // the hidden one and wins. Reported 20 Aug 2026 by an admin who unticked "Notify
 // students" and found the register showing the students as emailed.
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sendemail', 'value' => '0']);
-echo html_writer::tag('label',
-    html_writer::empty_tag('input', ['type' => 'checkbox', 'name' => 'sendemail', 'value' => '1', 'id' => 'gq-sendemail', 'checked' => 'checked', 'style' => 'margin-right:6px;'])
-    . 'Notify students',
-    ['for' => 'gq-sendemail', 'style' => 'font-size:0.87rem;color:#374151;cursor:pointer;margin:0;font-weight:400;']
+echo html_writer::tag(
+    'label',
+        html_writer::empty_tag('input', ['type' => 'checkbox', 'name' => 'sendemail', 'value' => '1', 'id' => 'gq-sendemail', 'checked' => 'checked', 'style' => 'margin-right:6px;'])
+        . 'Notify students',
+        ['for' => 'gq-sendemail', 'style' => 'font-size:0.87rem;color:#374151;cursor:pointer;margin:0;font-weight:400;']
 );
 // USI-PREFLIGHT (v6.3.13): :not(:disabled) — never tick a student the gate would refuse.
-echo html_writer::tag('a', 'Select all eligible',
-    ['href' => '#', 'onclick' => 'document.querySelectorAll(".gq-cbx:not(:disabled)").forEach(function (cb){cb.checked=true;}); return false;',
-     'style' => 'font-size:0.85rem;text-decoration:none;color:#2563eb;',
-     'title' => 'Tick every student who has a verified USI']
+echo html_writer::tag(
+    'a', 'Select all eligible',
+        ['href' => '#', 'onclick' => 'document.querySelectorAll(".gq-cbx:not(:disabled)").forEach(function (cb){cb.checked=true;}); return false;',
+         'style' => 'font-size:0.85rem;text-decoration:none;color:#2563eb;',
+         'title' => 'Tick every student who has a verified USI']
 );
 echo html_writer::tag('span', '/', ['style' => 'color:#9ca3af;']);
-echo html_writer::tag('a', 'None',
-    ['href' => '#', 'onclick' => 'document.querySelectorAll(".gq-cbx:not(:disabled)").forEach(function (cb){cb.checked=false;}); return false;',
-     'style' => 'font-size:0.85rem;text-decoration:none;color:#2563eb;']
+echo html_writer::tag(
+    'a', 'None',
+        ['href' => '#', 'onclick' => 'document.querySelectorAll(".gq-cbx:not(:disabled)").forEach(function (cb){cb.checked=false;}); return false;',
+         'style' => 'font-size:0.85rem;text-decoration:none;color:#2563eb;']
 );
 echo html_writer::end_div();
 
@@ -1071,15 +1093,16 @@ echo html_writer::start_div('', ['style' => 'margin-top:20px;display:flex;flex-w
 // CERT-COST-CONFIRM: state the credit/dollar cost before generating. Each student issued gets a
 // Testamur + Record of Results (2 certificates), and every certificate is charged 5 credits
 // (~A$0.50) through the central issuer — including nothing that generates for free.
-echo html_writer::empty_tag('input', [
-    'type'    => 'submit',
-    'value'   => 'Generate Testamur + Record of Results',
-    'class'   => 'btn btn-success btn-lg',
-    'title'   => 'Issue a Testamur and Record of Results for each ticked student',
-    'onclick' => 'var n=document.querySelectorAll(".gq-cbx:not(:disabled):checked").length;'
-        . 'if(!n){alert("Select at least one student with a verified USI first.\\n\\nStudents without a verified USI cannot be ticked — a Testamur or Record of Results cannot be issued without one.");return false;}'
-        . 'var certs=n*2, cr=certs*5;'
-        . 'return confirm("Generate certificates for "+n+" student(s)?\\n\\nEach student receives a Testamur + Record of Results (2 certificates), and every certificate costs 5 credits (about A$0.50).\\n\\nThis will charge "+cr+" credits (about A$"+(cr*0.10).toFixed(2)+") in total.\\n\\nContinue?");',
+echo html_writer::empty_tag(
+    'input', [
+        'type'    => 'submit',
+        'value'   => 'Generate Testamur + Record of Results',
+        'class'   => 'btn btn-success btn-lg',
+        'title'   => 'Issue a Testamur and Record of Results for each ticked student',
+        'onclick' => 'var n=document.querySelectorAll(".gq-cbx:not(:disabled):checked").length;'
+            . 'if(!n){alert("Select at least one student with a verified USI first.\\n\\nStudents without a verified USI cannot be ticked — a Testamur or Record of Results cannot be issued without one.");return false;}'
+            . 'var certs=n*2, cr=certs*5;'
+            . 'return confirm("Generate certificates for "+n+" student(s)?\\n\\nEach student receives a Testamur + Record of Results (2 certificates), and every certificate costs 5 credits (about A$0.50).\\n\\nThis will charge "+cr+" credits (about A$"+(cr*0.10).toFixed(2)+") in total.\\n\\nContinue?");',
 ]);
 echo '<span style="font-size:12.5px;color:#64748b;">Each certificate costs 5 credits (&#8776; A$0.50). Testamur + Record of Results = 2 per student.</span>';
 echo html_writer::link(

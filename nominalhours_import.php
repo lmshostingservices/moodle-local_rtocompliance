@@ -55,7 +55,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && confirm_sesskey()) {
         // Normalise line endings; the NCVER file is tab-delimited text.
         $raw = str_replace(["\r\n", "\r"], "\n", (string) $raw);
         $lines = explode("\n", $raw);
-        $created = 0; $updated = 0; $skipped = 0; $rownum = 0;
+        $created = 0;
+        $updated = 0;
+        $skipped = 0;
+        $rownum = 0;
         // Detect delimiter from the first non-empty line.
         $delim = "\t";
         foreach ($lines as $l) {
@@ -67,31 +70,51 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && confirm_sesskey()) {
             $rownum++;
             if (trim($line) === '') { continue; }
             $cols = str_getcsv($line, $delim);
-            if (count($cols) < 2) { $skipped++; continue; }
+            if (count($cols) < 2) {
+                $skipped++;
+                continue;
+            }
             // Find a unit-code-looking column and an hours column.
             $code = strtoupper(preg_replace('/\s+/', '', (string) $cols[0]));
             // A unit code is letters+digits; header rows / non-codes are skipped.
-            if (!preg_match('/^[A-Z]{2,10}[0-9]{2,7}[A-Z]?$/', $code)) { $skipped++; continue; }
+            if (!preg_match('/^[A-Z]{2,10}[0-9]{2,7}[A-Z]?$/', $code)) {
+                $skipped++;
+                continue;
+            }
             // Hours = first purely-numeric column after the code.
             $hours = null;
             for ($i = 1; $i < count($cols); $i++) {
                 $v = trim((string) $cols[$i]);
-                if ($v !== '' && ctype_digit($v)) { $hours = (int) $v; break; }
+                if ($v !== '' && ctype_digit($v)) {
+                    $hours = (int) $v;
+                    break;
+                }
             }
-            if ($hours === null) { $skipped++; continue; }
-            $res = local_rtocompliance_upsert_nominalhours($code, $hours, $state,
+            if ($hours === null) {
+                $skipped++;
+                continue;
+            }
+            $res = local_rtocompliance_upsert_nominalhours(
+                $code, $hours, $state,
                 $sourceref !== '' ? $sourceref : ('Import ' . userdate(time(), '%Y-%m-%d')));
-            if ($res === 'created') { $created++; } else if ($res === 'updated') { $updated++; } else { $skipped++; }
+            if ($res === 'created') {
+                $created++;
+            } else if ($res === 'updated') {
+                $updated++;
+            } else {
+                $skipped++;
+            }
         }
         $done = "Import complete — $created created, $updated updated, $skipped skipped.";
-        local_rtocompliance_log_action('import', 'nominalhours', 0,
+        local_rtocompliance_log_action(
+            'import', 'nominalhours', 0,
             ['state' => $state, 'created' => $created, 'updated' => $updated]);
     } else {
         $done = 'No file was uploaded.';
     }
 }
 
-$PAGE->add_body_class('path-local-rtocompliance'); // v5.9.445: scoped CSS needs this on admin_externalpage pages.
+$PAGE->add_body_class('path-local-rtocompliance'); // Version 5.9.445: scoped CSS needs this on admin_externalpage pages.
 echo $OUTPUT->header();
 echo local_rtocompliance_render_nav_header('Import Nominal Hours', null, null, 'qualbuilder');
 echo local_rtocompliance_page_banner('Import Nominal Hours');
@@ -119,13 +142,15 @@ echo html_writer::end_div();
 
 echo html_writer::start_div('form-group', ['style' => 'margin-bottom:14px;']);
 echo html_writer::tag('label', 'Source reference (provenance)', ['class' => 'form-label', 'style' => 'font-weight:600;']);
-echo html_writer::empty_tag('input', ['type' => 'text', 'name' => 'sourceref', 'class' => 'form-control',
+echo html_writer::empty_tag(
+    'input', ['type' => 'text', 'name' => 'sourceref', 'class' => 'form-control',
     'placeholder' => 'e.g. NCVER Nationally-agreed 2026Q2']);
 echo html_writer::end_div();
 
 echo html_writer::start_div('form-group', ['style' => 'margin-bottom:14px;']);
 echo html_writer::tag('label', 'Data file (tab-delimited .txt or .csv: unit code, hours)', ['class' => 'form-label', 'style' => 'font-weight:600;']);
-echo html_writer::empty_tag('input', ['type' => 'file', 'name' => 'datafile', 'class' => 'form-control',
+echo html_writer::empty_tag(
+    'input', ['type' => 'file', 'name' => 'datafile', 'class' => 'form-control',
     'accept' => '.txt,.tsv,.csv']);
 echo html_writer::tag('small', 'The importer detects tab or comma delimiters, skips header/non-code rows, and upserts one value per unit per jurisdiction. Read leading zeros as text — do not round-trip through Excel.', ['class' => 'form-text text-muted']);
 echo html_writer::end_div();

@@ -113,10 +113,11 @@ echo html_writer::end_div();
 
 $f = $record ?: new stdClass();
 
-echo html_writer::start_tag('form', [
-    'method' => 'post',
-    'action' => $PAGE->url->out_omit_querystring(),
-    'style'  => 'max-width: 780px;',
+echo html_writer::start_tag(
+    'form', [
+        'method' => 'post',
+        'action' => $PAGE->url->out_omit_querystring(),
+        'style'  => 'max-width: 780px;',
 ]);
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'action', 'value' => 'save']);
@@ -124,11 +125,12 @@ echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'id', 'value
 
 echo html_writer::start_div('form-group');
 echo html_writer::tag('label', 'Meeting Title *', ['for' => 'meetingtitle', 'class' => 'form-label']);
-echo html_writer::empty_tag('input', [
-    'type' => 'text', 'name' => 'meetingtitle', 'id' => 'meetingtitle',
-    'value' => s($f->meetingtitle ?? ''),
-    'class' => 'form-control', 'required' => 'required',
-    'placeholder' => 'e.g. Board Meeting March 2026 / Quality Management Meeting Q1 2026',
+echo html_writer::empty_tag(
+    'input', [
+        'type' => 'text', 'name' => 'meetingtitle', 'id' => 'meetingtitle',
+        'value' => s($f->meetingtitle ?? ''),
+        'class' => 'form-control', 'required' => 'required',
+        'placeholder' => 'e.g. Board Meeting March 2026 / Quality Management Meeting Q1 2026',
 ]);
 echo html_writer::end_div();
 
@@ -142,19 +144,21 @@ echo html_writer::end_div();
 
 echo html_writer::start_div('form-group');
 echo html_writer::tag('label', 'Date *', ['for' => 'meetingdate', 'class' => 'form-label']);
-echo html_writer::empty_tag('input', [
-    'type' => 'date', 'name' => 'meetingdate', 'id' => 'meetingdate',
-    'value' => !empty($f->meetingdate) ? date('Y-m-d', $f->meetingdate) : '',
-    'class' => 'form-control', 'required' => 'required',
+echo html_writer::empty_tag(
+    'input', [
+        'type' => 'date', 'name' => 'meetingdate', 'id' => 'meetingdate',
+        'value' => !empty($f->meetingdate) ? date('Y-m-d', $f->meetingdate) : '',
+        'class' => 'form-control', 'required' => 'required',
 ]);
 echo html_writer::end_div();
 
 echo html_writer::start_div('form-group');
 echo html_writer::tag('label', 'Location', ['for' => 'location', 'class' => 'form-label']);
-echo html_writer::empty_tag('input', [
-    'type' => 'text', 'name' => 'location', 'id' => 'location',
-    'value' => s($f->location ?? ''),
-    'class' => 'form-control', 'placeholder' => 'e.g. Head Office / Video call',
+echo html_writer::empty_tag(
+    'input', [
+        'type' => 'text', 'name' => 'location', 'id' => 'location',
+        'value' => s($f->location ?? ''),
+        'class' => 'form-control', 'placeholder' => 'e.g. Head Office / Video call',
 ]);
 echo html_writer::end_div();
 
@@ -169,9 +173,10 @@ foreach ([
 ] as [$name, $label, $placeholder, $rows]) {
     echo html_writer::start_div('form-group', ['style' => 'margin-top: 14px;']);
     echo html_writer::tag('label', $label, ['for' => $name, 'class' => 'form-label']);
-    echo html_writer::tag('textarea', s($f->$name ?? ''), [
-        'name' => $name, 'id' => $name, 'class' => 'form-control',
-        'rows' => $rows, 'placeholder' => $placeholder,
+    echo html_writer::tag(
+        'textarea', s($f->$name ?? ''), [
+            'name' => $name, 'id' => $name, 'class' => 'form-control',
+            'rows' => $rows, 'placeholder' => $placeholder,
     ]);
     echo html_writer::end_div();
 }

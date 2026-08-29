@@ -61,7 +61,7 @@ $definitions = [
         'staticacceleration' => true,
         'ttl' => 60,
     ],
-    // v6.3.14: parsed docs/*.md, release notes and live site facts for the AI assistant.
+    // Version 6.3.14: parsed docs/*.md, release notes and live site facts for the AI assistant.
     // simpledata is false because docs() returns nested arrays. Each entry carries a hash of
     // its source files' modification times INSIDE the payload and is rejected when that hash
     // no longer matches, so an edited document takes effect on the next question without a

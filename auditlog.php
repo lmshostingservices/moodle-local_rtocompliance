@@ -88,12 +88,14 @@ if ($logs) {
                 // Bug O fix: HTML-encode each key and value before rendering.
                 // html_writer::tag() outputs its content argument raw (no auto-escaping),
                 // so a stored XSS payload in the details JSON would execute without s().
-                $details = implode(', ', array_map(function ($k, $v) {
-                    if (is_array($v)) {
-                        $v = json_encode($v);
-                    }
-                    return s((string)$k) . ': ' . s((string)$v);
-                }, array_keys($detailsarr), array_values($detailsarr)));
+                $details = implode(
+                    ', ', array_map(
+                    function ($k, $v) {
+                            if (is_array($v)) {
+                                $v = json_encode($v);
+                            }
+                            return s((string)$k) . ': ' . s((string)$v);
+                        }, array_keys($detailsarr), array_values($detailsarr)));
             }
         }
         echo html_writer::tag('td', html_writer::tag('small', $details, ['class' => 'text-muted']));

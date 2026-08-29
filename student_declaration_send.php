@@ -21,7 +21,7 @@
  * @copyright  2025 LMS Labs
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-// student_declaration_send.php — Send a Student Declaration to selected students.
+// Send a Student Declaration to selected students (student_declaration_send.php).
 // FIX-RTO-DECL-SELECT (v4.0.78): replaced "send to all N students" button with a
 // checkbox-selection table so admin can target 1 or more specific students.
 // Declarations status (Not Sent / Pending / Completed) is shown per row.
@@ -35,18 +35,20 @@ admin_externalpage_setup('local_rtocompliance_students');
 require_login();
 require_capability('local/rtocompliance:manage', context_system::instance());
 
-// userid is kept for single-student shortcut (called from student profile page).
+// Userid is kept for single-student shortcut (called from student profile page).
 $userid       = optional_param('userid', 0, PARAM_INT);
 $declfilter   = optional_param('declfilter', 'all', PARAM_ALPHA); // all|notsent|pending|completed
 $search       = optional_param('search', '', PARAM_TEXT);
 $page         = max(0, optional_param('page', 0, PARAM_INT));
 $perpage      = 50;
 
-$PAGE->set_url(new moodle_url('/local/rtocompliance/student_declaration_send.php', [
-    'userid'     => $userid,
-    'declfilter' => $declfilter,
-    'search'     => $search,
-    'page'       => $page,
+$PAGE->set_url(
+    new moodle_url(
+    '/local/rtocompliance/student_declaration_send.php', [
+            'userid'     => $userid,
+            'declfilter' => $declfilter,
+            'search'     => $search,
+            'page'       => $page,
 ]));
 $PAGE->set_title('Send Student Declaration');
 $PAGE->set_heading('Send Student Declaration');
@@ -221,10 +223,11 @@ echo html_writer::tag('h2', 'Student Declaration — Pre-Enrolment Obligations')
 // Declaration summary card
 echo html_writer::start_div('info-card', ['style' => 'margin-bottom:1.5rem;']);
 echo html_writer::tag('h4', 'What this sends');
-echo html_writer::tag('p',
-    'This emails each selected student a unique link to a Student Declaration form. '
-    . 'Students confirm they have read and understood the following obligations by entering their full name '
-    . 'and typed signature. A timestamp is recorded and the completed declaration is stored against their student record.'
+echo html_writer::tag(
+    'p',
+        'This emails each selected student a unique link to a Student Declaration form. '
+        . 'Students confirm they have read and understood the following obligations by entering their full name '
+        . 'and typed signature. A timestamp is recorded and the completed declaration is stored against their student record.'
 );
 echo html_writer::start_tag('ul');
 foreach ($declarationItems as $item) {
@@ -315,9 +318,10 @@ $sql .= " ORDER BY u.lastname, u.firstname";
 $students = $DB->get_records_sql($sql, $params, $page * $perpage, $perpage);
 
 // Status summary counts (for filter bar badges)
-$allCount       = $DB->count_records_sql("SELECT COUNT(DISTINCT u.id) " . substr($sql, strpos($sql, 'FROM')),
-    // Re-use all params but without status filter — do a separate count query.
-    []
+$allCount       = $DB->count_records_sql(
+    "SELECT COUNT(DISTINCT u.id) " . substr($sql, strpos($sql, 'FROM')),
+        // Re-use all params but without status filter — do a separate count query.
+        []
 );
 $countNotSent   = $DB->count_records_sql(
     "SELECT COUNT(DISTINCT u.id)
@@ -381,9 +385,10 @@ $filterBar .= '</div></div>';
 echo $filterBar;
 
 // ── Student selection form ───────────────────────────────────────────────────
-$sendUrl = new moodle_url('/local/rtocompliance/student_declaration_send.php', [
-    'userid'  => 0,
-    'sesskey' => sesskey(),
+$sendUrl = new moodle_url(
+    '/local/rtocompliance/student_declaration_send.php', [
+        'userid'  => 0,
+        'sesskey' => sesskey(),
 ]);
 echo '<form id="decl-send-form" method="post" action="' . $sendUrl->out(false) . '">';
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
@@ -468,7 +473,8 @@ echo '</div>';
 echo html_writer::end_div(); // .compliance-container
 
 // ── JS for checkbox counter ───────────────────────────────────────────────────
-echo html_writer::script('
+echo html_writer::script(
+    '
 (function () {
     var sendBtn   = document.getElementById("decl-send-btn");
     var countSpan = document.getElementById("decl-count");

@@ -39,13 +39,14 @@ require_sesskey();
 function rtocompliance_curl_post(string $url, string $body, array $headers, int $timeout = 60): array {
     if (function_exists('curl_init')) {
         $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT        => $timeout,
-            CURLOPT_POST           => true,
-            CURLOPT_POSTFIELDS     => $body,
-            CURLOPT_HTTPHEADER     => $headers,
-            CURLOPT_SSL_VERIFYPEER => true,
+        curl_setopt_array(
+            $ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT        => $timeout,
+                CURLOPT_POST           => true,
+                CURLOPT_POSTFIELDS     => $body,
+                CURLOPT_HTTPHEADER     => $headers,
+                CURLOPT_SSL_VERIFYPEER => true,
         ]);
         $response = curl_exec($ch);
         $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -54,9 +55,10 @@ function rtocompliance_curl_post(string $url, string $body, array $headers, int 
         curl_close($ch);
         return ['response' => ($response !== false ? $response : ''), 'httpcode' => $httpcode, 'error' => $errmsg];
     }
-    $ctx = stream_context_create([
-        'http' => ['method' => 'POST', 'header' => implode("\r\n", $headers), 'content' => $body, 'timeout' => $timeout, 'ignore_errors' => true],
-        'ssl'  => ['verify_peer' => true],
+    $ctx = stream_context_create(
+        [
+            'http' => ['method' => 'POST', 'header' => implode("\r\n", $headers), 'content' => $body, 'timeout' => $timeout, 'ignore_errors' => true],
+            'ssl'  => ['verify_peer' => true],
     ]);
     $response = @file_get_contents($url, false, $ctx);
     $httpcode = 200;
@@ -69,11 +71,12 @@ function rtocompliance_curl_post(string $url, string $body, array $headers, int 
 function rtocompliance_curl_get(string $url, array $headers, int $timeout = 30): array {
     if (function_exists('curl_init')) {
         $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT        => $timeout,
-            CURLOPT_HTTPHEADER     => $headers,
-            CURLOPT_SSL_VERIFYPEER => true,
+        curl_setopt_array(
+            $ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT        => $timeout,
+                CURLOPT_HTTPHEADER     => $headers,
+                CURLOPT_SSL_VERIFYPEER => true,
         ]);
         $response = curl_exec($ch);
         $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -82,9 +85,10 @@ function rtocompliance_curl_get(string $url, array $headers, int $timeout = 30):
         curl_close($ch);
         return ['response' => ($response !== false ? $response : ''), 'httpcode' => $httpcode, 'error' => $errmsg];
     }
-    $ctx = stream_context_create([
-        'http' => ['method' => 'GET', 'header' => implode("\r\n", $headers), 'timeout' => $timeout, 'ignore_errors' => true],
-        'ssl'  => ['verify_peer' => true],
+    $ctx = stream_context_create(
+        [
+            'http' => ['method' => 'GET', 'header' => implode("\r\n", $headers), 'timeout' => $timeout, 'ignore_errors' => true],
+            'ssl'  => ['verify_peer' => true],
     ]);
     $response = @file_get_contents($url, false, $ctx);
     $httpcode = 200;
@@ -174,15 +178,16 @@ if ($action === 'tga_qualification' || $action === 'tgaqualification') {
     elseif  (preg_match('/graduate\s+cert(?:ificate)?/i',  $combined)) $aqfLevel = 8;
     elseif  (preg_match('/graduate\s+dipl(?:oma)?/i',      $combined)) $aqfLevel = 8;
 
-    echo json_encode([
-        'success' => true,
-        'qualification' => [
-            'Code'         => $data['qualification']['Code'] ?? $data['qualification']['code'] ?? $code,
-            'Title'        => $qualTitle,
-            'NominalHours' => $totalNominalHours,
-            'AQFLevel'     => $aqfLevel,
-        ],
-        'units' => $units,
+    echo json_encode(
+        [
+            'success' => true,
+            'qualification' => [
+                'Code'         => $data['qualification']['Code'] ?? $data['qualification']['code'] ?? $code,
+                'Title'        => $qualTitle,
+                'NominalHours' => $totalNominalHours,
+                'AQFLevel'     => $aqfLevel,
+            ],
+            'units' => $units,
     ]);
     exit;
 }
@@ -339,12 +344,13 @@ if ($action === 'generate_resolution') {
     }
     $keyword = implode("\n", $kwParts);
 
-    $suggestPayload = json_encode([
-        'apiKey'   => $apikey,
-        'field'    => $fieldKey,
-        'qualName' => '',
-        'keyword'  => $keyword,
-        'count'    => 1,
+    $suggestPayload = json_encode(
+        [
+            'apiKey'   => $apikey,
+            'field'    => $fieldKey,
+            'qualName' => '',
+            'keyword'  => $keyword,
+            'count'    => 1,
     ]);
     $sr = rtocompliance_curl_post($apiurl . '/api/rto/ai-suggest', $suggestPayload, ['Content-Type: application/json', 'Accept: application/json'], 60);
     if ($sr['error']) {
@@ -391,7 +397,8 @@ if ($action === 'ai_draft_text') {
     }
     $apiurl = rtrim($apiurl, '/');
 
-    $siteid = ''; $apikey = '';
+    $siteid = '';
+    $apikey = '';
     if (function_exists('local_aiconfig_get_siteid')) {
         $siteid = trim(local_aiconfig_get_siteid('local_rtocompliance') ?? '');
     }
@@ -528,12 +535,13 @@ if ($action === 'ai_draft_text') {
         }
         $keyword = implode("\n", $kwParts);
 
-        $suggestPayload = json_encode([
-            'apiKey'   => $apikey,
-            'field'    => $contexttype,
-            'qualName' => !empty($clean['qualification']) ? $clean['qualification'] : '',
-            'keyword'  => $keyword,
-            'count'    => 1,
+        $suggestPayload = json_encode(
+            [
+                'apiKey'   => $apikey,
+                'field'    => $contexttype,
+                'qualName' => !empty($clean['qualification']) ? $clean['qualification'] : '',
+                'keyword'  => $keyword,
+                'count'    => 1,
         ]);
         $sr = rtocompliance_curl_post($apiurl . '/api/rto/ai-suggest', $suggestPayload, ['Content-Type: application/json', 'Accept: application/json'], 60);
         if ($sr['error']) {
@@ -648,7 +656,8 @@ if ($action === 'issue_cert_from_results') {
     // Verify the student is actually complete (all selected units have a
     // competent outcome) before issuing — guards against button being shown
     // in edge cases or direct AJAX calls.
-    $allunits = $DB->get_records('local_rtocompliance_qualunits', [
+    $allunits = $DB->get_records(
+        'local_rtocompliance_qualunits', [
         'qualbuilderid' => $qualbuilderid, 'selected' => 1], 'unittype ASC, unitcode ASC');
     if (!empty($allunits)) {
         $isComplete = $DB->record_exists_sql(
@@ -721,8 +730,8 @@ if ($action === 'issue_cert_from_results') {
             $unitsForCert,
             time(),
             'default',
-            1,  // send email
-            0   // timecompleted unknown here
+            1,  // Send email
+            0   // Timecompleted unknown here
         );
 
         if ($result['ok']) {
@@ -758,17 +767,19 @@ if ($action === 'issue_cert_from_results') {
     // own; the queue is processed by an admin (Qual Cert Hub -> Process Queue) or by re-running
     // a generation page.
     if ($studentrec && $issuedcount > 0 && $heldcount === 0) {
-        $autocertrow = $DB->get_record('local_rtocompliance_autocerts', [
-            'studentid'     => $studentrec->id,
-            'qualbuilderid' => $qualbuilderid,
-            'status'        => 'pending',
+        $autocertrow = $DB->get_record(
+            'local_rtocompliance_autocerts', [
+                'studentid'     => $studentrec->id,
+                'qualbuilderid' => $qualbuilderid,
+                'status'        => 'pending',
         ]);
         if ($autocertrow) {
-            $DB->update_record('local_rtocompliance_autocerts', (object)[
-                'id'            => $autocertrow->id,
-                'status'        => 'complete',
-                'timeprocessed' => time(),
-                'certsissued'   => ($autocertrow->certsissued ?? 0) + $issuedcount,
+            $DB->update_record(
+                'local_rtocompliance_autocerts', (object)[
+                    'id'            => $autocertrow->id,
+                    'status'        => 'complete',
+                    'timeprocessed' => time(),
+                    'certsissued'   => ($autocertrow->certsissued ?? 0) + $issuedcount,
             ]);
         }
     }
@@ -778,12 +789,13 @@ if ($action === 'issue_cert_from_results') {
         exit;
     }
 
-    echo json_encode([
-        'success'    => true,
-        'issued'     => $issued,
-        'skipped'    => $skipped,
-        'errors'     => $errors,
-        'studentname' => fullname($user),
+    echo json_encode(
+        [
+            'success'    => true,
+            'issued'     => $issued,
+            'skipped'    => $skipped,
+            'errors'     => $errors,
+            'studentname' => fullname($user),
     ]);
     exit;
 }

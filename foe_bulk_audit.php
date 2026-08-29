@@ -134,9 +134,9 @@ $_imports = $DB->get_records_sql(
 // FORM (shown when action !== 'run')
 // ─────────────────────────────────────────────────────────────────────────────
 if ($action !== 'run') {
-    $PAGE->add_body_class('path-local-rtocompliance'); // v5.9.445: scoped CSS needs this on admin_externalpage pages.
+    $PAGE->add_body_class('path-local-rtocompliance'); // Version 5.9.445: scoped CSS needs this on admin_externalpage pages.
     echo $OUTPUT->header();
-    echo local_rtocompliance_render_nav_header('Bulk Over-Enrolment Audit'); // v5.9.404: add sidebar.
+    echo local_rtocompliance_render_nav_header('Bulk Over-Enrolment Audit'); // Version 5.9.404: add sidebar.
     echo '<h2>FOE Bulk Deletion Audit</h2>';
     echo '<p class="text-muted" style="max-width:800px;">'
        . 'Reads every <code>user_enrolment_deleted</code> event from Moodle\'s standard log for the '
@@ -288,7 +288,7 @@ $_logRs = $DB->get_recordset_sql(
     $_logParams
 );
 
-$_deletions   = []; // raw deletion tuples
+$_deletions   = []; // Raw deletion tuples
 $_stuUidSet   = [];
 $_actorUidSet = [];
 $_crsIdSet    = [];
@@ -309,7 +309,7 @@ $_totalDeletions = count($_deletions);
 
 if ($_totalDeletions === 0) {
     echo $OUTPUT->header();
-    echo local_rtocompliance_render_nav_header('Bulk Over-Enrolment Audit'); // v5.9.404: add sidebar.
+    echo local_rtocompliance_render_nav_header('Bulk Over-Enrolment Audit'); // Version 5.9.404: add sidebar.
     echo '<h2>FOE Bulk Deletion Audit</h2>';
     echo '<div class="alert alert-warning">'
        . '<strong>No <code>user_enrolment_deleted</code> events found</strong> between '
@@ -322,8 +322,8 @@ if ($_totalDeletions === 0) {
 }
 
 // ── 3. Bulk load student users (idnumber = NAT client ID) ─────────────────────
-$_stuUsers   = []; // userid → {username, firstname, lastname, idnumber}
-$_actorUsers = []; // userid → {username}
+$_stuUsers   = []; // Userid → {username, firstname, lastname, idnumber}
+$_actorUsers = []; // Userid → {username}
 
 foreach (array_chunk(array_keys($_stuUidSet), 500) as $_chunk) {
     [$_sql, $_p] = $DB->get_in_or_equal($_chunk, SQL_PARAMS_NAMED, 'su');
@@ -343,7 +343,7 @@ foreach (array_chunk(array_keys($_actorUidSet), 200) as $_chunk) {
 }
 
 // ── 4. Bulk load course info + extract unit codes ─────────────────────────────
-$_courseMap = []; // courseid → {shortname, fullname, unitcode}
+$_courseMap = []; // Courseid → {shortname, fullname, unitcode}
 foreach (array_chunk(array_keys($_crsIdSet), 500) as $_chunk) {
     [$_sql, $_p] = $DB->get_in_or_equal($_chunk, SQL_PARAMS_NAMED, 'cr');
     $_rs = $DB->get_recordset_sql(
@@ -457,10 +457,19 @@ foreach ($_deletions as [$_actorUid, $_stuUid, $_cid, $_ts, $_other]) {
     }
 
     // Assign verdict
-    if ($_shouldExist === true  && !$_existsNow)  { $_verdict = 'RESTORE REQUIRED';      $_cntRestore++;  }
-    elseif ($_shouldExist === false && !$_existsNow)  { $_verdict = 'Correctly removed';     $_cntCorrect++;  }
-    elseif ($_shouldExist === true  &&  $_existsNow)  { $_verdict = 'Successfully restored'; $_cntRestored++; }
-    else                                               { $_verdict = 'Review';                $_cntReview++;   }
+    if ($_shouldExist === true  && !$_existsNow)  {
+        $_verdict = 'RESTORE REQUIRED';
+        $_cntRestore++;
+    } elseif ($_shouldExist === false && !$_existsNow)  {
+        $_verdict = 'Correctly removed';
+        $_cntCorrect++;
+    } elseif ($_shouldExist === true  &&  $_existsNow)  {
+        $_verdict = 'Successfully restored';
+        $_cntRestored++;
+    } else {
+        $_verdict = 'Review';
+        $_cntReview++;
+    }
 
     $_rows[] = [
         'deleted_at'       => date('d M Y H:i:s', $_ts),
@@ -485,18 +494,20 @@ $_csvPath = _fba_csvpath($_tok);
 $_fh = @fopen($_csvPath, 'w');
 if ($_fh) {
     fprintf($_fh, "\xEF\xBB\xBF"); // UTF-8 BOM for Excel
-    fputcsv($_fh, [
-        'deleted_at','deleted_by','student_username','student_name','client_id',
-        'course_shortname','course_fullname','unit_code','enrol_method',
-        'should_exist_today','should_reason','exists_today','verdict',
+    fputcsv(
+        $_fh, [
+            'deleted_at','deleted_by','student_username','student_name','client_id',
+            'course_shortname','course_fullname','unit_code','enrol_method',
+            'should_exist_today','should_reason','exists_today','verdict',
     ]);
     foreach ($_rows as $_r) {
-        fputcsv($_fh, [
-            $_r['deleted_at'],  $_r['deleted_by'],       $_r['student_username'],
-            $_r['student_name'],$_r['client_id'],        $_r['course_shortname'],
-            $_r['course_fullname'], $_r['unit_code'],    $_r['enrol_method'],
-            $_r['should_exist'],    $_r['should_reason'],$_r['exists_now'],
-            $_r['verdict'],
+        fputcsv(
+            $_fh, [
+                $_r['deleted_at'],  $_r['deleted_by'],       $_r['student_username'],
+                $_r['student_name'],$_r['client_id'],        $_r['course_shortname'],
+                $_r['course_fullname'], $_r['unit_code'],    $_r['enrol_method'],
+                $_r['should_exist'],    $_r['should_reason'],$_r['exists_now'],
+                $_r['verdict'],
         ]);
     }
     fclose($_fh);
@@ -506,7 +517,7 @@ if ($_fh) {
 // RENDER RESULTS
 // ─────────────────────────────────────────────────────────────────────────────
 echo $OUTPUT->header();
-echo local_rtocompliance_render_nav_header('Bulk Over-Enrolment Audit'); // v5.9.404: add sidebar.
+echo local_rtocompliance_render_nav_header('Bulk Over-Enrolment Audit'); // Version 5.9.404: add sidebar.
 echo '<h2>FOE Bulk Deletion Audit — Results</h2>';
 
 // ── Summary tiles ─────────────────────────────────────────────────────────────
@@ -539,8 +550,9 @@ echo '<p class="text-muted mb-2" style="font-size:0.88em;">'
 // ── Download link ─────────────────────────────────────────────────────────────
 if ($_fh !== false && file_exists($_csvPath)) {
     echo '<p class="mb-3"><a href="'
-       . (new moodle_url('/local/rtocompliance/foe_bulk_audit.php', [
-           'action' => 'download', 'token' => $_tok
+       . (new moodle_url(
+           '/local/rtocompliance/foe_bulk_audit.php', [
+               'action' => 'download', 'token' => $_tok
        ]))->out()
        . '" class="btn btn-outline-secondary btn-sm">&#11015; Download full CSV ('
        . number_format($_totalDeletions) . ' rows)</a>'

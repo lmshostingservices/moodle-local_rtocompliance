@@ -168,7 +168,8 @@ class before_footer_html_generation {
                     $repairUrl = new \moodle_url('/local/rtocompliance/data_import.php');
                     $sesskey   = sesskey();
                     $noun      = $placeholderCount === 1 ? 'account' : 'accounts';
-                    $hook->add_html('
+                    $hook->add_html(
+                        '
 <style>
 #rtoc-repairnames-banner{
     position:fixed;bottom:24px;right:24px;z-index:99999;
@@ -207,11 +208,11 @@ class before_footer_html_generation {
             return;
         }
 
-        // v3.8.67+: Sidebar is rendered server-side by render_nav_header() as a flex child.
+        // Version 3.8.67+: Sidebar is rendered server-side by render_nav_header() as a flex child.
         // No sidebar injection needed here. Only table-sort JS is appended.
         require_once($CFG->dirroot . '/local/rtocompliance/lib.php');
 
-        // v4.4.26 CSP-TABLESORTER: Moodle 4.3+ blocks inline <script> blocks that
+        // Version 4.4.26 CSP-TABLESORTER: Moodle 4.3+ blocks inline <script> blocks that
         // lack a server-issued nonce (CSP directive: script-src 'self'). The old
         // $sorting_script heredoc injected an inline <script> block via add_html(),
         // which fires on every RTOC page — including trainers.php — and was being
@@ -221,7 +222,7 @@ class before_footer_html_generation {
         $tablesorter_url = (new \moodle_url('/local/rtocompliance/js/tablesorter.js'))->out();
         $hook->add_html('<script src="' . s($tablesorter_url) . '"></script>');
 
-        // v4.4.40 TABLES-FOOTER: tables.js must load on every plugin page, including
+        // Version 4.4.40 TABLES-FOOTER: tables.js must load on every plugin page, including
         // trainer_dashboard.php which uses $OUTPUT->header() directly and never calls
         // render_nav_header(). init() in tables.js is fully idempotent — the
         // closestScrollContainer + addToolbar duplicate-guard make a second run a no-op

@@ -21,7 +21,7 @@
  * @copyright  2025 LMS Labs
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-// v4.6.101 MULTI-UNIT-SOA — AJAX handler for soa_issue.php.
+// Version 4.6.101 MULTI-UNIT-SOA — AJAX handler for soa_issue.php.
 // Actions: getstudent | getunits | generatesoa
 
 require_once(__DIR__ . '/../../config.php');
@@ -65,11 +65,18 @@ try {
             $units    = soa_compliance_engine::get_eligible_units($userid, (bool)$override);
             $groups   = soa_compliance_engine::get_suggested_groups($units);
             // Convert stdClass objects to arrays for JSON encoding
-            $unitsArr  = array_map(function ($u) { return (array)$u; }, $units);
-            $groupsArr = array_map(function ($g) {
-                $g['units'] = array_map(function ($u) { return (array)$u; }, $g['units']);
-                return $g;
-            }, $groups);
+            $unitsArr  = array_map(
+                function ($u) {
+                    return (array)$u;
+                }, $units);
+            $groupsArr = array_map(
+                function ($g) {
+                    $g['units'] = array_map(
+                    function ($u) {
+                            return (array)$u;
+                        }, $g['units']);
+                    return $g;
+                }, $groups);
             echo json_encode(['ok' => true, 'units' => $unitsArr, 'groups' => $groupsArr]);
             break;
         }
@@ -115,10 +122,11 @@ try {
                     }
                 }
                 if (!empty($blockingErrors)) {
-                    echo json_encode([
-                        'ok'     => false,
-                        'error'  => 'Compliance check failed — resolve the following before issuing:',
-                        'detail' => $blockingErrors,
+                    echo json_encode(
+                        [
+                            'ok'     => false,
+                            'error'  => 'Compliance check failed — resolve the following before issuing:',
+                            'detail' => $blockingErrors,
                     ]);
                     break;
                 }
@@ -155,10 +163,11 @@ try {
                 ['certtype' => 'statement', 'studentid' => $userid, 'unitcount' => count($selectedUnits)]
             );
             if (!$creditresult['ok'] && ($creditresult['error'] ?? '') === 'INSUFFICIENT_CREDITS') {
-                echo json_encode([
-                    'ok'     => false,
-                    'error'  => 'Insufficient credits — current balance: ' . (int)($creditresult['credits'] ?? 0) . '. Each SOA costs 5 credits.',
-                    'buyUrl' => $creditresult['buyUrl'] ?? '',
+                echo json_encode(
+                    [
+                        'ok'     => false,
+                        'error'  => 'Insufficient credits — current balance: ' . (int)($creditresult['credits'] ?? 0) . '. Each SOA costs 5 credits.',
+                        'buyUrl' => $creditresult['buyUrl'] ?? '',
                 ]);
                 break;
             }
@@ -177,7 +186,7 @@ try {
                 if ($_unitcode !== '' && $_unitname !== '' && strpos($_unitname, $_unitcode) === 0) {
                     $_unitname = ltrim(substr($_unitname, strlen($_unitcode)), " \t-\xe2\x80\x94\xe2\x80\x93");
                 }
-                // v5.9.367 SOA-DATE-FIX: derive a Semester/Year value from the actual
+                // Version 5.9.367 SOA-DATE-FIX: derive a Semester/Year value from the actual
                 // completion date. The renderer's Record-of-Results/date column reads
                 // 'semester' (or 'year'), never 'date' — so without this the column fell
                 // back to a semester derived from the cert ISSUE date instead of when the
@@ -187,7 +196,7 @@ try {
                 if ($_cdate > 0) {
                     $_semester = ((int) date('n', $_cdate) <= 6 ? 'Sem 1 ' : 'Sem 2 ') . date('Y', $_cdate);
                 }
-                // v6.3.11 SOA-EPOCH-DATE-FIX: store the completion date as a UNIX
+                // Version 6.3.11 SOA-EPOCH-DATE-FIX: store the completion date as a UNIX
                 // TIMESTAMP, not a formatted 'd/m/Y' string. Every consumer of the
                 // units JSON (cert_template_renderer, and certificate_validator which
                 // already wrote a timestamp) treats 'date' as an integer timestamp, so
@@ -270,23 +279,25 @@ try {
             $log->itemid       = $cert->id;
             $log->userid       = $USER->id;
             $log->targetuserid = $userid;
-            $log->details      = json_encode([
-                'certnumber' => $certnumber,
-                'unitcount'  => count($selectedUnits),
-                'units'      => array_column($unitsJson, 'code'),
-                'bypass'     => (bool)$bypassval,
+            $log->details      = json_encode(
+                [
+                    'certnumber' => $certnumber,
+                    'unitcount'  => count($selectedUnits),
+                    'units'      => array_column($unitsJson, 'code'),
+                    'bypass'     => (bool)$bypassval,
             ]);
             $log->ipaddress   = getremoteaddr();
             $log->timecreated = time();
             $DB->insert_record('local_rtocompliance_log', $log);
 
-            echo json_encode([
-                'ok'          => true,
-                'certnumber'  => $certnumber,
-                'certid'      => $cert->id,
-                'unitcount'   => count($selectedUnits),
-                'viewurl'     => (new moodle_url('/local/rtocompliance/certificates.php'))->out(false),
-                'downloadurl' => (new moodle_url('/local/rtocompliance/download_cert.php', ['id' => $cert->id]))->out(false),
+            echo json_encode(
+                [
+                    'ok'          => true,
+                    'certnumber'  => $certnumber,
+                    'certid'      => $cert->id,
+                    'unitcount'   => count($selectedUnits),
+                    'viewurl'     => (new moodle_url('/local/rtocompliance/certificates.php'))->out(false),
+                    'downloadurl' => (new moodle_url('/local/rtocompliance/download_cert.php', ['id' => $cert->id]))->out(false),
             ]);
             break;
         }

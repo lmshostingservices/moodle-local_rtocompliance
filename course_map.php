@@ -53,11 +53,13 @@ $seedResult = null;
 if ($action === 'seed' && confirm_sesskey()) {
     $seedQual   = optional_param('seedqual', '', PARAM_ALPHANUMEXT);
     $seedResult = local_rtocompliance_seed_course_map($seedQual);
-    redirect(new moodle_url('/local/rtocompliance/course_map.php', [
-        'seeded'    => 1,
-        'inserted'  => $seedResult['inserted'],
-        'skipped'   => $seedResult['skipped'],
-        'nscanned'  => count($seedResult['quals_scanned']),
+    redirect(
+        new moodle_url(
+        '/local/rtocompliance/course_map.php', [
+                'seeded'    => 1,
+                'inserted'  => $seedResult['inserted'],
+                'skipped'   => $seedResult['skipped'],
+                'nscanned'  => count($seedResult['quals_scanned']),
     ]));
 }
 
@@ -82,7 +84,8 @@ if ($action === 'add' && confirm_sesskey() && $tableExists) {
             \core\notification::error('Moodle course ID ' . $newcourseid . ' does not exist — mapping not added.');
         } elseif ($DB->record_exists('local_rtocompliance_course_map', ['courseid' => $newcourseid])) {
             // Duplicate: show a friendly message instead of a silent no-op or DB exception.
-            \core\notification::warning('Course ID ' . $newcourseid . ' already has a mapping. '
+            \core\notification::warning(
+                'Course ID ' . $newcourseid . ' already has a mapping. '
                 . 'Delete the existing entry first if you need to remap it to a different qual/unit.');
         } else {
             try {
@@ -98,7 +101,8 @@ if ($action === 'add' && confirm_sesskey() && $tableExists) {
                 $row->timemodified = time();
                 $row->usermodified = (int)$USER->id;
                 $DB->insert_record('local_rtocompliance_course_map', $row);
-                \core\notification::success('Manual mapping added: course ' . $newcourseid
+                \core\notification::success(
+                    'Manual mapping added: course ' . $newcourseid
                     . ' → ' . strtoupper(trim($newqualcode)) . ' / ' . strtoupper(trim($newunitcode)));
             } catch (\dml_exception $e) {
                 // Concurrent add raced us to the unique key.
@@ -111,7 +115,7 @@ if ($action === 'add' && confirm_sesskey() && $tableExists) {
 
 // ── RENDER ────────────────────────────────────────────────────────────────────
 echo $OUTPUT->header();
-// v5.9.404: render the plugin's left-hand sidebar (this page was missing it).
+// Version 5.9.404: render the plugin's left-hand sidebar (this page was missing it).
 echo local_rtocompliance_render_nav_header('Moodle Course Map');
 echo local_rtocompliance_page_banner('Moodle Course Map');
 
@@ -183,7 +187,7 @@ if ($nUnconf > 0) {
 echo '<span class="badge badge-primary"   style="font-size:0.85em;" title="Links that came from the courses you attached to units in the Qualification Builder.">QB-linked: ' . $nQb . '</span>';
 echo '<span class="badge badge-info"      style="font-size:0.85em;" title="Links the system worked out by reading your Moodle category tree and course names.">Auto-detected: ' . $nAuto . '</span>';
 echo '<span class="badge badge-dark"      style="font-size:0.85em;" title="Links you added by hand using the Add Manual Mapping form.">Manual: ' . $nManual . '</span>';
-echo '</div></div>'; // close bar
+echo '</div></div>'; // Close bar
 
 // ── MAPPING TABLE ─────────────────────────────────────────────────────────────
 $filterWhere  = '';
@@ -237,13 +241,15 @@ if (empty($maps)) {
 
         $confirmBtn = '';
         if (!$m->confirmed) {
-            $confirmUrl = new moodle_url('/local/rtocompliance/course_map.php', [
-                'action' => 'confirm', 'mapid' => $m->id, 'sesskey' => sesskey(), 'filterq' => $filterq,
+            $confirmUrl = new moodle_url(
+                '/local/rtocompliance/course_map.php', [
+                    'action' => 'confirm', 'mapid' => $m->id, 'sesskey' => sesskey(), 'filterq' => $filterq,
             ]);
             $confirmBtn = '<a href="' . $confirmUrl->out(false) . '" class="btn btn-xs btn-success" style="margin-right:3px;" title="Mark as confirmed">✓</a>';
         }
-        $deleteUrl = new moodle_url('/local/rtocompliance/course_map.php', [
-            'action' => 'delete', 'mapid' => $m->id, 'sesskey' => sesskey(), 'filterq' => $filterq,
+        $deleteUrl = new moodle_url(
+            '/local/rtocompliance/course_map.php', [
+                'action' => 'delete', 'mapid' => $m->id, 'sesskey' => sesskey(), 'filterq' => $filterq,
         ]);
         $deleteBtn = '<a href="' . $deleteUrl->out(false) . '" class="btn btn-xs btn-danger" '
             . 'onclick="return confirm(\'Remove this mapping? The course will be excluded from completion detection until re-added.\')" title="Remove mapping">✕</a>';

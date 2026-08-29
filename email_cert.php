@@ -21,7 +21,7 @@
  * @copyright  2025 LMS Labs
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-// v4.2.36 CERTIFICATES-REDESIGN — One-click email certificate.
+// Version 4.2.36 CERTIFICATES-REDESIGN — One-click email certificate.
 //
 // Now supports TWO call paths:
 //   1. AJAX (header X-Requested-With: XMLHttpRequest OR ?ajax=1):
@@ -92,10 +92,11 @@ if (in_array($cert->certtype, ['testamur', 'statement'])) {
 // Already-emailed guard.
 if ($cert->emailsent) {
     if ($ajax) {
-        rtoc_email_cert_json_response([
-            'ok'    => false,
-            'error' => get_string('certificate_already_emailed', 'local_rtocompliance'),
-            'code'  => 'ALREADY_EMAILED',
+        rtoc_email_cert_json_response(
+            [
+                'ok'    => false,
+                'error' => get_string('certificate_already_emailed', 'local_rtocompliance'),
+                'code'  => 'ALREADY_EMAILED',
         ], 409);
     }
     redirect($returnurl, get_string('certificate_already_emailed', 'local_rtocompliance'), null, \core\output\notification::NOTIFY_WARNING);
@@ -104,7 +105,7 @@ if ($cert->emailsent) {
 
 // ── AJAX path: do it now, return JSON ────────────────────────────────────
 if ($ajax) {
-    // require_sesskey() MUST be inside the try/catch so that a bad/expired
+    // The require_sesskey() call MUST be inside the try/catch so that a bad/expired
     // sesskey throws a \required_key_exception that we can return as JSON.
     // If it sits outside, Moodle's global exception handler renders a full
     // HTML error page, which the JS then tries to parse as JSON and shows
@@ -115,10 +116,11 @@ if ($ajax) {
         if (!$result['ok']) {
             rtoc_email_cert_json_response(['ok' => false, 'error' => $result['error']], 500);
         }
-        rtoc_email_cert_json_response([
-            'ok'      => true,
-            'email'   => $result['email'],
-            'message' => 'Certificate emailed to ' . $result['email'],
+        rtoc_email_cert_json_response(
+            [
+                'ok'      => true,
+                'email'   => $result['email'],
+                'message' => 'Certificate emailed to ' . $result['email'],
         ]);
     } catch (\Throwable $e) {
         rtoc_email_cert_json_response(['ok' => false, 'error' => $e->getMessage()], 500);
@@ -148,11 +150,13 @@ echo local_rtocompliance_page_banner('Email Certificate');
 $certtypes = local_rtocompliance_get_certificate_types();
 
 echo $OUTPUT->confirm(
-    html_writer::tag('p', get_string('email_certificate_confirm', 'local_rtocompliance', [
-        'fullname'   => fullname($user),
-        'email'      => $user->email,
-        'certtype'   => $certtypes[$cert->certtype] ?? $cert->certtype,
-        'certnumber' => $cert->certnumber,
+    html_writer::tag(
+        'p', get_string(
+        'email_certificate_confirm', 'local_rtocompliance', [
+                'fullname'   => fullname($user),
+                'email'      => $user->email,
+                'certtype'   => $certtypes[$cert->certtype] ?? $cert->certtype,
+                'certnumber' => $cert->certnumber,
     ])),
     new moodle_url('/local/rtocompliance/email_cert.php', ['id' => $id, 'confirm' => 1]),
     $returnurl

@@ -21,7 +21,7 @@
  * @copyright  2025 LMS Labs
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-// v4.7.104 STUDENT-CERT-PORTAL — Enhanced student-facing certificate document area.
+// Version 4.7.104 STUDENT-CERT-PORTAL — Enhanced student-facing certificate document area.
 //
 // Replaces the basic v4.x card list with a proper certificate portfolio page:
 //   - Clean grouped layout by certificate type (Testamur, SoA, RoR, Completion)
@@ -88,9 +88,10 @@ rsort($allyears);
 
 // Apply the year filter in PHP.
 if ($filteryear > 0) {
-    $certs = array_filter($allcerts, function ($c) use ($filteryear) {
-        return !empty($c->issuedate) && (int) date('Y', (int) $c->issuedate) === (int) $filteryear;
-    });
+    $certs = array_filter(
+        $allcerts, function ($c) use ($filteryear) {
+            return !empty($c->issuedate) && (int) date('Y', (int) $c->issuedate) === (int) $filteryear;
+        });
 } else {
     $certs = $allcerts;
 }
@@ -103,9 +104,10 @@ echo html_writer::start_div('d-flex align-items-center justify-content-between f
 echo html_writer::tag('h2', get_string('mycertificates', 'local_rtocompliance'));
 if ($userid != $USER->id) {
     // Admin viewing another user
-    echo html_writer::tag('span',
-        'Viewing: ' . fullname($user),
-        ['class' => 'badge badge-info']
+    echo html_writer::tag(
+        'span',
+            'Viewing: ' . fullname($user),
+            ['class' => 'badge badge-info']
     );
 }
 echo html_writer::end_div();
@@ -114,15 +116,17 @@ echo html_writer::end_div();
 if (empty($certs)) {
     // ── Empty state ────────────────────────────────────────────────────────
     echo html_writer::start_div('no-deadlines text-center py-5');
-    echo html_writer::tag('div',
-        '<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="opacity:0.3">'.
-        '<circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>',
-        ['class' => 'mb-3 text-muted']
+    echo html_writer::tag(
+        'div',
+            '<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="opacity:0.3">'.
+            '<circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>',
+            ['class' => 'mb-3 text-muted']
     );
     echo html_writer::tag('h4', 'No certificates yet', ['class' => 'text-muted']);
-    echo html_writer::tag('p',
-        'Your certificates will appear here once your trainer or assessor issues them after completing a course or qualification.',
-        ['class' => 'text-muted']
+    echo html_writer::tag(
+        'p',
+            'Your certificates will appear here once your trainer or assessor issues them after completing a course or qualification.',
+            ['class' => 'text-muted']
     );
     echo html_writer::end_div();
     echo html_writer::end_div();
@@ -156,23 +160,25 @@ echo '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px
 if (count($allyears) > 1) {
     echo html_writer::start_tag('ul', ['class' => 'nav nav-tabs mb-4']);
     $activeclass = $filteryear === 0 ? 'nav-link active' : 'nav-link';
-    echo html_writer::tag('li',
-        html_writer::link(
-            new moodle_url('/local/rtocompliance/mycerts.php', ['userid' => $userid]),
-            'All Years',
-            ['class' => $activeclass]
-        ),
-        ['class' => 'nav-item']
-    );
-    foreach ($allyears as $yr) {
-        $activeclass = $filteryear === (int)$yr ? 'nav-link active' : 'nav-link';
-        echo html_writer::tag('li',
+    echo html_writer::tag(
+        'li',
             html_writer::link(
-                new moodle_url('/local/rtocompliance/mycerts.php', ['userid' => $userid, 'year' => $yr]),
-                (string) $yr,
+                new moodle_url('/local/rtocompliance/mycerts.php', ['userid' => $userid]),
+                'All Years',
                 ['class' => $activeclass]
             ),
             ['class' => 'nav-item']
+    );
+    foreach ($allyears as $yr) {
+        $activeclass = $filteryear === (int)$yr ? 'nav-link active' : 'nav-link';
+        echo html_writer::tag(
+            'li',
+                html_writer::link(
+                    new moodle_url('/local/rtocompliance/mycerts.php', ['userid' => $userid, 'year' => $yr]),
+                    (string) $yr,
+                    ['class' => $activeclass]
+                ),
+                ['class' => 'nav-item']
         );
     }
     echo html_writer::end_tag('ul');
@@ -233,51 +239,57 @@ foreach ($orderedgroups as $grouptype => $groupcerts) {
 
         // Qualification
         if ($cert->qualificationcode || $cert->qualificationname) {
-            echo html_writer::tag('h5',
-                ($cert->qualificationcode ? $cert->qualificationcode . ' ' : '') . $cert->qualificationname,
-                ['class' => 'mb-1']
+            echo html_writer::tag(
+                'h5',
+                    ($cert->qualificationcode ? $cert->qualificationcode . ' ' : '') . $cert->qualificationname,
+                    ['class' => 'mb-1']
             );
         } else {
             echo html_writer::tag('h5', $grouplabel, ['class' => 'mb-1']);
         }
 
         // Cert number
-        echo html_writer::tag('p',
-            html_writer::tag('strong', 'Certificate No: ') .
-            html_writer::tag('span', $cert->certnumber, ['class' => 'certificate-number']),
-            ['class' => 'mb-1']
+        echo html_writer::tag(
+            'p',
+                html_writer::tag('strong', 'Certificate No: ') .
+                html_writer::tag('span', $cert->certnumber, ['class' => 'certificate-number']),
+                ['class' => 'mb-1']
         );
 
         // Issue date
-        echo html_writer::tag('p',
-            html_writer::tag('strong', 'Issued: ') .
-            userdate($cert->issuedate, '%d %B %Y'),
-            ['class' => 'mb-1 text-muted']
+        echo html_writer::tag(
+            'p',
+                html_writer::tag('strong', 'Issued: ') .
+                userdate($cert->issuedate, '%d %B %Y'),
+                ['class' => 'mb-1 text-muted']
         );
 
         // Expiry date
         if (!empty($cert->expirydate)) {
-            echo html_writer::tag('p',
-                html_writer::tag('strong', 'Expires: ') .
-                userdate($cert->expirydate, '%d %B %Y'),
-                ['class' => 'mb-1 text-muted']
+            echo html_writer::tag(
+                'p',
+                    html_writer::tag('strong', 'Expires: ') .
+                    userdate($cert->expirydate, '%d %B %Y'),
+                    ['class' => 'mb-1 text-muted']
             );
         }
 
         // Units for SoA (collapsible)
         if ($cert->certtype === 'statement' && !empty($unitsdata)) {
             $unitsid = 'units-' . $cert->id;
-            echo html_writer::tag('p',
-                html_writer::link('#' . $unitsid,
-                    count($unitsdata) . ' unit' . (count($unitsdata) > 1 ? 's' : '') . ' of competency',
-                    [
-                        'class'          => 'small text-info',
-                        'data-toggle'    => 'collapse',
-                        'aria-expanded'  => 'false',
-                        'aria-controls'  => $unitsid,
-                    ]
-                ),
-                ['class' => 'mb-1']
+            echo html_writer::tag(
+                'p',
+                    html_writer::link(
+                    '#' . $unitsid,
+                            count($unitsdata) . ' unit' . (count($unitsdata) > 1 ? 's' : '') . ' of competency',
+                            [
+                                'class'          => 'small text-info',
+                                'data-toggle'    => 'collapse',
+                                'aria-expanded'  => 'false',
+                                'aria-controls'  => $unitsid,
+                            ]
+                    ),
+                    ['class' => 'mb-1']
             );
             echo html_writer::start_div('collapse', ['id' => $unitsid]);
             echo html_writer::start_tag('ul', ['class' => 'small text-muted pl-3 mt-1']);

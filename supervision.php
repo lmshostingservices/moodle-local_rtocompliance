@@ -109,17 +109,19 @@ if ($wtalerts) {
             new moodle_url('/local/rtocompliance/trainer_edit.php', ['id' => $wt->id]),
             fullname($name)
         );
-        return html_writer::tag('div',
-            html_writer::tag('span', $badgetext, ['class' => 'badge ' . $badgeclass, 'style' => 'margin-right: 8px;'])
-            . html_writer::tag('strong', $link)
-            . ' — 2-year TAE deadline: ' . userdate($wt->wtdeadline, '%d %b %Y'),
+        return html_writer::tag(
+            'div',
+                html_writer::tag('span', $badgetext, ['class' => 'badge ' . $badgeclass, 'style' => 'margin-right: 8px;'])
+                . html_writer::tag('strong', $link)
+                . ' — 2-year TAE deadline: ' . userdate($wt->wtdeadline, '%d %b %Y'),
             ['style' => 'padding: 4px 0; border-bottom: 1px solid #eee;']);
     };
 
     $alertclass = !empty($overdue) ? 'alert-danger' : 'alert-warning';
     echo html_writer::start_div('info-card ' . $alertclass, ['style' => 'margin: 20px 0;']);
     echo html_writer::tag('h4', 'Working Towards TAE — Deadline Alerts');
-    echo html_writer::tag('p',
+    echo html_writer::tag(
+        'p',
         'The following Working Towards trainers must complete their full TAE within 2 years of commencement. Review supervision arrangements before the deadline passes.');
     foreach ($overdue as $wt) {
         echo $renderrow($wt, true);
@@ -186,7 +188,7 @@ if (!empty($whereclauses)) {
     $sql .= " WHERE " . implode(' AND ', $whereclauses);
 }
 
-$sql .= " ORDER BY s.supervisiondate DESC"; // v5.9.368: LIMIT moved to get_records_sql for cross-DB portability
+$sql .= " ORDER BY s.supervisiondate DESC"; // Version 5.9.368: LIMIT moved to get_records_sql for cross-DB portability
 
 $logs = [];
 $tableexists = $DB->get_manager()->table_exists('local_rtocompliance_supervision');
@@ -258,16 +260,17 @@ if ($logs) {
         echo html_writer::tag('td', userdate($log->supervisiondate, '%d %b %Y'));
         echo html_writer::tag('td', html_writer::tag('strong', fullname($trainername)));
         echo html_writer::tag('td', fullname($supervisorname));
-        echo html_writer::tag('td', s($supervisiontypes[$log->supervisiontype] ?? $log->supervisiontype)); // v5.9.368: escape free-text
+        echo html_writer::tag('td', s($supervisiontypes[$log->supervisiontype] ?? $log->supervisiontype)); // Version 5.9.368: escape free-text
         echo html_writer::tag('td', $log->qualificationcode ? s($log->qualificationcode) : '-');
         echo html_writer::tag('td', $log->duration ? $log->duration . ' mins' : '-');
         echo html_writer::tag('td', html_writer::tag('span', $status, ['class' => 'badge ' . $statusclass]));
-        echo html_writer::tag('td',
-            html_writer::link(
-                new moodle_url('/local/rtocompliance/supervision_edit.php', ['id' => $log->id]),
-                'View',
-                ['class' => 'btn btn-sm btn-secondary', 'title' => 'View this supervision log']
-            )
+        echo html_writer::tag(
+            'td',
+                html_writer::link(
+                    new moodle_url('/local/rtocompliance/supervision_edit.php', ['id' => $log->id]),
+                    'View',
+                    ['class' => 'btn btn-sm btn-secondary', 'title' => 'View this supervision log']
+                )
         );
         echo html_writer::end_tag('tr');
     }

@@ -62,7 +62,8 @@ $PAGE->add_body_class('path-local-rtocompliance');
 // Hard-fail on guest/missing user.
 $user = core_user::get_user($userid, '*', MUST_EXIST);
 if (isguestuser($user) || empty($user->email) || strpos($user->email, '@') === false) {
-    throw new moodle_exception('error', 'local_rtocompliance', '',
+    throw new moodle_exception(
+        'error', 'local_rtocompliance', '',
         'Cannot send suitability review to user id ' . $userid . ': account is the guest user, deleted, or has no valid email.');
 }
 
@@ -239,12 +240,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && confirm_sesskey()) {
     }
 
     local_rtocompliance_send_suitability_email($user, $tas, $token);
-    local_rtocompliance_log_action('suitability_sent', 'suitability', $suitabilityid, [
-        'userid'      => $userid,
-        'tasid'       => $tasid,
-        'req_prereq'  => $reqPrereq,
-        'req_lln'     => $reqLLN,
-        'actual_lln'  => $actLLN,
+    local_rtocompliance_log_action(
+        'suitability_sent', 'suitability', $suitabilityid, [
+            'userid'      => $userid,
+            'tasid'       => $tasid,
+            'req_prereq'  => $reqPrereq,
+            'req_lln'     => $reqLLN,
+            'actual_lln'  => $actLLN,
     ]);
 
     redirect(
@@ -306,10 +308,11 @@ if (!empty($existing_records)) {
             ['class' => 'btn btn-sm btn-outline-secondary mr-1']
         );
         if ($er->status === 'pending') {
-            $resendurl = new moodle_url('/local/rtocompliance/suitability_send.php', [
-                'userid'   => $userid,
-                'resendid' => $er->id,
-                'sesskey'  => sesskey(),
+            $resendurl = new moodle_url(
+                '/local/rtocompliance/suitability_send.php', [
+                    'userid'   => $userid,
+                    'resendid' => $er->id,
+                    'sesskey'  => sesskey(),
             ]);
             $acts .= html_writer::link($resendurl, get_string('suitability_resend', 'local_rtocompliance'), ['class' => 'btn btn-sm btn-outline-primary']);
         }
@@ -344,18 +347,23 @@ if (empty($tas_records)) {
         $tasoptions[$t->id] = $t->qualificationcode . ': ' . $t->qualificationname;
     }
 
-    echo html_writer::tag('label', get_string('suitability_select_tas', 'local_rtocompliance'),
+    echo html_writer::tag(
+        'label', get_string('suitability_select_tas', 'local_rtocompliance'),
         ['for' => 'tasid', 'class' => 'd-block mb-1 font-weight-bold']);
-    echo html_writer::select($tasoptions, 'tasid', '', false,
+    echo html_writer::select(
+        $tasoptions, 'tasid', '', false,
         ['id' => 'tasid', 'class' => 'form-control mb-3']);
 
-    echo html_writer::tag('label', 'Required prerequisite qualification',
+    echo html_writer::tag(
+        'label', 'Required prerequisite qualification',
         ['for' => 'req_prereq', 'class' => 'd-block mb-1 font-weight-bold']);
     echo html_writer::tag('p', 'The minimum prior qualification required to enrol in this course. The student must hold at least this level. Default: no prerequisite.', ['class' => 'text-muted small mb-1']);
-    echo html_writer::select($qualOptions, 'req_prereq', 'none', false,
+    echo html_writer::select(
+        $qualOptions, 'req_prereq', 'none', false,
         ['id' => 'req_prereq', 'class' => 'form-control mb-3']);
 
-    echo html_writer::tag('label', 'Required LLN level (ACSF)',
+    echo html_writer::tag(
+        'label', 'Required LLN level (ACSF)',
         ['for' => 'req_lln_level', 'class' => 'd-block mb-1 font-weight-bold']);
     echo html_writer::tag('p', 'The minimum Australian Core Skills Framework level required for this course. Most Certificate III/IV courses require Level 3.', ['class' => 'text-muted small mb-1']);
     echo html_writer::select(
@@ -365,10 +373,12 @@ if (empty($tas_records)) {
     // ── LLN: render based on configured adapter (v4.2.50) ──
     if ($llnIsManual) {
         // Manual adapter: show the dropdown directly — current behaviour.
-        echo html_writer::tag('label', 'Student\'s assessed LLN level (if known)',
+        echo html_writer::tag(
+            'label', 'Student\'s assessed LLN level (if known)',
             ['for' => 'lln_actual_level', 'class' => 'd-block mb-1 font-weight-bold']);
         echo html_writer::tag('p', 'If the student has already completed an LLN assessment, record their result here. Leave as <em>Not yet assessed</em> if no result is on file — the system will recommend an LLN assessment as part of the support plan.', ['class' => 'text-muted small mb-1']);
-        echo html_writer::select($llnOptions, 'lln_actual_level', '', false,
+        echo html_writer::select(
+            $llnOptions, 'lln_actual_level', '', false,
             ['id' => 'lln_actual_level', 'class' => 'form-control mb-3']);
     } else {
         // External adapter (e.g. webhook): show notice + per-send manual override.
@@ -380,18 +390,22 @@ if (empty($tas_records)) {
         echo '<input class="form-check-input" type="checkbox" id="lln_manual_override" name="lln_manual_override" value="1">';
         echo '<label class="form-check-label font-weight-bold" for="lln_manual_override">' .
             get_string('lln_send_manual_override', 'local_rtocompliance') . '</label>';
-        echo html_writer::tag('p', get_string('lln_send_manual_override_desc', 'local_rtocompliance', s($llnAdapterLabel)),
+        echo html_writer::tag(
+            'p', get_string('lln_send_manual_override_desc', 'local_rtocompliance', s($llnAdapterLabel)),
             ['class' => 'text-muted small mb-1']);
         echo html_writer::end_div();
 
         echo html_writer::start_div('mb-3', ['id' => 'lln_manual_block', 'style' => 'display:none']);
-        echo html_writer::tag('label', 'Student\'s assessed LLN level',
+        echo html_writer::tag(
+            'label', 'Student\'s assessed LLN level',
             ['for' => 'lln_actual_level', 'class' => 'd-block mb-1 font-weight-bold']);
-        echo html_writer::select($llnOptions, 'lln_actual_level', '', false,
+        echo html_writer::select(
+            $llnOptions, 'lln_actual_level', '', false,
             ['id' => 'lln_actual_level', 'class' => 'form-control']);
         echo html_writer::end_div();
 
-        echo html_writer::script('
+        echo html_writer::script(
+            '
 (function (){
     var cb  = document.getElementById("lln_manual_override");
     var blk = document.getElementById("lln_manual_block");
@@ -402,9 +416,10 @@ if (empty($tas_records)) {
 ');
     }
 
-    echo html_writer::tag('button', get_string('suitability_send_btn', 'local_rtocompliance'), [
-        'type'  => 'submit',
-        'class' => 'btn btn-primary',
+    echo html_writer::tag(
+        'button', get_string('suitability_send_btn', 'local_rtocompliance'), [
+            'type'  => 'submit',
+            'class' => 'btn btn-primary',
     ]);
     echo html_writer::end_tag('form');
 

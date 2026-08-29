@@ -98,7 +98,8 @@ class trainer_edit_form extends moodleform {
 
         if ($trainer) {
             $traineruser = $DB->get_record('user', ['id' => $trainer->userid], 'id,firstname,lastname,firstnamephonetic,lastnamephonetic,middlename,alternatename');
-            $mform->addElement('static', 'username', get_string('trainer_name', 'local_rtocompliance'),
+            $mform->addElement(
+                'static', 'username', get_string('trainer_name', 'local_rtocompliance'),
                 fullname($traineruser));
             $mform->addElement('hidden', 'userid');
             $mform->setType('userid', PARAM_INT);
@@ -129,15 +130,18 @@ class trainer_edit_form extends moodleform {
 
         // Std 3.2 (T-P1-3): Working Towards trainers must complete their TAE within 2 years.
         // Capture the commencement date; the 2-year deadline is computed on save (wtstartdate + 2 years).
-        $mform->addElement('date_selector', 'wtstartdate',
+        $mform->addElement(
+            'date_selector', 'wtstartdate',
             'Working Towards commencement date (starts the 2-year deadline)', ['optional' => true]);
-        $mform->addElement('static', 'wtstartdatehelp', '',
+        $mform->addElement(
+            'static', 'wtstartdatehelp', '',
             '<div class="alert alert-info" style="margin-bottom: 12px;">Only used when the TAE Credential above is set to <strong>Working Towards</strong>. The trainer must complete their full TAE within <strong>2 years</strong> of this date. This field is cleared automatically if the credential is not "Working Towards".</div>');
         if ($trainer && ($trainer->taecredential ?? '') === 'Working Towards' && !empty($trainer->wtdeadline)) {
             $deadlineclass = ($trainer->wtdeadline < time()) ? 'alert-danger' : 'alert-warning';
-            $mform->addElement('static', 'wtdeadlinedisplay', '',
-                '<div class="alert ' . $deadlineclass . '" style="margin-bottom: 12px;"><strong>2-year TAE completion deadline:</strong> '
-                . userdate($trainer->wtdeadline, '%d %b %Y')
+            $mform->addElement(
+                'static', 'wtdeadlinedisplay', '',
+                    '<div class="alert ' . $deadlineclass . '" style="margin-bottom: 12px;"><strong>2-year TAE completion deadline:</strong> '
+                    . userdate($trainer->wtdeadline, '%d %b %Y')
                 . (($trainer->wtdeadline < time()) ? ' <strong>(OVERDUE)</strong>' : '') . '</div>');
         }
 
@@ -145,8 +149,9 @@ class trainer_edit_form extends moodleform {
         $mform->addHelpButton('taedateachieved', 'taedateachieved', 'local_rtocompliance');
 
         $mform->addElement('date_selector', 'taeexpirydate', 'TAE Expiry Date (leave blank if no expiry)', ['optional' => true]);
-        $mform->addElement('static', 'taeexpiryhelp', '', 
-            '<div class="alert alert-info" style="margin-bottom: 12px;"><strong>Important:</strong> TAE qualifications typically do NOT expire. Leave this field blank for "Current forever" status. Only set an expiry date if there is a specific expiry requirement.<br><br>
+        $mform->addElement(
+            'static', 'taeexpiryhelp', '', 
+                '<div class="alert alert-info" style="margin-bottom: 12px;"><strong>Important:</strong> TAE qualifications typically do NOT expire. Leave this field blank for "Current forever" status. Only set an expiry date if there is a specific expiry requirement.<br><br>
             <strong>Status Calculation:</strong><br>
             - No expiry date = <span style="color: green;">Current</span> (indefinitely)<br>
             - Expiry date in future = <span style="color: green;">Current</span><br>
@@ -184,20 +189,24 @@ class trainer_edit_form extends moodleform {
         foreach ($credentialroles as $code => $label) {
             $rolegroup[] = $mform->createElement('advcheckbox', "role_{$code}", '', $label, ['class' => 'rtoc-checkbox-list-item'], ['0', $code]);
         }
-        $mform->addGroup($rolegroup, 'credentialrolesgroup', get_string('credential_role', 'local_rtocompliance'),
+        $mform->addGroup(
+            $rolegroup, 'credentialrolesgroup', get_string('credential_role', 'local_rtocompliance'),
             '<br>', false);
         $mform->addHelpButton('credentialrolesgroup', 'credential_role', 'local_rtocompliance');
         
-        $mform->addElement('static', 'roleshelp', '', 
+        $mform->addElement(
+            'static', 'roleshelp', '', 
             '<div class="alert alert-info" style="margin-bottom: 12px;">You can select multiple roles if the trainer operates in different capacities. Most trainers are 1A (fully credentialed). Roles 1C, 1D, 2A, 2B require documented supervision.</div>');
 
-        $mform->addElement('static', 'asqalink', '', 
+        $mform->addElement(
+            'static', 'asqalink', '', 
             '<a href="https://www.asqa.gov.au/how-we-regulate/revised-standards-rtos/practice-guides/practice-guide-credential-policy" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-secondary">View ASQA Credential Policy Guide</a>');
 
         $mform->addElement('header', 'vocational', 'Vocational Qualifications');
 
-        $mform->addElement('static', 'vocqualhelp', '', 
-            '<div class="alert alert-info" style="margin-bottom: 12px;"><strong>Important:</strong> This section is for vocational qualifications (e.g., Certificate III, IV, Diploma in the industry area) - NOT teaching qualifications like a Bachelor of Education. These demonstrate industry expertise.<br><br>
+        $mform->addElement(
+            'static', 'vocqualhelp', '', 
+                '<div class="alert alert-info" style="margin-bottom: 12px;"><strong>Important:</strong> This section is for vocational qualifications (e.g., Certificate III, IV, Diploma in the industry area) - NOT teaching qualifications like a Bachelor of Education. These demonstrate industry expertise.<br><br>
             <strong>Examples of vocational qualifications:</strong><br>
             - Certificate III in Individual Support (CHC33021)<br>
             - Certificate IV in Fitness (SIS40221)<br>
@@ -205,15 +214,17 @@ class trainer_edit_form extends moodleform {
             - Diploma of Work Health and Safety (BSB51319)<br><br>
             You can search for qualifications at <a href="https://training.gov.au" target="_blank">training.gov.au</a></div>');
 
-        $mform->addElement('textarea', 'vocationalqualifications', 'Vocational Qualifications (from TGA)',
-            ['rows' => 4, 'cols' => 60, 'placeholder' => 'BSB50420 - Diploma of Leadership and Management (2022)
+        $mform->addElement(
+            'textarea', 'vocationalqualifications', 'Vocational Qualifications (from TGA)',
+                ['rows' => 4, 'cols' => 60, 'placeholder' => 'BSB50420 - Diploma of Leadership and Management (2022)
 CHC50121 - Diploma of Early Childhood Education and Care (2021)
 SIS40221 - Certificate IV in Fitness (2023)']);
         $mform->setType('vocationalqualifications', PARAM_TEXT);
         $mform->addHelpButton('vocationalqualifications', 'vocationalqualifications_help_long', 'local_rtocompliance');
 
-        $mform->addElement('static', 'voccomphelp', '', 
-            '<div class="alert alert-info" style="margin-bottom: 12px;"><strong>Evidence of Vocational Competency and Currency</strong><br>
+        $mform->addElement(
+            'static', 'voccomphelp', '', 
+                '<div class="alert alert-info" style="margin-bottom: 12px;"><strong>Evidence of Vocational Competency and Currency</strong><br>
             Select all evidence types that demonstrate this trainer\'s vocational competency relevant to the qualification being delivered and assessed. This aligns with Standard 3.3(2) of the Standards for RTOs 2025.</div>');
 
         $vocationalEvidenceTypes = [
@@ -238,52 +249,60 @@ SIS40221 - Certificate IV in Fitness (2023)']);
         foreach ($vocationalEvidenceTypes as $key => $label) {
             $evidencegroup[] = $mform->createElement('advcheckbox', "vocevidence_{$key}", '', $label, ['class' => 'rtoc-checkbox-list-item'], ['0', $key]);
         }
-        // v4.2.57 #2/#3/#4: see credentialrolesgroup above for separator rationale.
-        $mform->addGroup($evidencegroup, 'vocationalcompetencygroup', 'Vocational Competency Evidence (select all that apply)',
+        // Version 4.2.57 #2/#3/#4: see credentialrolesgroup above for separator rationale.
+        $mform->addGroup(
+            $evidencegroup, 'vocationalcompetencygroup', 'Vocational Competency Evidence (select all that apply)',
             '<br>', false);
         $mform->addHelpButton('vocationalcompetencygroup', 'vocationalcompetency_evidence', 'local_rtocompliance');
 
-        $mform->addElement('textarea', 'vocationalcompetencynotes', 'Additional Vocational Competency Notes',
+        $mform->addElement(
+            'textarea', 'vocationalcompetencynotes', 'Additional Vocational Competency Notes',
             ['rows' => 2, 'cols' => 60, 'placeholder' => 'Any additional notes about vocational competency...']);
         $mform->setType('vocationalcompetencynotes', PARAM_TEXT);
 
         $mform->addElement('date_selector', 'vocationalcompetencydate', 'Competency Verified Date', ['optional' => true]);
 
-        $mform->addElement('static', 'voccompactivities', 'Vocational Competency Activities', 
-            '<div id="voccomp-activities-summary"></div>' .
-            '<a href="#" id="manage-voccomp-btn" class="btn btn-primary" style="margin-top: 10px;">Manage Vocational Competency Activities</a>' .
+        $mform->addElement(
+            'static', 'voccompactivities', 'Vocational Competency Activities', 
+                '<div id="voccomp-activities-summary"></div>' .
+                '<a href="#" id="manage-voccomp-btn" class="btn btn-primary" style="margin-top: 10px;">Manage Vocational Competency Activities</a>' .
             '<p class="text-muted" style="margin-top: 8px;"><small>Save this trainer first, then click the button to record multiple vocational competency activities with evidence uploads.</small></p>');
 
         $mform->addElement('header', 'industry', get_string('trainer_industrycurrency', 'local_rtocompliance'));
 
-        $mform->addElement('text', 'industryexperienceyears', 'Industry Experience (Years)',
+        $mform->addElement(
+            'text', 'industryexperienceyears', 'Industry Experience (Years)',
             ['size' => 5, 'placeholder' => 'e.g. 8']);
         $mform->setType('industryexperienceyears', PARAM_INT);
         $mform->addHelpButton('industryexperienceyears', 'industryexperienceyears', 'local_rtocompliance');
-        $mform->addElement('static', 'industryexphelp', '',
+        $mform->addElement(
+            'static', 'industryexphelp', '',
             '<small class="text-muted">Enter the number of years of industry experience <strong>directly relevant to the qualifications being delivered and assessed</strong>. This must be supported by resume/CV evidence.</small>');
 
-        $mform->addElement('static', 'currencyexplain', '', 
-            '<div class="alert alert-info" style="margin-bottom: 12px;"><strong>Industry Currency Activities</strong><br>
+        $mform->addElement(
+            'static', 'currencyexplain', '', 
+                '<div class="alert alert-info" style="margin-bottom: 12px;"><strong>Industry Currency Activities</strong><br>
             ASQA Standards 2025 require trainers to demonstrate current industry skills through multiple activities. Use the Industry Currency Activities page to record employment, consulting, professional memberships, conferences, and other ongoing industry connections.<br><br>
             <strong>Record multiple activities</strong> to provide comprehensive evidence of your industry currency.<br><br>
             <a href="https://www.asqa.gov.au/how-we-regulate/revised-standards-rtos/practice-guides/practice-guide-credential-policy" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-secondary">View ASQA Trainer Credential Policy</a></div>');
         
-        $mform->addElement('static', 'currencyactivities', 'Currency Activities', 
-            '<div id="currency-activities-summary"></div>' .
-            '<a href="#" id="manage-currency-btn" class="btn btn-primary" style="margin-top: 10px;">Manage Industry Currency Activities</a>' .
+        $mform->addElement(
+            'static', 'currencyactivities', 'Currency Activities', 
+                '<div id="currency-activities-summary"></div>' .
+                '<a href="#" id="manage-currency-btn" class="btn btn-primary" style="margin-top: 10px;">Manage Industry Currency Activities</a>' .
             '<p class="text-muted" style="margin-top: 8px;"><small>Save this trainer first, then click the button to manage multiple currency activities.</small></p>');
 
         $mform->addElement('header', 'llnvet', 'LLN Capability &amp; VET Currency');
 
-        $mform->addElement('select', 'llncapability', 'LLN Capability', [
-            ''          => 'Not recorded',
-            'ACSF 1-2'  => 'ACSF Level 1–2 (can support entry-level learners)',
-            'ACSF 3'    => 'ACSF Level 3 (can support most VET learners)',
-            'ACSF 4-5'  => 'ACSF Level 4–5 (can support diploma/advanced diploma learners)',
-            'qualified' => 'Formally qualified LLN practitioner',
-            'trained'   => 'LLN awareness training completed',
-            'na'        => 'Not applicable to this trainer\'s scope',
+        $mform->addElement(
+            'select', 'llncapability', 'LLN Capability', [
+                ''          => 'Not recorded',
+                'ACSF 1-2'  => 'ACSF Level 1–2 (can support entry-level learners)',
+                'ACSF 3'    => 'ACSF Level 3 (can support most VET learners)',
+                'ACSF 4-5'  => 'ACSF Level 4–5 (can support diploma/advanced diploma learners)',
+                'qualified' => 'Formally qualified LLN practitioner',
+                'trained'   => 'LLN awareness training completed',
+                'na'        => 'Not applicable to this trainer\'s scope',
         ]);
         $mform->setType('llncapability', PARAM_TEXT);
         $mform->addHelpButton('llncapability', 'llncapability', 'local_rtocompliance');
@@ -296,12 +315,14 @@ SIS40221 - Certificate IV in Fitness (2023)']);
 
         $mform->addElement('header', 'resume', 'Resume/CV Upload');
         
-        $mform->addElement('static', 'resumehelp', '', 
+        $mform->addElement(
+            'static', 'resumehelp', '', 
             '<div class="alert alert-info" style="margin-bottom: 12px;">Upload your resume/CV that documents your <strong>industry experience</strong> (not just teaching/training experience). This should show your vocational work history in the areas you train and assess.</div>');
         
-        $mform->addElement('filepicker', 'resumefile', 'Resume/CV Document', null, [
-            'maxbytes' => 10485760,
-            'accepted_types' => ['.pdf', '.doc', '.docx'],
+        $mform->addElement(
+            'filepicker', 'resumefile', 'Resume/CV Document', null, [
+                'maxbytes' => 10485760,
+                'accepted_types' => ['.pdf', '.doc', '.docx'],
         ]);
         $mform->addHelpButton('resumefile', 'resumefile', 'local_rtocompliance');
 
@@ -316,44 +337,51 @@ SIS40221 - Certificate IV in Fitness (2023)']);
 
         $mform->addElement('header', 'signoff', get_string('manager_signoff', 'local_rtocompliance'));
         
-        $mform->addElement('static', 'signoffhelp', '', 
+        $mform->addElement(
+            'static', 'signoffhelp', '', 
             '<div class="alert alert-warning" style="margin-bottom: 12px;">RTO Manager verification that this trainer\'s credentials have been verified against original documents and they are approved to deliver/assess mapped training products.</div>');
 
-        $mform->addElement('advcheckbox', 'managersignoff', get_string('manager_signoff', 'local_rtocompliance'), 
+        $mform->addElement(
+            'advcheckbox', 'managersignoff', get_string('manager_signoff', 'local_rtocompliance'), 
             'I confirm credentials have been verified and this trainer is approved');
         $mform->addHelpButton('managersignoff', 'manager_signoff', 'local_rtocompliance');
 
         $mform->addElement('header', 'wwcc', 'Working With Children Check (WWCC / Blue Card)');
-        $mform->addElement('static', 'wwcchelp', '',
+        $mform->addElement(
+            'static', 'wwcchelp', '',
             '<div class="alert alert-info" style="margin-bottom:12px;">Record your trainer\'s current WWCC, Blue Card, Working with Vulnerable People card, or state equivalent. Mark N/A if the trainer does not work with people under 18.</div>');
-        $mform->addElement('select', 'wwccstatus', 'WWCC Status', [
-            '' => 'Not recorded',
-            'current'  => 'Current',
-            'pending'  => 'Pending / Applied',
-            'expired'  => 'Expired',
-            'na'       => 'Not Applicable (N/A)',
+        $mform->addElement(
+            'select', 'wwccstatus', 'WWCC Status', [
+                '' => 'Not recorded',
+                'current'  => 'Current',
+                'pending'  => 'Pending / Applied',
+                'expired'  => 'Expired',
+                'na'       => 'Not Applicable (N/A)',
         ]);
         $mform->setType('wwccstatus', PARAM_ALPHA);
         $mform->addElement('text', 'wwccnumber', 'WWCC / Card Number', ['size' => 30, 'maxlength' => 30]);
         $mform->setType('wwccnumber', PARAM_TEXT);
-        $mform->addElement('select', 'wwccstate', 'Issuing State', [
-            '' => 'Select state',
-            '01' => 'NSW', '02' => 'VIC', '03' => 'QLD',
-            '04' => 'SA', '05' => 'WA', '06' => 'TAS',
-            '07' => 'NT', '08' => 'ACT',
+        $mform->addElement(
+            'select', 'wwccstate', 'Issuing State', [
+                '' => 'Select state',
+                '01' => 'NSW', '02' => 'VIC', '03' => 'QLD',
+                '04' => 'SA', '05' => 'WA', '06' => 'TAS',
+                '07' => 'NT', '08' => 'ACT',
         ]);
         $mform->setType('wwccstate', PARAM_ALPHANUMEXT);
         $mform->addElement('date_selector', 'wwccexpiry', 'WWCC Expiry Date', ['optional' => true]);
 
         $mform->addElement('header', 'policecheck', 'National Police Certificate');
-        $mform->addElement('static', 'pchelp', '',
+        $mform->addElement(
+            'static', 'pchelp', '',
             '<div class="alert alert-info" style="margin-bottom:12px;">A current National Police Certificate is required for trainers who work with vulnerable people or in certain industry settings. Certificates typically expire after 3 years.</div>');
-        $mform->addElement('select', 'policecheckstatus', 'Police Check Status', [
-            '' => 'Not recorded',
-            'current'  => 'Current',
-            'pending'  => 'Pending',
-            'expired'  => 'Expired',
-            'na'       => 'Not Applicable (N/A)',
+        $mform->addElement(
+            'select', 'policecheckstatus', 'Police Check Status', [
+                '' => 'Not recorded',
+                'current'  => 'Current',
+                'pending'  => 'Pending',
+                'expired'  => 'Expired',
+                'na'       => 'Not Applicable (N/A)',
         ]);
         $mform->setType('policecheckstatus', PARAM_ALPHA);
         $mform->addElement('text', 'policechecknumber', 'Police Check Reference Number', ['size' => 50, 'maxlength' => 50]);
@@ -362,9 +390,11 @@ SIS40221 - Certificate IV in Fitness (2023)']);
         $mform->addElement('date_selector', 'policecheckexpiry', 'Police Check Expiry Date', ['optional' => true]);
 
         $mform->addElement('header', 'deliveryscope', 'Delivery Scope');
-        $mform->addElement('static', 'scopehelp', '',
+        $mform->addElement(
+            'static', 'scopehelp', '',
             '<div class="alert alert-info" style="margin-bottom:12px;">Document the specific qualifications, skill sets, and units this trainer is approved to deliver and/or assess. This forms part of your ASQA T&amp;A Register evidence.</div>');
-        $mform->addElement('textarea', 'scopenotes', 'Approved Delivery Scope', ['rows' => 4, 'cols' => 60,
+        $mform->addElement(
+            'textarea', 'scopenotes', 'Approved Delivery Scope', ['rows' => 4, 'cols' => 60,
             'placeholder' => 'e.g. BSB50420 Diploma of Leadership and Management — all units; TAE40122 Certificate IV in Training and Assessment — units TAEDES401, TAEDES402, TAEASS401']);
         $mform->setType('scopenotes', PARAM_TEXT);
 
@@ -616,12 +646,13 @@ $_rtoc_apikey = function_exists('local_aiconfig_get_apikey')
     ? (local_aiconfig_get_apikey('local_rtocompliance') ?: get_config('local_rtocompliance', 'apikey') ?: '')
     : (get_config('local_rtocompliance', 'apikey') ?: '');
 $_rtoc_apibase = rtrim(get_config('local_rtocompliance', 'apiurl') ?: 'https://lms-labs.com', '/');
-echo html_writer::tag('div', '', [
-    'id'            => 'rtoc-ai-config',
-    'data-api-key'  => $_rtoc_apikey,
-    'data-api-base' => $_rtoc_apibase,
-    'style'         => 'display:none',
-    'aria-hidden'   => 'true',
+echo html_writer::tag(
+    'div', '', [
+        'id'            => 'rtoc-ai-config',
+        'data-api-key'  => $_rtoc_apikey,
+        'data-api-base' => $_rtoc_apibase,
+        'style'         => 'display:none',
+        'aria-hidden'   => 'true',
 ]);
 
 echo local_rtocompliance_render_nav_header($id ? get_string('edit_trainer', 'local_rtocompliance') : get_string('add_trainer', 'local_rtocompliance'), get_string('trainers', 'local_rtocompliance'), '/local/rtocompliance/trainers.php', 'trainers');

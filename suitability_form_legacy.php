@@ -222,7 +222,8 @@ echo html_writer::end_div();
 echo html_writer::tag('p', s($rtoname), ['style' => 'text-align:center;color:#888;font-size:0.82rem;margin-top:18px']);
 echo html_writer::end_div();
 
-echo html_writer::script('
+echo html_writer::script(
+    '
 (function () {
     var qs = document.querySelectorAll(".rtoc-suit-question");
     qs.forEach(function (q) {

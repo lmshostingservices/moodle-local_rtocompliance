@@ -251,19 +251,22 @@ try {
     $rtoc_captured_errors[] = '[unregistered_teachers] ' . $e->getMessage();
 }
 if (!empty($unregistered_teachers)) {
-    $importurl = new moodle_url('/local/rtocompliance/trainers.php', [
-        'action'  => 'importtrainers',
-        'sesskey' => sesskey(),
+    $importurl = new moodle_url(
+        '/local/rtocompliance/trainers.php', [
+            'action'  => 'importtrainers',
+            'sesskey' => sesskey(),
     ]);
     $count = count($unregistered_teachers);
 
     echo html_writer::start_div('alert alert-info');
-    echo html_writer::tag('strong',
-        $count . ' Moodle teacher' . ($count > 1 ? 's have' : ' has') . ' no RTO compliance profile yet.'
+    echo html_writer::tag(
+        'strong',
+            $count . ' Moodle teacher' . ($count > 1 ? 's have' : ' has') . ' no RTO compliance profile yet.'
     );
-    echo html_writer::tag('p',
-        'These Moodle users hold an editing teacher, teacher, or manager role in at least one course '
-        . 'but have not been added to the Trainer Register. They are invisible in the trainer list below.'
+    echo html_writer::tag(
+        'p',
+            'These Moodle users hold an editing teacher, teacher, or manager role in at least one course '
+            . 'but have not been added to the Trainer Register. They are invisible in the trainer list below.'
     );
     echo html_writer::start_tag('ul');
     foreach ($unregistered_teachers as $t) {
@@ -291,7 +294,10 @@ echo html_writer::end_div();
 $_now30      = strtotime('+30 days');
 $_now        = time();
 try { $_total_t = (int)$DB->count_records('local_rtocompliance_trainers'); }
-catch (\Throwable $e) { $_total_t = 0; $rtoc_captured_errors[] = '[total] ' . $e->getMessage(); }
+catch (\Throwable $e) {
+    $_total_t = 0;
+    $rtoc_captured_errors[] = '[total] ' . $e->getMessage();
+}
 // TAE status based on taeexpirydate (not nextreviewdate which is for general credential review)
 $_current_t  = rtoc_safe_count(
     "SELECT COUNT(*) FROM {local_rtocompliance_trainers} WHERE taecredential != '' AND taecredential != 'Working Towards' AND (taeexpirydate IS NULL OR taeexpirydate = 0 OR taeexpirydate >= :now)",
@@ -311,7 +317,10 @@ $_tae122_t   = rtoc_safe_count("SELECT COUNT(*) FROM {local_rtocompliance_traine
 $_tae110_t   = rtoc_safe_count("SELECT COUNT(*) FROM {local_rtocompliance_trainers} WHERE taecredential LIKE :tae", ['tae' => '%TAE40110%'], 'tae110');
 $_notae_t    = rtoc_safe_count("SELECT COUNT(*) FROM {local_rtocompliance_trainers} WHERE taecredential IS NULL OR taecredential = '' OR taecredential = 'Working Towards'", [], 'tae_missing');
 try { $_wwcc_t = (int)$DB->count_records('local_rtocompliance_trainers', ['wwccstatus' => 'current']); }
-catch (\Throwable $e) { $_wwcc_t = 0; $rtoc_captured_errors[] = '[wwcc] ' . $e->getMessage(); }
+catch (\Throwable $e) {
+    $_wwcc_t = 0;
+    $rtoc_captured_errors[] = '[wwcc] ' . $e->getMessage();
+}
 
 echo html_writer::start_div('stats-cards', ['style' => 'margin-bottom: 24px;']);
 foreach ([
@@ -436,23 +445,27 @@ if ($rtoc_is_admin && !empty($rtoc_captured_errors)) {
         echo html_writer::tag('li', s($err));
     }
     echo html_writer::end_tag('ul');
-    $repairurl = new moodle_url('/local/rtocompliance/trainers.php',
+    $repairurl = new moodle_url(
+        '/local/rtocompliance/trainers.php',
         ['rtocrepair' => 1, 'sesskey' => sesskey()]);
-    echo html_writer::tag('p',
-        'If errors mention a missing column, click ' .
-        html_writer::link($repairurl->out(false), 'Repair schema',
-            ['class' => 'btn btn-sm btn-warning', 'title' => 'Add any missing database columns and reset the code cache']) .
-        ' to add any missing columns and reset OPcache.'
+    echo html_writer::tag(
+        'p',
+            'If errors mention a missing column, click ' .
+            html_writer::link(
+            $repairurl->out(false), 'Repair schema',
+                ['class' => 'btn btn-sm btn-warning', 'title' => 'Add any missing database columns and reset the code cache']) .
+            ' to add any missing columns and reset OPcache.'
     );
     echo html_writer::end_div();
 }
 
 if ($trainers) {
-    echo html_writer::tag('div',
-        html_writer::tag('strong', 'Note: ') .
-        'A TAE credential may show as <strong>Expired</strong> under TGA yet the trainer may still be approved to deliver and assess under your RTO\'s Credential Policy. ' .
-        'Always check the <strong>Status under Credential Policy</strong> column and verify against your Credential Policy document before making staffing decisions.',
-        ['class' => 'alert alert-info', 'style' => 'margin-bottom: 12px;']
+    echo html_writer::tag(
+        'div',
+            html_writer::tag('strong', 'Note: ') .
+            'A TAE credential may show as <strong>Expired</strong> under TGA yet the trainer may still be approved to deliver and assess under your RTO\'s Credential Policy. ' .
+            'Always check the <strong>Status under Credential Policy</strong> column and verify against your Credential Policy document before making staffing decisions.',
+            ['class' => 'alert alert-info', 'style' => 'margin-bottom: 12px;']
     );
     echo '<div class="rtoc-table-wrapper" style="overflow-x:auto;">';
     echo html_writer::start_tag('table', ['class' => 'trainers-table']);
@@ -460,17 +473,19 @@ if ($trainers) {
     echo html_writer::start_tag('tr');
     // Sortable Name column header.
     $trainerNameNextDir = ($sort === 'name' && $sortdir === 'asc') ? 'desc' : 'asc';
-    $trainerNameSortUrl = new moodle_url('/local/rtocompliance/trainers.php', [
-        'page' => 0, 'perpage' => $perpage, 'status' => $status,
-        'sort' => 'name', 'sortdir' => $trainerNameNextDir,
+    $trainerNameSortUrl = new moodle_url(
+        '/local/rtocompliance/trainers.php', [
+            'page' => 0, 'perpage' => $perpage, 'status' => $status,
+            'sort' => 'name', 'sortdir' => $trainerNameNextDir,
     ]);
     $trainerNameArrow = ($sort === 'name')
         ? ($sortdir === 'asc'
             ? ' <svg style="width:10px;height:10px;vertical-align:middle" viewBox="0 0 10 10"><path d="M5 2L9 8H1z" fill="currentColor"/></svg>'
             : ' <svg style="width:10px;height:10px;vertical-align:middle" viewBox="0 0 10 10"><path d="M5 8L1 2h8z" fill="currentColor"/></svg>')
         : '';
-    $trainerNameLink = html_writer::link($trainerNameSortUrl,
-        get_string('trainer_name', 'local_rtocompliance') . $trainerNameArrow,
+    $trainerNameLink = html_writer::link(
+        $trainerNameSortUrl,
+            get_string('trainer_name', 'local_rtocompliance') . $trainerNameArrow,
         ['style' => 'white-space:nowrap;text-decoration:none;color:inherit;font-weight:bold']);
     echo html_writer::tag('th', $trainerNameLink, ['class' => 'rtoc-col-trainer-name', 'title' => 'Trainer or assessor name and email — click to sort']);
     echo html_writer::tag('th', 'Role', ['title' => 'Credential role classification under the ASQA Trainer and Assessor Credential Policy']);
@@ -585,17 +600,20 @@ if ($trainers) {
         
         // Industry Currency — show industrycurrencydate from trainer record
         if (!empty($trainer->industrycurrencydate)) {
-            $currencyBadge = html_writer::tag('span',
-                userdate($trainer->industrycurrencydate, '%d %b %Y'),
-                ['class' => 'badge', 'style' => 'background-color: #28a745; color: white;',
+            $currencyBadge = html_writer::tag(
+                'span',
+                    userdate($trainer->industrycurrencydate, '%d %b %Y'),
+                    ['class' => 'badge', 'style' => 'background-color: #28a745; color: white;',
                  'title' => 'Date this trainer last did recent real-world work in their industry, which keeps their skills current.']);
         } elseif ($currencyCount > 0) {
             // Fallback: still show activity count if no date recorded yet
-            $currencyBadge = html_writer::tag('span', $currencyCount . ' activities',
-                ['class' => 'badge', 'style' => 'background-color: #6c757d; color: white;',
+            $currencyBadge = html_writer::tag(
+                'span', $currencyCount . ' activities',
+                    ['class' => 'badge', 'style' => 'background-color: #6c757d; color: white;',
                  'title' => 'Number of industry currency activities on file. Add a currency date on the profile to confirm they are up to date.']);
         } else {
-            $currencyBadge = html_writer::tag('span', 'None', ['class' => 'badge badge-warning', 'style' => 'background-color: #ffc107; color: #212529;',
+            $currencyBadge = html_writer::tag(
+                'span', 'None', ['class' => 'badge badge-warning', 'style' => 'background-color: #ffc107; color: #212529;',
                  'title' => 'No recent industry work recorded. Add industry currency activity to keep this trainer compliant.']);
         }
 
@@ -624,12 +642,13 @@ if ($trainers) {
             $roleBadges = [];
             foreach ($roles as $r) {
                 $tip = $roleTips[$r] ?? $r;
-                $roleBadges[] = html_writer::tag('span', htmlspecialchars($r), [
-                    'class'          => 'badge rtoc-role-badge',
-                    'style'          => 'background:#7c3aed;color:#fff;margin:1px;',
-                    'data-rtoc-tip'  => htmlspecialchars($tip, ENT_QUOTES),
-                    'tabindex'       => '0',
-                    'aria-label'     => htmlspecialchars($tip, ENT_QUOTES),
+                $roleBadges[] = html_writer::tag(
+                    'span', htmlspecialchars($r), [
+                        'class'          => 'badge rtoc-role-badge',
+                        'style'          => 'background:#7c3aed;color:#fff;margin:1px;',
+                        'data-rtoc-tip'  => htmlspecialchars($tip, ENT_QUOTES),
+                        'tabindex'       => '0',
+                        'aria-label'     => htmlspecialchars($tip, ENT_QUOTES),
                 ]);
             }
             $roleDisplay = $roleBadges ? implode(' ', $roleBadges) : '-';
@@ -655,7 +674,8 @@ if ($trainers) {
                 $vocQualShort = rtoc_mb_strlen($displayText) > 60
                     ? rtoc_mb_substr($displayText, 0, 60) . '…'
                     : $displayText;
-                $vocCompDisplay = html_writer::tag('span', htmlspecialchars($vocQualShort),
+                $vocCompDisplay = html_writer::tag(
+                    'span', htmlspecialchars($vocQualShort),
                     ['title' => htmlspecialchars($displayText), 'style' => 'cursor:help;font-size:0.85rem;']);
             }
         }
@@ -692,10 +712,11 @@ if ($trainers) {
             }
         }
 
-        $signoffDisplay = html_writer::tag('span', $credentialpolicy === 'approved' ? 'Approved' : 'Pending Review',
-            ['class' => 'badge ' . ($credentialpolicy === 'approved' ? 'badge-success' : 'badge-secondary'),
-             'title' => $credentialpolicy === 'approved'
-                 ? 'Trainer has been reviewed and approved under the RTO\'s Credential Policy'
+        $signoffDisplay = html_writer::tag(
+            'span', $credentialpolicy === 'approved' ? 'Approved' : 'Pending Review',
+                ['class' => 'badge ' . ($credentialpolicy === 'approved' ? 'badge-success' : 'badge-secondary'),
+                 'title' => $credentialpolicy === 'approved'
+                     ? 'Trainer has been reviewed and approved under the RTO\'s Credential Policy'
                  : 'Trainer has not yet been assessed under the Credential Policy — this does not mean they are rejected']);
         if ($credentialpolicy === 'approved' && !empty($trainer->managersignoffdate)) {
             $signoffDisplay .= html_writer::empty_tag('br') . html_writer::tag('small', userdate($trainer->managersignoffdate, '%d %b %Y'), ['class' => 'text-muted']);
@@ -707,13 +728,15 @@ if ($trainers) {
             $scopeShort = rtoc_mb_strlen($trainer->scopenotes) > 60
                 ? rtoc_mb_substr($trainer->scopenotes, 0, 60) . '…'
                 : $trainer->scopenotes;
-            $scopeDisplay = html_writer::tag('span', htmlspecialchars($scopeShort),
+            $scopeDisplay = html_writer::tag(
+                'span', htmlspecialchars($scopeShort),
                 ['title' => htmlspecialchars($trainer->scopenotes), 'style' => 'cursor:help;font-size:0.85rem;']);
         }
 
         // Industry experience years
         $industryExpDisplay = !empty($trainer->industryexperienceyears)
-            ? html_writer::tag('span', $trainer->industryexperienceyears . ' yrs',
+            ? html_writer::tag(
+                'span', $trainer->industryexperienceyears . ' yrs',
                 ['class' => 'badge', 'style' => 'background:#0891b2;color:#fff;'])
             : '-';
 
@@ -728,8 +751,9 @@ if ($trainers) {
                 'trained'   => 'Trained',
             ];
             $llnLabel = $llnLabels[$trainer->llncapability] ?? htmlspecialchars($trainer->llncapability);
-            $llnDisplay = html_writer::tag('span', $llnLabel,
-                ['class' => 'badge', 'style' => 'background:#7c3aed;color:#fff;',
+            $llnDisplay = html_writer::tag(
+                'span', $llnLabel,
+                    ['class' => 'badge', 'style' => 'background:#7c3aed;color:#fff;',
                  'title' => 'The level of language, literacy and numeracy (LLN) support this trainer can give learners.']);
         } elseif (!empty($trainer->llncapability) && $trainer->llncapability === 'na') {
             $llnDisplay = html_writer::tag('span', 'N/A', ['class' => 'text-muted']);
@@ -737,8 +761,9 @@ if ($trainers) {
 
         // VET Currency date
         $vetCurrencyDisplay = !empty($trainer->vetcurrencydate)
-            ? html_writer::tag('span', userdate($trainer->vetcurrencydate, '%d %b %Y'),
-                ['class' => 'badge', 'style' => 'background:#059669;color:#fff;',
+            ? html_writer::tag(
+                'span', userdate($trainer->vetcurrencydate, '%d %b %Y'),
+                    ['class' => 'badge', 'style' => 'background:#059669;color:#fff;',
                  'title' => 'Date this trainer last kept their VET (vocational education) training and assessment skills current.'])
             : '-';
 
@@ -758,23 +783,26 @@ if ($trainers) {
         }
         
         // Create status badge with debug info icon
-        $statusBadge = html_writer::tag('span', $statusLabel, [
-            'class' => $statusClass,
-            'title' => $debugTooltip,
-            'style' => 'cursor: help;'
+        $statusBadge = html_writer::tag(
+            'span', $statusLabel, [
+                'class' => $statusClass,
+                'title' => $debugTooltip,
+                'style' => 'cursor: help;'
         ]);
         
         // Add debug info icon with tooltip
-        $debugIcon = html_writer::tag('span', ' ⓘ', [
-            'class' => 'status-debug-icon',
-            'title' => $debugTooltip,
-            'style' => 'cursor: help; font-size: 14px; color: #6c757d;'
+        $debugIcon = html_writer::tag(
+            'span', ' ⓘ', [
+                'class' => 'status-debug-icon',
+                'title' => $debugTooltip,
+                'style' => 'cursor: help; font-size: 14px; color: #6c757d;'
         ]);
         
         // Add reason text below status for maximum visibility
-        $reasonText = html_writer::tag('small', $statusReason, [
-            'class' => 'text-muted d-block',
-            'style' => 'font-size: 11px; margin-top: 4px; max-width: 200px; word-wrap: break-word;'
+        $reasonText = html_writer::tag(
+            'small', $statusReason, [
+                'class' => 'text-muted d-block',
+                'style' => 'font-size: 11px; margin-top: 4px; max-width: 200px; word-wrap: break-word;'
         ]);
         
         // ── Build reusable display values ────────────────────────────────────────
@@ -787,9 +815,10 @@ if ($trainers) {
                 : $trainer->taecredential)
             : '-';
         $taeCredDisplay = !empty($trainer->taecredential)
-            ? html_writer::tag('span', $taeCredShort, [
-                'title' => htmlspecialchars($trainer->taecredential),
-                'style' => 'cursor:help;'
+            ? html_writer::tag(
+                'span', $taeCredShort, [
+                    'title' => htmlspecialchars($trainer->taecredential),
+                    'style' => 'cursor:help;'
               ])
             : '-';
 
@@ -817,10 +846,11 @@ if ($trainers) {
 
         // ── Row (13 columns per document spec) ───────────────────────────────
         echo html_writer::start_tag('tr', ['class' => 'rtoc-trainer-primary-row']);
-        echo html_writer::tag('td',
-            html_writer::tag('strong', fullname($trainer)) .
-            html_writer::empty_tag('br') .
-            html_writer::tag('small', $trainer->email, ['class' => 'text-muted'])
+        echo html_writer::tag(
+            'td',
+                html_writer::tag('strong', fullname($trainer)) .
+                html_writer::empty_tag('br') .
+                html_writer::tag('small', $trainer->email, ['class' => 'text-muted'])
         );
         echo html_writer::tag('td', $roleDisplay);
         echo html_writer::tag('td', $taeCredDisplay);
@@ -839,9 +869,10 @@ if ($trainers) {
         } catch (\Throwable $e) {
             $rtoc_captured_errors[] = '[row id=' . (int)($trainer->id ?? 0) . '] ' . $e->getMessage();
             echo html_writer::start_tag('tr');
-            echo html_writer::tag('td',
-                'Row failed to render: ' . s(fullname($trainer) ?: ('id=' . (int)($trainer->id ?? 0))) .
-                ($rtoc_is_admin ? ' — ' . s($e->getMessage()) : ''),
+            echo html_writer::tag(
+                'td',
+                    'Row failed to render: ' . s(fullname($trainer) ?: ('id=' . (int)($trainer->id ?? 0))) .
+                    ($rtoc_is_admin ? ' — ' . s($e->getMessage()) : ''),
                 ['colspan' => 14, 'style' => 'background:#fef2f2;color:#b91c1c;']);
             echo html_writer::end_tag('tr');
         }

@@ -36,14 +36,15 @@ function _di_log(string $step): void {
     @file_put_contents($_di_log, $line, FILE_APPEND);
     error_log('[RTOC-DI] ' . $step);
 }
-register_shutdown_function (function () {
-    $err = error_get_last();
-    if ($err) {
-        _di_log('SHUTDOWN fatal type=' . $err['type'] . ' msg=' . $err['message'] . ' in ' . $err['file'] . ':' . $err['line']);
-    } else {
-        _di_log('SHUTDOWN normal');
-    }
-});
+register_shutdown_function (
+    function () {
+        $err = error_get_last();
+        if ($err) {
+            _di_log('SHUTDOWN fatal type=' . $err['type'] . ' msg=' . $err['message'] . ' in ' . $err['file'] . ':' . $err['line']);
+        } else {
+            _di_log('SHUTDOWN normal');
+        }
+    });
 _di_log('START pid=' . getmypid() . ' method=' . ($_SERVER['REQUEST_METHOD'] ?? '?') . ' uri=' . ($_SERVER['REQUEST_URI'] ?? '?'));
 
 require_once(__DIR__ . '/../../config.php');
@@ -326,7 +327,8 @@ function local_rtocompliance_detect_nat00080_usi_pos(array $sampleLines): int {
                          : 60;
 
         // Find the sex+DOB anchor — reliable in every AVETMISS format.
-        if (!preg_match('/[MFX@][0-3]\d[0-1]\d(?:19|20)\d{2}/',
+        if (!preg_match(
+            '/[MFX@][0-3]\d[0-1]\d(?:19|20)\d{2}/',
                         substr($lineUp, $searchFrom), $m, PREG_OFFSET_CAPTURE)) {
             continue;   // DOB not stated or unparseable; skip
         }
@@ -352,7 +354,7 @@ function local_rtocompliance_detect_nat00080_usi_pos(array $sampleLines): int {
     if (empty($votes)) return -1;
 
     $maxVotes = max($votes);
-    if ($maxVotes < 2) return -1;   // need at least 2 matching records
+    if ($maxVotes < 2) return -1;   // Need at least 2 matching records
 
     // Tiebreaker 1: most distinct full values (USIs are unique per student).
     // Tiebreaker 2: most distinct FIRST CHARS.
@@ -431,7 +433,7 @@ function local_rtocompliance_find_usi_candidates(array $sampleLines, int $maxSam
 
     $votes   = [];
     $samples = []; // pos => [['usi'=>string,'clientid'=>string], ...]
-    $total   = 0;  // total parseable lines
+    $total   = 0;  // Total parseable lines
 
     foreach ($sampleLines as $rawLine) {
         $line   = ltrim(rtrim($rawLine, "\r"), "\xEF\xBB\xBF");
@@ -449,7 +451,8 @@ function local_rtocompliance_find_usi_candidates(array $sampleLines, int $maxSam
                          : 60;
 
         // Find DOB anchor — required to know where non-USI fields end.
-        if (!preg_match('/[MFX@][0-3]\d[0-1]\d(?:19|20)\d{2}/',
+        if (!preg_match(
+            '/[MFX@][0-3]\d[0-1]\d(?:19|20)\d{2}/',
                         substr($lineUp, $searchFrom), $m, PREG_OFFSET_CAPTURE)) {
             continue;
         }
@@ -516,7 +519,7 @@ function local_rtocompliance_parse_nat00080(string $line, int $detectedUsiPos = 
         $parts  = explode("\t", $line);
         // Strip surrounding ASCII/smart quotes from the first field.
         $field0 = local_rtocompliance_strip_leading_quote(trim($parts[0] ?? ''));
-        $field0 = rtrim($field0, '"');   // trailing ASCII closing quote
+        $field0 = rtrim($field0, '"');   // Trailing ASCII closing quote
         if (strlen($field0) < 10) return null;
         $clientid = trim(substr($field0, 0, 10));
         if ($clientid === '') return null;
@@ -617,11 +620,12 @@ function local_rtocompliance_parse_nat00080(string $line, int $detectedUsiPos = 
     // Fallback: vendor-specific fixed positions when DOB contains @@@@@@@@.
     $sex       = null;
     $dob       = null;
-    $dobAbsEnd = null;   // absolute index of first byte AFTER the 8-char DOB
-    $sexAbsPos = -1;     // absolute index of sex identifier byte (set in both branches below)
+    $dobAbsEnd = null;   // Absolute index of first byte AFTER the 8-char DOB
+    $sexAbsPos = -1;     // Absolute index of sex identifier byte (set in both branches below)
     $lineUp    = strtoupper($line);
 
-    if (preg_match('/([MFX@])([0-3]\d[0-1]\d(?:19|20)\d{2})/',
+    if (preg_match(
+        '/([MFX@])([0-3]\d[0-1]\d(?:19|20)\d{2})/',
                    substr($lineUp, $searchStart), $sdm, PREG_OFFSET_CAPTURE)) {
         $sexAbsPos = $searchStart + $sdm[0][1];
         $dobAbsEnd = $sexAbsPos + 9;     // 1 (sex) + 8 (DOB)
@@ -641,7 +645,7 @@ function local_rtocompliance_parse_nat00080(string $line, int $detectedUsiPos = 
             $dobpos     = $isExtended ? 73 : 63;
         }
         $dobAbsEnd  = $dobpos + 8;
-        $sexAbsPos  = $sexpos;   // unify with regex-branch variable name
+        $sexAbsPos  = $sexpos;   // Unify with regex-branch variable name
         $sexraw     = isset($lineUp[$sexpos]) ? $lineUp[$sexpos] : '';
         // '@' is the official AVETMISS "not stated" gender code — treat as valid, not missing.
         $sex        = in_array($sexraw, ['M', 'F', 'X', '@'], true) ? $sexraw : null;
@@ -1061,7 +1065,7 @@ function local_rtocompliance_parse_nat00120(string $line): ?array {
     ) {
         $isVendorPrefix = true;
         // Re-read all core fields at +10 offset.
-        $rtoid     = trim(substr($line, 10, 10));   // delivery location (was the standard pos 0–9)
+        $rtoid     = trim(substr($line, 10, 10));   // Delivery location (was the standard pos 0–9)
         $clientid  = trim(substr($line, 20, 10));
         if ($clientid === '') return null;
         $unitcode  = trim(substr($line, 30, 12));
@@ -1093,7 +1097,7 @@ function local_rtocompliance_parse_nat00120(string $line): ?array {
                 }
             }
             if ($outcome === null && $raw71 !== '' && $raw71 !== '@@') {
-                $outcome = $raw71;  // store raw value for audit
+                $outcome = $raw71;  // Store raw value for audit
             }
         }
 
@@ -1230,7 +1234,7 @@ function local_rtocompliance_parse_nat00120(string $line): ?array {
                 $deliveryModeLen     = 2;
                 $outcome             = $raw60;
             } elseif (in_array($raw60, $AVETMISS_OUTCOME_CODES, true)) {
-                // raw58 is an outcome-only code (41, 51, 52, 53, 61, 70, 81, 82, 85) that
+                // Raw58 is an outcome-only code (41, 51, 52, 53, 61, 70, 81, 82, 85) that
                 // cannot be a delivery mode.  raw60 also looks like an outcome code — treat
                 // raw60 as a vendor-specific extra field and shift fundingPos to 62.
                 $outcome             = $raw58;
@@ -1371,7 +1375,7 @@ function local_rtocompliance_parse_nat00130(string $line): ?array {
         // AVETMISS 8.0 Data Element 514 — Successful Programme Completion Indicator (1A).
         $rawflag = strlen($line) >= 39 ? strtoupper(trim(substr($line, 38, 1))) : null;
         $successfulcompletion = ($rawflag === 'Y' || $rawflag === 'N') ? $rawflag : null;
-        // certificateDate reads [39:47] → shifted to [40:48] because flag occupies pos 38.
+        // CertificateDate reads [39:47] → shifted to [40:48] because flag occupies pos 38.
         // AVETMISS 8.0 spec: Parchment Issue Date at pos 39 (after the 1-char flag at pos 38).
         $certificatedate = strlen($line) >= 47 ? trim(substr($line, 39, 8)) : null;
         $parchmentnumber = strlen($line) > 47  ? trim(substr($line, 47)) : null;
@@ -1436,8 +1440,8 @@ function local_rtocompliance_autoderive_families(): array {
             if (!isset($kw[$slug])) {
                 $kw[$slug] = [];
             }
-            $kw[$slug][strtolower($name)] = true;   // the title itself is a keyword
-            $kw[$slug][strtolower($code)] = true;   // and the code
+            $kw[$slug][strtolower($name)] = true;   // The title itself is a keyword
+            $kw[$slug][strtolower($code)] = true;   // And the code
         }
     }
     foreach ($kw as $s => $set) {
@@ -1626,12 +1630,12 @@ function local_rtocompliance_rebuild_archive_index(): array {
     // 5. Scan every category
     $inserted   = 0;
     $nullFamily = 0;
-    $inserted_ids = []; // track (family|year|sem) → [categoryids] for duplicate detection
+    $inserted_ids = []; // Track (family|year|sem) → [categoryids] for duplicate detection
 
     foreach ($allCats as $cat) {
         $ys = local_rtocompliance_archive_detect_year_sem($cat->name);
-        if ($ys['year'] === '') continue; // no year = not an archive category
-        if ($ys['sem']  === '') continue; // no S1/S2 = CPD/CBC/short course, not a student enrolment archive
+        if ($ys['year'] === '') continue; // No year = not an archive category
+        if ($ys['sem']  === '') continue; // No S1/S2 = CPD/CBC/short course, not a student enrolment archive
 
         $ancestorText = $buildAncestorText($cat);
         $family       = local_rtocompliance_archive_detect_family($ancestorText);
@@ -1930,7 +1934,7 @@ function local_rtocompliance_parse_nat_group(array $files, int $usiPosOverride =
             $detectedUsiPos = ($usiPosOverride >= 0)
                 ? $usiPosOverride
                 : local_rtocompliance_detect_nat00080_usi_pos($sampleLines);
-            $sampleLines = null; // free sample buffer before second pass
+            $sampleLines = null; // Free sample buffer before second pass
 
             // Second pass: stream all lines using the detected position.
             foreach (local_rtocompliance_nat_lines($file) as $line) {
@@ -2040,7 +2044,7 @@ function local_rtocompliance_parse_nat_group(array $files, int $usiPosOverride =
         $issues = [];
         if (empty($stud['usi']))                          $issues[] = 'usi_missing';
         if (!isset($stud['dob'])  || $stud['dob']  === null) $issues[] = 'dob_not_stated';
-        // sex='@' is the official AVETMISS "not stated" code — treat as stated (not an issue).
+        // A sex of '@' is the official AVETMISS "not stated" code — treat as stated (not an issue).
         if (!isset($stud['sex'])  || $stud['sex']  === null) $issues[] = 'sex_not_stated';
         $stud['hasdataissues']   = !empty($issues) ? 1 : 0;
         $stud['dataissuefields'] = json_encode(array_values($issues));
@@ -2174,9 +2178,9 @@ function local_rtocompliance_apply_nat_detail_to_students(array $disability, arr
 // students enrolled" with no clear explanation.  Fix: build a 12-char password
 // that guarantees at least one character from each required class.
 function local_rtocompliance_generate_policy_password(): string {
-    $lower   = 'abcdefghjkmnpqrstuvwxyz';    // no ambiguous l
-    $upper   = 'ABCDEFGHJKMNPQRSTUVWXYZ';    // no ambiguous I
-    $digits  = '23456789';                    // no ambiguous 0/1
+    $lower   = 'abcdefghjkmnpqrstuvwxyz';    // No ambiguous l
+    $upper   = 'ABCDEFGHJKMNPQRSTUVWXYZ';    // No ambiguous I
+    $digits  = '23456789';                    // No ambiguous 0/1
     $special = '!@#$%^*-+=';
     $all     = $lower . $upper . $digits . $special;
     // Guarantee one char from each class so the Moodle default policy always passes.
@@ -2217,24 +2221,27 @@ if ($action === 'foe_apply_chunk' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     // READ-ONLY MODE: enrolment write operations have been disabled.
     // All enrolment changes must be handled directly at the database level by the developer.
     header('Content-Type: application/json');
-    echo json_encode([
-        'error'       => 'read_only_mode',
-        'message'     => 'Enrolment write operations are disabled. Please contact your developer to apply changes directly.',
-        'processed'   => 0,
-        'remaining'   => 0,
-        'total'       => 0,
-        'errors'      => 0,
-        'completions' => 0,
-        'finished'    => true,
+    echo json_encode(
+        [
+            'error'       => 'read_only_mode',
+            'message'     => 'Enrolment write operations are disabled. Please contact your developer to apply changes directly.',
+            'processed'   => 0,
+            'remaining'   => 0,
+            'total'       => 0,
+            'errors'      => 0,
+            'completions' => 0,
+            'finished'    => true,
     ]);
     exit;
 
     $batchid = required_param('batchid', PARAM_ALPHANUMEXT);
 
     // How many rows are left to process?
-    $remaining = (int)$DB->count_records('local_rtocompliance_foe_pending',
+    $remaining = (int)$DB->count_records(
+        'local_rtocompliance_foe_pending',
         ['batchid' => $batchid, 'status' => 'pending']);
-    $total = (int)$DB->count_records('local_rtocompliance_foe_pending',
+    $total = (int)$DB->count_records(
+        'local_rtocompliance_foe_pending',
         ['batchid' => $batchid]);
 
     if ($total === 0) {
@@ -2243,7 +2250,8 @@ if ($action === 'foe_apply_chunk' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         // from a real count, so the progress bar doesn't silently report "N removed"
         // when the pending rows were never inserted.
         header('Content-Type: application/json');
-        echo json_encode(['processed' => 0, 'remaining' => 0, 'total' => 0,
+        echo json_encode(
+            ['processed' => 0, 'remaining' => 0, 'total' => 0,
             'errors' => 0, 'completions' => 0, 'finished' => true, 'batch_empty' => true]);
         exit;
     }
@@ -2334,7 +2342,7 @@ if ($action === 'foe_apply_chunk' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             );
 
             if ($_ueAllAfter > 0 && $_ueAllBefore > 0) {
-                // unenrol_user() did not remove the student. This indicates either:
+                // The unenrol_user() call did not remove the student. This indicates either:
                 //  - The enrol instance was recreated (foe_pending.enrolid is stale) AND
                 //    the sweep also failed to catch it (shouldn't happen but guard anyway)
                 //  - A Moodle-level permission or configuration blocked the deletion
@@ -2342,10 +2350,11 @@ if ($action === 'foe_apply_chunk' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $DB->set_field('local_rtocompliance_foe_pending', 'status', 'error', ['id' => (int)$row->id]);
                 $_errors++;
                 // Log full context to PHP error log for server-side diagnosis.
-                error_log('[FOE] unenrol_user() SILENT FAIL: userid=' . $_rowUid
-                    . ' courseid=' . $_rowCid . ' enrolid=' . $_rowEid
-                    . ' ue_before=' . $_ueAllBefore . ' ue_after=' . $_ueAllAfter
-                    . ' inst_enrol=' . ($inst->enrol ?? '?')
+                error_log(
+                    '[FOE] unenrol_user() SILENT FAIL: userid=' . $_rowUid
+                        . ' courseid=' . $_rowCid . ' enrolid=' . $_rowEid
+                        . ' ue_before=' . $_ueAllBefore . ' ue_after=' . $_ueAllAfter
+                        . ' inst_enrol=' . ($inst->enrol ?? '?')
                     . ' inst_status=' . ($inst->status ?? '?'));
                 continue;
             }
@@ -2354,9 +2363,10 @@ if ($action === 'foe_apply_chunk' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Delete phantom course_completions rows.
             try {
-                $ccRows = $DB->get_records('course_completions', [
-                    'userid' => $_rowUid,
-                    'course' => $_rowCid,
+                $ccRows = $DB->get_records(
+                    'course_completions', [
+                        'userid' => $_rowUid,
+                        'course' => $_rowCid,
                 ]);
                 foreach ($ccRows as $ccRec) {
                     if (!RTOC_ENROL_WRITES_DISABLED) { $DB->delete_records('course_completions', ['id' => (int)$ccRec->id]); }
@@ -2368,8 +2378,9 @@ if ($action === 'foe_apply_chunk' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (\Exception $fe) {
             $DB->set_field('local_rtocompliance_foe_pending', 'status', 'error', ['id' => (int)$row->id]);
             $_errors++;
-            error_log('[FOE] unenrol_user() EXCEPTION: userid=' . $_rowUid
-                . ' courseid=' . $_rowCid . ' enrolid=' . $_rowEid
+            error_log(
+                '[FOE] unenrol_user() EXCEPTION: userid=' . $_rowUid
+                    . ' courseid=' . $_rowCid . ' enrolid=' . $_rowEid
                 . ' msg=' . $fe->getMessage());
         }
     }
@@ -2380,7 +2391,8 @@ if ($action === 'foe_apply_chunk' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     // the student still enrolled with no exception thrown.
     \core\session\manager::write_close();
 
-    $remaining = (int)$DB->count_records('local_rtocompliance_foe_pending',
+    $remaining = (int)$DB->count_records(
+        'local_rtocompliance_foe_pending',
         ['batchid' => $batchid, 'status' => 'pending']);
     $finished  = ($remaining === 0);
 
@@ -2390,13 +2402,14 @@ if ($action === 'foe_apply_chunk' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     header('Content-Type: application/json');
-    echo json_encode([
-        'processed'   => $_processed,
-        'remaining'   => $remaining,
-        'total'       => $total,
-        'errors'      => $_errors,
-        'completions' => $_completions,
-        'finished'    => $finished,
+    echo json_encode(
+        [
+            'processed'   => $_processed,
+            'remaining'   => $remaining,
+            'total'       => $total,
+            'errors'      => $_errors,
+            'completions' => $_completions,
+            'finished'    => $finished,
     ]);
     exit;
 }
@@ -2450,8 +2463,9 @@ if ($action === 'rollback' && $importid && confirm_sesskey()) {
                     if (!RTOC_ENROL_WRITES_DISABLED) { $enrolplugin->unenrol_user($inst, (int)$rb->userid); }
                     $unenroled++;
                 } catch (\Exception $e) {
-                    debugging('rtocompliance rollback: unenrol_user failed for userid='
-                        . $rb->userid . ' courseid=' . $rb->courseid . ': ' . $e->getMessage(),
+                    debugging(
+                        'rtocompliance rollback: unenrol_user failed for userid='
+                            . $rb->userid . ' courseid=' . $rb->courseid . ': ' . $e->getMessage(),
                         DEBUG_DEVELOPER);
                 }
             }
@@ -2467,7 +2481,8 @@ if ($action === 'rollback' && $importid && confirm_sesskey()) {
                 }
                 $completionsRemoved++;
             } catch (\Exception $e) {
-                debugging('rtocompliance rollback: completion removal failed for cc_id='
+                debugging(
+                    'rtocompliance rollback: completion removal failed for cc_id='
                     . $rb->cc_id . ': ' . $e->getMessage(), DEBUG_DEVELOPER);
             }
         }
@@ -2479,7 +2494,8 @@ if ($action === 'rollback' && $importid && confirm_sesskey()) {
                 $suspendedUserIds[] = (int)$rb->userid;
                 $usersSuspended++;
             } catch (\Exception $e) {
-                debugging('rtocompliance rollback: user suspend failed for userid='
+                debugging(
+                    'rtocompliance rollback: user suspend failed for userid='
                     . $rb->userid . ': ' . $e->getMessage(), DEBUG_DEVELOPER);
             }
         }
@@ -2564,7 +2580,7 @@ if ($action === 'foe_trace' && $importid) {
     \core\session\manager::write_close();
 
     $_traceCid   = strtolower(trim(optional_param('tracecid', '', PARAM_ALPHANUMEXT)));
-    $_traceLcCid = $_traceCid; // already lowercased
+    $_traceLcCid = $_traceCid; // Already lowercased
 
     echo $OUTPUT->header();
     echo '<nav aria-label="breadcrumb"><ol class="breadcrumb">'
@@ -2613,8 +2629,9 @@ if ($action === 'foe_trace' && $importid) {
     );
     echo '<h5 style="margin-top:1.5rem;">Step 1 — NAT00120 staging data for this import</h5>';
     if (empty($step1Rows)) {
-        echo '<p>' . $traceFail('Client ID <code>' . htmlspecialchars($_traceCid) . '</code> has <strong>ZERO rows</strong> in <code>local_rtocompliance_avetmiss_enrolment</code> for importid=' . (int)$importid . '.<br>'
-           . 'This is fatal — the student is completely invisible to Fix Over-Enrolments for this import.<br>'
+        echo '<p>' . $traceFail(
+            'Client ID <code>' . htmlspecialchars($_traceCid) . '</code> has <strong>ZERO rows</strong> in <code>local_rtocompliance_avetmiss_enrolment</code> for importid=' . (int)$importid . '.<br>'
+               . 'This is fatal — the student is completely invisible to Fix Over-Enrolments for this import.<br>'
            . '<strong>Check:</strong> (a) is this the correct import? (b) was the correct NAT00120 file uploaded? (c) is the Client ID correct?</p>') . '</p>';
     } else {
         echo '<p>' . $tracePass(count($step1Rows) . ' unit(s) found in staging for this import. <strong>Step 1 OK — student IS in the NAT data.</strong>') . '</p>';
@@ -2631,7 +2648,10 @@ if ($action === 'foe_trace' && $importid) {
             $step1Units[strtoupper(trim((string)$_s1r->unitcode))] = trim((string)($_s1r->outcome ?? ''));
         }
     }
-    if (empty($step1Rows)) { echo $OUTPUT->footer(); exit; }
+    if (empty($step1Rows)) {
+        echo $OUTPUT->footer();
+        exit;
+    }
 
     // ── STEP 2: Can the clientid be matched to a Moodle user? (all 5 paths) ────
     echo '<h5 style="margin-top:1.5rem;">Step 2 — Moodle account matching (5 paths)</h5>';
@@ -2698,7 +2718,8 @@ if ($action === 'foe_trace' && $importid) {
               ORDER BY importid DESC",
             ['cid' => $_traceLcCid]
         );
-        $_traceEmail = ''; $_traceUsi = '';
+        $_traceEmail = '';
+        $_traceUsi = '';
         foreach ($_stagRows as $_sg) {
             $_em = strtolower(trim((string)($_sg->email ?? '')));
             if ($_traceEmail === '' && $_em !== '' && str_contains($_em, '@') && !str_ends_with($_em, '.invalid')) {
@@ -2800,9 +2821,13 @@ if ($action === 'foe_trace' && $importid) {
         $_aeNatOut = isset($step1Units[$_aeUc]) ? $step1Units[$_aeUc] : null;
         $_aeInNat  = ($step1Units !== null) && ($_aeUc !== '') && isset($step1Units[$_aeUc]);
 
-        if (!$_aeManual) { $_step3NonManual++; }
-        elseif ($_aeUc === '') { $_step3ManualNoCode++; }
-        else { $_step3ManualWithCode++; }
+        if (!$_aeManual) {
+            $_step3NonManual++;
+        } elseif ($_aeUc === '') {
+            $_step3ManualNoCode++;
+        } else {
+            $_step3ManualWithCode++;
+        }
 
         // Determine what FOE would do
         $_foeTxt = '—';
@@ -3087,9 +3112,9 @@ if (($action === 'fix_overenrolments' || $action === 'fix_overenrolments_apply')
           WHERE LOWER(idnumber) $_insql AND deleted = 0",
         $_inparams
     );
-    $foeClientToUserid = []; // lc clientid → userid
-    $foeClientToName   = []; // lc clientid → display name
-    $foeMatchedVia     = []; // lc clientid → 'idnumber' | 'profile'
+    $foeClientToUserid = []; // Lc clientid → userid
+    $foeClientToName   = []; // Lc clientid → display name
+    $foeMatchedVia     = []; // Lc clientid → 'idnumber' | 'profile'
     foreach ($_muRs as $_mu) {
         $_lcid = trim((string)$_mu->lc_idnumber);
         if ($_lcid !== '' && isset($allStudentUnits[$_lcid])) {
@@ -3171,13 +3196,13 @@ if (($action === 'fix_overenrolments' || $action === 'fix_overenrolments_apply')
               ORDER BY importid DESC",
             $_inparams4
         );
-        $_stagEmail   = []; // lc email → lc clientid
+        $_stagEmail   = []; // Lc email → lc clientid
         $_stagUsi     = []; // UC USI  → lc clientid
-        $_stagSeenCid = []; // lc clientid → true (dedup: keep first = highest importid)
+        $_stagSeenCid = []; // Lc clientid → true (dedup: keep first = highest importid)
         foreach ($_stagRs as $_sg) {
             $_lcid = strtolower(trim((string)$_sg->clientid));
             if ($_lcid === '' || isset($foeClientToUserid[$_lcid])) continue;
-            if (isset($_stagSeenCid[$_lcid])) continue; // already captured most-recent row
+            if (isset($_stagSeenCid[$_lcid])) continue; // Already captured most-recent row
             $_stagSeenCid[$_lcid] = true;
             $_em = strtolower(trim((string)($_sg->email ?? '')));
             if ($_em !== '' && str_contains($_em, '@') && !str_ends_with($_em, '.invalid')) {
@@ -3247,7 +3272,7 @@ if (($action === 'fix_overenrolments' || $action === 'fix_overenrolments_apply')
     // firstname/lastname/email from the avetmiss_student staging table so the
     // diagnostic panel can name them and tell the admin exactly what to fix
     // (set ID number, or check enrolment type).
-    $foeUnmatchedDetails = []; // lc clientid → [clientid, name, email]
+    $foeUnmatchedDetails = []; // Lc clientid → [clientid, name, email]
     $_foeUnmatchedCids   = array_values(array_diff($_clientids, array_keys($foeClientToUserid)));
     if (!empty($_foeUnmatchedCids)) {
         list($_umSql, $_umParams) = $DB->get_in_or_equal($_foeUnmatchedCids, SQL_PARAMS_NAMED, 'foeum');
@@ -3295,11 +3320,11 @@ if (($action === 'fix_overenrolments' || $action === 'fix_overenrolments_apply')
           WHERE id <> 1
           ORDER BY fullname ASC"
     );
-    $_courseIdnumber    = []; // courseid → UNITCODE
-    $_courseNames       = []; // courseid → fullname
-    $_courseCatid       = []; // courseid → categoryid
-    $_courseVisible     = []; // courseid → 1|0
-    $_courseUcFromName  = []; // courseid → true when unit code was extracted from name (not idnumber)
+    $_courseIdnumber    = []; // Courseid → UNITCODE
+    $_courseNames       = []; // Courseid → fullname
+    $_courseCatid       = []; // Courseid → categoryid
+    $_courseVisible     = []; // Courseid → 1|0
+    $_courseUcFromName  = []; // Courseid → true when unit code was extracted from name (not idnumber)
     // FOE-AVETMISS-SCOPE (v5.9.150): Courses excluded because their extracted unit code
     // does not appear in any student's NAT records for this import.
     // Key = courseid, value = ['unitcode' => ..., 'fullname' => ..., 'reason' => ...]
@@ -3490,21 +3515,24 @@ if (($action === 'fix_overenrolments' || $action === 'fix_overenrolments_apply')
         // Bulk-insert all pending unenrolment rows — fast single-row inserts in a loop
         // are fine here because the bottleneck was the unenrol_user() calls, not the inserts.
         foreach ($foeToUnenrol as $_row) {
-            $DB->insert_record('local_rtocompliance_foe_pending', (object)[
-                'batchid'  => $_batchId,
-                'importid' => (int)$importid,
-                'userid'   => (int)$_row['userid'],
-                'enrolid'  => (int)$_row['enrolid'],
-                'courseid' => (int)$_row['courseid'],
-                'status'   => 'pending',
+            $DB->insert_record(
+                'local_rtocompliance_foe_pending', (object)[
+                    'batchid'  => $_batchId,
+                    'importid' => (int)$importid,
+                    'userid'   => (int)$_row['userid'],
+                    'enrolid'  => (int)$_row['enrolid'],
+                    'courseid' => (int)$_row['courseid'],
+                    'status'   => 'pending',
             ], false);
         }
         // Redirect to the progress page — JS will drive the rest.
-        redirect(new moodle_url('/local/rtocompliance/data_import.php', [
-            'action'   => 'foe_progress',
-            'batchid'  => $_batchId,
-            'importid' => (int)$importid,
-            'total'    => count($foeToUnenrol),
+        redirect(
+            new moodle_url(
+            '/local/rtocompliance/data_import.php', [
+                    'action'   => 'foe_progress',
+                    'batchid'  => $_batchId,
+                    'importid' => (int)$importid,
+                    'total'    => count($foeToUnenrol),
         ]));
     }
 
@@ -3630,9 +3658,10 @@ if (($action === 'fix_overenrolments' || $action === 'fix_overenrolments_apply')
         }
 
         // ── Block 5: Actual $foeToUnenrol rows for this client ─────────────
-        $_dbFoeRows = array_filter($foeToUnenrol, function ($_fr) use ($_debugCid) {
-            return $_fr['clientid'] === $_debugCid;
-        });
+        $_dbFoeRows = array_filter(
+            $foeToUnenrol, function ($_fr) use ($_debugCid) {
+                return $_fr['clientid'] === $_debugCid;
+            });
         $debugOut .= '<p style="margin:0.6rem 0 0.2rem;"><strong>5. Rows in $foeToUnenrol for this client:</strong> ';
         if (empty($_dbFoeRows)) {
             $debugOut .= '<span style="color:#c62828;font-weight:700;">0 rows.</span> '
@@ -3682,7 +3711,7 @@ if (($action === 'fix_overenrolments' || $action === 'fix_overenrolments_apply')
     echo '<p style="font-weight:700;margin-bottom:0.35rem;">Criterion 2 — Finished / withdrawn outcome</p>';
     echo '<p class="mb-0 text-muted">The NAT file has a record for the unit, but the outcome code shows the student has a non-continuing result. Non-continuing codes: 10, 20, 30, 40, 41, 51&ndash;54, 60, 61, 81, 82, 85, 90. Code 30 (Competency Not Yet Achieved) is included — AVETMISS 8 defines it as a terminal outcome; in-progress students should carry code 70 (Continuing).</p>';
     echo '</div></div></div>';
-    echo '</div>'; // end row
+    echo '</div>'; // End row
     // Section labels
     echo '<p style="font-weight:700;font-size:0.9em;margin-bottom:0.5rem;">What the sections on this page mean:</p>';
     echo '<div class="row" style="font-size:0.88em;">';
@@ -3702,12 +3731,12 @@ if (($action === 'fix_overenrolments' || $action === 'fix_overenrolments_apply')
        . '<strong>Section D</strong> <span class="text-muted">(green)</span> — courses with an AVETMISS-pattern unit code in their name/ID, but that unit code does not appear in any student\'s NAT data for this import. '
        . 'These are CPD, orientation, admin, or other non-accredited courses. <strong>Enrolments in these courses are never touched.</strong>'
        . '</div></div>';
-    echo '</div>'; // end row
+    echo '</div>'; // End row
     echo '<div class="alert alert-warning mb-0 mt-2" style="padding:0.5rem 0.9rem;font-size:0.88em;">'
        . '<strong>&#9888; Review the list before applying.</strong> '
        . 'The Remove button removes all flagged enrolments at once. To keep a specific enrolment, re-enrol that student manually after applying.'
        . '</div>';
-    echo '</div></div>'; // end card-body / card
+    echo '</div></div>'; // End card-body / card
     // ── Brief intro ──────────────────────────────────────────────────────────
     echo '<p class="text-muted" style="font-size:0.93em;">Compares each student\'s NAT00120 unit codes against their current Moodle enrolments across <strong>all categories</strong>. '
        . 'Courses are identified by unit code via (1) the Course ID number field, (2) the start of the course shortname, or (3) the start of the course fullname — whichever matches first. '
@@ -3745,12 +3774,15 @@ if (($action === 'fix_overenrolments' || $action === 'fix_overenrolments_apply')
     $_usedCatids = array_unique(array_column($foeToUnenrol, 'catid'));
     $_catNames   = [];
     foreach ($_usedCatids as $_caid) {
-        $_crumbs = []; $_par = (int)$_caid; $_depth = 0;
+        $_crumbs = [];
+        $_par = (int)$_caid;
+        $_depth = 0;
         while ($_par > 0 && $_depth < 6) {
             $_cRec = $DB->get_record('course_categories', ['id' => $_par], 'id,name,parent', IGNORE_MISSING);
             if (!$_cRec) break;
             array_unshift($_crumbs, $_cRec->name);
-            $_par = (int)$_cRec->parent; $_depth++;
+            $_par = (int)$_cRec->parent;
+            $_depth++;
         }
         $_catNames[$_caid] = implode(' › ', $_crumbs) ?: 'Category ' . $_caid;
     }
@@ -3888,7 +3920,7 @@ document.addEventListener("DOMContentLoaded", function () {
        . 'Remove All ' . $_totalRows . ' Over-Enrolments</button> ';
     echo '<a href="' . (new moodle_url('/local/rtocompliance/data_import.php', ['importid' => $importid]))->out() . '" class="btn btn-secondary ml-2">Back to Import</a>';
     echo '</form>';
-    } // end if (!empty($foeToUnenrol))
+    } // End if (!empty($foeToUnenrol))
 
     // ── Diagnostic panel ─────────────────────────────────────────────────────
     // Three sections explain WHY a student may not appear in the main table:
@@ -4008,7 +4040,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // For each matched student, determine their "home" category IDs by mapping
     // their NAT unit codes → Moodle courses → category.
-    $_studentHomeCats = []; // lcCid → [catid => true]
+    $_studentHomeCats = []; // LcCid → [catid => true]
     foreach ($allStudentUnits as $_shLcCid => $_shNatUnits) {
         if (!isset($foeClientToUserid[$_shLcCid])) continue;
         foreach (array_keys($_shNatUnits) as $_shUc) {
@@ -4214,7 +4246,8 @@ if ($action === 'assign_archive_family' && $_SERVER['REQUEST_METHOD'] === 'POST'
         // Also check if this assignment resolved a duplicate
         $row = $DB->get_record('local_rtocompliance_archive_index', ['categoryid' => $catid]);
         if ($row) {
-            $dupeCount = $DB->count_records('local_rtocompliance_archive_index',
+            $dupeCount = $DB->count_records(
+                'local_rtocompliance_archive_index',
                 ['family' => $newFamily, 'year' => $row->year, 'sem' => $row->sem]);
             if ($dupeCount === 1) {
                 $DB->set_field('local_rtocompliance_archive_index', 'is_active', 1, ['categoryid' => $catid]);
@@ -4235,7 +4268,8 @@ if ($action === 'set_active_archive' && $_SERVER['REQUEST_METHOD'] === 'POST' &&
     $sem      = required_param('sem',        PARAM_ALPHANUMEXT);
     $chosenId = required_param('categoryid', PARAM_INT);
     // Upsert active pick
-    $existing = $DB->get_record('local_rtocompliance_archive_active_pick',
+    $existing = $DB->get_record(
+        'local_rtocompliance_archive_active_pick',
         ['family' => $family, 'year' => $year, 'sem' => $sem]);
     if ($existing) {
         $existing->active_categoryid = $chosenId;
@@ -4298,21 +4332,31 @@ if ($action === 'archive_index') {
     $unresolvedGroups = 0;
     foreach ($preCheckGroups as $pcg) {
         try {
-            $pcCands = $DB->get_records('local_rtocompliance_archive_index',
+            $pcCands = $DB->get_records(
+                'local_rtocompliance_archive_index',
                 ['family' => $pcg->family, 'year' => $pcg->year, 'sem' => $pcg->sem]);
         } catch (Exception $e) { $pcCands = []; }
         $pcHasActive = false;
-        foreach ($pcCands as $pcc) { if ($pcc->is_active) { $pcHasActive = true; break; } }
-        if ($pcHasActive) continue; // already resolved
+        foreach ($pcCands as $pcc) {
+            if ($pcc->is_active) {
+                $pcHasActive = true;
+                break;
+            }
+        }
+        if ($pcHasActive) continue; // Already resolved
         // Auto-routeable if: at least one candidate has a qual code in its path AND no two
         // candidates share the same qual code (so the import can pick exactly one per qual).
         // Candidates WITHOUT qual codes are dead/legacy categories — the import bypasses them.
-        $pcSeenQcs = []; $pcAllDistinct = true;
+        $pcSeenQcs = [];
+        $pcAllDistinct = true;
         foreach ($pcCands as $pcc) {
             $pcHay = strtoupper(($pcc->fullpath ?? '') . ' ' . ($pcc->categoryname ?? ''));
             foreach ($allFamilyQcKeys as $kqc) {
                 if (strpos($pcHay, strtoupper($kqc)) !== false) {
-                    if (isset($pcSeenQcs[$kqc])) { $pcAllDistinct = false; break 2; }
+                    if (isset($pcSeenQcs[$kqc])) {
+                        $pcAllDistinct = false;
+                        break 2;
+                    }
                     $pcSeenQcs[$kqc] = true;
                 }
             }
@@ -4347,7 +4391,8 @@ if ($action === 'archive_index') {
     }
 
     // ── Rebuild button ───────────────────────────────────────────────────────
-    $rebuildUrl = new moodle_url('/local/rtocompliance/data_import.php',
+    $rebuildUrl = new moodle_url(
+        '/local/rtocompliance/data_import.php',
         ['action' => 'rebuild_archive_index', 'sesskey' => sesskey()]);
     echo '<form method="post" action="' . $rebuildUrl->out(false) . '" class="mb-4">';
     echo '<button type="submit" class="btn btn-primary" title="Scan the Moodle category tree and rebuild the archive index">Rebuild Archive Index</button>';
@@ -4368,9 +4413,11 @@ if ($action === 'archive_index') {
         echo '<table class="table table-sm table-bordered mb-4">';
         echo '<thead class="thead-light"><tr>'
            . '<th title="Moodle course category name">Category</th><th title="Full category path in the hierarchy">Full Path</th><th title="Collection year">Year</th><th title="Semester">Sem</th><th title="Assign a qualification family to this category">Assign Family</th></tr></thead><tbody>';
-        $nullRecords = $DB->get_records_select('local_rtocompliance_archive_index',
+        $nullRecords = $DB->get_records_select(
+            'local_rtocompliance_archive_index',
             'family IS NULL', [], 'year DESC, sem DESC', 'id,categoryid,categoryname,fullpath,year,sem');
-        $assignUrl = new moodle_url('/local/rtocompliance/data_import.php',
+        $assignUrl = new moodle_url(
+            '/local/rtocompliance/data_import.php',
             ['action' => 'assign_archive_family', 'sesskey' => sesskey()]);
         $familyOptions = array_keys(local_rtocompliance_archive_family_keywords());
         foreach ($nullRecords as $r) {
@@ -4412,21 +4459,27 @@ if ($action === 'archive_index') {
         // Count truly-unresolved conflicts (excludes auto-routeable ones).
         $unresolvedCount = 0;
         foreach ($dupeGroups as $g) {
-            $hasActive = $DB->count_records_select('local_rtocompliance_archive_index',
-                'family = ? AND year = ? AND sem = ? AND is_active = 1',
+            $hasActive = $DB->count_records_select(
+                'local_rtocompliance_archive_index',
+                    'family = ? AND year = ? AND sem = ? AND is_active = 1',
                 [$g->family, $g->year, $g->sem]);
             if ($hasActive) continue;
             // Auto-routeable if at least one candidate has a distinct qual code in its path.
             try {
-                $ugCands = $DB->get_records('local_rtocompliance_archive_index',
+                $ugCands = $DB->get_records(
+                    'local_rtocompliance_archive_index',
                     ['family' => $g->family, 'year' => $g->year, 'sem' => $g->sem]);
             } catch (Exception $e) { $ugCands = []; }
-            $ugSeenQcs = []; $ugAllDistinct = true;
+            $ugSeenQcs = [];
+            $ugAllDistinct = true;
             foreach ($ugCands as $ugc) {
                 $ugHay = strtoupper(($ugc->fullpath ?? '') . ' ' . ($ugc->categoryname ?? ''));
                 foreach ($allFamilyQcKeys as $kqc) {
                     if (strpos($ugHay, strtoupper($kqc)) !== false) {
-                        if (isset($ugSeenQcs[$kqc])) { $ugAllDistinct = false; break 2; }
+                        if (isset($ugSeenQcs[$kqc])) {
+                            $ugAllDistinct = false;
+                            break 2;
+                        }
                         $ugSeenQcs[$kqc] = true;
                     }
                 }
@@ -4449,15 +4502,22 @@ if ($action === 'archive_index') {
         echo '<h4 class="mt-3">Conflicts <span class="badge ' . ($unresolvedCount > 0 ? 'badge-danger' : 'badge-success') . '" title="How many periods have more than one matching category, and how many of those still need one chosen.">'
            . count($dupeGroups) . ' total, ' . $unresolvedCount . ' unresolved</span></h4>';
 
-        $setActiveUrl = new moodle_url('/local/rtocompliance/data_import.php',
+        $setActiveUrl = new moodle_url(
+            '/local/rtocompliance/data_import.php',
             ['action' => 'set_active_archive', 'sesskey' => sesskey()]);
 
         foreach ($dupeGroups as $g) {
-            $candidates = $DB->get_records('local_rtocompliance_archive_index',
-                ['family' => $g->family, 'year' => $g->year, 'sem' => $g->sem],
+            $candidates = $DB->get_records(
+                'local_rtocompliance_archive_index',
+                    ['family' => $g->family, 'year' => $g->year, 'sem' => $g->sem],
                 'categoryid ASC');
             $hasActive = false;
-            foreach ($candidates as $c) { if ($c->is_active) { $hasActive = true; break; } }
+            foreach ($candidates as $c) {
+                if ($c->is_active) {
+                    $hasActive = true;
+                    break;
+                }
+            }
             $familyLabel = ucwords(str_replace('_', ' ', $g->family));
 
             // Determine auto-routeability early so the card header can use the right colour.
@@ -4473,10 +4533,14 @@ if ($action === 'archive_index') {
             }
             // Auto-routeable = at least one candidate has a distinct qual code in its path.
             // Candidates without qual codes are dead/legacy folders — the import bypasses them.
-            $hdrSeenQcs = []; $hdrAllDistinct = true;
+            $hdrSeenQcs = [];
+            $hdrAllDistinct = true;
             foreach ($archQcPreview as $pqcs) {
                 foreach ($pqcs as $pqc) {
-                    if (isset($hdrSeenQcs[$pqc])) { $hdrAllDistinct = false; break 2; }
+                    if (isset($hdrSeenQcs[$pqc])) {
+                        $hdrAllDistinct = false;
+                        break 2;
+                    }
                     $hdrSeenQcs[$pqc] = true;
                 }
             }
@@ -4511,7 +4575,7 @@ if ($action === 'archive_index') {
             // A qual code looks like TLI##### or SC### etc — pull all uppercase letter+digit tokens
             // that appear in the family's qual_to_family map.
             $allFamilyQualCodes = array_keys(local_rtocompliance_qual_to_family());
-            $candidateQcMap = []; // categoryid → [qualcodes found in fullpath]
+            $candidateQcMap = []; // Categoryid → [qualcodes found in fullpath]
             foreach ($candidates as $c) {
                 $haystack = strtoupper($c->fullpath . ' ' . $c->categoryname);
                 $found = [];
@@ -4527,7 +4591,7 @@ if ($action === 'archive_index') {
             // Genuinely ambiguous = no candidate has a qual code, OR two candidates share the same one.
             $allDistinct  = true;
             $seenQcs      = [];
-            $qcCandidates = []; // categoryid → first qual code found (for suggested-pick highlight)
+            $qcCandidates = []; // Categoryid → first qual code found (for suggested-pick highlight)
             foreach ($candidateQcMap as $cid => $qcs) {
                 if (!empty($qcs)) {
                     $qcCandidates[$cid] = $qcs[0];
@@ -4588,7 +4652,8 @@ if ($action === 'archive_index') {
     echo '<h4 class="mt-4">Full Index</h4>';
 
     // Group by family for readability
-    $allRows = $DB->get_records_select('local_rtocompliance_archive_index',
+    $allRows = $DB->get_records_select(
+        'local_rtocompliance_archive_index',
         'family IS NOT NULL', [], 'family ASC, year DESC, sem DESC');
     if (empty($allRows)) {
         echo '<p class="text-muted"><em>No indexed rows with assigned families yet.</em></p>';
@@ -4681,7 +4746,7 @@ if ($action === 'do_archive_link' && $_SERVER['REQUEST_METHOD'] === 'POST' && co
     }
 
     // Step 2: If this is the second POST (approvals submitted), process them
-    $approvals = optional_param_array('approve_group', [], PARAM_INT); // array of group indices to approve
+    $approvals = optional_param_array('approve_group', [], PARAM_INT); // Array of group indices to approve
     $groupsJson = optional_param('groups_json', '', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — JSON document, json_decode()'d immediately and rejected if it does not decode
     if (!empty($approvals) && !empty($groupsJson)) {
         // Process approved group → course mappings
@@ -4692,26 +4757,33 @@ if ($action === 'do_archive_link' && $_SERVER['REQUEST_METHOD'] === 'POST' && co
 
         if ($DB->get_manager()->table_exists('local_rtocompliance_qualunit_courses')) {
             foreach ($approvals as $idx => $courseid) {
-                if ((int)$courseid <= 0) { $skipped++; continue; }
+                if ((int)$courseid <= 0) {
+                    $skipped++;
+                    continue;
+                }
                 $semesterLabel = optional_param("semester_label_{$idx}", '', PARAM_TEXT);
                 $qualunitid    = (int)optional_param("qualunitid_{$idx}", 0, PARAM_INT);
-                if ($qualunitid <= 0) { $skipped++; continue; }
+                if ($qualunitid <= 0) {
+                    $skipped++;
+                    continue;
+                }
 
                 if (!$DB->record_exists('local_rtocompliance_qualunit_courses', ['qualunitid' => $qualunitid, 'courseid' => (int)$courseid])) {
                     try {
-                        $DB->insert_record('local_rtocompliance_qualunit_courses', (object)[
-                            'qualunitid'     => $qualunitid,
-                            'courseid'       => (int)$courseid,
-                            'semester_label' => substr(trim($semesterLabel), 0, 100),
-                            'is_archive'     => 1,
-                            'timecreated'    => time(),
+                        $DB->insert_record(
+                            'local_rtocompliance_qualunit_courses', (object)[
+                                'qualunitid'     => $qualunitid,
+                                'courseid'       => (int)$courseid,
+                                'semester_label' => substr(trim($semesterLabel), 0, 100),
+                                'is_archive'     => 1,
+                                'timecreated'    => time(),
                         ]);
                         $linked++;
                     } catch (\Throwable $e) {
                         $errors[] = "Unit {$qualunitid} → course {$courseid}: " . $e->getMessage();
                     }
                 } else {
-                    $skipped++; // already linked
+                    $skipped++; // Already linked
                 }
             }
         } else {
@@ -4879,7 +4951,7 @@ if ($action === 'do_archive_link' && $_SERVER['REQUEST_METHOD'] === 'POST' && co
             if ($s > 0) $scored[$course->id] = $s;
         }
         arsort($scored);
-        $topCourseIds = array_slice(array_keys($scored), 0, 1); // top 1 best match
+        $topCourseIds = array_slice(array_keys($scored), 0, 1); // Top 1 best match
 
         foreach ($matchedUnits as $qu) {
             $alreadyLinkedToTop = !empty($topCourseIds) && isset($existingLinks[$qu->id . '_' . $topCourseIds[0]]);
@@ -4896,7 +4968,7 @@ if ($action === 'do_archive_link' && $_SERVER['REQUEST_METHOD'] === 'POST' && co
             echo '<option value="0">-- Skip this unit --</option>';
             foreach ($allCourses as $course) {
                 $sc = $scored[$course->id] ?? 0;
-                if ($sc < 5 && count($allCourses) > 20) continue; // hide low-score noise when many courses
+                if ($sc < 5 && count($allCourses) > 20) continue; // Hide low-score noise when many courses
                 $sel = (!empty($topCourseIds) && $course->id == $topCourseIds[0] && !$alreadyLinkedToTop) ? ' selected' : '';
                 $scoreBadge = $sc >= 40 ? ' [' . $sc . '%]' : '';
                 echo '<option value="' . $course->id . '"' . $sel . '>' . htmlspecialchars($course->shortname . ' — ' . substr($course->fullname, 0, 60), ENT_QUOTES) . $scoreBadge . '</option>';
@@ -4944,14 +5016,16 @@ if ($action === 'verify_nat') {
     $PAGE->set_title(get_string('pluginname', 'local_rtocompliance') . ' — Verify NAT Data');
     $PAGE->set_heading(get_string('pluginname', 'local_rtocompliance'));
     echo $OUTPUT->header();
-    echo local_rtocompliance_render_nav_header('Verify NAT Data', 'Data Import',
+    echo local_rtocompliance_render_nav_header(
+        'Verify NAT Data', 'Data Import',
         '/local/rtocompliance/data_import.php', 'data_import');
     echo html_writer::start_div('compliance-container');
     echo html_writer::start_div('compliance-header');
     echo html_writer::tag('h2', 'Verify NAT Data');
-    echo html_writer::tag('p',
-        'Upload your NAT files to check which students have been successfully imported, '
-        . 'enrolled in Moodle, and linked to RTO Compliance records.',
+    echo html_writer::tag(
+        'p',
+            'Upload your NAT files to check which students have been successfully imported, '
+            . 'enrolled in Moodle, and linked to RTO Compliance records.',
         ['style' => 'color:#fff;opacity:0.9;']);
     echo html_writer::end_div();
 
@@ -5063,7 +5137,7 @@ if ($action === 'verify_nat') {
                 $moodleUserByCid      = []; // clientid => userid (idnumber match)
                 $moodleUserByEmail    = []; // clientid => userid (email fallback match)
                 $moodleMatchMethod    = []; // clientid => 'idnumber' | 'email'
-                $moodleUserIdList     = []; // flat list of all matched userids
+                $moodleUserIdList     = []; // Flat list of all matched userids
                 try {
                     foreach (array_chunk($allCids, $chunkSize) as $chunk) {
                         [$insqlC, $inparamsC] = $DB->get_in_or_equal($chunk, SQL_PARAMS_NAMED);
@@ -5089,7 +5163,7 @@ if ($action === 'verify_nat') {
                 if ($hasContactFile && !empty($nat85EmailByCid)) {
                     // Build a list of emails for students not yet matched.
                     $unmatchedEmails = [];
-                    $emailToCid      = []; // lowercase email => clientid
+                    $emailToCid      = []; // Lowercase email => clientid
                     foreach ($nat85EmailByCid as $cid => $email) {
                         if (!isset($moodleUserByCid[$cid]) && $email !== '') {
                             $lc = strtolower($email);
@@ -5584,9 +5658,10 @@ if ($action === 'backfill_records') {
             $moodleByIdnumber = [];
             $moodleByUsername = [];
             $moodleByEmail    = [];
-            $userRs = $DB->get_recordset_select('user',
-                'deleted = 0 AND mnethostid = :mnet',
-                ['mnet' => $CFG->mnet_localhost_id],
+            $userRs = $DB->get_recordset_select(
+                'user',
+                    'deleted = 0 AND mnethostid = :mnet',
+                    ['mnet' => $CFG->mnet_localhost_id],
                 '', 'id, username, idnumber, email');
             foreach ($userRs as $u) {
                 $lcIdnum = strtolower(trim((string)$u->idnumber));
@@ -5609,9 +5684,10 @@ if ($action === 'backfill_records') {
             // 4. Process each clientid that is missing from Student Records
             require_once($CFG->dirroot . '/user/lib.php');
 
-            $toProcess = array_filter($allClientIds, function ($cid) use ($existingClientMap) {
-                return !isset($existingClientMap[$cid]);
-            });
+            $toProcess = array_filter(
+                $allClientIds, function ($cid) use ($existingClientMap) {
+                    return !isset($existingClientMap[$cid]);
+                });
 
             foreach ($toProcess as $lcCid) {
                 $staging = $latestData[$lcCid] ?? null;
@@ -5663,7 +5739,8 @@ if ($action === 'backfill_records') {
                             $moodleByIdnumber[$lcCid] = (int)$userid;
                         } catch (Exception $eIdnum) {
                             // Non-fatal — Path B (clientid in student profile) will still work.
-                            debugging('rtocompliance backfill: idnumber update failed for userid='
+                            debugging(
+                                'rtocompliance backfill: idnumber update failed for userid='
                                 . $userid . ': ' . $eIdnum->getMessage(), DEBUG_DEVELOPER);
                         }
                     }
@@ -5675,7 +5752,8 @@ if ($action === 'backfill_records') {
                             $DB->set_field('user', 'idnumber', trim((string)$staging->clientid), ['id' => (int)$userid, 'deleted' => 0]);
                             $moodleByIdnumber[$lcCid] = (int)$userid;
                         } catch (Exception $eIdnum2) {
-                            debugging('rtocompliance backfill: idnumber update failed (2) for userid='
+                            debugging(
+                                'rtocompliance backfill: idnumber update failed (2) for userid='
                                 . $userid . ': ' . $eIdnum2->getMessage(), DEBUG_DEVELOPER);
                         }
                     }
@@ -5707,19 +5785,23 @@ if ($action === 'backfill_records') {
                 // a blank or different clientid, update it to the NAT clientid before skipping.
                 if (isset($existingByUserid[(int)$userid])) {
                     try {
-                        $existSR = $DB->get_record('local_rtocompliance_students',
+                        $existSR = $DB->get_record(
+                            'local_rtocompliance_students',
                             ['userid' => (int)$userid], 'id, clientid', IGNORE_MISSING);
                         if ($existSR) {
                             $existCid = strtolower(trim((string)($existSR->clientid ?? '')));
                             if ($existCid === '' || $existCid !== $lcCid) {
-                                $DB->set_field('local_rtocompliance_students', 'clientid',
+                                $DB->set_field(
+                                    'local_rtocompliance_students', 'clientid',
                                     trim((string)$staging->clientid), ['id' => $existSR->id]);
-                                $DB->set_field('local_rtocompliance_students', 'timemodified',
+                                $DB->set_field(
+                                    'local_rtocompliance_students', 'timemodified',
                                     time(), ['id' => $existSR->id]);
                             }
                         }
                     } catch (Exception $eCid) {
-                        debugging('rtocompliance backfill: clientid update failed for userid='
+                        debugging(
+                            'rtocompliance backfill: clientid update failed for userid='
                             . $userid . ': ' . $eCid->getMessage(), DEBUG_DEVELOPER);
                     }
                     $bfSkipped++;
@@ -5925,14 +6007,15 @@ function local_rtocompliance_save_nat_groups(array $groups, array $usiOverrides 
                 $_endDate = trim((string)($e['enddate'] ?? ''));
                 if (strlen($_endDate) === 8 && ctype_digit($_endDate)) {
                     // DDMMYYYY → compare to today
-                    $_ed_ts = mktime(0, 0, 0,
-                        (int)substr($_endDate, 2, 2),  // month
-                        (int)substr($_endDate, 0, 2),  // day
-                        (int)substr($_endDate, 4, 4)   // year
+                    $_ed_ts = mktime(
+                        0, 0, 0,
+                            (int)substr($_endDate, 2, 2),  // Month
+                            (int)substr($_endDate, 0, 2),  // Day
+                            (int)substr($_endDate, 4, 4)   // Year
                     );
                     $_rawOutcome = ($_ed_ts < time()) ? '' : '70'; // past = historical, future = continuing
                 } else {
-                    $_rawOutcome = '70'; // no end date → assume in progress
+                    $_rawOutcome = '70'; // No end date → assume in progress
                 }
             }
             $rec = (object)[
@@ -5964,11 +6047,12 @@ function local_rtocompliance_save_nat_groups(array $groups, array $usiOverrides 
         // NAT00030 programme records (qual names + VET flag) — stored when NAT00030 is included in the upload.
         foreach ($data['programmes'] ?? [] as $p) {
             try {
-                $DB->insert_record('local_rtocompliance_avetmiss_programme', (object)[
-                    'importid'  => $importid_new,
-                    'qualcode'  => $p['qualcode']  ?? '',
-                    'qualname'  => $p['qualname']  ?? '',
-                    'isvetprog' => $p['isvetprog'] ?? null,
+                $DB->insert_record(
+                    'local_rtocompliance_avetmiss_programme', (object)[
+                        'importid'  => $importid_new,
+                        'qualcode'  => $p['qualcode']  ?? '',
+                        'qualname'  => $p['qualname']  ?? '',
+                        'isvetprog' => $p['isvetprog'] ?? null,
                 ]);
             } catch (Exception $e) { /* table may not exist on older DB — safe to skip */ }
         }
@@ -5993,7 +6077,7 @@ function local_rtocompliance_save_nat_groups(array $groups, array $usiOverrides 
 
 // ─── Handle file upload — Step 1: read files, detect format, show confirmation ─
 
-$pendingConfirm = false;   // flag to render the confirmation UI instead of the list
+$pendingConfirm = false;   // Flag to render the confirmation UI instead of the list
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === '' && confirm_sesskey()) {
     raise_memory_limit(MEMORY_HUGE); // BUG-MEMORY-NATIMPORT (v4.9.168): file read + normalise
@@ -6078,9 +6162,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === '' && confirm_sesskey()
         if ($nat80content !== '') {
             // Content is pre-normalised to \n at upload time (v4.9.130). Defensive pattern kept.
             $allLines    = preg_split('/\r\n|\r|\n/', $nat80content);
-            $sampleLines = array_values(array_filter(
-                array_slice($allLines, 0, 100),
-                fn($l) => trim($l) !== ''
+            $sampleLines = array_values(
+                array_filter(
+                    array_slice($allLines, 0, 100),
+                    fn($l) => trim($l) !== ''
             ));
         }
         $detected = ($nat80content !== '')
@@ -6113,7 +6198,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === '' && confirm_sesskey()
         $pending['groups'][] = [
             'files'          => $sessFiles,
             'nat80tmppath'   => $nat80tmppath,
-            'nat80content'   => $useTmpFiles ? '' : $nat80content, // inline fallback only
+            'nat80content'   => $useTmpFiles ? '' : $nat80content, // Inline fallback only
             'usiposdetected' => $detected,
             'usiposoverride' => -1,
         ];
@@ -6211,7 +6296,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'finalizenat' && confir
         );
     }
 
-    // v5.9.371 NAT-RESULTS-REGISTER: populate the plugin's own results register
+    // Version 5.9.371 NAT-RESULTS-REGISTER: populate the plugin's own results register
     // (local_rtocompliance_enrolments) directly from the just-staged NAT enrolments,
     // for students already in the system. This writes ONLY plugin tables — it creates
     // and deletes NO Moodle accounts, enrolments or completions. Students with no
@@ -6263,7 +6348,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'finalizenat' && confir
         }
     }
 
-    // v5.9.371: go straight to the import detail view (Students / Enrolments / Quality
+    // Version 5.9.371: go straight to the import detail view (Students / Enrolments / Quality
     // tabs). The old auto-enrol wizard redirect is retired — the import no longer pushes
     // students into Moodle; it populates the plugin's results register instead.
     redirect(
@@ -6300,7 +6385,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
     // The session lock is held for a few seconds at most (the loop is O(1) in-memory
     // lookups thanks to pre-fetch), which is acceptable.
 
-    // qualcodes[], categories[], and yearsems[] are parallel arrays submitted by the wizard form.
+    // The qualcodes[], categories[] and yearsems[] arrays are parallel arrays submitted by the wizard form.
     // FIX-AUTOENROL-CATEGORIES (v4.9.179): in this RTO's Moodle, each qualification is a
     // Moodle *category* and each unit of competency is a *course* inside that category.
     // The wizard now collects a category ID per qual code. During enrolment, every visible
@@ -6372,7 +6457,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
     // Pre-load student details — name, email — needed for skip reports and
     // automatic account creation (v4.9.161: accounts created when no match found).
     $studentNameMap    = [];
-    $studentDetailsMap = [];   // clientid → stdClass{firstname, familyname, email}
+    $studentDetailsMap = [];   // Clientid → stdClass{firstname, familyname, email}
     // FIX-DOENROL-DUPKEY-2 (v5.2.8): get_records() uses the first selected column as the
     // PHP array key — selecting 'clientid, ...' from avetmiss_student (where duplicate
     // clientid rows can exist from malformed NAT files) triggers the Moodle duplicate-key
@@ -6396,9 +6481,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
     // importid.  Fix: do one extra query across ALL imports for any clientid that still
     // has no proper name — this covers both the "different batch" and "NAT00080 not
     // included at all in this run but uploaded previously" scenarios.
-    $allEnrolClientids = array_unique($DB->get_fieldset_select(
-        'local_rtocompliance_avetmiss_enrolment', 'clientid',
-        'importid = :importid', ['importid' => $importid]
+    $allEnrolClientids = array_unique(
+        $DB->get_fieldset_select(
+            'local_rtocompliance_avetmiss_enrolment', 'clientid',
+            'importid = :importid', ['importid' => $importid]
     ));
     if (!empty($allEnrolClientids)) {
         $needsName = [];
@@ -6492,12 +6578,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
     $seRs->close();
 
     $totalenrolled          = 0;
-    $totalcreated           = 0;   // new Moodle accounts created automatically
-    $totalmatched           = 0;   // matched by primary method (email or studentid)
-    $totalmatched_fallback  = 0;   // matched by fallback method (cross-mode lookup)
-    $totalskipnostudent     = 0;   // kept for compatibility — rarely triggered now
-    $totalskipnoemail       = 0;   // kept for compatibility — rarely triggered now
-    $totalskipnouser        = 0;   // account creation failed (username conflict etc.)
+    $totalcreated           = 0;   // New Moodle accounts created automatically
+    $totalmatched           = 0;   // Matched by primary method (email or studentid)
+    $totalmatched_fallback  = 0;   // Matched by fallback method (cross-mode lookup)
+    $totalskipnostudent     = 0;   // Kept for compatibility — rarely triggered now
+    $totalskipnoemail       = 0;   // Kept for compatibility — rarely triggered now
+    $totalskipnouser        = 0;   // Account creation failed (username conflict etc.)
     $totalskipalready       = 0;
     $totalskipterminal      = 0;   // ENROL-CONTINUING-ONLY (v5.9.52): students with terminal outcomes (no '70' units)
     $enrolledQualcodes  = [];
@@ -6544,9 +6630,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
     }
     $dobRs->close();
 
-    $usiToWrite      = [];   // userid (int) => usi (string) — collected per matched student
-    $dobToWrite      = [];   // userid (int) => dob string DDMMYYYY — collected per matched student
-    $profilesEnsured = [];   // userid (int) => true — profiles created synchronously this run
+    $usiToWrite      = [];   // Userid (int) => usi (string) — collected per matched student
+    $dobToWrite      = [];   // Userid (int) => dob string DDMMYYYY — collected per matched student
+    $profilesEnsured = [];   // Userid (int) => true — profiles created synchronously this run
 
     // NAT-FIX-5.2.4 (NAT-COMPLETION): Pre-load every NAT enrolment outcome for this
     // import so that, when a student is enrolled into a Moodle course, we can
@@ -6575,7 +6661,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
     // excluded from $natOutcomeMap but still represent real enrolments that should receive
     // Moodle access.  Only built when targeted_enrol is checked to avoid wasted memory on
     // large imports where the admin wants the old "enrol into everything" behaviour.
-    $allStudentUnits = [];  // clientid → [UNITCODE => true]
+    $allStudentUnits = [];  // Clientid → [UNITCODE => true]
     if ($targetedEnrol) {
         $allUnitsRs = $DB->get_recordset_select(
             'local_rtocompliance_avetmiss_enrolment',
@@ -6606,9 +6692,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
     // The unit code is stored so that NAT outcome matching ($courseIdnumber) works for
     // archive courses — a "S2 2010" archive course of TLJA5061 is still the SAME unit,
     // so a competent NAT outcome for that unit should trigger course_completions.
-    $archiveLinksByPrimary = [];   // primaryCourseid → list of archive link records
-    $archiveCourseIdSet    = [];   // flat set: archiveCourseid → true (for stats)
-    $totalarchiveenrolled  = 0;    // grand total archive-course enrolments this run
+    $archiveLinksByPrimary = [];   // PrimaryCourseid → list of archive link records
+    $archiveCourseIdSet    = [];   // Flat set: archiveCourseid → true (for stats)
+    $totalarchiveenrolled  = 0;    // Grand total archive-course enrolments this run
     if ($DB->get_manager()->table_exists('local_rtocompliance_qualunit_courses')) {
         $arcRs = $DB->get_recordset_sql(
             "SELECT qu.courseid AS primary_courseid,
@@ -6631,12 +6717,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
         $arcRs->close();
     }
 
-    $autoUnhiddenCatIds = []; // track categories we temporarily made visible for enrolment
+    $autoUnhiddenCatIds = []; // Track categories we temporarily made visible for enrolment
 
     foreach ($qualcodes as $i => $qualcode) {
         $qualcode   = trim(clean_param($qualcode, PARAM_TEXT));
         $categoryid = (int)($categoryids[$i] ?? 0);
-        $yearsem    = trim(clean_param($yearsems[$i] ?? '', PARAM_TEXT)); // e.g. "2015 S1" or ""
+        $yearsem    = trim(clean_param($yearsems[$i] ?? '', PARAM_TEXT)); // E.g. "2015 S1" or ""
         if ($categoryid <= 0 || $qualcode === '') continue;
 
         // AUTO-UNHIDE: if the archive category is hidden in Moodle, make it visible
@@ -6648,7 +6734,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
                 $catObj = core_course_category::get($categoryid, IGNORE_MISSING);
                 if ($catObj) {
                     $catObj->update(['visible' => 1]);
-                    $autoUnhiddenCatIds[] = $categoryid; // remember for re-hide offer
+                    $autoUnhiddenCatIds[] = $categoryid; // Remember for re-hide offer
                     if (!isset($diagLog[$qualcode])) $diagLog[$qualcode] = [];
                     $diagLog[$qualcode]['auto_unhide'] = true;
                 }
@@ -6673,9 +6759,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
         // Pre-fetch / create manual enrolment instances for every course in this
         // category, and pre-load the set of already-enrolled users per course.
         // This keeps the per-student inner loop free of DB queries.
-        $instanceByCourse   = [];   // courseid → enrol record
-        $enrolledByCourse   = [];   // courseid → [userid => true]
-        $courseIdnumber     = [];   // courseid → idnumber (unit code) for NAT completion matching
+        $instanceByCourse   = [];   // Courseid → enrol record
+        $enrolledByCourse   = [];   // Courseid → [userid => true]
+        $courseIdnumber     = [];   // Courseid → idnumber (unit code) for NAT completion matching
         foreach ($catCourses as $catCourse) {
             $cid  = (int)$catCourse->id;
             $inst = $DB->get_record('enrol', ['enrol' => 'manual', 'courseid' => $cid]);
@@ -6694,12 +6780,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
             if (!empty($catCourse->idnumber)) {
                 $courseIdnumber[$cid] = strtoupper(trim((string)$catCourse->idnumber));
             }
-            $enrolledByCourse[$cid] = array_flip($DB->get_fieldset_sql(
-                "SELECT DISTINCT ue.userid
+            $enrolledByCourse[$cid] = array_flip(
+                $DB->get_fieldset_sql(
+                    "SELECT DISTINCT ue.userid
                    FROM {user_enrolments} ue
                    JOIN {enrol} e ON e.id = ue.enrolid
                   WHERE e.courseid = :cid AND ue.status = 0",
-                ['cid' => $cid]
+                    ['cid' => $cid]
             ));
 
             // ARCHIVE-COURSE-AUTOENROL (v5.2.39): for each primary course in this
@@ -6708,10 +6795,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
             if (!empty($archiveLinksByPrimary[$cid])) {
                 foreach ($archiveLinksByPrimary[$cid] as $arcLink) {
                     $arcCid = $arcLink['courseid'];
-                    if (isset($instanceByCourse[$arcCid])) continue;   // already wired
-                    $arcCourse = $DB->get_record('course', ['id' => $arcCid, 'visible' => 1],
+                    if (isset($instanceByCourse[$arcCid])) continue;   // Already wired
+                    $arcCourse = $DB->get_record(
+                        'course', ['id' => $arcCid, 'visible' => 1],
                         'id, fullname, shortname, category, idnumber', IGNORE_MISSING);
-                    if (!$arcCourse) continue;   // deleted or hidden — skip silently
+                    if (!$arcCourse) continue;   // Deleted or hidden — skip silently
                     $arcInst = $DB->get_record('enrol', ['enrol' => 'manual', 'courseid' => $arcCid]);
                     if (!$arcInst) {
                         $arcInstId = $enrolplugin->add_default_instance($arcCourse);
@@ -6732,17 +6820,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
                     if ($arcUnitcode !== '') {
                         $courseIdnumber[$arcCid] = $arcUnitcode;
                     }
-                    $enrolledByCourse[$arcCid] = array_flip($DB->get_fieldset_sql(
-                        "SELECT DISTINCT ue.userid
+                    $enrolledByCourse[$arcCid] = array_flip(
+                        $DB->get_fieldset_sql(
+                            "SELECT DISTINCT ue.userid
                            FROM {user_enrolments} ue
                            JOIN {enrol} e ON e.id = ue.enrolid
                           WHERE e.courseid = :acid AND ue.status = 0",
-                        ['acid' => $arcCid]
+                            ['acid' => $arcCid]
                     ));
                 }
             }
         }
-        if (empty($instanceByCourse)) continue;   // no usable enrolment instances
+        if (empty($instanceByCourse)) continue;   // No usable enrolment instances
 
         $enrolledQualcodes[] = $qualcode;
 
@@ -6870,7 +6959,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
 
             // ── 1a. Primary match ────────────────────────────────────────────
             if ($matchMethod === 'studentid') {
-                // idnumber first (SMS-synced), then username.
+                // Idnumber first (SMS-synced), then username.
                 if (isset($moodleUserByIdnumber[$lcClientid])) {
                     $userid = $moodleUserByIdnumber[$lcClientid];
                     $wasMatched = true;
@@ -6930,7 +7019,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
             // Phase 2 — if no existing account found, create one automatically.
             // (v4.9.161: account creation for all RTOs regardless of whether
             //  students were already in Moodle.)
-            $useEmail = '';   // initialised here so the enrolfailed catch can reference it safely
+            $useEmail = '';   // Initialised here so the enrolfailed catch can reference it safely
             if ($userid === false) {
                 $details  = $studentDetailsMap[$clientid] ?? null;
 
@@ -6973,8 +7062,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
                 // the student entirely — leaving them un-enrolled.
                 // Fix: do a direct DB lookup by username before attempting creation.
                 // If the account already exists, reuse it and jump straight to Phase 3.
-                $existingByUsername = $DB->get_record('user',
-                    ['username' => $lcClientid, 'deleted' => 0, 'mnethostid' => $CFG->mnet_localhost_id],
+                $existingByUsername = $DB->get_record(
+                    'user',
+                        ['username' => $lcClientid, 'deleted' => 0, 'mnethostid' => $CFG->mnet_localhost_id],
                     'id', IGNORE_MISSING);
                 if ($existingByUsername) {
                     $userid            = (int)$existingByUsername->id;
@@ -7045,12 +7135,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
                     $isDuplicateUsername = (stripos($e->getMessage(), 'Duplicate entry') !== false
                         && stripos($e->getMessage(), 'mneuse_uix') !== false);
                     if ($isDuplicateUsername) {
-                        $recoveredUser = $DB->get_record('user',
-                            ['username' => $lcClientid, 'deleted' => 0, 'mnethostid' => $CFG->mnet_localhost_id],
+                        $recoveredUser = $DB->get_record(
+                            'user',
+                                ['username' => $lcClientid, 'deleted' => 0, 'mnethostid' => $CFG->mnet_localhost_id],
                             'id', IGNORE_MISSING);
                         if ($recoveredUser) {
-                            debugging('local_rtocompliance auto-enrol: user_create_user() duplicate for '
-                                . 'clientid=' . $clientid . ' — recovered existing userid=' . $recoveredUser->id,
+                            debugging(
+                                'local_rtocompliance auto-enrol: user_create_user() duplicate for '
+                                    . 'clientid=' . $clientid . ' — recovered existing userid=' . $recoveredUser->id,
                                 DEBUG_DEVELOPER);
                             $userid            = (int)$recoveredUser->id;
                             $wasMatched        = true;
@@ -7061,7 +7153,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
                         }
                     }
                     // For all other create failures, log and skip as before.
-                    debugging('local_rtocompliance auto-enrol: user_create_user() failed for '
+                    debugging(
+                        'local_rtocompliance auto-enrol: user_create_user() failed for '
                         . 'clientid=' . $clientid . ': ' . $e->getMessage(), DEBUG_DEVELOPER);
                     $totalskipnouser++;
                     $diagEntry['phase2_createfailed']++;
@@ -7142,7 +7235,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
                         $DB->insert_record('local_rtocompliance_students', $syncStud);
                     } catch (\dml_exception $esync) {
                         // Race: observer task ran concurrently and beat us to the insert. Fine.
-                        debugging('rtocompliance doenrol FIX-SYNC-PROFILE: race on userid='
+                        debugging(
+                            'rtocompliance doenrol FIX-SYNC-PROFILE: race on userid='
                             . $userid . ': ' . $esync->getMessage(), DEBUG_DEVELOPER);
                     }
                 }
@@ -7180,7 +7274,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
                     $cuCode = $courseIdnumber[$cid] ?? '';
                     if ($cuCode !== '' && !isset($allStudentUnits[(string)$clientid][$cuCode])) {
                         $diagEntry['phase3_skipped_nonat']++;
-                        continue;  // student has no NAT00120 record for this unit — skip
+                        continue;  // Student has no NAT00120 record for this unit — skip
                     }
                 }
                 if (isset($enrolledByCourse[$cid][$userid])) {
@@ -7209,38 +7303,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
                             }
                             $ctime = $endTs > 0 ? $endTs : time();
                             try {
-                                $existCC = $DB->get_record('course_completions',
+                                $existCC = $DB->get_record(
+                                    'course_completions',
                                     ['userid' => $userid, 'course' => $cid], 'id, timecompleted');
                                 if (!$existCC) {
-                                    $DB->insert_record('course_completions', (object)[
-                                        'userid'        => $userid,
-                                        'course'        => $cid,
-                                        'timeenrolled'  => time(),
-                                        'timestarted'   => time(),
-                                        'timecompleted' => $ctime,
-                                        'reaggregate'   => 0,
+                                    $DB->insert_record(
+                                        'course_completions', (object)[
+                                            'userid'        => $userid,
+                                            'course'        => $cid,
+                                            'timeenrolled'  => time(),
+                                            'timestarted'   => time(),
+                                            'timecompleted' => $ctime,
+                                            'reaggregate'   => 0,
                                     ]);
                                 } elseif (empty($existCC->timecompleted)) {
-                                    $DB->set_field('course_completions', 'timecompleted',
+                                    $DB->set_field(
+                                        'course_completions', 'timecompleted',
                                         $ctime, ['id' => $existCC->id]);
                                 }
                             } catch (\Exception $ecc) {
-                                debugging('rtocompliance doenrol FIX-COMPLETION-EXISTING: '
-                                    . 'course_completions write failed userid=' . $userid
+                                debugging(
+                                    'rtocompliance doenrol FIX-COMPLETION-EXISTING: '
+                                        . 'course_completions write failed userid=' . $userid
                                     . ' course=' . $cid . ': ' . $ecc->getMessage(), DEBUG_DEVELOPER);
                             }
                             // Queue the complete task so local_rtocompliance_enrolments.outcomeidentifier
                             // is updated from '70' (Continuing) to the correct NAT outcome on cron.
                             if (class_exists('\local_rtocompliance\task\process_enrolment_task')) {
-                                \local_rtocompliance\task\process_enrolment_task::queue_if_not_pending([
-                                    'action'   => 'complete',
-                                    'userid'   => (int)$userid,
-                                    'courseid' => (int)$cid,
+                                \local_rtocompliance\task\process_enrolment_task::queue_if_not_pending(
+                                    [
+                                        'action'   => 'complete',
+                                        'userid'   => (int)$userid,
+                                        'courseid' => (int)$cid,
                                 ]);
                             }
                         }
                     }
-                    continue;   // already enrolled in this specific unit course
+                    continue;   // Already enrolled in this specific unit course
                 }
                 try {
                     if (!RTOC_ENROL_WRITES_DISABLED) { $enrolplugin->enrol_user($inst, $userid, $studentroleid, time(), 0); }
@@ -7253,18 +7352,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
                     // ROLLBACK-TRACK (v5.2.9): record this enrolment so it can be reversed.
                     $rbId = 0;
                     try {
-                        $rbId = (int)$DB->insert_record('local_rtocompliance_enrol_rollback', (object)[
-                            'importid'     => $importid,
-                            'userid'       => (int)$userid,
-                            'courseid'     => (int)$cid,
-                            'enrolid'      => (int)$inst->id,
-                            'user_created' => $wasCreated ? 1 : 0,
-                            'cc_id'        => 0,
-                            'cc_inserted'  => 0,
-                            'timecreated'  => time(),
+                        $rbId = (int)$DB->insert_record(
+                            'local_rtocompliance_enrol_rollback', (object)[
+                                'importid'     => $importid,
+                                'userid'       => (int)$userid,
+                                'courseid'     => (int)$cid,
+                                'enrolid'      => (int)$inst->id,
+                                'user_created' => $wasCreated ? 1 : 0,
+                                'cc_id'        => 0,
+                                'cc_inserted'  => 0,
+                                'timecreated'  => time(),
                         ]);
                     } catch (\Exception $erb) {
-                        debugging('rtocompliance rollback-track: insert failed userid=' . $userid
+                        debugging(
+                            'rtocompliance rollback-track: insert failed userid=' . $userid
                             . ' courseid=' . $cid . ': ' . $erb->getMessage(), DEBUG_DEVELOPER);
                     }
 
@@ -7294,32 +7395,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
                             }
                             $ctime = $endTs > 0 ? $endTs : time();
                             try {
-                                $existCC = $DB->get_record('course_completions',
+                                $existCC = $DB->get_record(
+                                    'course_completions',
                                     ['userid' => $userid, 'course' => $cid], 'id, timecompleted');
                                 if (!$existCC) {
-                                    $newCcId = (int)$DB->insert_record('course_completions', (object)[
-                                        'userid'        => $userid,
-                                        'course'        => $cid,
-                                        'timeenrolled'  => time(),
-                                        'timestarted'   => time(),
-                                        'timecompleted' => $ctime,
-                                        'reaggregate'   => 0,
+                                    $newCcId = (int)$DB->insert_record(
+                                        'course_completions', (object)[
+                                            'userid'        => $userid,
+                                            'course'        => $cid,
+                                            'timeenrolled'  => time(),
+                                            'timestarted'   => time(),
+                                            'timecompleted' => $ctime,
+                                            'reaggregate'   => 0,
                                     ]);
                                     if ($rbId && $newCcId) {
-                                        $DB->update_record('local_rtocompliance_enrol_rollback',
+                                        $DB->update_record(
+                                            'local_rtocompliance_enrol_rollback',
                                             (object)['id' => $rbId, 'cc_id' => $newCcId, 'cc_inserted' => 1]);
                                     }
                                 } elseif (empty($existCC->timecompleted)) {
-                                    $DB->set_field('course_completions', 'timecompleted',
+                                    $DB->set_field(
+                                        'course_completions', 'timecompleted',
                                         $ctime, ['id' => $existCC->id]);
                                     if ($rbId && $existCC->id) {
-                                        $DB->update_record('local_rtocompliance_enrol_rollback',
+                                        $DB->update_record(
+                                            'local_rtocompliance_enrol_rollback',
                                             (object)['id' => $rbId, 'cc_id' => (int)$existCC->id, 'cc_inserted' => 0]);
                                     }
                                 }
                             } catch (\Exception $ecc) {
-                                debugging('rtocompliance doenrol NAT-COMPLETION: course_completions '
-                                    . 'write failed userid=' . $userid . ' course=' . $cid
+                                debugging(
+                                    'rtocompliance doenrol NAT-COMPLETION: course_completions '
+                                        . 'write failed userid=' . $userid . ' course=' . $cid
                                     . ': ' . $ecc->getMessage(), DEBUG_DEVELOPER);
                             }
                             // FIX-DOENROL-OUTCOME (v5.2.24): Doenrol inserts into course_completions
@@ -7328,16 +7435,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
                             // so that local_rtocompliance_enrolments.outcomeidentifier is updated
                             // from '70' (Continuing) to the correct NAT outcome on the next cron run.
                             if (class_exists('\local_rtocompliance\task\process_enrolment_task')) {
-                                \local_rtocompliance\task\process_enrolment_task::queue_if_not_pending([
-                                    'action'   => 'complete',
-                                    'userid'   => (int)$userid,
-                                    'courseid' => (int)$cid,
+                                \local_rtocompliance\task\process_enrolment_task::queue_if_not_pending(
+                                    [
+                                        'action'   => 'complete',
+                                        'userid'   => (int)$userid,
+                                        'courseid' => (int)$cid,
                                 ]);
                             }
                         }
                     }
                 } catch (\Exception $e) {
-                    debugging('local_rtocompliance auto-enrol: enrol_user() failed for userid='
+                    debugging(
+                        'local_rtocompliance auto-enrol: enrol_user() failed for userid='
                         . $userid . ' courseid=' . $cid . ': ' . $e->getMessage(), DEBUG_DEVELOPER);
                     $totalskipnouser++;
                     $diagEntry['phase3_enrolfailed']++;
@@ -7352,7 +7461,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
                 }
             }
             if (!$anyNewEnrolment) {
-                $totalskipalready++;   // student was already in every unit in this category
+                $totalskipalready++;   // Student was already in every unit in this category
             }
         }
 
@@ -7375,10 +7484,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
             $existing = $DB->get_record('local_rtocompliance_students', ['userid' => $uid], 'id, usi');
             if ($existing) {
                 if (empty($existing->usi)) {
-                    $DB->update_record('local_rtocompliance_students', (object)[
-                        'id'           => $existing->id,
-                        'usi'          => $usi,
-                        'timemodified' => time(),
+                    $DB->update_record(
+                        'local_rtocompliance_students', (object)[
+                            'id'           => $existing->id,
+                            'usi'          => $usi,
+                            'timemodified' => time(),
                     ]);
                 }
             } else {
@@ -7411,10 +7521,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
                     // Try to update the now-existing record if USI is still empty.
                     $existing2 = $DB->get_record('local_rtocompliance_students', ['userid' => $uid], 'id, usi');
                     if ($existing2 && empty($existing2->usi)) {
-                        $DB->update_record('local_rtocompliance_students', (object)[
-                            'id'           => $existing2->id,
-                            'usi'          => $usi,
-                            'timemodified' => time(),
+                        $DB->update_record(
+                            'local_rtocompliance_students', (object)[
+                                'id'           => $existing2->id,
+                                'usi'          => $usi,
+                                'timemodified' => time(),
                         ]);
                     }
                 }
@@ -7435,13 +7546,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
             $yy = (int)substr($dobStr, 4, 4);
             if ($dd < 1 || $dd > 31 || $mm < 1 || $mm > 12 || $yy < 1900 || $yy > 2100) continue;
             $ts = gmmktime(12, 0, 0, $mm, $dd, $yy);
-            if ($ts === false) continue; // v6.3.10: negative (pre-1970) is valid.
+            if ($ts === false) continue; // Version 6.3.10: negative (pre-1970) is valid.
             $existing = $DB->get_record('local_rtocompliance_students', ['userid' => $uid], 'id, dateofbirth');
             if ($existing && (empty($existing->dateofbirth) || (int)$existing->dateofbirth === 0)) {
-                $DB->update_record('local_rtocompliance_students', (object)[
-                    'id'           => $existing->id,
-                    'dateofbirth'  => (int)$ts,
-                    'timemodified' => time(),
+                $DB->update_record(
+                    'local_rtocompliance_students', (object)[
+                        'id'           => $existing->id,
+                        'dateofbirth'  => (int)$ts,
+                        'timemodified' => time(),
                 ]);
             }
         }
@@ -7500,7 +7612,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
                     $DB->insert_record('local_rtocompliance_students', $rpStud);
                 } catch (\dml_exception $erp) {
                     // Duplicate key — process_enrolment_task raced us. Fine.
-                    debugging('rtocompliance doenrol FIX-RETROACTIVE-PROFILES: race on userid='
+                    debugging(
+                        'rtocompliance doenrol FIX-RETROACTIVE-PROFILES: race on userid='
                         . $rpUid . ': ' . $erp->getMessage(), DEBUG_DEVELOPER);
                 }
             }
@@ -7509,19 +7622,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
 
     // Store the per-student skip report in the session so the results page can render it.
     // Keyed by importid so it survives page refresh and parallel imports.
-    $SESSION->{'rtoc_ae_report_' . $importid} = json_encode([
-        'totalenrolled'         => $totalenrolled,
-        'totalarchiveenrolled'  => $totalarchiveenrolled,
-        'totalcreated'          => $totalcreated,
-        'totalmatched'          => $totalmatched,
-        'totalmatched_fallback' => $totalmatched_fallback,
-        'totalskipalready'      => $totalskipalready,
-        'enrolledQualcodes'     => $enrolledQualcodes,
-        'skipped'               => $aeSkipped,
-        'matchMethod'           => $matchMethod,
-        'diagLog'               => $diagLog,
-        'diagImportId'          => $importid,
-        'diagMatchMethod'       => $matchMethod,
+    $SESSION->{'rtoc_ae_report_' . $importid} = json_encode(
+        [
+            'totalenrolled'         => $totalenrolled,
+            'totalarchiveenrolled'  => $totalarchiveenrolled,
+            'totalcreated'          => $totalcreated,
+            'totalmatched'          => $totalmatched,
+            'totalmatched_fallback' => $totalmatched_fallback,
+            'totalskipalready'      => $totalskipalready,
+            'enrolledQualcodes'     => $enrolledQualcodes,
+            'skipped'               => $aeSkipped,
+            'matchMethod'           => $matchMethod,
+            'diagLog'               => $diagLog,
+            'diagImportId'          => $importid,
+            'diagMatchMethod'       => $matchMethod,
     ]);
 
     $totalskipped    = $totalskipnostudent + $totalskipnoemail + $totalskipnouser;
@@ -7572,12 +7686,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'doenrol' && $importid 
     $redirectSearch = !empty($enrolledQualcodes) ? reset($enrolledQualcodes) : '';
 
     redirect(
-        new moodle_url('/local/rtocompliance/data_import.php', [
-            'importid'       => $importid,
-            'tab'            => 'enrolments',
-            'autoenrol_done' => 1,
-            'enrolled'       => $totalenrolled,
-            'search'         => $redirectSearch,
+        new moodle_url(
+            '/local/rtocompliance/data_import.php', [
+                'importid'       => $importid,
+                'tab'            => 'enrolments',
+                'autoenrol_done' => 1,
+                'enrolled'       => $totalenrolled,
+                'search'         => $redirectSearch,
         ]),
         $msg,
         null,
@@ -7625,7 +7740,7 @@ if ($action === 'ae_skipcsv' && $importid) {
 // GET ?action=export_quality_csv&importid=N — export flagged students as CSV. Must be before any output.
 if ($action === 'export_quality_csv' && $importid) {
     require_login();
-    // v5.9.368 CAP-FIX: 'manageimports' is not a declared capability (db/access.php)
+    // Version 5.9.368 CAP-FIX: 'manageimports' is not a declared capability (db/access.php)
     // — it threw a coding_exception on this CSV export. Use the plugin's manage cap.
     require_capability('local/rtocompliance:manage', context_system::instance());
     $dqexp = $DB->get_records_select(
@@ -7656,7 +7771,7 @@ if ($action === 'export_quality_csv' && $importid) {
     exit;
 }
 
-// v5.9.371 NAT-RESULTS-REGISTER: GET ?action=export_unmatched&importid=N — download the
+// Version 5.9.371 NAT-RESULTS-REGISTER: GET ?action=export_unmatched&importid=N — download the
 // students in this NAT file who are NOT yet in your system (no plugin student record), so
 // their results could not be imported. Read-only; touches no Moodle data.
 if ($action === 'export_unmatched' && $importid) {
@@ -7718,7 +7833,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'repairnames' && confir
     $nameMap = [];
     foreach ($allStudentRecs as $s) {
         $numId = ltrim((string)$s->clientid, '0') ?: '0';
-        if (isset($nameMap[$numId])) { continue; }   // keep first (= most-recent importid, DESC ordered)
+        if (isset($nameMap[$numId])) { continue; }   // Keep first (= most-recent importid, DESC ordered)
 
         $first = trim($s->firstname  ?? '');
         $last  = trim($s->familyname ?? '');
@@ -7787,7 +7902,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'repairnames' && confir
     }
 
     // ── Step 3: redirect with a clear result message ───────────────────────────
-    $redirectUrl = new moodle_url('/local/rtocompliance/data_import.php',
+    $redirectUrl = new moodle_url(
+        '/local/rtocompliance/data_import.php',
         $importid ? ['importid' => $importid] : []);
     $natCount = count($nameMap);
     if ($fixed > 0) {
@@ -7817,7 +7933,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'repairnames' && confir
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'hide_archive_cats' && confirm_sesskey()) {
     global $SESSION;
     $catIdsRaw = $SESSION->rtoc_auto_unhidden_cats ?? [];
-    unset($SESSION->rtoc_auto_unhidden_cats); // consume immediately so the card disappears
+    unset($SESSION->rtoc_auto_unhidden_cats); // Consume immediately so the card disappears
 
     $hidden  = 0;
     $failed  = 0;
@@ -7838,10 +7954,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'hide_archive_cats' && 
     }
 
     $importid   = optional_param('importid', 0, PARAM_INT);
-    $redirectTo = new moodle_url('/local/rtocompliance/data_import.php', [
-        'importid'       => $importid,
-        'tab'            => 'enrolments',
-        'autoenrol_done' => 1,
+    $redirectTo = new moodle_url(
+        '/local/rtocompliance/data_import.php', [
+            'importid'       => $importid,
+            'tab'            => 'enrolments',
+            'autoenrol_done' => 1,
     ]);
 
     if ($failed === 0 && $hidden > 0) {
@@ -7866,17 +7983,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'hide_archive_cats' && 
 // categories with their full path + up to 3 immediate children for confirmation.
 if ($action === 'qcm_search') {
     require_sesskey();
-    // v5.9.368 CAP-FIX: 'importavetmiss' is undeclared — use the manage capability.
+    // Version 5.9.368 CAP-FIX: 'importavetmiss' is undeclared — use the manage capability.
     require_capability('local/rtocompliance:manage', $context);
     header('Content-Type: application/json');
     $q = trim(optional_param('q', '', PARAM_TEXT));
-    if (strlen($q) < 2) { echo json_encode(['cats' => []]); die; }
-    $allCats = $DB->get_records_select('course_categories', '', [], 'name ASC',
+    if (strlen($q) < 2) {
+        echo json_encode(['cats' => []]);
+        die;
+    }
+    $allCats = $DB->get_records_select(
+        'course_categories', '', [], 'name ASC',
         'id,name,parent,depth,path,idnumber');
     $catById2 = [];
     foreach ($allCats as $c) { $catById2[(int)$c->id] = $c; }
     foreach ($allCats as $c) {
-        $parts = []; $cur = $c;
+        $parts = [];
+        $cur = $c;
         while ($cur) {
             array_unshift($parts, $cur->name);
             $cur = isset($catById2[(int)$cur->parent]) ? $catById2[(int)$cur->parent] : null;
@@ -7915,7 +8037,7 @@ if ($action === 'qcm_search') {
 // Pass G uses ONLY the intakes[] IDs — zero text parsing.
 if ($action === 'qcm_save') {
     require_sesskey();
-    // v5.9.368 CAP-FIX: 'importavetmiss' is undeclared — use the manage capability.
+    // Version 5.9.368 CAP-FIX: 'importavetmiss' is undeclared — use the manage capability.
     require_capability('local/rtocompliance:manage', $context);
     header('Content-Type: application/json');
     $mapRaw  = optional_param('map', '', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — JSON document, json_decode()'d immediately and rejected if it does not decode
@@ -7963,13 +8085,17 @@ if ($action === 'qcm_save') {
 // with exact names and IDs straight from the DB — no parsing involved.
 if ($action === 'qcm_children') {
     require_sesskey();
-    // v5.9.368 CAP-FIX: 'importavetmiss' is undeclared — use the manage capability.
+    // Version 5.9.368 CAP-FIX: 'importavetmiss' is undeclared — use the manage capability.
     require_capability('local/rtocompliance:manage', $context);
     header('Content-Type: application/json');
     $parentId = (int)optional_param('cat_id', 0, PARAM_INT);
-    if ($parentId <= 0) { echo json_encode(['children' => [], 'parent_name' => '']); die; }
+    if ($parentId <= 0) {
+        echo json_encode(['children' => [], 'parent_name' => '']);
+        die;
+    }
     $parent = $DB->get_record_select('course_categories', 'id = :id', ['id' => $parentId], 'id,name');
-    $kids   = $DB->get_records_select('course_categories', 'parent = :pid',
+    $kids   = $DB->get_records_select(
+        'course_categories', 'parent = :pid',
         ['pid' => $parentId], 'name ASC', 'id,name');
     $result = [];
     foreach ($kids as $k) {
@@ -8031,7 +8157,7 @@ if ($action === 'autoenrol' && $importid) {
 
     // ── 3. Load enrolments + group by family + year + sem ──────────────────────
     // Dedup by client_id so each student counts once per family+period group.
-    $p2Groups = []; // gkey → [family, year, sem, qualcodes_map, cid_map, studentcount]
+    $p2Groups = []; // Gkey → [family, year, sem, qualcodes_map, cid_map, studentcount]
     try {
         $p2EnrolRs = $DB->get_recordset_sql(
             "SELECT qualcode, startdate, clientid
@@ -8047,7 +8173,8 @@ if ($action === 'autoenrol' && $importid) {
 
             // Extract year+sem from DDMMYYYY start date.
             $p2Sd   = trim((string)($p2Er->startdate ?? ''));
-            $p2Year = 0; $p2Sem = '';
+            $p2Year = 0;
+            $p2Sem = '';
             if (strlen($p2Sd) === 8) {
                 $p2Mon = (int)substr($p2Sd, 2, 2);
                 $p2Yr  = (int)substr($p2Sd, 4, 4);
@@ -8069,7 +8196,7 @@ if ($action === 'autoenrol' && $importid) {
                     'sem'          => $p2Sem,
                     '_qcodes'      => [],
                     '_cids'        => [],
-                    '_qc_cids'     => [], // qualcode → [clientid => true]
+                    '_qc_cids'     => [], // Qualcode → [clientid => true]
                     'studentcount' => 0,
                 ];
             }
@@ -8109,10 +8236,11 @@ if ($action === 'autoenrol' && $importid) {
 
         // Fetch archive candidates for this period.
         try {
-            $p2SArchRows = $DB->get_records('local_rtocompliance_archive_index', [
-                'family' => $p2G['family'],
-                'year'   => $p2G['year'],
-                'sem'    => $p2G['sem'],
+            $p2SArchRows = $DB->get_records(
+                'local_rtocompliance_archive_index', [
+                    'family' => $p2G['family'],
+                    'year'   => $p2G['year'],
+                    'sem'    => $p2G['sem'],
             ]);
         } catch (Exception $e) { $p2SArchRows = []; }
         if (count($p2SArchRows) < 2) continue;
@@ -8148,7 +8276,7 @@ if ($action === 'autoenrol' && $importid) {
                 'qualcodes'           => [$p2SQc2],
                 '_qc_studentcounts'   => [$p2SQc2 => $p2G['_qc_studentcounts'][$p2SQc2] ?? 0],
                 'studentcount'        => $p2G['_qc_studentcounts'][$p2SQc2] ?? 0,
-                '_preresolved_arch'   => $p2SArch2, // archive already matched — skip DB lookup
+                '_preresolved_arch'   => $p2SArch2, // Archive already matched — skip DB lookup
             ];
         }
     }
@@ -8193,17 +8321,19 @@ if ($action === 'autoenrol' && $importid) {
             // without the fallback those annual categories would never match.
             $p2ArchRows = [];
             try {
-                $p2ArchRows = $DB->get_records('local_rtocompliance_archive_index', [
-                    'family' => $p2G['family'],
-                    'year'   => $p2G['year'],
-                    'sem'    => $p2G['sem'],
+                $p2ArchRows = $DB->get_records(
+                    'local_rtocompliance_archive_index', [
+                        'family' => $p2G['family'],
+                        'year'   => $p2G['year'],
+                        'sem'    => $p2G['sem'],
                 ]);
                 if (empty($p2ArchRows) && $p2G['sem'] !== '') {
                     // Annual fallback: category was indexed without a semester suffix.
-                    $p2ArchRows = $DB->get_records('local_rtocompliance_archive_index', [
-                        'family' => $p2G['family'],
-                        'year'   => $p2G['year'],
-                        'sem'    => '',
+                    $p2ArchRows = $DB->get_records(
+                        'local_rtocompliance_archive_index', [
+                            'family' => $p2G['family'],
+                            'year'   => $p2G['year'],
+                            'sem'    => '',
                     ]);
                     $p2AnnualFallback = !empty($p2ArchRows);
                 }
@@ -8221,7 +8351,10 @@ if ($action === 'autoenrol' && $importid) {
 
             // Prefer is_active=1; fall back to qual-code tie-break for single-qual groups.
             foreach ($p2ArchRows as $p2Ar) {
-                if ((int)$p2Ar->is_active === 1) { $p2ActiveRow = $p2Ar; break; }
+                if ((int)$p2Ar->is_active === 1) {
+                    $p2ActiveRow = $p2Ar;
+                    break;
+                }
             }
 
             // Qual-code tie-break: when there is no is_active=1 row AND there are
@@ -8259,7 +8392,7 @@ if ($action === 'autoenrol' && $importid) {
                 }
                 continue;
             }
-        } // end else (normal DB lookup path)
+        } // End else (normal DB lookup path)
 
         $p2G['qual_code_resolved'] = $p2QcResolved;
         $p2G['archive_row']        = $p2ActiveRow;
@@ -8320,11 +8453,14 @@ if ($action === 'autoenrol' && $importid) {
             $p2SQcUp = strtoupper(trim((string)$p2Sr->qualcode));
             $p2SFam  = $p2QualToFamily[$p2SQcUp] ?? '';
             $p2SSd   = trim((string)($p2Sr->startdate ?? ''));
-            $p2SYear = 0; $p2SSem = '';
+            $p2SYear = 0;
+            $p2SSem = '';
             if (strlen($p2SSd) === 8) {
-                $p2SMon = (int)substr($p2SSd, 2, 2); $p2SYr = (int)substr($p2SSd, 4, 4);
+                $p2SMon = (int)substr($p2SSd, 2, 2);
+                $p2SYr = (int)substr($p2SSd, 4, 4);
                 if ($p2SYr >= 2000 && $p2SMon >= 1 && $p2SMon <= 12) {
-                    $p2SYear = $p2SYr; $p2SSem = ($p2SMon <= 6) ? 'S1' : 'S2';
+                    $p2SYear = $p2SYr;
+                    $p2SSem = ($p2SMon <= 6) ? 'S1' : 'S2';
                 }
             }
             $p2Sk = ($p2SFam !== '' ? $p2SFam : '__unk__' . $p2SQcUp) . '|||' . $p2SYear . '|||' . $p2SSem;
@@ -8342,15 +8478,16 @@ if ($action === 'autoenrol' && $importid) {
 
     // ── 6. Sort: auto → review → manual; within each group: family, year DESC, sem ──
     $p2SortOrd = ['auto' => 0, 'review' => 1, 'manual' => 2];
-    uasort($p2Groups, function ($a, $b) use ($p2SortOrd) {
-        $sa = $p2SortOrd[$a['status']] ?? 2;
-        $sb = $p2SortOrd[$b['status']] ?? 2;
-        if ($sa !== $sb) return $sa - $sb;
-        $fc = strcmp($a['family'], $b['family']);
-        if ($fc !== 0) return $fc;
-        if ($b['year'] !== $a['year']) return $b['year'] - $a['year'];
-        return strcmp($a['sem'], $b['sem']);
-    });
+    uasort(
+        $p2Groups, function ($a, $b) use ($p2SortOrd) {
+            $sa = $p2SortOrd[$a['status']] ?? 2;
+            $sb = $p2SortOrd[$b['status']] ?? 2;
+            if ($sa !== $sb) return $sa - $sb;
+            $fc = strcmp($a['family'], $b['family']);
+            if ($fc !== 0) return $fc;
+            if ($b['year'] !== $a['year']) return $b['year'] - $a['year'];
+            return strcmp($a['sem'], $b['sem']);
+        });
 
     $p2NAuto   = count(array_filter($p2Groups, fn($g) => $g['status'] === 'auto'));
     $p2NReview = count(array_filter($p2Groups, fn($g) => $g['status'] === 'review'));
@@ -8499,7 +8636,7 @@ if ($action === 'autoenrol' && $importid) {
     echo '</div>';
 
     echo '</div>'; // card-body
-    echo '</div>'; // card
+    echo '</div>'; // Card
     // ── end help block ────────────────────────────────────────────────────────
 
     if (!empty($p2Groups)) {
@@ -8623,7 +8760,7 @@ if ($action === 'autoenrol' && $importid) {
                 echo $p2G['status_reason'];
                 echo '</div>';
 
-            } else { // manual
+            } else { // Manual
                 echo '<div class="alert alert-danger py-1 px-2 mb-0" style="font-size:0.85rem">';
                 echo $p2G['status_reason'];
                 echo '</div>';
@@ -8635,7 +8772,7 @@ if ($action === 'autoenrol' && $importid) {
             }
 
             echo '</div>'; // card-body
-            echo '</div>'; // card
+            echo '</div>'; // Card
         }
 
         // Submit footer.
@@ -8651,9 +8788,10 @@ if ($action === 'autoenrol' && $importid) {
         }
         if ($p2NReview > 0 || $p2NManual > 0) {
             // Phase 3: Re-check button — lets admin fix REVIEW/MANUAL issues then quickly reload.
-            $p2RecheckUrl = (new moodle_url('/local/rtocompliance/data_import.php', [
-                'action'   => 'autoenrol',
-                'importid' => $importid,
+            $p2RecheckUrl = (new moodle_url(
+                '/local/rtocompliance/data_import.php', [
+                    'action'   => 'autoenrol',
+                    'importid' => $importid,
             ]))->out(false);
             echo '<a href="' . s($p2RecheckUrl) . '" class="btn btn-outline-info">&#8635; Re-check after fixing</a>';
             if ($p2NAuto === 0) {
@@ -8686,7 +8824,7 @@ if ($action === 'autoenrol' && $importid) {
 
         echo '</form>';
 
-    } // end if !empty($p2Groups)
+    } // End if !empty($p2Groups)
 
     // Fix Student Names button (outside main form, always shown).
     $p2RepairUrl = new moodle_url('/local/rtocompliance/data_import.php');
@@ -8879,7 +9017,7 @@ if ($action === 'autoenrol' && $importid) {
         }
 
         echo '</div>'; // card-body
-        echo '</div>'; // card
+        echo '</div>'; // Card
     }
 
     // Action buttons — single clear CTA, no "Update Preview" needed.
@@ -8891,7 +9029,7 @@ if ($action === 'autoenrol' && $importid) {
 
     echo '</form>';
 
-    // v5.9.372 DATA-IMPORT-DECLUTTER: the "Fix Student Names" tool repaired names on
+    // Version 5.9.372 DATA-IMPORT-DECLUTTER: the "Fix Student Names" tool repaired names on
     // auto-created Moodle accounts. The import no longer creates Moodle accounts, so it
     // has been removed.
 
@@ -8904,27 +9042,29 @@ if ($action === 'autoenrol' && $importid) {
     echo '<a href="' . (new moodle_url('/local/rtocompliance/data_import.php'))->out() . '" class="btn btn-secondary btn-sm">';
     echo '&larr; ' . get_string('dataimport_back', 'local_rtocompliance');
     echo '</a>';
-    $deleteurl = new moodle_url('/local/rtocompliance/data_import.php', [
-        'action'   => 'delete',
-        'importid' => $importid,
-        'sesskey'  => sesskey(),
+    $deleteurl = new moodle_url(
+        '/local/rtocompliance/data_import.php', [
+            'action'   => 'delete',
+            'importid' => $importid,
+            'sesskey'  => sesskey(),
     ]);
     echo '<a href="' . $deleteurl->out() . '" class="btn btn-danger btn-sm" '
         . 'title="Permanently delete this import and its records" '
         . 'onclick="return confirm(\'' . get_string('dataimport_confirm_delete', 'local_rtocompliance') . '\')">'
         . get_string('dataimport_delete', 'local_rtocompliance') . '</a>';
 
-    // v5.9.371 NAT-RESULTS-REGISTER: download the students in this file who are not yet in
+    // Version 5.9.371 NAT-RESULTS-REGISTER: download the students in this file who are not yet in
     // your system (so their results could not be imported into the register). Read-only.
-    $unmatchedUrl = new moodle_url('/local/rtocompliance/data_import.php', [
-        'action'   => 'export_unmatched',
-        'importid' => $importid,
+    $unmatchedUrl = new moodle_url(
+        '/local/rtocompliance/data_import.php', [
+            'action'   => 'export_unmatched',
+            'importid' => $importid,
     ]);
     echo '<a href="' . $unmatchedUrl->out() . '" class="btn btn-outline-secondary btn-sm" '
         . 'title="CSV of students in this NAT file who have no record in your system yet">'
         . '&#8681; Download unmatched students</a>';
 
-    // v5.9.372 DATA-IMPORT-DECLUTTER: the Rollback and Fix-Over-Enrolments buttons and
+    // Version 5.9.372 DATA-IMPORT-DECLUTTER: the Rollback and Fix-Over-Enrolments buttons and
     // the rollback status panel were auto-enrol cleanup tools. The import no longer creates
     // Moodle enrolments, so there is nothing to roll back or over-enrol — removed.
     echo '</div>';
@@ -9045,9 +9185,10 @@ if ($action === 'autoenrol' && $importid) {
 
         // ── Skip report (amber/red) ───────────────────────────────────────────
         if ($rSkipCount > 0) {
-            $csvUrl = (new moodle_url('/local/rtocompliance/data_import.php', [
-                'action'   => 'ae_skipcsv',
-                'importid' => $importid,
+            $csvUrl = (new moodle_url(
+                '/local/rtocompliance/data_import.php', [
+                    'action'   => 'ae_skipcsv',
+                    'importid' => $importid,
             ]))->out(false);
 
             echo '<div class="card border-warning mb-4">';
@@ -9069,7 +9210,7 @@ if ($action === 'autoenrol' && $importid) {
             foreach ($rSkipped as $sk) {
                 $reason = $sk['reason'] ?? 'nouser';
                 if (!isset($byReason[$reason])) {
-                    $reason = 'nouser';   // fallback for any unexpected future reason codes
+                    $reason = 'nouser';   // Fallback for any unexpected future reason codes
                 }
                 $byReason[$reason][] = $sk;
             }
@@ -9140,7 +9281,7 @@ if ($action === 'autoenrol' && $importid) {
                     echo '</tr>';
                 }
                 echo '</tbody></table>';
-                echo '</div>'; // toggle div
+                echo '</div>'; // Toggle div
                 echo '</div></div>';
                 echo '</div>'; // p-3
             }
@@ -9199,7 +9340,7 @@ if ($action === 'autoenrol' && $importid) {
                 $unitSkip = (int)($de['phase3_skipped_nonat'] ?? 0);
                 echo '<td' . ($unitSkip > 0 ? ' style="color:#0c5460;font-weight:bold"' : '') . '>' . $unitSkip . '</td>';
                 echo '</tr>';
-                // v4.9.175: When DB rows = 0, show a supplementary row with actual qualcodes in DB.
+                // Version 4.9.175: When DB rows = 0, show a supplementary row with actual qualcodes in DB.
                 if ($total === 0 && !empty($de['actual_qualcodes_in_db'])) {
                     echo '<tr style="background:#fff3cd">';
                     echo '<td colspan="12" class="small" style="color:#856404;padding:0.4rem 0.75rem">';
@@ -9556,9 +9697,11 @@ if ($action === 'autoenrol' && $importid) {
             $enrolRs->close();
         }
 
-        $clearUrlC = (new moodle_url('/local/rtocompliance/data_import.php',
+        $clearUrlC = (new moodle_url(
+            '/local/rtocompliance/data_import.php',
             ['importid' => $importid, 'tab' => 'completions']))->out();
-        $toggleUrl = (new moodle_url('/local/rtocompliance/data_import.php',
+        $toggleUrl = (new moodle_url(
+            '/local/rtocompliance/data_import.php',
             ['importid' => $importid, 'tab' => 'completions', 'showincomplete' => $showincomplete ? 0 : 1]))->out();
         if ($search !== '') {
             echo '<p class="text-muted small mb-2">Showing ' . count($completions) . ' of ' . $totalCompletionsMatching
@@ -9909,8 +10052,9 @@ if ($action === 'autoenrol' && $importid) {
             ['importid' => $importid]
         );
 
-        $dqExportUrl = (new moodle_url('/local/rtocompliance/data_import.php', [
-            'importid' => $importid, 'action' => 'export_quality_csv',
+        $dqExportUrl = (new moodle_url(
+            '/local/rtocompliance/data_import.php', [
+                'importid' => $importid, 'action' => 'export_quality_csv',
         ]))->out(false);
 
         // ── Alert banner ──────────────────────────────────────────────────────
@@ -9958,7 +10102,8 @@ if ($action === 'autoenrol' && $importid) {
         if ($dqTotal > 0) {
             echo '<div class="mb-4 d-flex flex-wrap align-items-center" style="gap:0.5rem">';
             echo '<a href="' . $dqExportUrl . '" class="btn btn-warning btn-sm">&#11015; Export Flagged Students CSV</a>';
-            $dqStudUrl = (new moodle_url('/local/rtocompliance/data_import.php',
+            $dqStudUrl = (new moodle_url(
+                '/local/rtocompliance/data_import.php',
                 ['importid' => $importid, 'tab' => 'students']))->out(false);
             echo '<a href="' . $dqStudUrl . '" class="btn btn-outline-secondary btn-sm" title="View all students in this import">View All Students &rarr;</a>';
             $dqSRUrl = (new moodle_url('/local/rtocompliance/students.php'))->out(false);
@@ -9989,7 +10134,8 @@ if ($action === 'autoenrol' && $importid) {
             foreach ($dqFlagged as $dqf) {
                 $dqi    = json_decode($dqf->dataissuefields ?? '[]', true) ?: [];
                 $dqname = trim(($dqf->firstname ?? '') . ' ' . ($dqf->familyname ?? '')) ?: $dqf->name;
-                $dqpUrl = (new moodle_url('/local/rtocompliance/students.php',
+                $dqpUrl = (new moodle_url(
+                    '/local/rtocompliance/students.php',
                     ['search' => $dqf->clientid]))->out(false);
                 echo '<tr class="table-warning">';
                 echo '<td><code class="small text-muted">' . s($dqf->clientid) . '</code></td>';
@@ -10057,8 +10203,9 @@ if ($action === 'autoenrol' && $importid) {
                 echo '</div></div></div>';
             }
             echo '</div>';
-            $dqCompUrl = (new moodle_url('/local/rtocompliance/data_import.php', [
-                'importid' => $importid, 'tab' => 'completions', 'showincomplete' => 1,
+            $dqCompUrl = (new moodle_url(
+                '/local/rtocompliance/data_import.php', [
+                    'importid' => $importid, 'tab' => 'completions', 'showincomplete' => 1,
             ]))->out(false);
             echo '<a href="' . $dqCompUrl . '" class="btn btn-sm btn-outline-secondary" title="View the completion records for this import">View completion records &rarr;</a>';
             echo '</div></div>';
@@ -10216,7 +10363,7 @@ if ($action === 'autoenrol' && $importid) {
     echo '</form>';
     echo '</div></div>';
 
-    // v5.9.372 DATA-IMPORT-DECLUTTER: the always-visible "Fix Placeholder Student Names"
+    // Version 5.9.372 DATA-IMPORT-DECLUTTER: the always-visible "Fix Placeholder Student Names"
     // utility repaired auto-created Moodle accounts. The import no longer creates Moodle
     // accounts, so it has been removed.
 
@@ -10288,8 +10435,8 @@ if ($action === 'autoenrol' && $importid) {
         }
     }
 
-} // end if ($action === 'autoenrol') / elseif / else chain
+} // End if ($action === 'autoenrol') / elseif / else chain
 
-echo html_writer::end_div(); // close compliance-container
+echo html_writer::end_div(); // Close compliance-container
 
 echo $OUTPUT->footer();

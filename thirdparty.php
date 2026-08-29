@@ -110,12 +110,13 @@ if ($arrangements) {
         echo html_writer::tag('td', html_writer::tag('span', $notified, ['class' => 'badge ' . $notifiedclass]));
         echo html_writer::tag('td', html_writer::tag('span', $clausesok ? 'Complete' : 'Incomplete', ['class' => 'badge ' . $clausesclass, 'title' => $clausestitle]));
         echo html_writer::tag('td', html_writer::tag('span', ucfirst($arr->status), ['class' => 'badge ' . $statusclass, 'title' => $statustitle]));
-        echo html_writer::tag('td',
-            html_writer::link(
-                new moodle_url('/local/rtocompliance/thirdparty_edit.php', ['id' => $arr->id]),
-                'Edit',
-                ['class' => 'btn btn-sm btn-secondary', 'title' => 'Edit this third-party arrangement']
-            )
+        echo html_writer::tag(
+            'td',
+                html_writer::link(
+                    new moodle_url('/local/rtocompliance/thirdparty_edit.php', ['id' => $arr->id]),
+                    'Edit',
+                    ['class' => 'btn btn-sm btn-secondary', 'title' => 'Edit this third-party arrangement']
+                )
         );
         echo html_writer::end_tag('tr');
     }

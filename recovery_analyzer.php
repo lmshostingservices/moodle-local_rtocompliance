@@ -78,10 +78,18 @@ function _ra_n(int $n): string    { return number_format($n); }
 //                 restored_after_deletion | multiple_cycles | history_incomplete
 function _ra_ls_history_status(array $events): string {
     if (empty($events)) return 'never_enrolled';
-    $creates = 0; $deletes = 0; $lastEvt = '';
+    $creates = 0;
+    $deletes = 0;
+    $lastEvt = '';
     foreach ($events as $_hse) {
-        if (strpos($_hse['event'], 'enrolment_created') !== false) { $creates++; $lastEvt = 'c'; }
-        if (strpos($_hse['event'], 'enrolment_deleted') !== false) { $deletes++; $lastEvt = 'd'; }
+        if (strpos($_hse['event'], 'enrolment_created') !== false) {
+            $creates++;
+            $lastEvt = 'c';
+        }
+        if (strpos($_hse['event'], 'enrolment_deleted') !== false) {
+            $deletes++;
+            $lastEvt = 'd';
+        }
     }
     if ($creates === 0 && $deletes > 0) return 'history_incomplete';
     if ($creates > 1 || $deletes > 1)   return 'multiple_cycles';
@@ -191,7 +199,7 @@ if ($action !== 'analyse') {
     );
 
     local_rtocompliance_render_nav_header($PAGE);
-    $PAGE->add_body_class('path-local-rtocompliance'); // v5.9.445: scoped CSS needs this on admin_externalpage pages.
+    $PAGE->add_body_class('path-local-rtocompliance'); // Version 5.9.445: scoped CSS needs this on admin_externalpage pages.
     echo $OUTPUT->header();
     ?>
     <div class="rtoc-main-content">
@@ -325,8 +333,9 @@ $headers = array_map('strtolower', $parsed['headers']);
 $hasUsername = in_array('username', $headers, true);
 $hasShortname = in_array('course_shortname', $headers, true);
 if (!$hasUsername || !$hasShortname) {
-    redirect(new moodle_url('/local/rtocompliance/recovery_analyzer.php'),
-        'CSV must contain "username" and "course_shortname" columns. Found: ' . implode(', ', $headers),
+    redirect(
+        new moodle_url('/local/rtocompliance/recovery_analyzer.php'),
+            'CSV must contain "username" and "course_shortname" columns. Found: ' . implode(', ', $headers),
         null, \core\output\notification::NOTIFY_ERROR);
 }
 
@@ -501,9 +510,9 @@ foreach ($_crsAll as $_ca) {
 $_crsAll->close();
 
 // ── Step 5: Build the three reports ──────────────────────────────────────────
-$rptLost     = []; // rows for Report 1
-$rptNew      = []; // rows for Report 2
-$rptRecovery = []; // rows for Report 3
+$rptLost     = []; // Rows for Report 1
+$rptNew      = []; // Rows for Report 2
+$rptRecovery = []; // Rows for Report 3
 
 // ── Report 1 & 3: Lost Enrolments (Friday MINUS Current) ──────────────────────
 $_countLostRestore = 0;
@@ -569,17 +578,18 @@ foreach ($fridayRows as $lcUn => $courses) {
             $_countLostReview++;
         }
 
-        $rptRecovery[] = array_merge($lostRow, [
-            'unit_code'      => $courseUnitCode[$lcSn] ?? '',
-            'classification' => $classification,
-            'reason'         => $classReason,
-            // Internal fields for Step 5b logstore enrichment (not in CSV output).
-            '_uid'           => $uid,
-            '_courseid'      => $courseIdByLcSn[$lcSn] ?? 0,
-            // Placeholder fields populated by Step 5b.
-            'created_at'     => '',
-            'deleted_at'     => '',
-            'deleted_by'     => '',
+        $rptRecovery[] = array_merge(
+            $lostRow, [
+                'unit_code'      => $courseUnitCode[$lcSn] ?? '',
+                'classification' => $classification,
+                'reason'         => $classReason,
+                // Internal fields for Step 5b logstore enrichment (not in CSV output).
+                '_uid'           => $uid,
+                '_courseid'      => $courseIdByLcSn[$lcSn] ?? 0,
+                // Placeholder fields populated by Step 5b.
+                'created_at'     => '',
+                'deleted_at'     => '',
+                'deleted_by'     => '',
         ]);
     }
 }
@@ -588,7 +598,7 @@ foreach ($fridayRows as $lcUn => $courses) {
 // Batch-queries mdl_logstore_standard_log for creation + deletion events per
 // student+course pair.  Uids chunked in groups of 500 for scalability.
 // Gracefully skips if logstore table is absent.
-$raLogstoreHistory    = []; // uid:cid => [[event, ts, actor], ...] ORDER BY timecreated ASC
+$raLogstoreHistory    = []; // Uid:cid => [[event, ts, actor], ...] ORDER BY timecreated ASC
 $raLogstoreActorNames = []; // userid => username
 $raLogstoreAvailable  = false;
 
@@ -647,7 +657,8 @@ if ($raLogstoreAvailable && !empty($rptRecovery)) {
 foreach ($rptRecovery as &$_rrecRef) {
     $rk          = $_rrecRef['_uid'] . ':' . $_rrecRef['_courseid'];
     $_rEvs5b     = $raLogstoreHistory[$rk] ?? [];
-    $_rCreated5b = null; $_rDeleted5b = null;
+    $_rCreated5b = null;
+    $_rDeleted5b = null;
     foreach ($_rEvs5b as $_rev5b) {
         // First create (for created_at CSV column).
         if (strpos($_rev5b['event'], 'enrolment_created') !== false && $_rCreated5b === null) {
@@ -669,7 +680,7 @@ foreach ($rptRecovery as &$_rrecRef) {
         $_rrecRef['deleted_by'] = $raLogstoreActorNames[$_rDeleted5b['actor']] ?? 'user#' . $_rDeleted5b['actor'];
     }
     $_rrecRef['history_status']   = _ra_ls_history_status($_rEvs5b);
-    $_rrecRef['_logstore_events'] = $_rEvs5b; // full event list for HTML timeline
+    $_rrecRef['_logstore_events'] = $_rEvs5b; // Full event list for HTML timeline
 }
 unset($_rrecRef);
 
@@ -700,45 +711,52 @@ $newToken = bin2hex(random_bytes(16));
 
 // Report 1 — Lost
 $fLost = fopen(_ra_csvpath($newToken, 'lost'), 'w');
-fputcsv($fLost, ['username','client_id','firstname','lastname',
+fputcsv(
+    $fLost, ['username','client_id','firstname','lastname',
     'course_shortname','course_fullname','category','enrolled_on','enrol_method','moodle_matched']);
 foreach ($rptLost as $r) {
-    fputcsv($fLost, [$r['username'],$r['client_id'],$r['firstname'],$r['lastname'],
-        $r['course_shortname'],$r['course_fullname'],$r['category'],$r['enrolled_on'],
+    fputcsv(
+        $fLost, [$r['username'],$r['client_id'],$r['firstname'],$r['lastname'],
+            $r['course_shortname'],$r['course_fullname'],$r['category'],$r['enrolled_on'],
         $r['enrol_method'],$r['moodle_matched']]);
 }
 fclose($fLost);
 
 // Report 2 — New
 $fNew = fopen(_ra_csvpath($newToken, 'new'), 'w');
-fputcsv($fNew, ['username','client_id','firstname','lastname',
+fputcsv(
+    $fNew, ['username','client_id','firstname','lastname',
     'course_shortname','course_fullname','category','enrolled_on','enrol_method','unit_code']);
 foreach ($rptNew as $r) {
-    fputcsv($fNew, [$r['username'],$r['client_id'],$r['firstname'],$r['lastname'],
-        $r['course_shortname'],$r['course_fullname'],$r['category'],$r['enrolled_on'],
+    fputcsv(
+        $fNew, [$r['username'],$r['client_id'],$r['firstname'],$r['lastname'],
+            $r['course_shortname'],$r['course_fullname'],$r['category'],$r['enrolled_on'],
         $r['enrol_method'],$r['unit_code']]);
 }
 fclose($fNew);
 
 // Report 3 — Recovery Candidates (includes logstore history columns)
 $fRec = fopen(_ra_csvpath($newToken, 'recovery'), 'w');
-fputcsv($fRec, ['username','client_id','firstname','lastname',
-    'course_shortname','course_fullname','category','enrolled_on','enrol_method',
-    'unit_code','classification','reason','created_at','deleted_at','deleted_by',
+fputcsv(
+    $fRec, ['username','client_id','firstname','lastname',
+        'course_shortname','course_fullname','category','enrolled_on','enrol_method',
+        'unit_code','classification','reason','created_at','deleted_at','deleted_by',
     'history_status']);
 foreach ($rptRecovery as $r) {
-    fputcsv($fRec, [$r['username'],$r['client_id'],$r['firstname'],$r['lastname'],
-        $r['course_shortname'],$r['course_fullname'],$r['category'],$r['enrolled_on'],
-        $r['enrol_method'],$r['unit_code'],$r['classification'],$r['reason'],
-        $r['created_at'] ?? '', $r['deleted_at'] ?? '', $r['deleted_by'] ?? '',
+    fputcsv(
+        $fRec, [$r['username'],$r['client_id'],$r['firstname'],$r['lastname'],
+            $r['course_shortname'],$r['course_fullname'],$r['category'],$r['enrolled_on'],
+            $r['enrol_method'],$r['unit_code'],$r['classification'],$r['reason'],
+            $r['created_at'] ?? '', $r['deleted_at'] ?? '', $r['deleted_by'] ?? '',
         $r['history_status'] ?? '']);
 }
 fclose($fRec);
 
 // ── Step 7: Render results ────────────────────────────────────────────────────
-$_dlBase = new moodle_url('/local/rtocompliance/recovery_analyzer.php', [
-    'action' => 'download',
-    'token'  => $newToken,
+$_dlBase = new moodle_url(
+    '/local/rtocompliance/recovery_analyzer.php', [
+        'action' => 'download',
+        'token'  => $newToken,
 ]);
 
 local_rtocompliance_render_nav_header($PAGE);

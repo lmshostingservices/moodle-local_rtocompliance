@@ -117,7 +117,7 @@ class survey_send_form extends moodleform {
 
         $mform->setDefault('message', ['text' => $defaultmessage, 'format' => FORMAT_HTML]);
 
-        // v5.9.381: removed the "Send Reminder" and "Survey Expires On" options —
+        // Version 5.9.381: removed the "Send Reminder" and "Survey Expires On" options —
         // they were never implemented (no reminder was ever sent and the link
         // never expired), so they promised behaviour the code did not deliver.
         $this->add_action_buttons(true, 'Send Surveys');

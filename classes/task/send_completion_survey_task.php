@@ -68,10 +68,11 @@ class send_completion_survey_task extends \core\task\scheduled_task {
                   AND (lrc.id IS NOT NULL OR qu.id IS NOT NULL)
                 ORDER BY cc.timecompleted DESC";
 
-        $completions = $DB->get_records_sql($sql, [
-            'cutoff'       => $cutoff,
-            'maxage'       => $maxage,
-            'recentcutoff' => $maxage,
+        $completions = $DB->get_records_sql(
+            $sql, [
+                'cutoff'       => $cutoff,
+                'maxage'       => $maxage,
+                'recentcutoff' => $maxage,
         ], 0, 50);
         
         $sentcount = 0;
@@ -109,10 +110,11 @@ class send_completion_survey_task extends \core\task\scheduled_task {
             // no orphaned record is created and the user will be retried on the next cron run.
             $surveylink = new \moodle_url('/local/rtocompliance/survey_respond.php', ['token' => $accesstoken]);
 
-            $messagetext = get_string('autosurvey_message', 'local_rtocompliance', [
-                'firstname' => $completion->firstname,
-                'coursename' => $completion->coursename,
-                'surveylink' => $surveylink->out(false),
+            $messagetext = get_string(
+                'autosurvey_message', 'local_rtocompliance', [
+                    'firstname' => $completion->firstname,
+                    'coursename' => $completion->coursename,
+                    'surveylink' => $surveylink->out(false),
             ]);
 
             $eventdata                    = new \core\message\message();

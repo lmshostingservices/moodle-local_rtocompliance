@@ -84,22 +84,26 @@ class insurance_form extends \moodleform {
         $mform->addElement('header', 'coveragemapping', 'Coverage Mapping');
         $mform->addHelpButton('coveragemapping', 'coveragemapping_header', 'local_rtocompliance');
         
-        $mform->addElement('static', 'coveragehelp', '', 
+        $mform->addElement(
+            'static', 'coveragehelp', '', 
             '<div class="alert alert-info" style="margin-bottom: 12px;"><strong>TAS Linking:</strong> Link this insurance policy to the qualifications, delivery modes and locations it covers. This is required for ASQA compliance to demonstrate appropriate insurance coverage for your training products.</div>');
 
-        $mform->addElement('textarea', 'qualificationscovered', 'Qualifications Covered (TAS Link)', 
-            ['rows' => 3, 'cols' => 80, 'placeholder' => 'BSB50420 - Diploma of Leadership and Management
+        $mform->addElement(
+            'textarea', 'qualificationscovered', 'Qualifications Covered (TAS Link)', 
+                ['rows' => 3, 'cols' => 80, 'placeholder' => 'BSB50420 - Diploma of Leadership and Management
 CHC50121 - Diploma of Early Childhood Education and Care
 SIS40221 - Certificate IV in Fitness']);
         $mform->setType('qualificationscovered', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
 
-        $mform->addElement('textarea', 'deliverymodes', get_string('delivery_modes', 'local_rtocompliance'), 
+        $mform->addElement(
+            'textarea', 'deliverymodes', get_string('delivery_modes', 'local_rtocompliance'), 
             ['rows' => 2, 'cols' => 80, 'placeholder' => 'Classroom, Online, Workplace, Blended']);
         $mform->setType('deliverymodes', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addHelpButton('deliverymodes', 'deliverymodes', 'local_rtocompliance');
 
-        $mform->addElement('textarea', 'locations', get_string('locations', 'local_rtocompliance'), 
-            ['rows' => 2, 'cols' => 80, 'placeholder' => 'Head Office - 123 Main St, Sydney NSW 2000
+        $mform->addElement(
+            'textarea', 'locations', get_string('locations', 'local_rtocompliance'), 
+                ['rows' => 2, 'cols' => 80, 'placeholder' => 'Head Office - 123 Main St, Sydney NSW 2000
 Training Centre - 456 Training Rd, Melbourne VIC 3000']);
         $mform->setType('locations', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addHelpButton('locations', 'insurance_locations', 'local_rtocompliance');

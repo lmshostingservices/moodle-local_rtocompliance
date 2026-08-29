@@ -53,7 +53,8 @@ $qualbuilderid = optional_param('qualbuilderid', 0,  PARAM_INT);
 // Set programcode on every blank enrolment whose course belongs to this qual.
 if ($action === 'bulk_apply' && $qualbuilderid > 0 && confirm_sesskey()) {
 
-    $qb = $DB->get_record('local_rtocompliance_qualbuilder',
+    $qb = $DB->get_record(
+        'local_rtocompliance_qualbuilder',
         ['id' => $qualbuilderid], 'id, qualificationcode, qualificationname', MUST_EXIST);
 
     $qualcode = trim((string)$qb->qualificationcode);
@@ -86,7 +87,8 @@ if ($action === 'bulk_apply' && $qualbuilderid > 0 && confirm_sesskey()) {
     if (empty($courseids)) {
         redirect(
             new moodle_url('/local/rtocompliance/repair_programcodes.php'),
-            get_string('repair_programcodes_no_courses', 'local_rtocompliance',
+            get_string(
+                'repair_programcodes_no_courses', 'local_rtocompliance',
                 s($qb->qualificationcode)),
             null,
             \core\output\notification::NOTIFY_WARNING
@@ -134,19 +136,21 @@ if ($action === 'bulk_apply' && $qualbuilderid > 0 && confirm_sesskey()) {
     $log->itemid      = $qualbuilderid;
     $log->userid      = $USER->id;
     $log->targetuserid = null;
-    $log->details     = json_encode([
-        'qualbuilderid'    => $qualbuilderid,
-        'qualificationcode' => $qualcode,
-        'rows_updated'     => $updated,
+    $log->details     = json_encode(
+        [
+            'qualbuilderid'    => $qualbuilderid,
+            'qualificationcode' => $qualcode,
+            'rows_updated'     => $updated,
     ]);
     $log->ipaddress   = getremoteaddr();
     $log->timecreated = time();
     $DB->insert_record('local_rtocompliance_log', $log);
 
-    $msg = get_string('repair_programcodes_applied', 'local_rtocompliance', [
-        'count'    => $updated,
-        'qualcode' => s($qualcode),
-        'qualname' => s($qb->qualificationname),
+    $msg = get_string(
+        'repair_programcodes_applied', 'local_rtocompliance', [
+            'count'    => $updated,
+            'qualcode' => s($qualcode),
+            'qualname' => s($qb->qualificationname),
     ]);
     redirect(
         new moodle_url('/local/rtocompliance/repair_programcodes.php'),
@@ -176,9 +180,10 @@ echo $navheader;
 
 echo '<div style="max-width:900px;">';
 echo html_writer::tag('h2', get_string('repair_programcodes_title', 'local_rtocompliance'));
-echo html_writer::tag('p',
-    get_string('repair_programcodes_desc', 'local_rtocompliance'),
-    ['class' => 'text-muted', 'style' => 'margin-bottom:1.5rem;']
+echo html_writer::tag(
+    'p',
+        get_string('repair_programcodes_desc', 'local_rtocompliance'),
+        ['class' => 'text-muted', 'style' => 'margin-bottom:1.5rem;']
 );
 
 // ── Query: which quals have blank enrolments? ────────────────────────────────
@@ -217,9 +222,10 @@ if (empty($rows)) {
     echo html_writer::tag(
         'div',
         html_writer::tag('strong', '✓ ' . get_string('repair_programcodes_all_clean', 'local_rtocompliance')) .
-        html_writer::tag('p',
-            get_string('repair_programcodes_all_clean_desc', 'local_rtocompliance'),
-            ['style' => 'margin:6px 0 0 0;font-size:.9rem;']
+        html_writer::tag(
+            'p',
+                get_string('repair_programcodes_all_clean_desc', 'local_rtocompliance'),
+                ['style' => 'margin:6px 0 0 0;font-size:.9rem;']
         ),
         ['style' => 'background:#f0fdf4;border:1px solid #22c55e;border-radius:8px;padding:16px 20px;color:#166534;']
     );
@@ -228,49 +234,57 @@ if (empty($rows)) {
     $totalblank = array_sum(array_column((array)$rows, 'blankcount'));
     echo html_writer::tag(
         'div',
-        html_writer::tag('strong',
-            sprintf(
-                get_string('repair_programcodes_summary', 'local_rtocompliance'),
-                count($rows),
-                $totalblank
-            )
+        html_writer::tag(
+            'strong',
+                sprintf(
+                    get_string('repair_programcodes_summary', 'local_rtocompliance'),
+                    count($rows),
+                    $totalblank
+                )
         ) .
-        html_writer::tag('p',
-            get_string('repair_programcodes_summary_desc', 'local_rtocompliance'),
-            ['style' => 'margin:6px 0 0 0;font-size:.9rem;']
+        html_writer::tag(
+            'p',
+                get_string('repair_programcodes_summary_desc', 'local_rtocompliance'),
+                ['style' => 'margin:6px 0 0 0;font-size:.9rem;']
         ),
         ['style' => 'background:#fffbeb;border:1px solid #f59e0b;border-left:4px solid #d97706;'
             . 'border-radius:8px;padding:14px 18px;margin-bottom:20px;color:#92400e;']
     );
 
     // Table of affected qualifications.
-    echo html_writer::start_tag('table', [
-        'class' => 'table',
-        'style' => 'background:white;border:1px solid #e5e7eb;border-radius:12px;border-collapse:collapse;width:100%;',
+    echo html_writer::start_tag(
+        'table', [
+            'class' => 'table',
+            'style' => 'background:white;border:1px solid #e5e7eb;border-radius:12px;border-collapse:collapse;width:100%;',
     ]);
     echo html_writer::start_tag('thead');
     echo html_writer::start_tag('tr');
-    echo html_writer::tag('th', get_string('qualification', 'local_rtocompliance'),
+    echo html_writer::tag(
+        'th', get_string('qualification', 'local_rtocompliance'),
         ['style' => 'padding:10px 14px;background:#f9fafb;border-bottom:1px solid #e5e7eb;']);
-    echo html_writer::tag('th', get_string('repair_programcodes_col_blank', 'local_rtocompliance'),
+    echo html_writer::tag(
+        'th', get_string('repair_programcodes_col_blank', 'local_rtocompliance'),
         ['style' => 'padding:10px 14px;background:#f9fafb;border-bottom:1px solid #e5e7eb;text-align:center;']);
-    echo html_writer::tag('th', '',
+    echo html_writer::tag(
+        'th', '',
         ['style' => 'padding:10px 14px;background:#f9fafb;border-bottom:1px solid #e5e7eb;width:180px;']);
     echo html_writer::end_tag('tr');
     echo html_writer::end_tag('thead');
     echo html_writer::start_tag('tbody');
 
     foreach ($rows as $row) {
-        $applyUrl = (new moodle_url('/local/rtocompliance/repair_programcodes.php', [
-            'action'        => 'bulk_apply',
-            'qualbuilderid' => $row->id,
-            'sesskey'       => sesskey(),
+        $applyUrl = (new moodle_url(
+            '/local/rtocompliance/repair_programcodes.php', [
+                'action'        => 'bulk_apply',
+                'qualbuilderid' => $row->id,
+                'sesskey'       => sesskey(),
         ]))->out(false);
 
         $confirmMsg = addslashes(
-            get_string('repair_programcodes_confirm', 'local_rtocompliance', [
-                'count'    => $row->blankcount,
-                'qualcode' => $row->qualificationcode,
+            get_string(
+                'repair_programcodes_confirm', 'local_rtocompliance', [
+                    'count'    => $row->blankcount,
+                    'qualcode' => $row->qualificationcode,
             ])
         );
 
@@ -284,42 +298,49 @@ if (empty($rows)) {
         echo html_writer::start_tag('tr', ['style' => 'border-bottom:1px solid #f3f4f6;']);
 
         // Qual name cell.
-        echo html_writer::tag('td',
-            html_writer::tag('div',
-                html_writer::tag('span',
-                    s($row->qualificationcode),
-                    ['style' => 'font-weight:700;font-family:monospace;font-size:.9rem;']
-                ) . $statusBadge,
-                ['style' => 'margin-bottom:.2rem;']
-            ) .
-            html_writer::tag('div',
-                s($row->qualificationname),
-                ['style' => 'font-size:.85rem;color:#6b7280;']
-            ),
-            ['style' => 'padding:12px 14px;']
+        echo html_writer::tag(
+            'td',
+                html_writer::tag(
+                'div',
+                        html_writer::tag(
+                    'span',
+                                s($row->qualificationcode),
+                                ['style' => 'font-weight:700;font-family:monospace;font-size:.9rem;']
+                        ) . $statusBadge,
+                        ['style' => 'margin-bottom:.2rem;']
+                ) .
+                html_writer::tag(
+                'div',
+                        s($row->qualificationname),
+                        ['style' => 'font-size:.85rem;color:#6b7280;']
+                ),
+                ['style' => 'padding:12px 14px;']
         );
 
         // Blank count cell.
-        echo html_writer::tag('td',
-            html_writer::tag('span',
-                number_format($row->blankcount),
-                ['style' => 'font-size:1.1rem;font-weight:700;color:#d97706;']
-            ),
-            ['style' => 'padding:12px 14px;text-align:center;vertical-align:middle;']
+        echo html_writer::tag(
+            'td',
+                html_writer::tag(
+                'span',
+                        number_format($row->blankcount),
+                        ['style' => 'font-size:1.1rem;font-weight:700;color:#d97706;']
+                ),
+                ['style' => 'padding:12px 14px;text-align:center;vertical-align:middle;']
         );
 
         // Action cell.
-        echo html_writer::tag('td',
-            html_writer::link(
-                $applyUrl,
-                get_string('repair_programcodes_apply_btn', 'local_rtocompliance'),
-                [
-                    'class'   => 'btn btn-sm btn-warning',
-                    'style'   => 'white-space:nowrap;',
-                    'onclick' => "return confirm('" . $confirmMsg . "');",
-                ]
-            ),
-            ['style' => 'padding:12px 14px;text-align:right;vertical-align:middle;']
+        echo html_writer::tag(
+            'td',
+                html_writer::link(
+                    $applyUrl,
+                    get_string('repair_programcodes_apply_btn', 'local_rtocompliance'),
+                    [
+                        'class'   => 'btn btn-sm btn-warning',
+                        'style'   => 'white-space:nowrap;',
+                        'onclick' => "return confirm('" . $confirmMsg . "');",
+                    ]
+                ),
+                ['style' => 'padding:12px 14px;text-align:right;vertical-align:middle;']
         );
 
         echo html_writer::end_tag('tr');
@@ -336,14 +357,18 @@ echo '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" st
 echo get_string('repair_programcodes_how_heading', 'local_rtocompliance');
 echo '</summary>';
 echo '<div style="padding:0 16px 16px 16px;font-size:.875rem;color:#374151;">';
-echo html_writer::tag('p', get_string('repair_programcodes_how_body', 'local_rtocompliance'),
+echo html_writer::tag(
+    'p', get_string('repair_programcodes_how_body', 'local_rtocompliance'),
     ['style' => 'margin:.75rem 0 .5rem;']);
 echo html_writer::start_tag('ul', ['style' => 'padding-left:1.4rem;margin:.4rem 0;']);
-echo html_writer::tag('li', get_string('repair_programcodes_how_li1', 'local_rtocompliance'),
+echo html_writer::tag(
+    'li', get_string('repair_programcodes_how_li1', 'local_rtocompliance'),
     ['style' => 'margin-bottom:.35rem;']);
-echo html_writer::tag('li', get_string('repair_programcodes_how_li2', 'local_rtocompliance'),
+echo html_writer::tag(
+    'li', get_string('repair_programcodes_how_li2', 'local_rtocompliance'),
     ['style' => 'margin-bottom:.35rem;']);
-echo html_writer::tag('li', get_string('repair_programcodes_how_li3', 'local_rtocompliance'),
+echo html_writer::tag(
+    'li', get_string('repair_programcodes_how_li3', 'local_rtocompliance'),
     ['style' => 'margin-bottom:.35rem;']);
 echo html_writer::end_tag('ul');
 echo '</div>';

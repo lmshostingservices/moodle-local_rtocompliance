@@ -138,6 +138,6 @@ echo '<h3>Still stuck?</h3>';
 echo '<p>Ask the <strong>AI Assistant</strong> at the bottom-right of any page (1 credit per question) — it knows this software and the ASQA 2025 Standards and will link you straight to the right page. For detailed how-to guides, open the <a href="' . s($siteurl . '/local/rtocompliance/support.php') . '">Support page</a>.</p>';
 echo '</div>';
 
-echo '</div>'; // wrap
+echo '</div>'; // Wrap
 
 echo $OUTPUT->footer();

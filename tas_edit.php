@@ -99,15 +99,16 @@ class tas_form extends moodleform {
         // written against, so it is obvious when the qualification is superseded and
         // the TAS needs review. No schema change — this is captured within the
         // Version Number / Revision Notes fields in Section 9 and flagged here.
-        $mform->addElement('static', 'trainingproductrelease_advisory', '',
-            '<div class="alert alert-info" style="margin-bottom:16px;">'
-            . '<strong>Training-product release check:</strong> Record above the exact '
-            . 'training-product release (training.gov.au status/release) this TAS was '
-            . 'written against, and note it in the <em>Revision Notes</em> field (Section 9). '
-            . 'This TAS is <strong>not</strong> automatically re-linked when the qualification '
-            . 'is superseded or updated on training.gov.au — if this training product is '
-            . 'superseded, review and re-version this TAS and check the '
-            . '<a href="/local/rtocompliance/transitions.php">Training Transitions register</a> '
+        $mform->addElement(
+            'static', 'trainingproductrelease_advisory', '',
+                '<div class="alert alert-info" style="margin-bottom:16px;">'
+                . '<strong>Training-product release check:</strong> Record above the exact '
+                . 'training-product release (training.gov.au status/release) this TAS was '
+                . 'written against, and note it in the <em>Revision Notes</em> field (Section 9). '
+                . 'This TAS is <strong>not</strong> automatically re-linked when the qualification '
+                . 'is superseded or updated on training.gov.au — if this training product is '
+                . 'superseded, review and re-version this TAS and check the '
+                . '<a href="/local/rtocompliance/transitions.php">Training Transitions register</a> '
             . 'for the applicable teach-out / transition timeframe.</div>');
 
         $mform->addElement('textarea', 'scopedetails', 'RTO Scope Details', ['rows' => 3, 'cols' => 80]);
@@ -116,8 +117,9 @@ class tas_form extends moodleform {
 
         $mform->addElement('header', 'section2', 'Section 2: Target Learner Cohort & Entry Requirements');
 
-        $mform->addElement('static', 'cohort_selector_helper', '',
-'<div id="rtoc-cohort-helper" style="border:1px solid #dee2e6;border-radius:8px;padding:16px;background:#f0f6ff;margin-bottom:16px;">
+        $mform->addElement(
+            'static', 'cohort_selector_helper', '',
+    '<div id="rtoc-cohort-helper" style="border:1px solid #dee2e6;border-radius:8px;padding:16px;background:#f0f6ff;margin-bottom:16px;">
 <strong style="font-size:14px;">Smart Cohort &amp; Entry Requirements Builder</strong>
 <p style="color:#555;font-size:13px;margin:6px 0 12px;">Select the qualification AQF level, tick applicable learner cohorts, then click <em>Apply to Section 2</em> to auto-fill the fields below.</p>
 <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px;">
@@ -292,16 +294,18 @@ class tas_form extends moodleform {
                 $statusHtml = '<div style="margin: 8px 0;"><span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;background:#e2e3e5;color:#383d41;border:1px solid #d6d8db;">NO EVIDENCE</span> No consultation records uploaded yet.</div>';
             }
 
-            $mform->addElement('static', 'consultationmanager', '',
-                '<div style="border:1px solid #dee2e6;border-radius:8px;padding:16px;background:#f8f9fa;margin-bottom:12px;">'
-                . '<strong>Industry Consultation Evidence</strong><br>'
-                . '<p style="color:#666;margin:8px 0;">Instead of entering text directly, use the Industry Consultation Manager to download a pre-filled template, '
-                . 'record consultation details, upload evidence documents, and auto-generate the TAS narrative.</p>'
-                . $statusHtml
-                . '<a href="' . $consultUrl->out(false) . '" class="btn btn-primary" style="margin-top:4px;">Manage Industry Consultations</a>'
+            $mform->addElement(
+                'static', 'consultationmanager', '',
+                    '<div style="border:1px solid #dee2e6;border-radius:8px;padding:16px;background:#f8f9fa;margin-bottom:12px;">'
+                    . '<strong>Industry Consultation Evidence</strong><br>'
+                    . '<p style="color:#666;margin:8px 0;">Instead of entering text directly, use the Industry Consultation Manager to download a pre-filled template, '
+                    . 'record consultation details, upload evidence documents, and auto-generate the TAS narrative.</p>'
+                    . $statusHtml
+                    . '<a href="' . $consultUrl->out(false) . '" class="btn btn-primary" style="margin-top:4px;">Manage Industry Consultations</a>'
                 . '</div>');
         } else {
-            $mform->addElement('static', 'consultationmanager', '',
+            $mform->addElement(
+                'static', 'consultationmanager', '',
                 '<div class="alert alert-warning">Save this TAS first, then return to manage industry consultation records.</div>');
         }
 
@@ -314,12 +318,13 @@ class tas_form extends moodleform {
 
         $mform->addElement('header', 'section4', 'Section 4: Delivery Structure & Volume of Learning');
 
-        $mform->addElement('static', 'deliveryplannerhelp', '',
-            '<div class="alert alert-info" style="margin-bottom: 16px;">' .
-            '<strong>Smart Delivery Planner</strong><br>' .
-            'Enter a start date and click "Generate Delivery Plan" to automatically calculate delivery duration, ' .
-            'volume of learning, weekly schedule, and hour breakdown based on AQF expectations and the qualification units. ' .
-            'The system uses training.gov.au data and skips Australian public holidays.' .
+        $mform->addElement(
+            'static', 'deliveryplannerhelp', '',
+                '<div class="alert alert-info" style="margin-bottom: 16px;">' .
+                '<strong>Smart Delivery Planner</strong><br>' .
+                'Enter a start date and click "Generate Delivery Plan" to automatically calculate delivery duration, ' .
+                'volume of learning, weekly schedule, and hour breakdown based on AQF expectations and the qualification units. ' .
+                'The system uses training.gov.au data and skips Australian public holidays.' .
             '</div>');
 
         $modes = [
@@ -539,22 +544,28 @@ document.addEventListener("DOMContentLoaded", function (){
 
         // TAS-AUTHENTICITY-FIELDS (v6.2.45): online/blended authenticity, identity verification,
         // academic integrity, and the responsible-AI review attestation (Standard 1.4).
-        $mform->addElement('static', 'authenticity_note', '',
+        $mform->addElement(
+            'static', 'authenticity_note', '',
             '<div class="alert alert-info" style="margin-bottom:8px;"><strong>Assessment authenticity &amp; online delivery (Standard 1.4).</strong> Complete the fields below where delivery is online or blended, so the strategy shows how you keep evidence authentic and the right person is assessed.</div>');
-        $mform->addElement('textarea', 'identityverification', 'Learner identity verification',
+        $mform->addElement(
+            'textarea', 'identityverification', 'Learner identity verification',
             ['rows' => 3, 'cols' => 80, 'placeholder' => 'How do you verify the enrolled learner is the person who completes the training and assessment (especially online/blended) — e.g. USI check, photo ID at induction, proctoring, live video verification?']);
         $mform->setType('identityverification', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
-        $mform->addElement('textarea', 'academicintegrity', 'Academic integrity — authenticity of evidence',
+        $mform->addElement(
+            'textarea', 'academicintegrity', 'Academic integrity — authenticity of evidence',
             ['rows' => 3, 'cols' => 80, 'placeholder' => 'How do you assure assessment evidence is the learner\'s own work and NOT plagiarised or AI-generated — e.g. authenticity declarations, oral/live questioning to corroborate, similarity/AI checks, supervised tasks? (Required where delivery is online or blended.)']);
         $mform->setType('academicintegrity', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
-        $mform->addElement('text', 'aireviewedby', 'AI-assisted content reviewed by',
+        $mform->addElement(
+            'text', 'aireviewedby', 'AI-assisted content reviewed by',
             ['size' => 60, 'placeholder' => 'Name of the RTO staff member who reviewed any AI-assisted drafts']);
         $mform->setType('aireviewedby', PARAM_TEXT);
-        $mform->addElement('static', 'aireview_note', '',
+        $mform->addElement(
+            'static', 'aireview_note', '',
             '<p style="color:#666;font-size:12px;margin-top:4px;">AI may assist drafting, but a competent person must review and approve all content before use — record who reviewed it (ASQA responsible-AI expectation).</p>');
 
         // TAS-STRUCTURAL (v6.2.48): RPL as a documented pathway (was only an assessment-method checkbox).
-        $mform->addElement('textarea', 'rplpathway', 'RPL pathway (documented process)',
+        $mform->addElement(
+            'textarea', 'rplpathway', 'RPL pathway (documented process)',
             ['rows' => 3, 'cols' => 80, 'placeholder' => 'Describe how Recognition of Prior Learning is offered for this qualification as a documented process — the evidence-gathering methods (portfolio, third-party report, competency conversation, challenge test), how authenticity and currency are assured, and how gaps are addressed with gap training.']);
         $mform->setType('rplpathway', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
 
@@ -562,7 +573,8 @@ document.addEventListener("DOMContentLoaded", function (){
 
         $mform->addElement('textarea', 'trainerrequirements', 'Trainer/Assessor Requirements', ['rows' => 4, 'cols' => 80]);
         // TAS-STRUCTURAL (v6.2.48): per-unit trainer mapping + Credential-Policy classification.
-        $mform->addElement('textarea', 'trainerunitmapping', 'Trainer/assessor → units mapping',
+        $mform->addElement(
+            'textarea', 'trainerunitmapping', 'Trainer/assessor → units mapping',
             ['rows' => 3, 'cols' => 80, 'placeholder' => 'Map each trainer/assessor to the specific units they deliver/assess, and note their Credential-Policy classification (fully credentialled vs working under direction — no assessment judgements), vocational competency, and industry currency / CPD (Standards 3.1-3.3).']);
         $mform->setType('trainerunitmapping', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->setType('trainerrequirements', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
@@ -799,9 +811,10 @@ if ($form->is_cancelled()) {
         $DB->update_record('local_rtocompliance_tas', $record);
         $message = 'TAS document updated successfully';
     } else {
-        $existing = $DB->get_record('local_rtocompliance_tas', [
-            'qualificationcode' => $record->qualificationcode,
-            'version'           => $record->version,
+        $existing = $DB->get_record(
+            'local_rtocompliance_tas', [
+                'qualificationcode' => $record->qualificationcode,
+                'version'           => $record->version,
         ]);
         if ($existing) {
             $record->id = $existing->id;
@@ -840,12 +853,13 @@ $_rtoc_apikey = function_exists('local_aiconfig_get_apikey')
     ? (local_aiconfig_get_apikey('local_rtocompliance') ?: get_config('local_rtocompliance', 'apikey') ?: '')
     : (get_config('local_rtocompliance', 'apikey') ?: '');
 $_rtoc_apibase = rtrim(get_config('local_rtocompliance', 'apiurl') ?: 'https://lms-labs.com', '/');
-echo html_writer::tag('div', '', [
-    'id'             => 'rtoc-ai-config',
-    'data-api-key'   => $_rtoc_apikey,
-    'data-api-base'  => $_rtoc_apibase,
-    'style'          => 'display:none',
-    'aria-hidden'    => 'true',
+echo html_writer::tag(
+    'div', '', [
+        'id'             => 'rtoc-ai-config',
+        'data-api-key'   => $_rtoc_apikey,
+        'data-api-base'  => $_rtoc_apibase,
+        'style'          => 'display:none',
+        'aria-hidden'    => 'true',
 ]);
 echo local_rtocompliance_render_nav_header($id ? 'Edit TAS' : 'Create TAS', get_string('tas', 'local_rtocompliance'), '/local/rtocompliance/tas.php', 'tas');
 echo local_rtocompliance_page_banner($id ? 'Edit TAS' : 'Create TAS');
@@ -855,12 +869,13 @@ echo $OUTPUT->heading($id ? 'Edit Training & Assessment Strategy' : 'Create Trai
 // FIX-AI-NOTICE: if API key not configured, show a clear admin-only notice so
 // the user understands why the AI sparkle buttons are absent from textareas.
 if (empty($_rtoc_apikey) && has_capability('moodle/site:config', context_system::instance())) {
-    echo html_writer::tag('div',
-        html_writer::tag('strong', 'AI Content Suggestions unavailable: ') .
-        'No platform API key is configured for this plugin. To enable the AI sparkle buttons on all text fields, go to ' .
-        html_writer::tag('a', 'Plugin Settings', ['href' => (new moodle_url('/admin/settings.php', ['section' => 'local_rtocompliance_api']))->out(false)]) .
-        ' and enter your API key.',
-        ['class' => 'alert alert-warning', 'style' => 'margin-bottom: 12px;']
+    echo html_writer::tag(
+        'div',
+            html_writer::tag('strong', 'AI Content Suggestions unavailable: ') .
+            'No platform API key is configured for this plugin. To enable the AI sparkle buttons on all text fields, go to ' .
+            html_writer::tag('a', 'Plugin Settings', ['href' => (new moodle_url('/admin/settings.php', ['section' => 'local_rtocompliance_api']))->out(false)]) .
+            ' and enter your API key.',
+            ['class' => 'alert alert-warning', 'style' => 'margin-bottom: 12px;']
     );
 }
 

@@ -91,9 +91,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && confirm_sesskey()
     $suit->timemodified          = time();
     $DB->update_record('local_rtocompliance_suitability', $suit);
 
-    local_rtocompliance_log_action('suitability_trainer_decision', 'suitability', $suit->id, [
-        'decision'  => $decision,
-        'trainerid' => $USER->id,
+    local_rtocompliance_log_action(
+        'suitability_trainer_decision', 'suitability', $suit->id, [
+            'decision'  => $decision,
+            'trainerid' => $USER->id,
     ]);
 
     // Email the student with the decision and advice.
@@ -144,9 +145,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && confirm_sesskey()) {
         $suit->status, $reasons, $support, $tas, $rtoname);
 
     $DB->update_record('local_rtocompliance_suitability', $suit);
-    local_rtocompliance_log_action('suitability_overridden', 'suitability', $suit->id, [
-        'outcome' => $newOutcome,
-        'notes'   => $notes,
+    local_rtocompliance_log_action(
+        'suitability_overridden', 'suitability', $suit->id, [
+            'outcome' => $newOutcome,
+            'notes'   => $notes,
     ]);
     redirect($PAGE->url, get_string('suitability_overridden_ok', 'local_rtocompliance'), null, \core\output\notification::NOTIFY_SUCCESS);
 }
@@ -182,12 +184,13 @@ echo html_writer::end_div();
 
 // ── Action: download PDF report (only when there's something to report) ──
 if ($suit->status !== 'pending') {
-    echo html_writer::tag('p',
-        html_writer::link(
-            new moodle_url('/local/rtocompliance/suitability_pdf.php', ['id' => $suit->id]),
-            'Download PDF Report',
-            ['class' => 'btn btn-outline-primary mb-3', 'target' => '_blank', 'title' => 'Open a printable PDF of this eligibility check and trainer decision', 'data-testid' => 'link-suit-pdf-' . $suit->id]
-        )
+    echo html_writer::tag(
+        'p',
+            html_writer::link(
+                new moodle_url('/local/rtocompliance/suitability_pdf.php', ['id' => $suit->id]),
+                'Download PDF Report',
+                ['class' => 'btn btn-outline-primary mb-3', 'target' => '_blank', 'title' => 'Open a printable PDF of this eligibility check and trainer decision', 'data-testid' => 'link-suit-pdf-' . $suit->id]
+            )
     );
 }
 
@@ -349,8 +352,9 @@ if ($suit->status !== 'pending') {
             echo html_writer::end_div();
         } else if ($suit->status === 'submitted') {
             // Awaiting decision — show form.
-            echo html_writer::tag('p',
-                'The student has completed their eligibility check and is awaiting your review. Complete the form below to record your decision. The student will be emailed your advice.',
+            echo html_writer::tag(
+                'p',
+                    'The student has completed their eligibility check and is awaiting your review. Complete the form below to record your decision. The student will be emailed your advice.',
                 ['class' => 'text-muted', 'style' => 'max-width:780px']);
 
             echo html_writer::start_tag('form', ['method' => 'post', 'action' => '', 'style' => 'max-width:780px']);
@@ -372,28 +376,32 @@ if ($suit->status !== 'pending') {
             echo html_writer::end_div();
 
             echo html_writer::start_div('form-group mt-3');
-            echo html_writer::tag('label', 'Advice to student (required — emailed to the student)',
+            echo html_writer::tag(
+                'label', 'Advice to student (required — emailed to the student)',
                 ['for' => 'trainer_advice_text', 'class' => 'font-weight-bold']);
-            echo html_writer::tag('textarea', '', [
-                'name'        => 'trainer_advice_text',
-                'id'          => 'trainer_advice_text',
-                'class'       => 'form-control mt-1',
-                'rows'        => 5,
-                'placeholder' => 'e.g. Based on your eligibility check, you have been approved to enrol in this qualification. Your trainer will contact you to discuss enrolment arrangements and any support that has been identified...',
-                'required'    => 'required',
+            echo html_writer::tag(
+                'textarea', '', [
+                    'name'        => 'trainer_advice_text',
+                    'id'          => 'trainer_advice_text',
+                    'class'       => 'form-control mt-1',
+                    'rows'        => 5,
+                    'placeholder' => 'e.g. Based on your eligibility check, you have been approved to enrol in this qualification. Your trainer will contact you to discuss enrolment arrangements and any support that has been identified...',
+                    'required'    => 'required',
             ]);
             echo html_writer::end_div();
 
             echo html_writer::start_div('form-group mt-3');
-            echo html_writer::tag('label', 'Trainer justification (required — recorded for audit, not sent to student)',
+            echo html_writer::tag(
+                'label', 'Trainer justification (required — recorded for audit, not sent to student)',
                 ['for' => 'trainer_justification', 'class' => 'font-weight-bold']);
-            echo html_writer::tag('textarea', '', [
-                'name'        => 'trainer_justification',
-                'id'          => 'trainer_justification',
-                'class'       => 'form-control mt-1',
-                'rows'        => 3,
-                'placeholder' => 'Record your professional judgement. Reference the student\'s LLN self-report, digital literacy, prior skills, and any identified support needs.',
-                'required'    => 'required',
+            echo html_writer::tag(
+                'textarea', '', [
+                    'name'        => 'trainer_justification',
+                    'id'          => 'trainer_justification',
+                    'class'       => 'form-control mt-1',
+                    'rows'        => 3,
+                    'placeholder' => 'Record your professional judgement. Reference the student\'s LLN self-report, digital literacy, prior skills, and any identified support needs.',
+                    'required'    => 'required',
             ]);
             echo html_writer::end_div();
 
@@ -404,22 +412,24 @@ if ($suit->status !== 'pending') {
                 . '</label>';
             echo html_writer::end_div();
 
-            echo html_writer::tag('button', 'Save Decision &amp; Notify Student', [
-                'type'  => 'submit',
-                'class' => 'btn btn-primary mt-3',
+            echo html_writer::tag(
+                'button', 'Save Decision &amp; Notify Student', [
+                    'type'  => 'submit',
+                    'class' => 'btn btn-primary mt-3',
             ]);
             echo html_writer::end_tag('form');
         }
 }
 
 // Back button
-echo html_writer::tag('p',
-    html_writer::link(
-        new moodle_url('/local/rtocompliance/students.php'),
-        '&larr; ' . get_string('students', 'local_rtocompliance'),
-        ['class' => 'btn btn-outline-secondary mt-3']
-    ),
-    ['class' => 'mt-4']
+echo html_writer::tag(
+    'p',
+        html_writer::link(
+            new moodle_url('/local/rtocompliance/students.php'),
+            '&larr; ' . get_string('students', 'local_rtocompliance'),
+            ['class' => 'btn btn-outline-secondary mt-3']
+        ),
+        ['class' => 'mt-4']
 );
 
 echo $OUTPUT->footer();

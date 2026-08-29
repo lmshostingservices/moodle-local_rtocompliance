@@ -57,23 +57,25 @@ function rtoc_render_run_analysis_form($type, $year, $count) {
               .  "<path d=\"M21 12a9 9 0 1 1-6.219-8.56\"></path></svg></span>"
               .  "Analysing responses (please wait 30-60 seconds)...'; "
               .  "this.form.submit(); return false;";
-    echo html_writer::start_tag('form', [
-        'method' => 'post',
-        'action' => (new \moodle_url('/local/rtocompliance/ai_analysis.php'))->out(false),
-        'style'  => 'display:inline;margin:0;',
+    echo html_writer::start_tag(
+        'form', [
+            'method' => 'post',
+            'action' => (new \moodle_url('/local/rtocompliance/ai_analysis.php'))->out(false),
+            'style'  => 'display:inline;margin:0;',
     ]);
     echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
     echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'action',  'value' => 'analyze']);
     echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'type',    'value' => $type]);
     echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'year',    'value' => (string)$year]);
-    echo html_writer::tag('button',
-        'Run AI Analysis (' . (int)$count . ' response' . ($count === 1 ? '' : 's') . ')',
-        [
-            'type'    => 'submit',
-            'class'   => 'btn btn-primary',
-            'title'   => 'Runs the AI analysis directly. You will be asked to confirm the 5-credit cost first.',
-            'onclick' => $spinnerjs,
-        ]
+    echo html_writer::tag(
+        'button',
+            'Run AI Analysis (' . (int)$count . ' response' . ($count === 1 ? '' : 's') . ')',
+            [
+                'type'    => 'submit',
+                'class'   => 'btn btn-primary',
+                'title'   => 'Runs the AI analysis directly. You will be asked to confirm the 5-credit cost first.',
+                'onclick' => $spinnerjs,
+            ]
     );
     echo html_writer::end_tag('form');
     // Inject keyframes once per page render — duplicate-safe, browsers ignore
@@ -100,28 +102,32 @@ echo html_writer::tag('p', 'Quality Indicator surveys are required annually unde
 
 $currentyear = date('Y');
 
-$learnercount = $DB->count_records('local_rtocompliance_surveys', [
-    'surveytype' => 'learner',
-    'year' => $currentyear,
-    'status' => 'completed',
+$learnercount = $DB->count_records(
+    'local_rtocompliance_surveys', [
+        'surveytype' => 'learner',
+        'year' => $currentyear,
+        'status' => 'completed',
 ]);
 
-$employercount = $DB->count_records('local_rtocompliance_surveys', [
-    'surveytype' => 'employer',
-    'year' => $currentyear,
-    'status' => 'completed',
+$employercount = $DB->count_records(
+    'local_rtocompliance_surveys', [
+        'surveytype' => 'employer',
+        'year' => $currentyear,
+        'status' => 'completed',
 ]);
 
-$learnerpending = $DB->count_records('local_rtocompliance_surveys', [
-    'surveytype' => 'learner',
-    'year' => $currentyear,
-    'status' => 'sent',
+$learnerpending = $DB->count_records(
+    'local_rtocompliance_surveys', [
+        'surveytype' => 'learner',
+        'year' => $currentyear,
+        'status' => 'sent',
 ]);
 
-$employerpending = $DB->count_records('local_rtocompliance_surveys', [
-    'surveytype' => 'employer',
-    'year' => $currentyear,
-    'status' => 'sent',
+$employerpending = $DB->count_records(
+    'local_rtocompliance_surveys', [
+        'surveytype' => 'employer',
+        'year' => $currentyear,
+        'status' => 'sent',
 ]);
 
 $learnertotal  = $DB->count_records('local_rtocompliance_surveys', ['surveytype' => 'learner',  'year' => $currentyear]);
@@ -199,9 +205,10 @@ echo html_writer::link(
 if ($learnercount > 0) {
     rtoc_render_run_analysis_form('learner', $currentyear, $learnercount);
 } else {
-    echo html_writer::tag('span',
-        'AI Analysis — no responses yet',
-        ['class' => 'btn btn-secondary disabled', 'title' => 'Send the learner survey and wait for at least one completed response before running AI analysis.', 'aria-disabled' => 'true']
+    echo html_writer::tag(
+        'span',
+            'AI Analysis — no responses yet',
+            ['class' => 'btn btn-secondary disabled', 'title' => 'Send the learner survey and wait for at least one completed response before running AI analysis.', 'aria-disabled' => 'true']
     );
 }
 echo html_writer::end_div();
@@ -212,10 +219,11 @@ echo html_writer::tag('div', $learnercount, ['class' => 'survey-stat-value']);
 echo html_writer::tag('div', 'Responses ' . $currentyear, ['class' => 'survey-stat-label']);
 echo html_writer::end_div();
 
-$pending = $DB->count_records('local_rtocompliance_surveys', [
-    'surveytype' => 'learner',
-    'year' => $currentyear,
-    'status' => 'pending',
+$pending = $DB->count_records(
+    'local_rtocompliance_surveys', [
+        'surveytype' => 'learner',
+        'year' => $currentyear,
+        'status' => 'pending',
 ]);
 echo html_writer::start_div('survey-stat');
 echo html_writer::tag('div', $pending, ['class' => 'survey-stat-value']);
@@ -247,9 +255,10 @@ echo html_writer::link(
 if ($employercount > 0) {
     rtoc_render_run_analysis_form('employer', $currentyear, $employercount);
 } else {
-    echo html_writer::tag('span',
-        'AI Analysis — no responses yet',
-        ['class' => 'btn btn-secondary disabled', 'title' => 'Send the employer survey and wait for at least one completed response before running AI analysis.', 'aria-disabled' => 'true']
+    echo html_writer::tag(
+        'span',
+            'AI Analysis — no responses yet',
+            ['class' => 'btn btn-secondary disabled', 'title' => 'Send the employer survey and wait for at least one completed response before running AI analysis.', 'aria-disabled' => 'true']
     );
 }
 echo html_writer::end_div();
@@ -260,10 +269,11 @@ echo html_writer::tag('div', $employercount, ['class' => 'survey-stat-value']);
 echo html_writer::tag('div', 'Responses ' . $currentyear, ['class' => 'survey-stat-label']);
 echo html_writer::end_div();
 
-$pending = $DB->count_records('local_rtocompliance_surveys', [
-    'surveytype' => 'employer',
-    'year' => $currentyear,
-    'status' => 'pending',
+$pending = $DB->count_records(
+    'local_rtocompliance_surveys', [
+        'surveytype' => 'employer',
+        'year' => $currentyear,
+        'status' => 'pending',
 ]);
 echo html_writer::start_div('survey-stat');
 echo html_writer::tag('div', $pending, ['class' => 'survey-stat-value']);

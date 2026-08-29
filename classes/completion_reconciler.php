@@ -100,7 +100,7 @@ class completion_reconciler {
             'unresolved_sample' => [],
         ];
 
-        // userid → plugin studentid (welded via local_rtocompliance_students.userid).
+        // Userid → plugin studentid (welded via local_rtocompliance_students.userid).
         $studentbyuser = [];
         $srs = $DB->get_records('local_rtocompliance_students', null, '', 'id, userid');
         foreach ($srs as $sr) {
@@ -148,7 +148,7 @@ class completion_reconciler {
             // resolves to — one register row per (student, unit).
             foreach ($units as $u) {
                 list($unitcode, $qualcode, $unitname, $programname) = $u;
-                $programcode = $qualcode; // may be '' if the qualification is unknown.
+                $programcode = $qualcode; // May be '' if the qualification is unknown.
 
                 // UNIT-scoped lookup so a unit already recorded (with or without a
                 // program) is never duplicated; programcode only backfills a blank.
@@ -158,10 +158,11 @@ class completion_reconciler {
                     if ((int)$existing->manualoutcome === 1) {
                         // Never touch a manual outcome — but safe to fill a blank program.
                         if (!$dryrun && empty($existing->programcode) && $programcode !== '') {
-                            $DB->update_record('local_rtocompliance_enrolments', (object)[
-                                'id' => $existing->id, 'programcode' => $programcode,
-                                'programname' => ($programname !== '' ? $programname : $existing->programname),
-                                'timemodified' => $now,
+                            $DB->update_record(
+                                'local_rtocompliance_enrolments', (object)[
+                                    'id' => $existing->id, 'programcode' => $programcode,
+                                    'programname' => ($programname !== '' ? $programname : $existing->programname),
+                                    'timemodified' => $now,
                             ]);
                         }
                         $summary['manual_preserved']++;
@@ -273,7 +274,7 @@ class completion_reconciler {
     public static function unmapped_completions(int $limit = 0): array {
         global $DB;
 
-        // userid → plugin studentid (to count how many real students are blocked).
+        // Userid → plugin studentid (to count how many real students are blocked).
         $studentbyuser = [];
         foreach ($DB->get_records('local_rtocompliance_students', null, '', 'id, userid') as $sr) {
             if (!empty($sr->userid)) {
@@ -297,7 +298,7 @@ class completion_reconciler {
                 $resolvecache[$courseid] = self::resolve_course_units($courseid);
             }
             if (!empty($resolvecache[$courseid])) {
-                continue; // resolves to at least one unit — not an issue.
+                continue; // Resolves to at least one unit — not an issue.
             }
             // Mirror reconcile()'s ordering: a completion with no plugin student
             // record is skipped as "no student", never counted as "unmapped".
@@ -321,12 +322,16 @@ class completion_reconciler {
 
         // Enrich with course + category names.
         list($insql, $inparams) = $DB->get_in_or_equal(array_keys($unmapped), SQL_PARAMS_NAMED, 'uc');
-        $courses = $DB->get_records_select('course', "id $insql", $inparams, '',
+        $courses = $DB->get_records_select(
+            'course', "id $insql", $inparams, '',
             'id, shortname, fullname, category');
         $catnames = [];
-        $catids = array_values(array_unique(array_map(function ($c) {
-            return (int)$c->category;
-        }, $courses)));
+        $catids = array_values(
+            array_unique(
+            array_map(
+            function ($c) {
+                        return (int)$c->category;
+                    }, $courses)));
         if (!empty($catids) && $DB->get_manager()->table_exists('course_categories')) {
             list($cin, $cinp) = $DB->get_in_or_equal($catids, SQL_PARAMS_NAMED, 'cc');
             foreach ($DB->get_records_select('course_categories', "id $cin", $cinp, '', 'id, name') as $cat) {
@@ -347,9 +352,10 @@ class completion_reconciler {
             $out[] = $row;
         }
         // Most impactful first: courses blocking the most students, then completions.
-        usort($out, function ($a, $b) {
-            return ($b->students <=> $a->students) ?: ($b->completions <=> $a->completions);
-        });
+        usort(
+            $out, function ($a, $b) {
+                return ($b->students <=> $a->students) ?: ($b->completions <=> $a->completions);
+            });
         return $out;
     }
 
@@ -378,10 +384,10 @@ class completion_reconciler {
             return [];
         }
         $index = self::unit_index();
-        $found = []; // current unitcode => [unitcode, qualcode, unitname, programname]
+        $found = []; // Current unitcode => [unitcode, qualcode, unitname, programname]
 
         $add = function (string $uc, string $qc, string $un, string $pn) use (&$found, $index) {
-            $cur = self::current_code($uc); // superseded → current
+            $cur = self::current_code($uc); // Superseded → current
             if ($cur === '') {
                 return;
             }
@@ -408,7 +414,8 @@ class completion_reconciler {
             ['courseid' => $courseid]);
         foreach ($prims as $p) {
             if (!empty($p->unitcode)) {
-                $add(strtoupper(trim($p->unitcode)), strtoupper(trim((string)$p->qualificationcode)),
+                $add(
+                    strtoupper(trim($p->unitcode)), strtoupper(trim((string)$p->qualificationcode)),
                      (string)$p->unitname, (string)$p->qualificationname);
             }
         }
@@ -425,7 +432,8 @@ class completion_reconciler {
             ['courseid' => $courseid]);
         foreach ($vars as $v) {
             if (!empty($v->unitcode)) {
-                $add(strtoupper(trim($v->unitcode)), strtoupper(trim((string)$v->qualificationcode)),
+                $add(
+                    strtoupper(trim($v->unitcode)), strtoupper(trim((string)$v->qualificationcode)),
                      (string)$v->unitname, (string)$v->qualificationname);
             }
         }
@@ -568,10 +576,11 @@ class completion_reconciler {
      */
     protected static function find_existing(int $studentid, string $unitcode) {
         global $DB;
-        $rows = $DB->get_records_select('local_rtocompliance_enrolments',
-            "studentid = :sid AND UPPER(unitcode) = :uc",
-            ['sid' => $studentid, 'uc' => strtoupper($unitcode)],
-            "CASE WHEN programcode IS NOT NULL AND programcode <> '' THEN 0 ELSE 1 END ASC,
+        $rows = $DB->get_records_select(
+            'local_rtocompliance_enrolments',
+                "studentid = :sid AND UPPER(unitcode) = :uc",
+                ['sid' => $studentid, 'uc' => strtoupper($unitcode)],
+                "CASE WHEN programcode IS NOT NULL AND programcode <> '' THEN 0 ELSE 1 END ASC,
              CASE status WHEN 'active' THEN 1 WHEN 'completed' THEN 2 WHEN 'hold' THEN 3 WHEN 'withdrawn' THEN 4 ELSE 5 END ASC,
              timemodified DESC",
             'id, outcomeidentifier, manualoutcome, status, unitname, programname, programcode', 0, 1);

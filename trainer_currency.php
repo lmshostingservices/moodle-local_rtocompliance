@@ -148,7 +148,8 @@ class trainer_currency_form extends moodleform {
 
         $mform->addElement('header', 'detailsheader', 'Activity Details');
         
-        $mform->addElement('textarea', 'description', 'Description of Activities', 
+        $mform->addElement(
+            'textarea', 'description', 'Description of Activities', 
             ['rows' => 4, 'cols' => 60, 'placeholder' => 'Describe the industry activities undertaken and how they maintain your current skills...']);
         $mform->setType('description', PARAM_TEXT);
 
@@ -156,9 +157,10 @@ class trainer_currency_form extends moodleform {
         
         $mform->addElement('select', 'evidencetype', 'Evidence Type', $evidencetypes);
         
-        $mform->addElement('filepicker', 'evidencefile', 'Upload Evidence', null, [
-            'maxbytes' => 10485760,
-            'accepted_types' => ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png'],
+        $mform->addElement(
+            'filepicker', 'evidencefile', 'Upload Evidence', null, [
+                'maxbytes' => 10485760,
+                'accepted_types' => ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png'],
         ]);
         
         $mform->addElement('textarea', 'notes', 'Additional Notes', ['rows' => 2, 'cols' => 60]);
@@ -191,11 +193,12 @@ if ($id) {
     $activity = $DB->get_record('local_rtocompliance_trainer_currency', ['id' => $id, 'trainerid' => $trainerid], '*', MUST_EXIST);
 }
 
-$form = new trainer_currency_form(null, [
-    'activity' => $activity,
-    'activitytypes' => $activitytypes,
-    'evidencetypes' => $evidencetypes,
-    'trainerid' => $trainerid,
+$form = new trainer_currency_form(
+    null, [
+        'activity' => $activity,
+        'activitytypes' => $activitytypes,
+        'evidencetypes' => $evidencetypes,
+        'trainerid' => $trainerid,
 ]);
 
 if ($activity) {
@@ -262,7 +265,8 @@ if ($form->is_cancelled()) {
     // the permanent, pluginfile-served 'trainer_evidence' filearea keyed by the record
     // id, and store that record id as the durable evidencefileid.
     if (!empty($evidenceitemid)) {
-        file_save_draft_area_files($evidenceitemid, context_system::instance()->id,
+        file_save_draft_area_files(
+            $evidenceitemid, context_system::instance()->id,
             'local_rtocompliance', 'trainer_evidence', $record->id, ['maxfiles' => 1]);
         $DB->set_field('local_rtocompliance_trainer_currency', 'evidencefileid', $record->id, ['id' => $record->id]);
     }

@@ -79,7 +79,8 @@ class validation_form extends \moodleform {
         $mform->setDefault('risklevel', 'medium');
         $mform->addHelpButton('risklevel', 'validation_risklevel', 'local_rtocompliance');
 
-        $mform->addElement('static', 'riskfactorshelp', '', 
+        $mform->addElement(
+            'static', 'riskfactorshelp', '', 
             '<div class="alert alert-info" style="margin-bottom: 12px;">Select all risk factors that apply. These help determine validation priority and frequency.</div>');
         
         $riskfactors = [
@@ -176,7 +177,8 @@ class validation_form extends \moodleform {
         $mform->addElement('header', 'methodology', 'Methodology');
         $mform->addHelpButton('methodology', 'methodology_header', 'local_rtocompliance');
 
-        $mform->addElement('static', 'methodologyhelp', '', 
+        $mform->addElement(
+            'static', 'methodologyhelp', '', 
             '<div class="alert alert-info" style="margin-bottom: 12px;">Select validation methodologies used. A combination of methods provides stronger validation evidence.</div>');
 
         $methodologies = [
@@ -221,25 +223,29 @@ class validation_form extends \moodleform {
         // Standard 1.5 (T-P1-1): Validator independence.
         $mform->addElement('header', 'independence', 'Independence (Standard 1.5)');
 
-        $mform->addElement('static', 'independencehelp', '',
+        $mform->addElement(
+            'static', 'independencehelp', '',
             '<div class="alert alert-info" style="margin-bottom: 12px;">Standard 1.5 requires that the validation outcome is not solely determined by a person who designed or delivered the assessment being validated. Confirm independence before marking a validation as <strong>Completed</strong>.</div>');
 
-        $mform->addElement('advcheckbox', 'independenceconfirmed',
-            'Validator independence',
-            'I confirm the validation outcome was NOT solely determined by a person who designed or delivered the assessment being validated (Standard 1.5)',
+        $mform->addElement(
+            'advcheckbox', 'independenceconfirmed',
+                'Validator independence',
+                'I confirm the validation outcome was NOT solely determined by a person who designed or delivered the assessment being validated (Standard 1.5)',
             [], ['0', '1']);
         $mform->setDefault('independenceconfirmed', 0);
 
-        $mform->addElement('textarea', 'independencedeclaration',
-            'Independence declaration',
+        $mform->addElement(
+            'textarea', 'independencedeclaration',
+                'Independence declaration',
             ['rows' => 3, 'cols' => 80, 'placeholder' => 'Describe how independence was assured — who validated, and who made the final judgement']);
         $mform->setType('independencedeclaration', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
 
         $mform->addElement('header', 'outcomes', 'Outcomes');
         $mform->addHelpButton('outcomes', 'outcomes_header', 'local_rtocompliance');
 
-        $mform->addElement('static', 'outcomeshelp', '', 
-            '<div class="alert alert-info" style="margin-bottom: 12px;">
+        $mform->addElement(
+            'static', 'outcomeshelp', '', 
+                '<div class="alert alert-info" style="margin-bottom: 12px;">
             <strong>Findings Count:</strong> Total number of issues/improvements identified during validation.<br>
             <strong>Report Document URL:</strong> Paste the full URL to the validation report (Google Drive, SharePoint, OneDrive, or any accessible link). The URL will appear as a "View Report" button in the Validation Schedule and Completed Events lists.<br>
             <strong>ADC Linked:</strong> Check if validation evidence is attached to Annual Declaration of Compliance documentation.</div>');
@@ -253,7 +259,8 @@ class validation_form extends \moodleform {
         ];
         $mform->addElement('select', 'outcome', 'Validation Outcome', $outcomeoptions);
 
-        $mform->addElement('textarea', 'improvements', 'Improvements / Rectification Actions',
+        $mform->addElement(
+            'textarea', 'improvements', 'Improvements / Rectification Actions',
             ['rows' => 4, 'cols' => 80, 'placeholder' => 'Document improvements required and rectification actions arising from this validation (what, who, by when).']);
         $mform->setType('improvements', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
 
@@ -262,7 +269,8 @@ class validation_form extends \moodleform {
         $mform->setDefault('findingscount', 0);
         $mform->addHelpButton('findingscount', 'findings_count', 'local_rtocompliance');
 
-        $mform->addElement('textarea', 'findings', 'Findings & Recommendations', ['rows' => 5, 'cols' => 80, 'placeholder' => 'Document each finding with:
+        $mform->addElement(
+            'textarea', 'findings', 'Findings & Recommendations', ['rows' => 5, 'cols' => 80, 'placeholder' => 'Document each finding with:
 - Issue identified
 - Severity (minor/major/critical)
 - Recommended action

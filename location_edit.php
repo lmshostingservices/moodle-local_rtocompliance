@@ -124,24 +124,27 @@ class location_form extends moodleform {
 
         // ── ASQA Rule 9B ──────────────────────────────────────────────────────
         $mform->addElement('header', 'rule9bheader', get_string('rule9b_header', 'local_rtocompliance'));
-        $mform->addElement('advcheckbox', 'rule9b_approved',
-            get_string('rule9b_approved', 'local_rtocompliance'),
-            get_string('rule9b_approved', 'local_rtocompliance'),
-            [],
-            [0, 1]
+        $mform->addElement(
+            'advcheckbox', 'rule9b_approved',
+                get_string('rule9b_approved', 'local_rtocompliance'),
+                get_string('rule9b_approved', 'local_rtocompliance'),
+                [],
+                [0, 1]
         );
         $mform->addHelpButton('rule9b_approved', 'rule9b_approved', 'local_rtocompliance');
         $mform->setDefault('rule9b_approved', 0);
 
         // 9B certificate upload
-        $mform->addElement('filemanager', 'certificate9b_filemanager',
-            get_string('certificate9b_upload', 'local_rtocompliance'),
-            null,
-            ['subdirs' => 0, 'maxfiles' => 3, 'accepted_types' => ['.pdf', '.jpg', '.jpeg', '.png']]
+        $mform->addElement(
+            'filemanager', 'certificate9b_filemanager',
+                get_string('certificate9b_upload', 'local_rtocompliance'),
+                null,
+                ['subdirs' => 0, 'maxfiles' => 3, 'accepted_types' => ['.pdf', '.jpg', '.jpeg', '.png']]
         );
         $mform->addHelpButton('certificate9b_filemanager', 'certificate9b_upload', 'local_rtocompliance');
 
-        $this->add_action_buttons(true, $location = $this->_customdata['location'] ?? null
+        $this->add_action_buttons(
+            true, $location = $this->_customdata['location'] ?? null
             ? get_string('savechanges') : get_string('add'));
     }
 
@@ -174,13 +177,15 @@ $syscontext = context_system::instance();
 if ($location) {
     // Prepare the 9B certificate draft file area so existing files show in filemanager.
     $draftitemid = file_get_submitted_draft_itemid('certificate9b_filemanager');
-    file_prepare_draft_area($draftitemid, $syscontext->id, 'local_rtocompliance', 'certificate9b',
+    file_prepare_draft_area(
+        $draftitemid, $syscontext->id, 'local_rtocompliance', 'certificate9b',
         $location->id, ['subdirs' => 0, 'maxfiles' => 3]);
     $location->certificate9b_filemanager = $draftitemid;
     $form->set_data($location);
 } else {
     $draftitemid = file_get_submitted_draft_itemid('certificate9b_filemanager');
-    file_prepare_draft_area($draftitemid, $syscontext->id, 'local_rtocompliance', 'certificate9b',
+    file_prepare_draft_area(
+        $draftitemid, $syscontext->id, 'local_rtocompliance', 'certificate9b',
         0, ['subdirs' => 0, 'maxfiles' => 3]);
     $form->set_data(['id' => 0, 'certificate9b_filemanager' => $draftitemid]);
 }
@@ -209,23 +214,26 @@ if ($form->is_cancelled()) {
     if (!empty($data->id)) {
         $record->id = $data->id;
         $DB->update_record('local_rtocompliance_locations', $record);
-        audit_logger::log_update('location', $record->id, 'Delivery location updated: ' . $record->locationname, null, [
-            'locationid' => $record->locationid, 'name' => $record->locationname,
+        audit_logger::log_update(
+            'location', $record->id, 'Delivery location updated: ' . $record->locationname, null, [
+                'locationid' => $record->locationid, 'name' => $record->locationname,
         ]);
         $message = get_string('location_updated', 'local_rtocompliance');
     } else {
         $record->timecreated = $now;
         $record->id = $DB->insert_record('local_rtocompliance_locations', $record);
-        audit_logger::log_create('location', $record->id, 'Delivery location created: ' . $record->locationname, [
-            'locationid' => $record->locationid, 'name' => $record->locationname,
+        audit_logger::log_create(
+            'location', $record->id, 'Delivery location created: ' . $record->locationname, [
+                'locationid' => $record->locationid, 'name' => $record->locationname,
         ]);
         $message = get_string('location_created', 'local_rtocompliance');
     }
 
     // Save the 9B certificate file(s) from the draft area into the plugin file area.
     if (!empty($data->certificate9b_filemanager)) {
-        file_save_draft_area_files($data->certificate9b_filemanager, $syscontext->id,
-            'local_rtocompliance', 'certificate9b', $record->id,
+        file_save_draft_area_files(
+            $data->certificate9b_filemanager, $syscontext->id,
+                'local_rtocompliance', 'certificate9b', $record->id,
             ['subdirs' => 0, 'maxfiles' => 3]);
     }
 

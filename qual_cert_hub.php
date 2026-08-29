@@ -77,8 +77,9 @@ function qch_build_detection_vars(stdClass $qual): array {
             ['qbid' => $qbid]
         );
         if ($variantCourseids) {
-            $alllinkedcourseids = array_values(array_unique(
-                array_merge($alllinkedcourseids, array_map('intval', $variantCourseids))
+            $alllinkedcourseids = array_values(
+                array_unique(
+                    array_merge($alllinkedcourseids, array_map('intval', $variantCourseids))
             ));
         }
     }
@@ -159,13 +160,14 @@ function qch_build_detection_vars(stdClass $qual): array {
     }
     if (!empty($catTreePairs)) {
         $ctQids        = array_values(array_unique(array_column($catTreePairs, 'quid')));
-        $effectiveQids = array_values(array_unique(
-            array_merge($effectiveQids, array_map('intval', $ctQids))
+        $effectiveQids = array_values(
+            array_unique(
+                array_merge($effectiveQids, array_map('intval', $ctQids))
         ));
     }
     $effectiveLinkedUnitCount = count($effectiveQids);
 
-    // numunits: active selected units WITH a unit code (SOURCE 2 denominator).
+    // Numunits: active selected units WITH a unit code (SOURCE 2 denominator).
     $numunits = (int)$DB->count_records_sql(
         "SELECT COUNT(DISTINCT id) FROM {local_rtocompliance_qualunits}
           WHERE qualbuilderid = :qbid AND selected = 1 AND status = 'active'
@@ -287,10 +289,11 @@ function qch_get_completers(stdClass $qual, array $det): array {
             }
         }
 
-        uasort($allcompleters, function ($a, $b) {
-            $c = strcmp($a->lastname ?? '', $b->lastname ?? '');
-            return $c !== 0 ? $c : strcmp($a->firstname ?? '', $b->firstname ?? '');
-        });
+        uasort(
+            $allcompleters, function ($a, $b) {
+                $c = strcmp($a->lastname ?? '', $b->lastname ?? '');
+                return $c !== 0 ? $c : strcmp($a->firstname ?? '', $b->firstname ?? '');
+            });
     }
 
     return $allcompleters;
@@ -396,7 +399,7 @@ function qch_issue_batch(stdClass $qual, array $userids, array $det, int $sendem
 
     $issued           = 0;
     $skipped          = 0;
-    $usiskipped       = 0; // v5.9.383: students skipped because no USI is recorded.
+    $usiskipped       = 0; // Version 5.9.383: students skipped because no USI is recorded.
     $failed           = 0;
     $voided           = 0;
     $messages         = [];
@@ -495,12 +498,14 @@ function qch_issue_batch(stdClass $qual, array $userids, array $det, int $sendem
             if ($result['ok']) {
                 // VOID-AFTER-ISSUE (v6.3.13): safe now that the replacement exists.
                 if ($forceregen && $existingcert) {
-                    $DB->update_record('local_rtocompliance_certs', (object)[
-                        'id'           => $existingcert->id,
-                        'reissued_at'  => time(),
-                        'notes'        => trim(($existingcert->notes ?? '')
-                            . "\n[Superseded by force-regenerate — Qual Cert Hub]"),
-                        'timemodified' => time(),
+                    $DB->update_record(
+                        'local_rtocompliance_certs', (object)[
+                            'id'           => $existingcert->id,
+                            'reissued_at'  => time(),
+                            'notes'        => trim(
+                            ($existingcert->notes ?? '')
+                                . "\n[Superseded by force-regenerate — Qual Cert Hub]"),
+                            'timemodified' => time(),
                     ]);
                     if (!empty($existingcert->verifytoken)) {
                         local_rtocompliance_update_registry_status($existingcert->verifytoken, 'superseded');
@@ -511,11 +516,12 @@ function qch_issue_batch(stdClass $qual, array $userids, array $det, int $sendem
                 $issuedThisStudent++;
                 $messages[] = fullname($user) . ' — ' . $certtype . ' issued (' . $result['certnumber'] . ')';
                 if ($forceregen && $existingcert && !empty($result['certid'])) {
-                    $DB->update_record('local_rtocompliance_certs', (object)[
-                        'id'             => $result['certid'],
-                        'replacement_of' => $existingcert->id,
-                        'notes'          => 'Force-regenerated via Qual Cert Hub',
-                        'timemodified'   => time(),
+                    $DB->update_record(
+                        'local_rtocompliance_certs', (object)[
+                            'id'             => $result['certid'],
+                            'replacement_of' => $existingcert->id,
+                            'notes'          => 'Force-regenerated via Qual Cert Hub',
+                            'timemodified'   => time(),
                     ]);
                 }
             } elseif ($result['error'] === 'INSUFFICIENT_CREDITS') {
@@ -524,9 +530,9 @@ function qch_issue_batch(stdClass $qual, array $userids, array $det, int $sendem
                 $failedThisStudent++;
                 $lastErrThisStudent = 'insufficient credits';
                 $creditsExhausted   = true;
-                break; // break inner cert-type loop; outer loop checks flag
+                break; // Break inner cert-type loop; outer loop checks flag
             } elseif (!empty($result['skipped']) || ($result['error'] ?? '') === 'NO_USI') {
-                // v5.9.383: a Clause-12 USI skip is NOT a failure. Count it
+                // Version 5.9.383: a Clause-12 USI skip is NOT a failure. Count it
                 // separately, surface the reason, and (below) leave the autocert row PENDING
                 // so it can be re-run once a USI is verified. NB (v6.3.14): pending does not
                 // mean automatic — no scheduled task issues certificates. An admin runs
@@ -550,10 +556,11 @@ function qch_issue_batch(stdClass $qual, array $userids, array $det, int $sendem
         //   failed > 0, no credits  → failed   (attempt made but nothing issued)
         //   creditsExhausted        → leave pending so retry is possible after top-up
         if ($studentrec) {
-            $autocertrow = $DB->get_record('local_rtocompliance_autocerts', [
-                'studentid'     => $studentrec->id,
-                'qualbuilderid' => $qual->id,
-                'status'        => 'pending',
+            $autocertrow = $DB->get_record(
+                'local_rtocompliance_autocerts', [
+                    'studentid'     => $studentrec->id,
+                    'qualbuilderid' => $qual->id,
+                    'status'        => 'pending',
             ]);
             if ($autocertrow) {
                 // ORDER MATTERS (v6.3.13): a pre-issue refusal outranks a partial success.
@@ -562,27 +569,30 @@ function qch_issue_batch(stdClass $qual, array $userids, array $det, int $sendem
                 // process_enrolment_task.php never re-queues a complete row — so the missing
                 // Record could never self-heal. Leave it pending instead.
                 if ($usiskipThisStudent > 0) {
-                    $DB->update_record('local_rtocompliance_autocerts', (object)[
-                        'id'           => $autocertrow->id,
-                        'status'       => 'pending',
-                        'timemodified' => time(),
+                    $DB->update_record(
+                        'local_rtocompliance_autocerts', (object)[
+                            'id'           => $autocertrow->id,
+                            'status'       => 'pending',
+                            'timemodified' => time(),
                     ]);
                 } elseif ($issuedThisStudent > 0) {
                     // Every cert this student needed was issued — mark complete.
-                    $DB->update_record('local_rtocompliance_autocerts', (object)[
-                        'id'           => $autocertrow->id,
-                        'status'       => 'complete',
-                        'timemodified' => time(),
-                        'certsissued'  => ($autocertrow->certsissued ?? 0) + $issuedThisStudent,
+                    $DB->update_record(
+                        'local_rtocompliance_autocerts', (object)[
+                            'id'           => $autocertrow->id,
+                            'status'       => 'complete',
+                            'timemodified' => time(),
+                            'certsissued'  => ($autocertrow->certsissued ?? 0) + $issuedThisStudent,
                     ]);
                 } elseif (!$creditsExhausted && $failedThisStudent > 0) {
                     // Every cert attempt failed (non-credit reason) — mark failed
                     // so the queue shows the problem and an admin can investigate.
-                    $DB->update_record('local_rtocompliance_autocerts', (object)[
-                        'id'           => $autocertrow->id,
-                        'status'       => 'failed',
-                        'errormessage' => 'Issuance failed: ' . $lastErrThisStudent,
-                        'timemodified' => time(),
+                    $DB->update_record(
+                        'local_rtocompliance_autocerts', (object)[
+                            'id'           => $autocertrow->id,
+                            'status'       => 'failed',
+                            'errormessage' => 'Issuance failed: ' . $lastErrThisStudent,
+                            'timemodified' => time(),
                     ]);
                 }
                 // If $creditsExhausted: row stays 'pending' — retry after top-up.
@@ -679,9 +689,11 @@ if ($action === 'issue_all_pending' && confirm_sesskey() && $qualid > 0) {
                 . implode(', ', $missingsettings) . '.';
         } else {
             $usiMapAll   = local_rtocompliance_usi_issue_status_map($pending);
-            $preheld     = array_values(array_filter($pending, function ($uid) use ($usiMapAll) {
-                return empty($usiMapAll[(int)$uid]['canissue']);
-            }));
+            $preheld     = array_values(
+                array_filter(
+                $pending, function ($uid) use ($usiMapAll) {
+                        return empty($usiMapAll[(int)$uid]['canissue']);
+                    }));
             $pending     = array_values(array_diff($pending, $preheld));
             $preheldnote = !empty($preheld)
                 ? ' ' . count($preheld) . ' student(s) were not attempted — no verified USI (no credits charged).'
@@ -757,10 +769,11 @@ if ($action === 'scan_missed' && confirm_sesskey()) {
             if (!$srec) {
                 continue;
             }
-            $hasQueue = $DB->record_exists('local_rtocompliance_autocerts', [
-                'studentid'     => $srec->id,
-                'qualbuilderid' => $q->id,
-                'status'        => 'pending',
+            $hasQueue = $DB->record_exists(
+                'local_rtocompliance_autocerts', [
+                    'studentid'     => $srec->id,
+                    'qualbuilderid' => $q->id,
+                    'status'        => 'pending',
             ]);
             if (!$hasQueue) {
                 $row                = new stdClass();
@@ -793,11 +806,12 @@ if ($action === 'retry_autocert' && confirm_sesskey() && $qualid > 0) {
     $rowid = required_param('rowid', PARAM_INT);
     $row   = $DB->get_record('local_rtocompliance_autocerts', ['id' => $rowid, 'qualbuilderid' => $qualid], '*', IGNORE_MISSING);
     if ($row && $row->status === 'failed') {
-        $DB->update_record('local_rtocompliance_autocerts', (object)[
-            'id'           => $row->id,
-            'status'       => 'pending',
-            'errormessage' => trim(($row->errormessage ?? '') . "\n[Retried by admin on " . userdate(time()) . ']'),
-            'timemodified' => time(),
+        $DB->update_record(
+            'local_rtocompliance_autocerts', (object)[
+                'id'           => $row->id,
+                'status'       => 'pending',
+                'errormessage' => trim(($row->errormessage ?? '') . "\n[Retried by admin on " . userdate(time()) . ']'),
+                'timemodified' => time(),
         ]);
         $msg   = 'Autocert entry reset to pending — it will be processed on the next queue run.';
         $ntype = \core\output\notification::NOTIFY_SUCCESS;
@@ -813,18 +827,20 @@ if ($action === 'retry_autocert' && confirm_sesskey() && $qualid > 0) {
 
 // ── action=retry_all_failed — reset all failed autocert rows to pending ───────
 if ($action === 'retry_all_failed' && confirm_sesskey() && $qualid > 0) {
-    $failedRows = $DB->get_records('local_rtocompliance_autocerts', [
-        'qualbuilderid' => $qualid,
-        'status'        => 'failed',
+    $failedRows = $DB->get_records(
+        'local_rtocompliance_autocerts', [
+            'qualbuilderid' => $qualid,
+            'status'        => 'failed',
     ]);
     $resetCount = 0;
     $ts         = userdate(time());
     foreach ($failedRows as $row) {
-        $DB->update_record('local_rtocompliance_autocerts', (object)[
-            'id'           => $row->id,
-            'status'       => 'pending',
-            'errormessage' => trim(($row->errormessage ?? '') . "\n[Bulk-retried by admin on " . $ts . ']'),
-            'timemodified' => time(),
+        $DB->update_record(
+            'local_rtocompliance_autocerts', (object)[
+                'id'           => $row->id,
+                'status'       => 'pending',
+                'errormessage' => trim(($row->errormessage ?? '') . "\n[Bulk-retried by admin on " . $ts . ']'),
+                'timemodified' => time(),
         ]);
         $resetCount++;
     }
@@ -959,10 +975,11 @@ if (!$qualid) {
     echo '</div>';
 
     // "Refresh All Stats" URL — clears the full cache.
-    $refreshAllUrl = (new moodle_url('/local/rtocompliance/qual_cert_hub.php', [
-        'action'         => 'refresh_stats',
-        'refresh_qualid' => 0,
-        'sesskey'        => sesskey(),
+    $refreshAllUrl = (new moodle_url(
+        '/local/rtocompliance/qual_cert_hub.php', [
+            'action'         => 'refresh_stats',
+            'refresh_qualid' => 0,
+            'sesskey'        => sesskey(),
     ]))->out(false);
 
     echo '<div class="certificates-container">';
@@ -980,11 +997,11 @@ if (!$qualid) {
     // row actions convey the same thing without a lecture on every visit; the full
     // walkthrough lives in the Support centre.
 
-    // v5.9.383: landing search — find a qualification by code/name and filter by
+    // Version 5.9.383: landing search — find a qualification by code/name and filter by
     // category, instead of scrolling the whole list.
     $fq   = optional_param('fq', '', PARAM_RAW_TRIMMED);  // pipeline-ignore: PARAM_RAW — free-text value, escaped at output; a narrower type would corrupt legitimate punctuation
     $fcat = optional_param('fcat', 0, PARAM_INT);
-    // v6.2.84 CASCADE: parent category -> sub-category -> course, sourced from each
+    // Version 6.2.84 CASCADE: parent category -> sub-category -> course, sourced from each
     // qualification's ACTUAL result courses (enrolments.programcode -> courseid -> category),
     // because qualbuilder.categoryid is populated on only a handful of products.
     $rparent = optional_param('rparent', 0, PARAM_INT);
@@ -1009,7 +1026,7 @@ if (!$qualid) {
         $hubparams
     );
 
-    // v6.2.84 CASCADE DATA — the category tree + course list built from the courses students
+    // Version 6.2.84 CASCADE DATA — the category tree + course list built from the courses students
     // actually hold results in, plus a map of qualification code -> its result-course ids, so
     // the picker can narrow the qualification list to those delivered in a chosen category/course.
     $resCourses = [];   // courseid => ['name'=>.., 'catpath'=>.., 'catid'=>..]
@@ -1036,7 +1053,7 @@ if (!$qualid) {
             }
         }
     }
-    // qualification code (upper) => set of result-course ids it is delivered in.
+    // Qualification code (upper) => set of result-course ids it is delivered in.
     $qualCourseIds = [];
     foreach ($DB->get_records_sql(
         "SELECT " . $DB->sql_concat('UPPER(programcode)', "'|'", 'courseid') . " AS k,
@@ -1066,12 +1083,13 @@ if (!$qualid) {
     }
     // Narrow the qualification list to those with a result course in the chosen scope.
     if ($cascadeActive) {
-        $quals = array_filter($quals, function ($q) use ($qualCourseIds, $matchCourseIds) {
-            if (empty($matchCourseIds)) { return false; }
-            $set = $qualCourseIds[strtoupper((string)$q->qualificationcode)] ?? [];
-            foreach ($set as $cid => $_) { if (isset($matchCourseIds[$cid])) { return true; } }
-            return false;
-        });
+        $quals = array_filter(
+            $quals, function ($q) use ($qualCourseIds, $matchCourseIds) {
+                if (empty($matchCourseIds)) { return false; }
+                $set = $qualCourseIds[strtoupper((string)$q->qualificationcode)] ?? [];
+                foreach ($set as $cid => $_) { if (isset($matchCourseIds[$cid])) { return true; } }
+                return false;
+            });
     }
 
     // Filter bar.
@@ -1129,7 +1147,7 @@ if (!$qualid) {
         echo ' <span style="align-self:center;color:#6b7280;font-size:0.85rem;">' . count($quals) . ' match(es)</span>';
     }
     echo '</form>';
-    // v6.2.84 cascade behaviour (mirrors Student Results): keep sub/course showing only the
+    // Version 6.2.84 cascade behaviour (mirrors Student Results): keep sub/course showing only the
     // options under the current upstream selection, reset downstream on change, then submit.
     echo <<<'HUBCASCADE'
 <script>
@@ -1225,21 +1243,24 @@ HUBCASCADE;
             }
 
             // Autocert queue (always live — a single cheap count).
-            $queueCount = (int)$DB->count_records('local_rtocompliance_autocerts', [
-                'qualbuilderid' => $q->id,
-                'status'        => 'pending',
+            $queueCount = (int)$DB->count_records(
+                'local_rtocompliance_autocerts', [
+                    'qualbuilderid' => $q->id,
+                    'status'        => 'pending',
             ]);
 
             $detailurl   = (new moodle_url('/local/rtocompliance/qual_cert_hub.php', ['qualid' => $q->id]))->out(false);
-            $issueAllUrl = (new moodle_url('/local/rtocompliance/qual_cert_hub.php', [
-                'qualid'  => $q->id,
-                'action'  => 'issue_all_pending',
-                'sesskey' => sesskey(),
+            $issueAllUrl = (new moodle_url(
+                '/local/rtocompliance/qual_cert_hub.php', [
+                    'qualid'  => $q->id,
+                    'action'  => 'issue_all_pending',
+                    'sesskey' => sesskey(),
             ]))->out(false);
-            $refreshRowUrl = (new moodle_url('/local/rtocompliance/qual_cert_hub.php', [
-                'action'         => 'refresh_stats',
-                'refresh_qualid' => $q->id,
-                'sesskey'        => sesskey(),
+            $refreshRowUrl = (new moodle_url(
+                '/local/rtocompliance/qual_cert_hub.php', [
+                    'action'         => 'refresh_stats',
+                    'refresh_qualid' => $q->id,
+                    'sesskey'        => sesskey(),
             ]))->out(false);
 
             echo '<tr>';
@@ -1277,9 +1298,10 @@ HUBCASCADE;
         echo '</tbody></table></div>';
 
         // Global catch-up scan.
-        $scanurl = (new moodle_url('/local/rtocompliance/qual_cert_hub.php', [
-            'action'  => 'scan_missed',
-            'sesskey' => sesskey(),
+        $scanurl = (new moodle_url(
+            '/local/rtocompliance/qual_cert_hub.php', [
+                'action'  => 'scan_missed',
+                'sesskey' => sesskey(),
         ]))->out(false);
         echo '<div style="margin-top:20px;padding:14px 18px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">';
         echo '<div><strong>Find students who finished but were missed</strong><br>'
@@ -1353,7 +1375,7 @@ foreach ($tabs_def as $tkey => $tlabel) {
 }
 echo '</div>';
 
-// v5.9.383: instant client-side filter across the active tab's rows — works on
+// Version 5.9.383: instant client-side filter across the active tab's rows — works on
 // every tab (not just Certs Issued), no page reload. Filters on whatever the row
 // shows (name, email, cert number, and USI where displayed).
 echo '<div style="margin-bottom:14px;">'
@@ -1390,12 +1412,13 @@ if ($activeTab === 'ready') {
         // Separate pending (no cert) from already-issued — batched query.
         $cIds = array_keys($allcompleters);
         list($batchSql, $batchParams) = $DB->get_in_or_equal($cIds, SQL_PARAMS_NAMED, 'bcu');
-        $certedUserIds = array_map('intval', $DB->get_fieldset_sql(
-            "SELECT DISTINCT userid FROM {local_rtocompliance_certs}
+        $certedUserIds = array_map(
+            'intval', $DB->get_fieldset_sql(
+                "SELECT DISTINCT userid FROM {local_rtocompliance_certs}
               WHERE qualificationcode = :bqc AND certtype = 'testamur'
                 AND status = 'issued' AND (reissued_at IS NULL OR reissued_at = 0)
                 AND userid $batchSql",
-            array_merge(['bqc' => $qualcode], $batchParams)
+                array_merge(['bqc' => $qualcode], $batchParams)
         ));
 
         $pendingStudents = [];
@@ -1446,7 +1469,9 @@ if ($activeTab === 'ready') {
                     . '<div style="font-size:14px;color:#7f1d1d;line-height:1.55;">'
                     . 'These AQF-required fields are not configured: <strong>'
                     . s(implode(', ', $qchMissingSettings)) . '</strong>. '
-                    . '<a href="' . s((new moodle_url('/local/rtocompliance/plugin_settings.php',
+                    . '<a href="' . s(
+                        (new moodle_url(
+                        '/local/rtocompliance/plugin_settings.php',
                         ['section' => 'local_rtocompliance_settings']))->out(false))
                     . '" style="font-weight:600;">Open RTO Settings &rarr;</a></div></div>';
             }
@@ -1459,10 +1484,11 @@ if ($activeTab === 'ready') {
                     : null
             );
 
-            $issuanceUrl = (new moodle_url('/local/rtocompliance/qual_cert_hub.php', [
-                'qualid'  => $qualid,
-                'action'  => 'issue',
-                'sesskey' => sesskey(),
+            $issuanceUrl = (new moodle_url(
+                '/local/rtocompliance/qual_cert_hub.php', [
+                    'qualid'  => $qualid,
+                    'action'  => 'issue',
+                    'sesskey' => sesskey(),
             ]))->out(false);
 
             echo '<form method="post" action="' . s($issuanceUrl) . '">';
@@ -1528,7 +1554,8 @@ if ($activeTab === 'ready') {
                 echo '<tr' . ($uHeld && !$isSuspended ? ' style="background:#fffbeb;"' : '') . '>';
                 echo '<td><input type="checkbox" class="hub-student-cb" name="userids[]" value="' . (int)$uid . '"'
                     . ($uHeld
-                        ? ' disabled title="' . s('Cannot be issued — '
+                        ? ' disabled title="' . s(
+                            'Cannot be issued — '
                             . ($uReason !== '' ? $uReason : 'refused by a pre-issue check')) . '"'
                         : ' checked')
                     . '></td>';
@@ -1643,8 +1670,9 @@ if ($activeTab === 'issued') {
         echo '</tbody></table>';
 
         if ($totalcerts > $perpage) {
-            $pagingurl = new moodle_url('/local/rtocompliance/qual_cert_hub.php', [
-                'qualid' => $qualid, 'tab' => 'issued', 'q' => $qclean,
+            $pagingurl = new moodle_url(
+                '/local/rtocompliance/qual_cert_hub.php', [
+                    'qualid' => $qualid, 'tab' => 'issued', 'q' => $qclean,
             ]);
             echo $OUTPUT->paging_bar($totalcerts, $page_num, $perpage, $pagingurl);
         }
@@ -1684,7 +1712,7 @@ if ($activeTab === 'partial') {
             echo '<div class="no-deadlines"><p>No actively enrolled students found in the courses linked to this qualification.</p></div>';
         } else {
             $completerIds = array_keys($allcompleters);
-            $numtotal     = max(1, $det['numunits']); // avoid division by zero
+            $numtotal     = max(1, $det['numunits']); // Avoid division by zero
             $partials     = [];
 
             // TASK-52 (v5.9.350): Build a full unitcode→unitname map once so we can
@@ -1730,19 +1758,25 @@ if ($activeTab === 'partial') {
                 ];
             }
 
-            usort($partials, function ($a, $b) { return $b['percent'] - $a['percent']; });
+            usort(
+                $partials, function ($a, $b) {
+                    return $b['percent'] - $a['percent'];
+                });
 
             // ── Units-remaining filter ────────────────────────────────────────
             $totalBeforeFilter = count($partials);
             if ($maxmissing > 0) {
-                $partials = array_values(array_filter($partials, function ($p) use ($maxmissing) {
-                    return count($p['missing']) <= $maxmissing;
-                }));
+                $partials = array_values(
+                    array_filter(
+                    $partials, function ($p) use ($maxmissing) {
+                            return count($p['missing']) <= $maxmissing;
+                        }));
             }
 
             // Filter bar (rendered before the empty-check so it always shows).
-            $filterBaseUrl = (new moodle_url('/local/rtocompliance/qual_cert_hub.php', [
-                'qualid' => $qualid, 'tab' => 'partial',
+            $filterBaseUrl = (new moodle_url(
+                '/local/rtocompliance/qual_cert_hub.php', [
+                    'qualid' => $qualid, 'tab' => 'partial',
             ]))->out(false);
             echo '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;'
                 . 'padding:10px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">';
@@ -1848,10 +1882,11 @@ if ($activeTab === 'queue') {
 
         // Process button + info.
         if (!empty($pendingQueue)) {
-            $processUrl = (new moodle_url('/local/rtocompliance/qual_cert_hub.php', [
-                'qualid'  => $qualid,
-                'action'  => 'process_queue',
-                'sesskey' => sesskey(),
+            $processUrl = (new moodle_url(
+                '/local/rtocompliance/qual_cert_hub.php', [
+                    'qualid'  => $qualid,
+                    'action'  => 'process_queue',
+                    'sesskey' => sesskey(),
             ]))->out(false);
             $pqCount = count($pendingQueue);
 
@@ -1877,10 +1912,11 @@ if ($activeTab === 'queue') {
         }
 
         // Per-qual catch-up scan.
-        $scanUrl = (new moodle_url('/local/rtocompliance/qual_cert_hub.php', [
-            'action'      => 'scan_missed',
-            'scan_qualid' => $qualid,
-            'sesskey'     => sesskey(),
+        $scanUrl = (new moodle_url(
+            '/local/rtocompliance/qual_cert_hub.php', [
+                'action'      => 'scan_missed',
+                'scan_qualid' => $qualid,
+                'sesskey'     => sesskey(),
         ]))->out(false);
         echo '<div style="padding:10px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">';
         echo '<span style="font-size:0.85rem;color:#374151;">Scan for completers with no certificate and no queue entry (historical catch-up for this qualification).</span>';
@@ -1891,10 +1927,11 @@ if ($activeTab === 'queue') {
         // Retry All Failed button (shown only when there are failed rows).
         $failedQueue = array_filter($queueRows, fn($r) => $r->status === 'failed');
         if (!empty($failedQueue)) {
-            $retryAllUrl = (new moodle_url('/local/rtocompliance/qual_cert_hub.php', [
-                'qualid'  => $qualid,
-                'action'  => 'retry_all_failed',
-                'sesskey' => sesskey(),
+            $retryAllUrl = (new moodle_url(
+                '/local/rtocompliance/qual_cert_hub.php', [
+                    'qualid'  => $qualid,
+                    'action'  => 'retry_all_failed',
+                    'sesskey' => sesskey(),
             ]))->out(false);
             $fqCount = count($failedQueue);
             echo '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">';
@@ -1930,11 +1967,12 @@ if ($activeTab === 'queue') {
                 // Per-row Retry button (only for failed rows).
                 $actionCell = '—';
                 if ($row->status === 'failed') {
-                    $retryUrl = (new moodle_url('/local/rtocompliance/qual_cert_hub.php', [
-                        'qualid'  => $qualid,
-                        'action'  => 'retry_autocert',
-                        'rowid'   => $row->id,
-                        'sesskey' => sesskey(),
+                    $retryUrl = (new moodle_url(
+                        '/local/rtocompliance/qual_cert_hub.php', [
+                            'qualid'  => $qualid,
+                            'action'  => 'retry_autocert',
+                            'rowid'   => $row->id,
+                            'sesskey' => sesskey(),
                     ]))->out(false);
                     $actionCell = '<a href="' . s($retryUrl) . '" class="btn btn-outline-danger btn-sm"'
                         . ' onclick="return confirm(\'Reset this entry to pending and retry?\');">Retry</a>';

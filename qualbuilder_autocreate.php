@@ -38,7 +38,7 @@ require_login();
 require_capability('local/rtocompliance:manage', context_system::instance());
 
 $action = optional_param('action', '', PARAM_ALPHANUMEXT);
-// v5.9.443: default to the Course Map — it is the already-seeded source of truth (course →
+// Version 5.9.443: default to the Course Map — it is the already-seeded source of truth (course →
 // qual → unit), whereas the category-tree walk only works when units are named sub-categories
 // (this RTO delivers units as courses, so that source finds nothing).
 $source = optional_param('source', 'coursemap', PARAM_ALPHA);
@@ -51,7 +51,8 @@ $PAGE->set_title('Auto-Create Qualifications');
 $PAGE->set_heading('Auto-Create Qualifications');
 $PAGE->requires->css('/local/rtocompliance/styles.css');
 $PAGE->add_body_class('path-local-rtocompliance');
-$PAGE->navbar->add(get_string('qualbuilder', 'local_rtocompliance'),
+$PAGE->navbar->add(
+    get_string('qualbuilder', 'local_rtocompliance'),
     new moodle_url('/local/rtocompliance/qualbuilder.php'));
 $PAGE->navbar->add('Auto-Create Qualifications');
 
@@ -64,9 +65,11 @@ if ($action === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST' && confirm_ses
     $summary = local_rtocompliance_autocreate_quals_from_scan($codes, $usetga, $source);
 
     $created = count($summary['created']);
-    $units   = array_sum(array_map(function ($c) {
-        return (int)$c['unitcount'];
-    }, $summary['created']));
+    $units   = array_sum(
+        array_map(
+        function ($c) {
+                return (int)$c['unitcount'];
+            }, $summary['created']));
     $skipped = count($summary['skipped']);
     $errors  = count($summary['errors']);
 
@@ -74,8 +77,9 @@ if ($action === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST' && confirm_ses
         . ($skipped ? ', ' . $skipped . ' already existed' : '')
         . ($errors ? ', ' . $errors . ' error(s)' : '') . '.';
 
-    redirect(new moodle_url('/local/rtocompliance/qualbuilder.php'),
-        $msg, null,
+    redirect(
+        new moodle_url('/local/rtocompliance/qualbuilder.php'),
+            $msg, null,
         $errors ? \core\output\notification::NOTIFY_WARNING : \core\output\notification::NOTIFY_SUCCESS);
 }
 
@@ -85,16 +89,21 @@ $scan = ($source === 'coursemap')
     ? local_rtocompliance_scan_coursemap_for_quals()
     : local_rtocompliance_scan_categories_for_quals();
 
-$newquals = array_values(array_filter($scan, function ($q) {
-    return empty($q['exists']);
-}));
-$existing = array_values(array_filter($scan, function ($q) {
-    return !empty($q['exists']);
-}));
+$newquals = array_values(
+    array_filter(
+    $scan, function ($q) {
+            return empty($q['exists']);
+        }));
+$existing = array_values(
+    array_filter(
+    $scan, function ($q) {
+            return !empty($q['exists']);
+        }));
 
 echo $OUTPUT->header();
 echo local_rtocompliance_render_nav_header('Auto-Create Qualifications', null, null, 'qualbuilder');
-echo local_rtocompliance_page_banner('Auto-Create Qualifications',
+echo local_rtocompliance_page_banner(
+    'Auto-Create Qualifications',
     'Build Qualification Builder products from your existing course data.');
 
 echo html_writer::start_div('', ['style' => 'max-width:1100px;']);
@@ -103,9 +112,11 @@ echo html_writer::start_div('', ['style' => 'max-width:1100px;']);
 $caturl = new moodle_url('/local/rtocompliance/qualbuilder_autocreate.php', ['source' => 'categories']);
 $mapurl = new moodle_url('/local/rtocompliance/qualbuilder_autocreate.php', ['source' => 'coursemap']);
 echo '<div class="filter-tabs" style="margin-bottom:14px;">';
-echo html_writer::link($caturl, 'From Category Tree',
+echo html_writer::link(
+    $caturl, 'From Category Tree',
     ['class' => 'btn btn-sm ' . ($source === 'categories' ? 'btn-primary' : 'btn-secondary')]);
-echo ' ' . html_writer::link($mapurl, 'From Course Map',
+echo ' ' . html_writer::link(
+    $mapurl, 'From Course Map',
     ['class' => 'btn btn-sm ' . ($source === 'coursemap' ? 'btn-primary' : 'btn-secondary')]);
 echo '</div>';
 
@@ -146,7 +157,8 @@ echo '<div class="rtoc-dob-sync-bar" style="border-left-color:#d97706;background
     . 'qualification code and title from the parent category.'
     . '</span>'
     . '<div style="margin-top:10px;">'
-    . html_writer::link(new moodle_url('/local/rtocompliance/qualbuilder_semester.php'),
+    . html_writer::link(
+        new moodle_url('/local/rtocompliance/qualbuilder_semester.php'),
         'Open Semester Intake Builder →', ['class' => 'btn btn-sm btn-warning'])
     . '</div>'
     . '</div>';
@@ -208,7 +220,8 @@ if (!empty($newquals)) {
     echo '</tbody></table>';
 
     echo '<button type="submit" class="btn btn-primary" style="margin-top:6px;">Create selected qualifications</button> ';
-    echo html_writer::link(new moodle_url('/local/rtocompliance/qualbuilder.php'), 'Cancel',
+    echo html_writer::link(
+        new moodle_url('/local/rtocompliance/qualbuilder.php'), 'Cancel',
         ['class' => 'btn btn-outline-secondary', 'style' => 'margin-top:6px;']);
     echo '</form>';
 

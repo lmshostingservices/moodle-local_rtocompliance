@@ -21,7 +21,7 @@
  * @copyright  2025 LMS Labs
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-// v4.2.36 CERTIFICATES-REDESIGN — One-click certificate reissue endpoint.
+// Version 4.2.36 CERTIFICATES-REDESIGN — One-click certificate reissue endpoint.
 //
 // Creates a new certificate based on an existing source cert, marks the source
 // as replaced (audit trail preserved — original cert is NEVER deleted), charges
@@ -80,9 +80,10 @@ if (in_array($source->certtype, ['testamur', 'statement'], true)) {
         $student = $DB->get_record('local_rtocompliance_students', ['userid' => $source->userid]);
         if (!$student || !local_rtocompliance_usi_is_verified($student->usiverified)) {
             http_response_code(400);
-            echo json_encode([
-                'ok' => false,
-                'error' => 'USI not verified for this student — Clause 12 blocks reissue of testamur/statement until USI verification is complete.',
+            echo json_encode(
+                [
+                    'ok' => false,
+                    'error' => 'USI not verified for this student — Clause 12 blocks reissue of testamur/statement until USI verification is complete.',
             ]);
             exit;
         }
@@ -168,7 +169,8 @@ $DB->set_field('local_rtocompliance_certs', 'timemodified', $now, ['id' => $sour
 try {
     local_rtocompliance_update_registry_status($source->verifytoken, 'superseded');
 } catch (\Throwable $ereg) {
-    debugging('reissue_cert: registry supersede failed (non-fatal): '
+    debugging(
+        'reissue_cert: registry supersede failed (non-fatal): '
         . $ereg->getMessage(), DEBUG_DEVELOPER);
 }
 
@@ -183,31 +185,35 @@ try {
         local_rtocompliance_publish_cert_to_registry($newcert, $certowner);
     }
 } catch (\Throwable $ereg2) {
-    debugging('reissue_cert: registry publish for new cert failed (non-fatal): '
+    debugging(
+        'reissue_cert: registry publish for new cert failed (non-fatal): '
         . $ereg2->getMessage(), DEBUG_DEVELOPER);
 }
 
 // Log the action.
-$DB->insert_record('local_rtocompliance_log', [
-    'action'       => 'reissue_certificate',
-    'component'    => 'certificates',
-    'itemid'       => $newcert->id,
-    'userid'       => $USER->id,
-    'targetuserid' => $source->userid,
-    'details'      => json_encode([
-        'newcertnumber'    => $newcertnumber,
-        'sourcecertid'     => $source->id,
-        'sourcecertnumber' => $source->certnumber,
-        'certtype'         => $source->certtype,
-    ]),
-    'ipaddress'    => getremoteaddr(),
-    'timecreated'  => $now,
+$DB->insert_record(
+    'local_rtocompliance_log', [
+        'action'       => 'reissue_certificate',
+        'component'    => 'certificates',
+        'itemid'       => $newcert->id,
+        'userid'       => $USER->id,
+        'targetuserid' => $source->userid,
+        'details'      => json_encode(
+        [
+                'newcertnumber'    => $newcertnumber,
+                'sourcecertid'     => $source->id,
+                'sourcecertnumber' => $source->certnumber,
+                'certtype'         => $source->certtype,
+        ]),
+        'ipaddress'    => getremoteaddr(),
+        'timecreated'  => $now,
 ]);
 
-echo json_encode([
-    'ok'             => true,
-    'new_id'         => (int)$newcert->id,
-    'new_certnumber' => $newcertnumber,
-    'source_id'      => (int)$source->id,
-    'message'        => 'Reissued as ' . $newcertnumber . '. Original ' . $source->certnumber . ' preserved for audit trail.',
+echo json_encode(
+    [
+        'ok'             => true,
+        'new_id'         => (int)$newcert->id,
+        'new_certnumber' => $newcertnumber,
+        'source_id'      => (int)$source->id,
+        'message'        => 'Reissued as ' . $newcertnumber . '. Original ' . $source->certnumber . ' preserved for audit trail.',
 ]);

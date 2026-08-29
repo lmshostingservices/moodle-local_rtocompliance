@@ -1,3 +1,57 @@
+## v6.3.21 — 21 Aug 2026
+
+### Changed — release-pipeline sweep: one error and all seven warnings cleared, with no behaviour change
+
+Every change below was applied with a token-aware tool and verified by comparing the PHP token
+stream of all 207 files before and after, ignoring whitespace and comments. **The executable token
+stream is identical across the whole plugin** — nothing in this release can alter what the code does.
+
+- **Coding style — one statement per line**: 200 lines across 31 files carried two or more
+  statements. Split shape-aware, not mechanically: a `switch` case moves its body under the label, a
+  brace block opened and closed on one line is expanded, a one-line closure gets a real body, and
+  `}` followed by `else` is joined into `} else {`. Template lines mixing HTML with several short
+  PHP blocks break *inside* the PHP block, after the semicolon, which cannot change a byte of
+  rendered output.
+- **Coding style — multi-line calls**: 1,827 calls across 150 files had their first argument on the
+  same line as the opening parenthesis. The argument now starts on the next line, and the call's
+  continuation lines are re-indented one step so the argument list still reads as one block.
+- **Coding style — comment blocks**: 1,116 blocks across 96 files opened with a lower-case letter.
+  Prose is capitalised. Anything that must not be re-cased is left alone and reworded instead:
+  `pipeline-ignore` / `phpcs` / `eslint` annotations, variables, URLs, function and file names, CSS
+  class and column identifiers, and value lists. The plugin's own `// v6.2.78 …` release markers are
+  respelled `// Version 6.2.78 …`, keeping the release number exactly where it was.
+- **AMD / JavaScript**: `nominalhours_autofill.js` carried ten user-facing strings in the file. They
+  now load from the language pack via `core/str`, and the lookup button is injected only once its
+  label has resolved, so no English placeholder is ever painted. Ten new language strings.
+- **Language strings**: the two shouting values (`PACKAGING RULES: COMPLIANT` / `NOT COMPLIANT`) are
+  sentence case; *ASQA 2025 Compliance* and *TAS Arrangement (Tuition Assurance Scheme membership)*
+  are reworded so they no longer open on an acronym; FAQ and CEO are spelled out. Genuine Australian
+  VET acronyms used as field labels (ABN, USI, RTO, DOB, QLD LUI, WA RAPT ID) are kept and annotated
+  — expanding them would make the interface less correct, not more.
+- **Security warnings, verified not fixed**: the four public pages (three token-gated forms plus the
+  machine-to-machine webhook) and the one hardened `unserialize()` call now carry the pipeline's own
+  `pipeline-ignore` annotation stating what authorises the request. Adding a capability check to
+  those pages would lock out the students and survey respondents they exist for.
+- **Fixed**: the v6.3.20 test file opened its class body with a blank line (the one reported error).
+- No DB schema changes. Savepoint 2026082105.
+
+## v6.3.20 — 21 Aug 2026
+
+### Fixed — the Record of Results printed two header rows
+
+- **DUPLICATE-TABLE-HEADER-STRIP** (`classes/cert_template.php`): a Record of Results saved before v5.9.447 carries a row of plain text fields above the units table holding the old column captions (*Semester / Year*, *Units / modules enrolled*, *Results*). Since v5.9.447 the table draws its **own** shaded header bar, so those captions became a second, stale header sitting directly above the real one, with different wording. v6.2.9 removed them from the starter designs, but every template already saved kept them.
+  - `cert_template::strip_legacy_table_headers()` removes them at render time, from `ensure_mandatory_fields()`, so the issued PDF **and** the editor canvas correct themselves with no rebuild and no data migration. The saved design is never modified, and the transform is idempotent.
+  - Deliberately narrow, so a caption an author placed on purpose survives: it fires only when a self-heading table field is present; never when the design still uses the legacy per-column fields (`qualification.units_col_*`), where those captions are the only headings there are; and only for a caption whose wording matches a known column label **and** which sits within 30mm above the table and overlaps it horizontally.
+  - The identity captions (*Name of student:*, *USI:*) are held back until the shaded student details table is actually on the canvas, so `upgrade_record_identity_to_table()` can still recognise the stacked block it replaces.
+
+### Added — certificate table column headings are now the RTO's to word
+
+- **SITE-WIDE** (`settings.php`, `lib.php`): nine new fields under *RTO Settings → Certificate settings* set the heading wording for the units / Record of Results table (unit code, unit title, date, result, enrolment date, completion date) and the student details table (student name, USI, qualification). Left empty, each keeps its ASQA sample-forms default.
+- **PER TEMPLATE** (`cert_template_edit.php`, `amd/src/cert_template_editor.js`): a single template can override again per table field, in the editor's Field Properties panel. Each input shows the site-wide wording as its placeholder, and the canvas mock updates as you type.
+- **ONE RESOLUTION ORDER** (`classes/cert_template_renderer.php`): template field override → site setting → built-in default, applied identically in the issued PDF and on the editor canvas. An RTO that says *COMPETENCY CODE* or *OUTCOME* relabels every certificate without touching code.
+- **TESTS** (`tests/cert_template_headers_test.php`): five PHPUnit tests covering the strip's four guard conditions and the heading fallback order.
+- No DB schema changes. Savepoint 2026082104.
+
 ## v6.3.0 — 14 Aug 2026
 
 ### Added — AVETMISS profile lock: students must complete their data before they can train

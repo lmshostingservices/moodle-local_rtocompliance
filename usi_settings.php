@@ -94,13 +94,27 @@ if (!isset($usisortcols[$usisort])) {
     $usisort = 'name';
 }
 switch ($usisort) {
-    case 'email':    $usiorderby = "u.email $usidir"; break;
-    case 'clientid': $usiorderby = "s.clientid $usidir, u.lastname ASC"; break;
-    case 'usi':      $usiorderby = "s.usi $usidir, u.lastname ASC"; break;
-    case 'dob':      $usiorderby = "s.dateofbirth $usidir, u.lastname ASC"; break;
-    case 'status':   $usiorderby = "s.usiverified $usidir, u.lastname ASC"; break;
-    case 'vdate':    $usiorderby = "s.usiverifieddate $usidir, u.lastname ASC"; break;
-    default:         $usiorderby = "u.lastname $usidir, u.firstname $usidir"; break;
+    case 'email':
+        $usiorderby = "u.email $usidir";
+        break;
+    case 'clientid':
+        $usiorderby = "s.clientid $usidir, u.lastname ASC";
+        break;
+    case 'usi':
+        $usiorderby = "s.usi $usidir, u.lastname ASC";
+        break;
+    case 'dob':
+        $usiorderby = "s.dateofbirth $usidir, u.lastname ASC";
+        break;
+    case 'status':
+        $usiorderby = "s.usiverified $usidir, u.lastname ASC";
+        break;
+    case 'vdate':
+        $usiorderby = "s.usiverifieddate $usidir, u.lastname ASC";
+        break;
+    default
+        :         $usiorderby = "u.lastname $usidir, u.firstname $usidir";
+        break;
 }
 
 // USI-RULE-DATE-FILTER (v6.3.1): the Unique Student Identifier became mandatory for
@@ -162,7 +176,7 @@ $usi_build_where = function (string $filter, string $search, int $catid = 0, int
             break;
         case 'all':
         default:
-            // no extra clause — every student profile.
+            // No extra clause — every student profile.
             break;
     }
 
@@ -483,7 +497,8 @@ if ($usiexport === 'csv' || $usiexport === 'nodob') {
 
     // Filename is derived from the RTO's own name rather than a hard-coded site
     // code, so a downloaded file is identifiable on any site running the plugin.
-    $fnrto = preg_replace('/[^a-z0-9]+/', '-',
+    $fnrto = preg_replace(
+        '/[^a-z0-9]+/', '-',
         strtolower((string)(get_config('local_rtocompliance', 'rtoname') ?: 'rto')));
     $filename = trim($fnrto, '-') . '-' . $fnamebit . '-' . date('Ymd-His') . '.csv';
     header('Content-Type: text/csv; charset=utf-8');
@@ -502,23 +517,26 @@ if ($usiexport === 'csv' || $usiexport === 'nodob') {
         // "Date of birth (missing)" heading from previously downloaded files.
         fputcsv($out, ['Family name', 'Given name', 'Email', 'Client identifier', 'USI', 'Date of birth']);
         foreach ($rows as $r) {
-            fputcsv($out, [
-                $r->lastname, $r->firstname, $r->email,
-                (string) $r->clientid, (string) $r->usi, '',
+            fputcsv(
+                $out, [
+                    $r->lastname, $r->firstname, $r->email,
+                    (string) $r->clientid, (string) $r->usi, '',
             ]);
         }
     } else {
-        fputcsv($out, ['Family name', 'Given name', 'Email', 'Client identifier', 'USI',
+        fputcsv(
+            $out, ['Family name', 'Given name', 'Email', 'Client identifier', 'USI',
                        'Date of birth', 'USI verification status', 'Verified date']);
         foreach ($rows as $r) {
             $dob = (!empty($r->dateofbirth) && (int) $r->dateofbirth !== 0)
                 ? userdate((int) $r->dateofbirth, '%d/%m/%Y') : '';
             $vdate = (!empty($r->usiverifieddate) && (int) $r->usiverifieddate > 0)
                 ? userdate((int) $r->usiverifieddate, '%d/%m/%Y') : '';
-            fputcsv($out, [
-                $r->lastname, $r->firstname, $r->email,
-                (string) $r->clientid, (string) $r->usi, $dob,
-                $usi_status_label($r->usiverified, $r->usi), $vdate,
+            fputcsv(
+                $out, [
+                    $r->lastname, $r->firstname, $r->email,
+                    (string) $r->clientid, (string) $r->usi, $dob,
+                    $usi_status_label($r->usiverified, $r->usi), $vdate,
             ]);
         }
     }
@@ -606,9 +624,11 @@ if ($usiexport === 'pdf') {
         . '<p style="font-size:9pt;color:#444;margin:2px 0 6px;">'
         // Escape each part, THEN join with the HTML separator — escaping the joined
         // string would print the separator entity literally.
-        . implode(' &nbsp;|&nbsp; ', array_map(function ($b) {
-            return htmlspecialchars($b, ENT_QUOTES);
-        }, $scopebits))
+        . implode(
+            ' &nbsp;|&nbsp; ', array_map(
+            function ($b) {
+                    return htmlspecialchars($b, ENT_QUOTES);
+                }, $scopebits))
         . ' &nbsp;|&nbsp; ' . $ptotal . ' student(s) matched'
         . ($ptotal > $pdfmax ? ' — first ' . $pdfmax . ' shown in this PDF (use the CSV export for the full list)' : '')
         . '</p>';
@@ -654,7 +674,8 @@ if ($usiaction === 'uploaddob' && confirm_sesskey()) {
     $redirurl = new moodle_url('/local/rtocompliance/usi_settings.php', ['usifilter' => 'missingdob']);
     $upload = $_FILES['dobcsv'] ?? null;
     if (!$upload || (int) ($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || empty($upload['tmp_name'])) {
-        redirect($redirurl, 'No CSV file was received. Please choose a file and try again.',
+        redirect(
+            $redirurl, 'No CSV file was received. Please choose a file and try again.',
             null, \core\output\notification::NOTIFY_ERROR);
     }
     if ((int) ($upload['size'] ?? 0) > 10 * 1024 * 1024) {
@@ -667,11 +688,17 @@ if ($usiaction === 'uploaddob' && confirm_sesskey()) {
         if ($raw === '') { return 0; }
         $d = $m = $y = 0;
         if (preg_match('#^(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})$#', $raw, $mm)) {
-            $d = (int) $mm[1]; $m = (int) $mm[2]; $y = (int) $mm[3];
+            $d = (int) $mm[1];
+            $m = (int) $mm[2];
+            $y = (int) $mm[3];
         } else if (preg_match('#^(\d{4})[/\-](\d{1,2})[/\-](\d{1,2})$#', $raw, $mm)) {
-            $y = (int) $mm[1]; $m = (int) $mm[2]; $d = (int) $mm[3];
+            $y = (int) $mm[1];
+            $m = (int) $mm[2];
+            $d = (int) $mm[3];
         } else if (preg_match('#^(\d{2})(\d{2})(\d{4})$#', $raw, $mm)) {
-            $d = (int) $mm[1]; $m = (int) $mm[2]; $y = (int) $mm[3];
+            $d = (int) $mm[1];
+            $m = (int) $mm[2];
+            $y = (int) $mm[3];
         } else {
             return 0;
         }
@@ -711,14 +738,20 @@ if ($usiaction === 'uploaddob' && confirm_sesskey()) {
 
     if ($col_dob === null || ($col_client === null && $col_usi === null && $col_email === null)) {
         fclose($handle);
-        redirect($redirurl,
-            'CSV must have a "Date of birth" column and at least one of "Client identifier", "USI" or "Email". '
-            . 'Tip: use the "Export students without DOB" download, fill in the Date of birth column, then re-upload.',
+        redirect(
+            $redirurl,
+                'CSV must have a "Date of birth" column and at least one of "Client identifier", "USI" or "Email". '
+                . 'Tip: use the "Export students without DOB" download, fill in the Date of birth column, then re-upload.',
             null, \core\output\notification::NOTIFY_ERROR);
     }
 
-    $updated = 0; $skipped = 0; $nomatch = 0; $baddate = 0; $ambiguous = 0;
-    $implausible = 0; $conflict = 0;
+    $updated = 0;
+    $skipped = 0;
+    $nomatch = 0;
+    $baddate = 0;
+    $ambiguous = 0;
+    $implausible = 0;
+    $conflict = 0;
 
     // AMBIGUOUS-MATCH-GUARD (v6.3.4): match on a unique identifier or not at all.
     //
@@ -807,10 +840,13 @@ if ($usiaction === 'uploaddob' && confirm_sesskey()) {
     };
 
     while (($row = fgetcsv($handle)) !== false) {
-        if (count(array_filter($row, fn($v) => trim((string) $v) !== '')) === 0) { continue; } // blank line
+        if (count(array_filter($row, fn($v) => trim((string) $v) !== '')) === 0) { continue; } // Blank line
         $dobstr = $col_dob !== null ? ($row[$col_dob] ?? '') : '';
         $ts = $parsedob($dobstr);
-        if ($ts <= 0) { $baddate++; continue; }
+        if ($ts <= 0) {
+            $baddate++;
+            continue;
+        }
 
         // Locate the student — clientid, then USI, then email. Unique matches only,
         // with the name on the row used to settle a shared identifier.
@@ -832,7 +868,11 @@ if ($usiaction === 'uploaddob' && confirm_sesskey()) {
         if (!$stud) {
             // Distinguish "nobody has this identifier" from "several students do" —
             // they need completely different follow-up from the administrator.
-            if ($wasambiguous) { $ambiguous++; } else { $nomatch++; }
+            if ($wasambiguous) {
+                $ambiguous++;
+            } else {
+                $nomatch++;
+            }
             continue;
         }
 
@@ -851,11 +891,16 @@ if ($usiaction === 'uploaddob' && confirm_sesskey()) {
             // Already has one. Report a DIFFERENT date separately from a matching one:
             // a conflict means either the sheet or the record is wrong and a human has to
             // decide, whereas a repeat of the same date is a harmless re-upload.
-            if ((int) $stud->dateofbirth !== $ts) { $conflict++; } else { $skipped++; }
+            if ((int) $stud->dateofbirth !== $ts) {
+                $conflict++;
+            } else {
+                $skipped++;
+            }
             continue;
         }
 
-        $DB->update_record('local_rtocompliance_students',
+        $DB->update_record(
+            'local_rtocompliance_students',
             (object) ['id' => $stud->id, 'dateofbirth' => $ts, 'timemodified' => time()]);
         $updated++;
     }
@@ -920,19 +965,23 @@ if ($usiaction === 'uploadcert' && confirm_sesskey()) {
             UPLOAD_ERR_CANT_WRITE => 'The server could not write the uploaded file to disk — contact your host.',
             UPLOAD_ERR_EXTENSION  => 'A server extension blocked the upload.',
         ];
-        redirect($redir, $errmap[$uerr] ?? ('Credential upload failed (PHP upload error ' . $uerr . ').'),
+        redirect(
+            $redir, $errmap[$uerr] ?? ('Credential upload failed (PHP upload error ' . $uerr . ').'),
             null, \core\output\notification::NOTIFY_ERROR);
     }
     if (empty($upload['tmp_name']) || !is_uploaded_file($upload['tmp_name'])) {
-        redirect($redir, 'The uploaded credential could not be validated on the server. Please try again.',
+        redirect(
+            $redir, 'The uploaded credential could not be validated on the server. Please try again.',
             null, \core\output\notification::NOTIFY_ERROR);
     }
     if ((int) ($upload['size'] ?? 0) > 5 * 1024 * 1024) {
-        redirect($redir, 'Credential file too large (max 5 MB) — a myGovID keystore is only a few KB, so please check the file.',
+        redirect(
+            $redir, 'Credential file too large (max 5 MB) — a myGovID keystore is only a few KB, so please check the file.',
             null, \core\output\notification::NOTIFY_ERROR);
     }
     if ($orgid === '') {
-        redirect($redir, 'RTO code (TOID) is required. Set it on the RTO Settings page or enter it in the upload form.',
+        redirect(
+            $redir, 'RTO code (TOID) is required. Set it on the RTO Settings page or enter it in the upload form.',
             null, \core\output\notification::NOTIFY_ERROR);
     }
 
@@ -947,11 +996,13 @@ if ($usiaction === 'uploadcert' && confirm_sesskey()) {
         $bytes = file_get_contents($dest);
     }
     if ($bytes === false) {
-        redirect($redir, 'The server could not read the uploaded credential file (check server file permissions / open_basedir). Nothing was sent to the platform.',
+        redirect(
+            $redir, 'The server could not read the uploaded credential file (check server file permissions / open_basedir). Nothing was sent to the platform.',
             null, \core\output\notification::NOTIFY_ERROR);
     }
     if (strlen($bytes) < 200) {
-        redirect($redir, 'That file is empty or too small to be a keystore (' . strlen($bytes) . ' bytes). Upload your myGovID Machine Credential (.pfx/.p12) or ABR keystore.xml.',
+        redirect(
+            $redir, 'That file is empty or too small to be a keystore (' . strlen($bytes) . ' bytes). Upload your myGovID Machine Credential (.pfx/.p12) or ABR keystore.xml.',
             null, \core\output\notification::NOTIFY_ERROR);
     }
     $b64 = base64_encode($bytes);
@@ -960,7 +1011,9 @@ if ($usiaction === 'uploadcert' && confirm_sesskey()) {
     $res = $client->upload_cert($b64, $certpass, $orgid, $certtestmode, $notifemail);
 
     // Wipe sensitive material from memory as soon as the call returns — never persisted.
-    $bytes = null; $b64 = null; $certpass = null;
+    $bytes = null;
+    $b64 = null;
+    $certpass = null;
     unset($_FILES['certfile']);
 
     if (!empty($res['ok'])) {
@@ -996,16 +1049,18 @@ if ($usiaction === 'uploadcert' && confirm_sesskey()) {
         if (!empty($res['certBytes'])) { $detail .= ' (' . (int) $res['certBytes'] . ' bytes'; }
         if (!empty($res['certExpiry'])) { $detail .= ($detail ? ', expires ' : ' (expires ') . s($res['certExpiry']); }
         if ($detail && $detail[0] === ' ' && strpos($detail, '(') !== false) { $detail .= ')'; }
-        redirect($redir,
-            'USI credential uploaded to the platform for TOID ' . s($orgid) . ' ('
-            . ($certtestmode ? 'test/EVTE' : 'production') . ' mode).' . $detail
-            . ($keysaved ? ' Your platform API key was updated automatically.' : '')
-            . ' Verification can now run — use "Re-verify all students" below.',
+        redirect(
+            $redir,
+                'USI credential uploaded to the platform for TOID ' . s($orgid) . ' ('
+                . ($certtestmode ? 'test/EVTE' : 'production') . ' mode).' . $detail
+                . ($keysaved ? ' Your platform API key was updated automatically.' : '')
+                . ' Verification can now run — use "Re-verify all students" below.',
             null, \core\output\notification::NOTIFY_SUCCESS);
     } else {
-        redirect($redir,
-            'Credential upload failed: ' . s($res['error'] ?? $res['message'] ?? 'unknown error')
-            . '. Check the keystore password and that the file is a valid myGovID Machine Credential (ABR keystore .xml, or .pfx/.p12).',
+        redirect(
+            $redir,
+                'Credential upload failed: ' . s($res['error'] ?? $res['message'] ?? 'unknown error')
+                . '. Check the keystore password and that the file is a valid myGovID Machine Credential (ABR keystore .xml, or .pfx/.p12).',
             null, \core\output\notification::NOTIFY_ERROR);
     }
 }
@@ -1169,7 +1224,7 @@ echo '<div><label style="display:block;font-weight:600;font-size:12.5px;margin-b
 echo '<div><label style="display:block;font-weight:600;font-size:12.5px;margin-bottom:4px;">Expiry reminder email (optional)</label>'
     . '<input type="email" name="certemail" class="form-control" placeholder="alerts@yourrto.edu.au"></div>';
 
-echo '</div>'; // grid
+echo '</div>'; // Grid
 
 echo '<div style="margin-top:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">';
 echo '<button type="submit" class="btn btn-primary">'
@@ -1209,7 +1264,8 @@ $usitotal = (int) $DB->count_records_sql(
        JOIN {local_rtocompliance_students} s ON s.userid = u.id
       WHERE $twhere", $tparams);
 // The DOB banner stays whole-of-site: it is a data-quality alert, not a view.
-$nmissingdob_all = (int) $DB->count_records_select('local_rtocompliance_students',
+$nmissingdob_all = (int) $DB->count_records_select(
+    'local_rtocompliance_students',
     "usi IS NOT NULL AND usi <> '' AND (dateofbirth IS NULL OR dateofbirth = 0)");
 
 $usiscoped   = ($usicat > 0 || $usisubcat > 0 || $usicourse > 0 || $usisearch !== '' || $usirule !== 'all');
@@ -1232,16 +1288,17 @@ if ($usicourse > 0 && ($cx = $DB->get_record('course', ['id' => $usicourse], 'id
 // ── URL builder: keeps the whole view state (filter + scope + sort + paging) ──
 $usi_url = function (array $overrides = []) use ($usifilter, $usisearch, $usicat, $usicourse,
                                                  $usiperpage, $usisort, $usidir, $usirule, $usisubcat) {
-    $params = array_merge([
-        'usifilter'  => $usifilter,
-        'usisearch'  => $usisearch,
-        'usicat'     => $usicat,
-        'usisubcat'  => $usisubcat,
-        'usicourse'  => $usicourse,
-        'usirule'    => $usirule,
-        'usiperpage' => $usiperpage,
-        'usisort'    => $usisort,
-        'usidir'     => $usidir,
+    $params = array_merge(
+        [
+            'usifilter'  => $usifilter,
+            'usisearch'  => $usisearch,
+            'usicat'     => $usicat,
+            'usisubcat'  => $usisubcat,
+            'usicourse'  => $usicourse,
+            'usirule'    => $usirule,
+            'usiperpage' => $usiperpage,
+            'usisort'    => $usisort,
+            'usidir'     => $usidir,
     ], $overrides);
     // Drop defaults so shared/bookmarked URLs stay readable.
     if (($params['usifilter'] ?? 'all') === 'all')   { unset($params['usifilter']); }
@@ -1333,9 +1390,11 @@ echo '</div>';
 $svgdl = '<svg style="width:14px;height:14px;vertical-align:-2px;margin-right:5px" viewBox="0 0 24 24" fill="none">'
     . '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor"'
     . ' stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-$reverifyurl = new moodle_url('/local/rtocompliance/usi_settings.php',
+$reverifyurl = new moodle_url(
+    '/local/rtocompliance/usi_settings.php',
     ['usiaction' => 'reverifyall', 'sesskey' => sesskey()]);
-$conntesturl = new moodle_url('/local/rtocompliance/usi_settings.php',
+$conntesturl = new moodle_url(
+    '/local/rtocompliance/usi_settings.php',
     ['usiaction' => 'conntest', 'sesskey' => sesskey()]);
 $exportcururl   = $usi_url(['usiexport' => 'csv', 'sesskey' => sesskey()]);
 $exportpdfurl   = $usi_url(['usiexport' => 'pdf', 'sesskey' => sesskey()]);
@@ -1343,25 +1402,31 @@ $exportnodoburl = $usi_url(['usiexport' => 'nodob', 'sesskey' => sesskey()]);
 $fixdoburl      = new moodle_url('/local/rtocompliance/students.php', ['filter' => 'usimissingdob']);
 
 echo '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px;">';
-echo html_writer::link($conntesturl,
-    '<svg style="width:14px;height:14px;vertical-align:-2px;margin-right:5px" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Run connection test',
-    ['class' => 'btn btn-info btn-sm',
+echo html_writer::link(
+    $conntesturl,
+        '<svg style="width:14px;height:14px;vertical-align:-2px;margin-right:5px" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Run connection test',
+        ['class' => 'btn btn-info btn-sm',
      'title' => 'Verify a dummy record to confirm the platform + usi.gov.au link is working (a "no match" result means it works)']);
-echo html_writer::link($reverifyurl,
-    '<svg style="width:14px;height:14px;vertical-align:-2px;margin-right:5px" viewBox="0 0 24 24" fill="none"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Re-verify all students',
-    ['class' => 'btn btn-primary btn-sm',
+echo html_writer::link(
+    $reverifyurl,
+        '<svg style="width:14px;height:14px;vertical-align:-2px;margin-right:5px" viewBox="0 0 24 24" fill="none"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Re-verify all students',
+        ['class' => 'btn btn-primary btn-sm',
      'title' => 'Queue every student with a USI and date of birth for re-verification on the next scheduled USI run']);
-echo html_writer::link($exportcururl, $svgdl . 'Export this view (CSV)',
-    ['class' => 'btn btn-outline-secondary btn-sm',
+echo html_writer::link(
+    $exportcururl, $svgdl . 'Export this view (CSV)',
+        ['class' => 'btn btn-outline-secondary btn-sm',
      'title' => 'Download every student currently matched by the filters (not just this page) as a CSV']);
-echo html_writer::link($exportpdfurl, $svgdl . 'Export this view (PDF)',
-    ['class' => 'btn btn-outline-secondary btn-sm',
+echo html_writer::link(
+    $exportpdfurl, $svgdl . 'Export this view (PDF)',
+        ['class' => 'btn btn-outline-secondary btn-sm',
      'title' => 'Download every student currently matched by the filters as a print-ready PDF report']);
-echo html_writer::link($exportnodoburl, $svgdl . 'Export students without DOB',
-    ['class' => 'btn btn-outline-warning btn-sm',
+echo html_writer::link(
+    $exportnodoburl, $svgdl . 'Export students without DOB',
+        ['class' => 'btn btn-outline-warning btn-sm',
      'title' => 'Download the students who have a USI but no date of birth — these can never be verified until a DOB is added']);
-echo html_writer::link($fixdoburl, 'Fix missing DOBs →',
-    ['class' => 'btn btn-link btn-sm',
+echo html_writer::link(
+    $fixdoburl, 'Fix missing DOBs →',
+        ['class' => 'btn btn-link btn-sm',
      'title' => 'Go to Student Records to backfill dates of birth from your NAT00080 file']);
 echo '</div>';
 
@@ -1376,8 +1441,9 @@ if ($nmissingdob_all > 0) {
     // Step 1 — download the pre-filled template (this IS the correct upload format).
     echo '<div style="background:#fff;border:1px solid #fcd34d;border-radius:8px;padding:10px 12px;min-width:250px;">';
     echo '<div style="font-weight:700;font-size:12px;color:#78350f;margin-bottom:6px;">Step 1 — download the template</div>';
-    echo html_writer::link($exportnodoburl, $svgdl . 'Download DOB template (CSV)',
-        ['class' => 'btn btn-warning btn-sm',
+    echo html_writer::link(
+        $exportnodoburl, $svgdl . 'Download DOB template (CSV)',
+            ['class' => 'btn btn-warning btn-sm',
          'title' => 'A CSV of every student who has a USI but no date of birth, in the exact format this page accepts back']);
     echo '<div style="font-size:11.5px;color:#78350f;margin-top:6px;line-height:1.5;">'
         . 'Pre-filled with the students missing a DOB. Keep the column headings as they are.</div>';
@@ -1555,15 +1621,16 @@ foreach ($usiperpageopts as $pp) {
     echo '<option value="' . $pp . '"' . ($usiperpage === $pp ? ' selected' : '') . '>' . $pp . ' per page</option>';
 }
 echo '</select></div>';
-echo '</div>'; // grid
+echo '</div>'; // Grid
 
 echo '<div class="rtoc-usi-actions">';
 echo '<button type="submit" class="btn btn-primary btn-sm">'
     . '<svg style="width:14px;height:14px;vertical-align:-2px;margin-right:5px" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="m20 20-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
     . 'Apply filters</button>';
 if ($usihasfilter) {
-    echo html_writer::link(new moodle_url('/local/rtocompliance/usi_settings.php'),
-        '<svg style="width:14px;height:14px;vertical-align:-2px;margin-right:5px" viewBox="0 0 24 24" fill="none"><path d="M18 6 6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Clear filters',
+    echo html_writer::link(
+        new moodle_url('/local/rtocompliance/usi_settings.php'),
+            '<svg style="width:14px;height:14px;vertical-align:-2px;margin-right:5px" viewBox="0 0 24 24" fill="none"><path d="M18 6 6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Clear filters',
         ['class' => 'btn btn-outline-secondary btn-sm', 'title' => 'Reset the status, category, course and search back to defaults']);
 } else {
     echo '<span style="font-size:12px;color:#94a3b8;">No filters applied — showing every student.</span>';
@@ -1652,7 +1719,8 @@ if ($usihasfilter) {
 // browsers ignore the hidden attribute on an <option> inside a native <select>,
 // which is why picking a category previously appeared to do nothing.
 // Containment is tested on the category path, exactly as the server does it.
-echo html_writer::script('
+echo html_writer::script(
+    '
 (function () {
     var cat    = document.getElementById("usicat");
     var sub    = document.getElementById("usisubcat");
@@ -1748,11 +1816,31 @@ $usi_badge = function ($code, $usi) {
         return '<span class="rtoc-usi-pill" style="background:#f1f5f9;color:#64748b;">No USI</span>';
     }
     switch ((int) $code) {
-        case 1: $bg = '#dcfce7'; $fg = '#166534'; $t = 'Verified'; break;
-        case 2: $bg = '#fee2e2'; $fg = '#991b1b'; $t = 'Failed'; break;
-        case 3: $bg = '#e0f2fe'; $fg = '#075985'; $t = 'Pending'; break;
-        case 4: $bg = '#fef3c7'; $fg = '#92400e'; $t = 'Manual review'; break;
-        default: $bg = '#f1f5f9'; $fg = '#475569'; $t = 'Not yet verified'; break;
+        case 1:
+            $bg = '#dcfce7';
+            $fg = '#166534';
+            $t = 'Verified';
+            break;
+        case 2:
+            $bg = '#fee2e2';
+            $fg = '#991b1b';
+            $t = 'Failed';
+            break;
+        case 3:
+            $bg = '#e0f2fe';
+            $fg = '#075985';
+            $t = 'Pending';
+            break;
+        case 4:
+            $bg = '#fef3c7';
+            $fg = '#92400e';
+            $t = 'Manual review';
+            break;
+        default
+            : $bg = '#f1f5f9';
+            $fg = '#475569';
+            $t = 'Not yet verified';
+            break;
     }
     return '<span class="rtoc-usi-pill" style="background:' . $bg . ';color:' . $fg . ';">' . $t . '</span>';
 };
@@ -1766,7 +1854,8 @@ if (empty($rows)) {
             : 'There are no student profiles recorded yet.')
         . '</p>';
     if ($usihasfilter) {
-        echo html_writer::link(new moodle_url('/local/rtocompliance/usi_settings.php'),
+        echo html_writer::link(
+            new moodle_url('/local/rtocompliance/usi_settings.php'),
             'Clear filters', ['class' => 'btn btn-primary btn-sm']);
     }
     echo '</div>';

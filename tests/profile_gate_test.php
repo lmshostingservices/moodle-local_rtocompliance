@@ -47,11 +47,13 @@ class profile_gate_test extends \advanced_testcase {
         parent::setUp();
         $this->resetAfterTest(true);
 
-        $this->student = $this->getDataGenerator()->create_user([
-            'firstname' => 'Gate', 'lastname' => 'Student', 'email' => 'gate.student@test.com',
+        $this->student = $this->getDataGenerator()->create_user(
+            [
+                'firstname' => 'Gate', 'lastname' => 'Student', 'email' => 'gate.student@test.com',
         ]);
-        $this->course = $this->getDataGenerator()->create_course([
-            'fullname' => 'TLI50816 Diploma of Customs Broking', 'shortname' => 'TLI50816',
+        $this->course = $this->getDataGenerator()->create_course(
+            [
+                'fullname' => 'TLI50816 Diploma of Customs Broking', 'shortname' => 'TLI50816',
         ]);
 
         set_config('enforceprofile', 1, 'local_rtocompliance');
@@ -63,14 +65,15 @@ class profile_gate_test extends \advanced_testcase {
      */
     protected function mark_recognised(int $courseid): void {
         global $DB;
-        $DB->insert_record('local_rtocompliance_courses', (object)[
-            'courseid' => $courseid,
-            'nationallyrecognised' => 1,
-            'qualificationcode' => 'TLI50816',
-            'qualificationname' => 'Diploma of Customs Broking',
-            'cricosregistered' => 0,
-            'timecreated' => time(),
-            'timemodified' => time(),
+        $DB->insert_record(
+            'local_rtocompliance_courses', (object)[
+                'courseid' => $courseid,
+                'nationallyrecognised' => 1,
+                'qualificationcode' => 'TLI50816',
+                'qualificationname' => 'Diploma of Customs Broking',
+                'cricosregistered' => 0,
+                'timecreated' => time(),
+                'timemodified' => time(),
         ]);
     }
 
@@ -79,29 +82,30 @@ class profile_gate_test extends \advanced_testcase {
      */
     protected function make_student_record(int $userid, array $overrides = []): int {
         global $DB;
-        $record = (object)array_merge([
-            'userid' => $userid,
-            'usi' => null,
-            'usiverified' => 0,
-            'dateofbirth' => null,
-            'sex' => null,
-            'indigenousstatus' => '@',
-            'countryofbirth' => '1101',
-            'languageathome' => '1201',
-            'englishproficiency' => '@',
-            'disabilityflag' => 'N',
-            'suburb' => null,
-            'postcode' => null,
-            'statecode' => null,
-            'highestschoollevel' => '@@',
-            'atschoolflag' => 'N',
-            'labourforcestatus' => '@@',
-            'studyreason' => '@@',
-            'prioreducationflag' => '@',
-            'surveycontactstatus' => 'N',
-            'profilecomplete' => 0,
-            'timecreated' => time(),
-            'timemodified' => time(),
+        $record = (object)array_merge(
+            [
+                'userid' => $userid,
+                'usi' => null,
+                'usiverified' => 0,
+                'dateofbirth' => null,
+                'sex' => null,
+                'indigenousstatus' => '@',
+                'countryofbirth' => '1101',
+                'languageathome' => '1201',
+                'englishproficiency' => '@',
+                'disabilityflag' => 'N',
+                'suburb' => null,
+                'postcode' => null,
+                'statecode' => null,
+                'highestschoollevel' => '@@',
+                'atschoolflag' => 'N',
+                'labourforcestatus' => '@@',
+                'studyreason' => '@@',
+                'prioreducationflag' => '@',
+                'surveycontactstatus' => 'N',
+                'profilecomplete' => 0,
+                'timecreated' => time(),
+                'timemodified' => time(),
         ], $overrides);
         return (int)$DB->insert_record('local_rtocompliance_students', $record);
     }
@@ -180,7 +184,8 @@ class profile_gate_test extends \advanced_testcase {
 
     public function test_usi_is_not_required_by_the_gate_by_default(): void {
         $fields = local_rtocompliance_avetmiss_mandatory_fields();
-        $this->assertNotContains('usi', $fields,
+        $this->assertNotContains(
+            'usi', $fields,
             'A student cannot obtain a USI on demand, so it must not block site access by default');
         $this->assertContains('dateofbirth', $fields);
         $this->assertCount(10, $fields);
@@ -191,8 +196,10 @@ class profile_gate_test extends \advanced_testcase {
 
     public function test_mandatory_field_setting_is_honoured_and_cannot_be_emptied(): void {
         set_config('mandatoryprofilefields', 'dateofbirth,usi', 'local_rtocompliance');
-        $this->assertSame(['usi', 'dateofbirth'], array_values(
-            array_intersect(local_rtocompliance_avetmiss_all_fields(),
+        $this->assertSame(
+            ['usi', 'dateofbirth'], array_values(
+                array_intersect(
+                local_rtocompliance_avetmiss_all_fields(),
                 local_rtocompliance_avetmiss_mandatory_fields())));
 
         // Unknown keys are ignored, and an all-unknown setting falls back to the
@@ -278,12 +285,14 @@ class profile_gate_test extends \advanced_testcase {
 
         // Grant the bypass at system level, as the manager archetype does.
         $roleid = $this->getDataGenerator()->create_role();
-        assign_capability('local/rtocompliance:bypassprofilegate', CAP_ALLOW, $roleid,
+        assign_capability(
+            'local/rtocompliance:bypassprofilegate', CAP_ALLOW, $roleid,
             \context_system::instance()->id, true);
         role_assign($roleid, $teacher->id, \context_system::instance()->id);
 
         $this->setUser($teacher);
-        $this->assertFalse(local_rtocompliance_profile_gate_applies($teacher->id),
+        $this->assertFalse(
+            local_rtocompliance_profile_gate_applies($teacher->id),
             'A trainer who is also a learner must not be locked out of the site they run');
     }
 

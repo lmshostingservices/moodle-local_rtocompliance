@@ -81,7 +81,8 @@ class appeal_form extends \moodleform {
         $mform->addRule('groundsforappeal', get_string('required'), 'required', null, 'client');
         $mform->addHelpButton('groundsforappeal', 'grounds_for_appeal', 'local_rtocompliance');
 
-        $mform->addElement('html', '
+        $mform->addElement(
+            'html', '
 <div class="rtoc-ai-assist-bar" style="margin:-0.25rem 0 0.75rem 0;">
     <button type="button" id="rtoc-grounds-ai-btn" class="btn btn-sm btn-outline-secondary"
             style="display:inline-flex;align-items:center;gap:5px;font-size:0.82em;">
@@ -210,7 +211,8 @@ class appeal_form extends \moodleform {
         $mform->setType('outcomereason', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
         $mform->addHelpButton('outcomereason', 'outcome_reason', 'local_rtocompliance');
 
-        $mform->addElement('html', '
+        $mform->addElement(
+            'html', '
 <div class="rtoc-ai-assist-bar" style="margin:-0.25rem 0 0.75rem 0;">
     <button type="button" id="rtoc-outcomereason-ai-btn" class="btn btn-sm btn-outline-secondary"
             style="display:inline-flex;align-items:center;gap:5px;font-size:0.82em;">

@@ -21,7 +21,7 @@
  * @copyright  2025 LMS Labs
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-// v4.9.108 STUDENT-DOC-REPOSITORY — Central student document & certificate portal.
+// Version 4.9.108 STUDENT-DOC-REPOSITORY — Central student document & certificate portal.
 //
 // One page per student that combines:
 //   (1) All issued certificates (from local_rtocompliance_certs) with download/verify links.
@@ -112,7 +112,8 @@ if ($action === 'upload' && $canupload && confirm_sesskey()) {
         'filepath'  => '/',
         'filename'  => $originalname,
     ];
-    $existing = $fs->get_file($fileinfo['contextid'], $fileinfo['component'], $fileinfo['filearea'],
+    $existing = $fs->get_file(
+        $fileinfo['contextid'], $fileinfo['component'], $fileinfo['filearea'],
                                $fileinfo['itemid'], $fileinfo['filepath'], $fileinfo['filename']);
     if ($existing) {
         $existing->delete();
@@ -240,9 +241,10 @@ if (empty($certs)) {
         $typebadge = ['testamur' => 'badge-success', 'statement' => 'badge-info',
                       'record'   => 'badge-secondary', 'completion' => 'badge-warning'][$cert->certtype] ?? 'badge-light';
         $issuedate = $cert->issuedate ? date('d M Y', $cert->issuedate) : '—';
-        $qualparts = array_filter([
-            !empty($cert->qualificationcode) ? htmlspecialchars($cert->qualificationcode) : '',
-            !empty($cert->qualificationname) ? htmlspecialchars($cert->qualificationname) : '',
+        $qualparts = array_filter(
+            [
+                !empty($cert->qualificationcode) ? htmlspecialchars($cert->qualificationcode) : '',
+                !empty($cert->qualificationname) ? htmlspecialchars($cert->qualificationname) : '',
         ]);
         $qualstr = $qualparts ? implode(' — ', $qualparts) : '—';
         $downloadurl = new moodle_url('/local/rtocompliance/download_cert.php', ['certid' => $cert->id]);
@@ -288,17 +290,19 @@ if (empty($docs)) {
     foreach ($docs as $doc) {
         $dtlabel  = $doctypelabels[$doc->doctype] ?? htmlspecialchars($doc->doctype);
         $filesize_str = $doc->filesize > 0 ? ' <small class="text-muted">(' . round($doc->filesize / 1024, 1) . ' KB)</small>' : '';
-        $dlurl = new moodle_url('/local/rtocompliance/student_docs_download.php', [
-            'docid'   => $doc->id,
-            'sesskey' => sesskey(),
+        $dlurl = new moodle_url(
+            '/local/rtocompliance/student_docs_download.php', [
+                'docid'   => $doc->id,
+                'sesskey' => sesskey(),
         ]);
         $deletehtml = '';
         if ($canupload) {
-            $delurl = new moodle_url('/local/rtocompliance/mydocs.php', [
-                'userid'  => $userid,
-                'action'  => 'delete',
-                'docid'   => $doc->id,
-                'sesskey' => sesskey(),
+            $delurl = new moodle_url(
+                '/local/rtocompliance/mydocs.php', [
+                    'userid'  => $userid,
+                    'action'  => 'delete',
+                    'docid'   => $doc->id,
+                    'sesskey' => sesskey(),
             ]);
             $deletehtml = ' <a href="' . $delurl->out(false) . '" class="btn btn-sm btn-outline-danger"'
                         . ' title="Delete this document permanently" onclick="return confirm(\'Delete this document?\')">Delete</a>';

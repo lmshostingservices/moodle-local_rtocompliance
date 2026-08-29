@@ -53,10 +53,11 @@ class student_profile_form extends \moodleform {
         $mform->addRule('usi', get_string('error_usi_format', 'local_rtocompliance'), 'maxlength', 10, 'client');
         $mform->addHelpButton('usi', 'usi', 'local_rtocompliance');
 
-        $mform->addElement('date_selector', 'dateofbirth', get_string('dateofbirth', 'local_rtocompliance'), [
-            'startyear' => 1920,
-            'stopyear' => date('Y') - 14,
-            'optional' => true,
+        $mform->addElement(
+            'date_selector', 'dateofbirth', get_string('dateofbirth', 'local_rtocompliance'), [
+                'startyear' => 1920,
+                'stopyear' => date('Y') - 14,
+                'optional' => true,
         ]);
         $mform->addHelpButton('dateofbirth', 'dateofbirth', 'local_rtocompliance');
 
@@ -262,7 +263,8 @@ class student_profile_form extends \moodleform {
                 }
                 $value = $data[$field] ?? null;
                 if (local_rtocompliance_avetmiss_value_missing($field, $value)) {
-                    $errors[$field] = get_string('avetmiss_field_required', 'local_rtocompliance',
+                    $errors[$field] = get_string(
+                        'avetmiss_field_required', 'local_rtocompliance',
                         $labels[$field] ?? $field);
                 }
             }

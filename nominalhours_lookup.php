@@ -46,9 +46,12 @@ header('Content-Type: application/json');
 // {success, hours:{CODE:{nominalHours,source,state,sourceref}}, totalHours, resolved, missing[]}.
 $codesparam = (string) optional_param('codes', '', PARAM_TEXT);
 if (trim($codesparam) !== '') {
-    $codes = array_unique(array_filter(array_map(function ($c) {
-        return strtoupper(preg_replace('/\s+/', '', $c));
-    }, explode(',', $codesparam))));
+    $codes = array_unique(
+        array_filter(
+        array_map(
+        function ($c) {
+                    return strtoupper(preg_replace('/\s+/', '', $c));
+                }, explode(',', $codesparam))));
     $map = [];
     $missing = [];
     $total = 0;
@@ -71,12 +74,13 @@ if (trim($codesparam) !== '') {
         $total += (int) $r['nominalhours'];
         $resolved++;
     }
-    echo json_encode([
-        'success'    => true,
-        'hours'      => $map,
-        'totalHours' => $total,
-        'resolved'   => $resolved,
-        'missing'    => array_values($missing),
+    echo json_encode(
+        [
+            'success'    => true,
+            'hours'      => $map,
+            'totalHours' => $total,
+            'resolved'   => $resolved,
+            'missing'    => array_values($missing),
     ]);
     exit;
 }
@@ -89,21 +93,23 @@ if ($code === '') {
 
 $result = local_rtocompliance_lookup_nominalhours($code);
 if ($result === null) {
-    echo json_encode([
-        'success'      => false,
-        'nominalHours' => 0,
-        'source'       => 'none',
-        'message'      => 'No nominal-hours value on file for ' . $code
-            . '. Import the NCVER nationally-agreed dataset (or enter manually).',
+    echo json_encode(
+        [
+            'success'      => false,
+            'nominalHours' => 0,
+            'source'       => 'none',
+            'message'      => 'No nominal-hours value on file for ' . $code
+                . '. Import the NCVER nationally-agreed dataset (or enter manually).',
     ]);
     exit;
 }
 
-echo json_encode([
-    'success'      => true,
-    'nominalHours' => (int) $result['nominalhours'],
-    'source'       => 'database',
-    'state'        => $result['state'],
-    'sourceref'    => $result['sourceref'] ?? '',
+echo json_encode(
+    [
+        'success'      => true,
+        'nominalHours' => (int) $result['nominalhours'],
+        'source'       => 'database',
+        'state'        => $result['state'],
+        'sourceref'    => $result['sourceref'] ?? '',
 ]);
 exit;

@@ -266,10 +266,10 @@ if (!empty($testUids)) {
 }
 
 // ── Step 3: Scan all Moodle courses ──────────────────────────────────────────
-$courseToUnit          = []; // courseid → unitcode
-$unitToPreferredCid    = []; // unitcode → newest visible courseid
-$courseDetail          = []; // courseid → stdClass
-$unitDeliveryCourseMap = []; // unitcode → [deliveryKey → courseid]
+$courseToUnit          = []; // Courseid → unitcode
+$unitToPreferredCid    = []; // Unitcode → newest visible courseid
+$courseDetail          = []; // Courseid → stdClass
+$unitDeliveryCourseMap = []; // Unitcode → [deliveryKey → courseid]
 
 $_diagNatUcSet = [];
 foreach ($natUnits as $_unitMap) {
@@ -314,8 +314,8 @@ foreach ($_allCrs as $_c) {
 $_allCrs->close();
 
 // ── Step 4: Load current ACTIVE manual enrolments (for reconciler) ────────────
-$currentEnrolments = []; // uid → [courseid => unitcode]
-$enrolTimecreated  = []; // uid → [courseid => unix timestamp]
+$currentEnrolments = []; // Uid → [courseid => unitcode]
+$enrolTimecreated  = []; // Uid → [courseid => unix timestamp]
 
 if (!empty($testUids)) {
     [$_uidsql2, $_uidp2] = $DB->get_in_or_equal($testUids, SQL_PARAMS_NAMED, 'rtce');
@@ -339,7 +339,7 @@ if (!empty($testUids)) {
 
 // ── Step 4b: Load ALL enrolments including hidden/archived courses ─────────────
 // Used for the enriched Moodle Status column (Active / Archived / Not enrolled).
-$allMoodleEnrolCids = []; // uid → [courseid => true]
+$allMoodleEnrolCids = []; // Uid → [courseid => true]
 
 if (!empty($testUids)) {
     [$_uidsqlB, $_uidpB] = $DB->get_in_or_equal($testUids, SQL_PARAMS_NAMED, 'rtab');
@@ -359,11 +359,11 @@ if (!empty($testUids)) {
 }
 
 // ── Step 5: KEEP / POST-IMPORT / REMOVE / REVIEW classification ───────────────
-$keepEnrolments       = []; // uid → [courseid => true]
-$postImportEnrolments = []; // uid → [courseid => true]
-$removeEnrolments     = []; // uid → [courseid => true]
-$reviewEnrolments     = []; // uid → [courseid => true]
-$actualUnitCoverage   = []; // uid → [unitcode => courseid]
+$keepEnrolments       = []; // Uid → [courseid => true]
+$postImportEnrolments = []; // Uid → [courseid => true]
+$removeEnrolments     = []; // Uid → [courseid => true]
+$reviewEnrolments     = []; // Uid → [courseid => true]
+$actualUnitCoverage   = []; // Uid → [unitcode => courseid]
 $_importTs = $importRec ? (int)$importRec->timecreated : 0;
 
 foreach ($regressionCases as $rc) {
@@ -389,7 +389,7 @@ foreach ($regressionCases as $rc) {
 }
 
 // ── Step 6: ADD recommendations ───────────────────────────────────────────────
-$addEnrolments = []; // uid → [courseid => unitcode]
+$addEnrolments = []; // Uid → [courseid => unitcode]
 
 foreach ($regressionCases as $rc) {
     $_uid6  = (int)$rc['uid'];
@@ -411,7 +411,7 @@ foreach ($regressionCases as $rc) {
 // 'active'     = enrolled in a visible (active) course with this unit code
 // 'archived'   = enrolled only in hidden course(s) with this unit code
 // 'not_enrolled' = no Moodle enrolment for this unit code at all
-$unitMoodleStatusMap = []; // uid → [unitcode → ['status', 'shortname', 'courseid']]
+$unitMoodleStatusMap = []; // Uid → [unitcode → ['status', 'shortname', 'courseid']]
 
 foreach ($regressionCases as $rc) {
     $_uid7  = (int)$rc['uid'];
@@ -430,7 +430,7 @@ foreach ($regressionCases as $rc) {
                 $status7 = $thisStatus;
                 $sn7     = $cd7->shortname;
                 $cid7    = $_ecid;
-                if ($thisStatus === 'active') break; // prefer active; stop searching
+                if ($thisStatus === 'active') break; // Prefer active; stop searching
             }
         }
         $unitMoodleStatusMap[$_uid7][$_uc7] = [
@@ -490,7 +490,10 @@ foreach ($regressionCases as $i => $rc) {
             // Best-matching courseid for logstore history (Step 8).
             $_histCid = null;
             foreach ($courseDetail as $_hcid => $_hcd) {
-                if (_rt_matches_pattern($_hcd->shortname, $pat)) { $_histCid = $_hcid; break; }
+                if (_rt_matches_pattern($_hcd->shortname, $pat)) {
+                    $_histCid = $_hcid;
+                    break;
+                }
             }
 
             $comparisonRows[] = [
@@ -531,10 +534,11 @@ foreach ($regressionCases as $i => $rc) {
     }
 
     // Sort: not_enrolled first (most interesting), then archived, then active.
-    usort($natTrace, function ($a, $b) {
-        $ord = ['not_enrolled' => 0, 'archived' => 1, 'active' => 2];
-        return ($ord[$a['moodle_status']] ?? 0) <=> ($ord[$b['moodle_status']] ?? 0);
-    });
+    usort(
+        $natTrace, function ($a, $b) {
+            $ord = ['not_enrolled' => 0, 'archived' => 1, 'active' => 2];
+            return ($ord[$a['moodle_status']] ?? 0) <=> ($ord[$b['moodle_status']] ?? 0);
+        });
 
     // Overall pass: all comparison rows pass.
     $_allPass = !empty($comparisonRows) && array_reduce($comparisonRows, fn($c, $r) => $c && $r['pass'], true);
@@ -562,14 +566,22 @@ $overallPass = $passCount === $totalCount;
 //                 restored_after_deletion | multiple_cycles | history_incomplete
 function _rt_history_status(array $events): string {
     if (empty($events)) return 'never_enrolled';
-    $creates = 0; $deletes = 0; $lastEvt = '';
+    $creates = 0;
+    $deletes = 0;
+    $lastEvt = '';
     foreach ($events as $_hse) {
-        if (strpos($_hse['event'], 'enrolment_created') !== false) { $creates++; $lastEvt = 'c'; }
-        if (strpos($_hse['event'], 'enrolment_deleted') !== false) { $deletes++; $lastEvt = 'd'; }
+        if (strpos($_hse['event'], 'enrolment_created') !== false) {
+            $creates++;
+            $lastEvt = 'c';
+        }
+        if (strpos($_hse['event'], 'enrolment_deleted') !== false) {
+            $deletes++;
+            $lastEvt = 'd';
+        }
     }
-    if ($creates === 0 && $deletes > 0) return 'history_incomplete';   // deleted with no create on record
-    if ($creates > 1 || $deletes > 1)   return 'multiple_cycles';      // enrolled/removed more than once
-    if ($creates > 0 && $deletes === 0) return 'currently_enrolled';   // create but no delete
+    if ($creates === 0 && $deletes > 0) return 'history_incomplete';   // Deleted with no create on record
+    if ($creates > 1 || $deletes > 1)   return 'multiple_cycles';      // Enrolled/removed more than once
+    if ($creates > 0 && $deletes === 0) return 'currently_enrolled';   // Create but no delete
     if ($lastEvt === 'c')               return 'restored_after_deletion';
     if ($lastEvt === 'd')               return 'enrolled_then_removed';
     return 'never_enrolled';
@@ -579,7 +591,7 @@ function _rt_history_status(array $events): string {
 // Batch-queries mdl_logstore_standard_log for creation + deletion events per
 // student+course pair.  Uids chunked in groups of 500 to avoid over-long IN
 // clauses on large sites.  Gracefully skips if logstore table is absent.
-$logstoreHistory    = []; // uid:cid => [[event, ts, actor], ...] ORDER BY timecreated ASC
+$logstoreHistory    = []; // Uid:cid => [[event, ts, actor], ...] ORDER BY timecreated ASC
 $logstoreActorNames = []; // userid => username (resolved after all chunks)
 $logstoreAvailable  = false;
 
@@ -876,13 +888,12 @@ echo '<div class="rtoc-main-content" style="max-width:1200px;margin:0 auto;paddi
                       if (in_array($_hStatus, ['enrolled_then_removed','history_incomplete','multiple_cycles'])) {
                           echo ' &rarr; <strong style="color:#0d6efd;">Suggested: Restore</strong>';
                       }
-                  }
-              else: ?>
+                  } else : ?>
                 <span style="color:#adb5bd;">No logstore record &mdash; student may never have been enrolled in this course</span>
               <?php endif; ?>
             </td>
           </tr>
-          <?php endif; // end logstore sub-row ?>
+          <?php endif; // End logstore sub-row ?>
           <?php endforeach; ?>
         </tbody>
       </table>

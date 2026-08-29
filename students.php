@@ -49,10 +49,12 @@ require_login();
 if ($action === 'unsuspend' && $actionuserid > 0 && confirm_sesskey()) {
     require_capability('moodle/user:update', context_system::instance());
     $DB->set_field('user', 'suspended', 0, ['id' => $actionuserid]);
-    \core\session\manager::gc(); // clear any stale session locks for this user
-    redirect(new moodle_url('/local/rtocompliance/students.php', [
-        'filter' => 'all',
-        'sesskey' => sesskey(),
+    \core\session\manager::gc(); // Clear any stale session locks for this user
+    redirect(
+        new moodle_url(
+        '/local/rtocompliance/students.php', [
+                'filter' => 'all',
+                'sesskey' => sesskey(),
     ]), get_string('user_unsuspended', 'local_rtocompliance'), null, \core\output\notification::NOTIFY_SUCCESS);
 }
 
@@ -66,16 +68,18 @@ if ($action === 'bulk_unsuspend' && confirm_sesskey()) {
     $userids = optional_param_array('students', [], PARAM_INT);
     $count   = 0;
     foreach ($userids as $uid) {
-        if ($uid > 1) { // never touch guest/admin id 1
+        if ($uid > 1) { // Never touch guest/admin id 1
             $updateuser            = new stdClass();
             $updateuser->id        = $uid;
             $updateuser->suspended = 0;
-            user_update_user($updateuser, false, false); // update DB + clear user cache
+            user_update_user($updateuser, false, false); // Update DB + clear user cache
             $count++;
         }
     }
-    redirect(new moodle_url('/local/rtocompliance/students.php', [
-        'filter' => 'suspended',
+    redirect(
+        new moodle_url(
+        '/local/rtocompliance/students.php', [
+                'filter' => 'suspended',
     ]), $count . ' account(s) activated successfully.', null, \core\output\notification::NOTIFY_SUCCESS);
 }
 
@@ -88,8 +92,9 @@ if ($action === 'retry_pending_usi' && confirm_sesskey()) {
     require_once(__DIR__ . '/classes/usi/usi_verification_service.php');
     $usiservice = new \local_rtocompliance\usi\usi_verification_service();
     $resetcount = $usiservice->reset_stuck_pending();
-    redirect(new moodle_url('/local/rtocompliance/students.php', ['filter' => $filter]),
-        $resetcount . ' student(s) reset — verification will be retried on the next scheduled run.',
+    redirect(
+        new moodle_url('/local/rtocompliance/students.php', ['filter' => $filter]),
+            $resetcount . ' student(s) reset — verification will be retried on the next scheduled run.',
         null, \core\output\notification::NOTIFY_SUCCESS);
 }
 
@@ -127,7 +132,7 @@ if ($action === 'sync_dobs_from_nat' && confirm_sesskey()) {
         $yy = (int)substr($dobStr, 4, 4);
         if ($dd < 1 || $dd > 31 || $mm < 1 || $mm > 12 || $yy < 1900 || $yy > 2100) return 0;
         $ts = gmmktime(12, 0, 0, $mm, $dd, $yy);
-        // v6.3.10: pre-1970 DOBs are NEGATIVE timestamps and valid — the
+        // Version 6.3.10: pre-1970 DOBs are NEGATIVE timestamps and valid — the
         // 1900-2100 year gate above bounds the range; only false is invalid.
         return ($ts === false) ? 0 : (int)$ts;
     };
@@ -143,7 +148,7 @@ if ($action === 'sync_dobs_from_nat' && confirm_sesskey()) {
     $filledByIdnumber = 0;  // Path B: mdl_user.idnumber
     if (!empty($clientToTs)) {
         $clientids = array_values(array_keys($clientToTs));
-        $chunks    = array_chunk($clientids, 200); // keep IN() params well under DB limits
+        $chunks    = array_chunk($clientids, 200); // Keep IN() params well under DB limits
 
         foreach ($chunks as $chunk) {
             // Path A: match directly by local_rtocompliance_students.clientid.
@@ -158,10 +163,11 @@ if ($action === 'sync_dobs_from_nat' && confirm_sesskey()) {
             foreach ($rowsA as $row) {
                 $ts = $clientToTs[$row->clientid] ?? 0;
                 if ($ts === 0) continue;
-                $DB->update_record('local_rtocompliance_students', (object)[
-                    'id'           => $row->id,
-                    'dateofbirth'  => $ts,
-                    'timemodified' => time(),
+                $DB->update_record(
+                    'local_rtocompliance_students', (object)[
+                        'id'           => $row->id,
+                        'dateofbirth'  => $ts,
+                        'timemodified' => time(),
                 ]);
                 $filledById++;
             }
@@ -181,7 +187,8 @@ if ($action === 'sync_dobs_from_nat' && confirm_sesskey()) {
             foreach ($userRows as $ur) {
                 $ts = $clientToTs[trim($ur->idnumber)] ?? 0;
                 if ($ts === 0) continue;
-                $stud = $DB->get_record('local_rtocompliance_students',
+                $stud = $DB->get_record(
+                    'local_rtocompliance_students',
                     ['userid' => (int)$ur->userid], 'id, clientid, dateofbirth');
                 if (!$stud) continue;
                 if (!empty($stud->dateofbirth) && (int)$stud->dateofbirth !== 0) continue;
@@ -268,10 +275,11 @@ if ($action === 'sync_dobs_from_nat' && confirm_sesskey()) {
     foreach ($missing as $ms) {
         $key = $normName($ms->firstname ?? '', $ms->lastname ?? '');
         if ($key !== '' && isset($nameToTs[$key]) && ($missingNameCount[$key] ?? 0) === 1) {
-            $DB->update_record('local_rtocompliance_students', (object)[
-                'id'           => $ms->id,
-                'dateofbirth'  => $nameToTs[$key],
-                'timemodified' => time(),
+            $DB->update_record(
+                'local_rtocompliance_students', (object)[
+                    'id'           => $ms->id,
+                    'dateofbirth'  => $nameToTs[$key],
+                    'timemodified' => time(),
             ]);
             $filledByName++;
         } else if ($key !== '' && (isset($ambiguousNames[$key]) || ($missingNameCount[$key] ?? 0) > 1)) {
@@ -306,14 +314,16 @@ if ($action === 'upload_nat_dobs' && confirm_sesskey()) {
     if (!$upload || (int)($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || empty($upload['tmp_name'])) {
         $errcodes = [UPLOAD_ERR_INI_SIZE=>'file too large (server limit)',UPLOAD_ERR_FORM_SIZE=>'file too large (form limit)',UPLOAD_ERR_PARTIAL=>'partial upload',UPLOAD_ERR_NO_FILE=>'no file selected',UPLOAD_ERR_NO_TMP_DIR=>'no temp directory',UPLOAD_ERR_CANT_WRITE=>'cannot write to disk',UPLOAD_ERR_EXTENSION=>'upload blocked by extension'];
         $errmsg = $errcodes[$upload['error'] ?? UPLOAD_ERR_NO_FILE] ?? ('PHP upload error code ' . ($upload['error'] ?? '?'));
-        redirect(new moodle_url('/local/rtocompliance/students.php'),
+        redirect(
+            new moodle_url('/local/rtocompliance/students.php'),
             'Upload failed: ' . $errmsg, null, \core\output\notification::NOTIFY_ERROR);
     }
 
     // Safety: cap at 20 MB to prevent memory exhaustion on very large exports.
     if ((int)($upload['size'] ?? 0) > 20 * 1024 * 1024) {
-        redirect(new moodle_url('/local/rtocompliance/students.php'),
-            'File too large (max 20 MB). Use the Data Import page for files this size.',
+        redirect(
+            new moodle_url('/local/rtocompliance/students.php'),
+                'File too large (max 20 MB). Use the Data Import page for files this size.',
             null, \core\output\notification::NOTIFY_ERROR);
     }
 
@@ -330,7 +340,8 @@ if ($action === 'upload_nat_dobs' && confirm_sesskey()) {
     $clientToDob = [];
 
     if ($lines === false || count($lines) === 0) {
-        redirect(new moodle_url('/local/rtocompliance/students.php'),
+        redirect(
+            new moodle_url('/local/rtocompliance/students.php'),
             'Could not read the uploaded file. Please try again.', null, \core\output\notification::NOTIFY_ERROR);
     }
 
@@ -354,10 +365,11 @@ if ($action === 'upload_nat_dobs' && confirm_sesskey()) {
     }
 
     if (empty($clientToDob)) {
-        redirect(new moodle_url('/local/rtocompliance/students.php'),
-            "No valid DOB records found in the uploaded file ($parsedRows rows parsed, $skippedRows skipped). "
-            . "This parser expects a standard fixed-width NAT00080 file (AVETMISS 8.0). "
-            . "For tab-delimited or variant formats, use the Data Import page.",
+        redirect(
+            new moodle_url('/local/rtocompliance/students.php'),
+                "No valid DOB records found in the uploaded file ($parsedRows rows parsed, $skippedRows skipped). "
+                . "This parser expects a standard fixed-width NAT00080 file (AVETMISS 8.0). "
+                . "For tab-delimited or variant formats, use the Data Import page.",
             null, \core\output\notification::NOTIFY_WARNING);
     }
 
@@ -369,7 +381,7 @@ if ($action === 'upload_nat_dobs' && confirm_sesskey()) {
         $yy = (int)substr($dobStr, 4, 4);
         if ($dd < 1 || $dd > 31 || $mm < 1 || $mm > 12 || $yy < 1900 || $yy > 2100) continue;
         $ts = gmmktime(12, 0, 0, $mm, $dd, $yy);
-        if ($ts === false) continue; // v6.3.10: negative (pre-1970) is valid.
+        if ($ts === false) continue; // Version 6.3.10: negative (pre-1970) is valid.
         $clientToTs[$clientid] = (int)$ts;
     }
 
@@ -387,8 +399,9 @@ if ($action === 'upload_nat_dobs' && confirm_sesskey()) {
             foreach ($rowsA as $row) {
                 $ts = $clientToTs[$row->clientid] ?? 0;
                 if ($ts === 0) continue;
-                $DB->update_record('local_rtocompliance_students', (object)[
-                    'id' => $row->id, 'dateofbirth' => $ts, 'timemodified' => time(),
+                $DB->update_record(
+                    'local_rtocompliance_students', (object)[
+                        'id' => $row->id, 'dateofbirth' => $ts, 'timemodified' => time(),
                 ]);
                 $updated++;
             }
@@ -403,12 +416,13 @@ if ($action === 'upload_nat_dobs' && confirm_sesskey()) {
             foreach ($userRows as $ur) {
                 $ts = $clientToTs[trim($ur->idnumber)] ?? 0;
                 if ($ts === 0) continue;
-                $stud = $DB->get_record('local_rtocompliance_students',
+                $stud = $DB->get_record(
+                    'local_rtocompliance_students',
                     ['userid' => (int)$ur->userid], 'id, clientid, dateofbirth');
                 if (!$stud || (!empty($stud->dateofbirth) && (int)$stud->dateofbirth !== 0)) continue;
                 $upd = (object)['id' => $stud->id, 'dateofbirth' => $ts, 'timemodified' => time()];
                 if (empty($stud->clientid)) {
-                    $upd->clientid = trim($ur->idnumber); // backfill clientid for future Path A
+                    $upd->clientid = trim($ur->idnumber); // Backfill clientid for future Path A
                 }
                 $DB->update_record('local_rtocompliance_students', $upd);
                 $updated++;
@@ -462,7 +476,8 @@ if ($action === 'upload_dob_csv' && confirm_sesskey()) {
 
     $upload = $_FILES['dobcsv'] ?? null;
     if (!$upload || (int) ($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || empty($upload['tmp_name'])) {
-        redirect($redirurl, 'No CSV file was received. Please choose a file and try again.',
+        redirect(
+            $redirurl, 'No CSV file was received. Please choose a file and try again.',
             null, \core\output\notification::NOTIFY_ERROR);
     }
     if ((int) ($upload['size'] ?? 0) > 10 * 1024 * 1024) {
@@ -474,17 +489,23 @@ if ($action === 'upload_dob_csv' && confirm_sesskey()) {
         if ($raw === '') { return 0; }
         $d = $m = $y = 0;
         if (preg_match('#^(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})$#', $raw, $mm)) {
-            $d = (int) $mm[1]; $m = (int) $mm[2]; $y = (int) $mm[3];
+            $d = (int) $mm[1];
+            $m = (int) $mm[2];
+            $y = (int) $mm[3];
         } else if (preg_match('#^(\d{4})[/\-](\d{1,2})[/\-](\d{1,2})$#', $raw, $mm)) {
-            $y = (int) $mm[1]; $m = (int) $mm[2]; $d = (int) $mm[3];
+            $y = (int) $mm[1];
+            $m = (int) $mm[2];
+            $d = (int) $mm[3];
         } else if (preg_match('#^(\d{2})(\d{2})(\d{4})$#', $raw, $mm)) {
-            $d = (int) $mm[1]; $m = (int) $mm[2]; $y = (int) $mm[3];
+            $d = (int) $mm[1];
+            $m = (int) $mm[2];
+            $y = (int) $mm[3];
         } else {
             return 0;
         }
         if ($d < 1 || $d > 31 || $m < 1 || $m > 12 || $y < 1900 || $y > 2100) { return 0; }
         $ts = gmmktime(12, 0, 0, $m, $d, $y);
-        return ($ts === false) ? 0 : (int) $ts; // v6.3.10: negative (pre-1970) is valid.
+        return ($ts === false) ? 0 : (int) $ts; // Version 6.3.10: negative (pre-1970) is valid.
     };
 
     $handle = @fopen($upload['tmp_name'], 'r');
@@ -506,38 +527,55 @@ if ($action === 'upload_dob_csv' && confirm_sesskey()) {
 
     if ($col_dob === null || ($col_client === null && $col_usi === null && $col_email === null)) {
         fclose($handle);
-        redirect($redirurl,
-            'CSV must have a "Date of birth" column and at least one of "Client identifier", "USI" or "Email". '
-            . 'Tip: use "Download DOB template (CSV)", fill in the Date of birth column, then re-upload.',
+        redirect(
+            $redirurl,
+                'CSV must have a "Date of birth" column and at least one of "Client identifier", "USI" or "Email". '
+                . 'Tip: use "Download DOB template (CSV)", fill in the Date of birth column, then re-upload.',
             null, \core\output\notification::NOTIFY_ERROR);
     }
 
-    $updated = 0; $skipped = 0; $nomatch = 0; $baddate = 0;
+    $updated = 0;
+    $skipped = 0;
+    $nomatch = 0;
+    $baddate = 0;
     while (($row = fgetcsv($handle)) !== false) {
         if (count(array_filter($row, fn($v) => trim((string) $v) !== '')) === 0) { continue; }
         $ts = $parsedob($col_dob !== null ? ($row[$col_dob] ?? '') : '');
-        if ($ts === 0) { $baddate++; continue; } // v6.3.10: negative (pre-1970) is valid.
+        if ($ts === 0) {
+            $baddate++;
+            continue;
+        } // Version 6.3.10: negative (pre-1970) is valid.
 
         $stud = null;
         if ($col_client !== null && trim((string) ($row[$col_client] ?? '')) !== '') {
-            $stud = $DB->get_record('local_rtocompliance_students',
+            $stud = $DB->get_record(
+                'local_rtocompliance_students',
                 ['clientid' => trim((string) $row[$col_client])], 'id, dateofbirth', IGNORE_MULTIPLE);
         }
         if (!$stud && $col_usi !== null && trim((string) ($row[$col_usi] ?? '')) !== '') {
-            $stud = $DB->get_record('local_rtocompliance_students',
+            $stud = $DB->get_record(
+                'local_rtocompliance_students',
                 ['usi' => trim((string) $row[$col_usi])], 'id, dateofbirth', IGNORE_MULTIPLE);
         }
         if (!$stud && $col_email !== null && trim((string) ($row[$col_email] ?? '')) !== '') {
             $u = $DB->get_record('user', ['email' => trim((string) $row[$col_email]), 'deleted' => 0], 'id', IGNORE_MULTIPLE);
             if ($u) {
-                $stud = $DB->get_record('local_rtocompliance_students',
+                $stud = $DB->get_record(
+                    'local_rtocompliance_students',
                     ['userid' => (int) $u->id], 'id, dateofbirth', IGNORE_MULTIPLE);
             }
         }
-        if (!$stud) { $nomatch++; continue; }
-        if (!empty($stud->dateofbirth) && (int) $stud->dateofbirth !== 0) { $skipped++; continue; }
+        if (!$stud) {
+            $nomatch++;
+            continue;
+        }
+        if (!empty($stud->dateofbirth) && (int) $stud->dateofbirth !== 0) {
+            $skipped++;
+            continue;
+        }
 
-        $DB->update_record('local_rtocompliance_students',
+        $DB->update_record(
+            'local_rtocompliance_students',
             (object) ['id' => $stud->id, 'dateofbirth' => $ts, 'timemodified' => time()]);
         $updated++;
     }
@@ -549,7 +587,8 @@ if ($action === 'upload_dob_csv' && confirm_sesskey()) {
     if ($nomatch > 0) { $extra[] = "{$nomatch} not matched to a student"; }
     if ($baddate > 0) { $extra[] = "{$baddate} had an unreadable date"; }
     if ($extra) { $msg .= ' (' . implode(', ', $extra) . ').'; }
-    redirect($redirurl, $msg, null,
+    redirect(
+        $redirurl, $msg, null,
         $updated > 0 ? \core\output\notification::NOTIFY_SUCCESS : \core\output\notification::NOTIFY_WARNING);
 }
 
@@ -579,9 +618,10 @@ if ($action === 'sync_avetmiss_fields' && confirm_sesskey()) {
     $updated = 0;
     foreach ($stagingRs as $stg) {
         // Find the matching student record.
-        $stud = $DB->get_record('local_rtocompliance_students',
-            ['clientid' => trim((string)$stg->clientid)],
-            'id, sex, indigenousstatus, labourforcestatus, highestschoollevel, suburb, statecode, languageathome, countryofbirth, disabilityflag, prioreducationflag, atschoolflag',
+        $stud = $DB->get_record(
+            'local_rtocompliance_students',
+                ['clientid' => trim((string)$stg->clientid)],
+                'id, sex, indigenousstatus, labourforcestatus, highestschoollevel, suburb, statecode, languageathome, countryofbirth, disabilityflag, prioreducationflag, atschoolflag',
             IGNORE_MISSING);
         if (!$stud) continue;
 
@@ -727,7 +767,7 @@ if ($action === 'sync_programcodes' && confirm_sesskey()) {
 
     $updated     = 0;
     $skipped     = 0;
-    $courseCache = [];   // courseid → detected qual code (avoid duplicate walks)
+    $courseCache = [];   // Courseid → detected qual code (avoid duplicate walks)
 
     foreach ($blankRs as $row) {
         $cid = (int)$row->courseid;
@@ -764,12 +804,14 @@ if ($action === 'sync_programcodes' && confirm_sesskey()) {
     );
 }
 
-$PAGE->set_url(new moodle_url('/local/rtocompliance/students.php', [
-    'filter'  => $filter,
-    'state'   => $state,
-    'search'  => $search,
-    'sort'    => $sort,
-    'sortdir' => $sortdir,
+$PAGE->set_url(
+    new moodle_url(
+    '/local/rtocompliance/students.php', [
+            'filter'  => $filter,
+            'state'   => $state,
+            'search'  => $search,
+            'sort'    => $sort,
+            'sortdir' => $sortdir,
 ]));
 $PAGE->set_title(get_string('students', 'local_rtocompliance'));
 $PAGE->set_heading(get_string('students', 'local_rtocompliance'));
@@ -794,14 +836,15 @@ $_usi_cert_ok = false;
 if ($_usi_api_configured) {
     // Quick status ping — short timeout so it doesn't slow the page.
     $curl = curl_init(rtrim($_usi_apiurl, '/') . '/api/usi/status');
-    curl_setopt_array($curl, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPHEADER => [
-            'X-Site-Id: ' . $_usi_siteid,
-            'X-Api-Key: ' . $_usi_apikey,
-        ],
-        CURLOPT_TIMEOUT => 5,
-        CURLOPT_CONNECTTIMEOUT => 3,
+    curl_setopt_array(
+        $curl, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => [
+                'X-Site-Id: ' . $_usi_siteid,
+                'X-Api-Key: ' . $_usi_apikey,
+            ],
+            CURLOPT_TIMEOUT => 5,
+            CURLOPT_CONNECTTIMEOUT => 3,
     ]);
     $resp = curl_exec($curl);
     $code = (int) curl_getinfo($curl, CURLINFO_HTTP_CODE);
@@ -928,7 +971,7 @@ $stats['withprofile']     = $DB->count_records_sql(
 );
 $stats['complete']        = $DB->count_records('local_rtocompliance_students', ['profilecomplete' => 1]);
 $stats['withusi']         = $DB->count_records_sql("SELECT COUNT(*) FROM {local_rtocompliance_students} WHERE usi IS NOT NULL AND usi != ''");
-$stats['missing_usi']     = max(0, $stats['withprofile'] - $stats['withusi']); // v5.9.368: clamp (withprofile excludes trainers, withusi doesn't → could go negative)
+$stats['missing_usi']     = max(0, $stats['withprofile'] - $stats['withusi']); // Version 5.9.368: clamp (withprofile excludes trainers, withusi doesn't → could go negative)
 // DOB-MISSING-USI-FIX (v5.2.88): count of students who have a USI but are missing DOB
 // (verification cannot proceed without DOB).
 $stats['usi_missing_dob'] = $DB->count_records_sql(
@@ -1035,9 +1078,10 @@ echo $filterform;
 // This one-click backfill reads all previously uploaded NAT00080 data and writes
 // dateofbirth into every student record that is currently missing it.
 if ($stats['usi_missing_dob'] > 0) {
-    $syncurl      = new moodle_url('/local/rtocompliance/students.php', [
-        'action'  => 'sync_dobs_from_nat',
-        'sesskey' => sesskey(),
+    $syncurl      = new moodle_url(
+        '/local/rtocompliance/students.php', [
+            'action'  => 'sync_dobs_from_nat',
+            'sesskey' => sesskey(),
     ]);
     $importurl = new moodle_url('/local/rtocompliance/data_import.php');
     // Check whether any NAT00080 data has been previously uploaded so we can
@@ -1099,7 +1143,8 @@ if ($stats['usi_missing_dob'] > 0) {
         . '<span style="flex-basis:100%;height:0"></span>'
         . '<span style="font-size:12px;color:#78350f;align-self:center;">Or use a simple CSV:</span>'
         . '<a href="' . htmlspecialchars(
-                (new moodle_url('/local/rtocompliance/students.php',
+                (new moodle_url(
+                    '/local/rtocompliance/students.php',
                     ['action' => 'export_dob_csv', 'sesskey' => sesskey()]))->out(false), ENT_QUOTES) . '"'
             . ' class="btn btn-outline-secondary btn-sm rtoc-dob-sync-btn"'
             . ' title="Download a CSV of the students missing a DOB, ready to fill in and re-upload">'
@@ -1155,9 +1200,10 @@ try {
     $_needsAvetmissSync = false;
 }
 if ($_needsAvetmissSync) {
-    $_syncAvetmissUrl = new moodle_url('/local/rtocompliance/students.php', [
-        'action'  => 'sync_avetmiss_fields',
-        'sesskey' => sesskey(),
+    $_syncAvetmissUrl = new moodle_url(
+        '/local/rtocompliance/students.php', [
+            'action'  => 'sync_avetmiss_fields',
+            'sesskey' => sesskey(),
     ]);
     $_svgSync = '<svg style="width:13px;height:13px;vertical-align:middle;margin-right:4px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     echo '<div class="rtoc-dob-sync-bar" style="border-left-color:#8b5cf6;">'
@@ -1184,9 +1230,10 @@ try {
     $_courseMapEmpty = false;
 }
 if ($_courseMapEmpty) {
-    $_rebuildUrl = new moodle_url('/local/rtocompliance/students.php', [
-        'action'  => 'rebuild_course_map',
-        'sesskey' => sesskey(),
+    $_rebuildUrl = new moodle_url(
+        '/local/rtocompliance/students.php', [
+            'action'  => 'rebuild_course_map',
+            'sesskey' => sesskey(),
     ]);
     echo '<div class="rtoc-dob-sync-bar" style="border-left-color:#6366f1;">'
         . '<span class="rtoc-dob-sync-msg">'
@@ -1222,9 +1269,10 @@ try {
     $_hasBlankProgramcodes = false;
 }
 if ($_hasBlankProgramcodes) {
-    $_syncPcUrl     = new moodle_url('/local/rtocompliance/students.php', [
-        'action'  => 'sync_programcodes',
-        'sesskey' => sesskey(),
+    $_syncPcUrl     = new moodle_url(
+        '/local/rtocompliance/students.php', [
+            'action'  => 'sync_programcodes',
+            'sesskey' => sesskey(),
     ]);
     $_skippedRptUrl = new moodle_url('/local/rtocompliance/skipped_programcodes.php');
     echo '<div class="rtoc-dob-sync-bar" style="border-left-color:#f59e0b;">'
@@ -1259,9 +1307,10 @@ if ($_hasBlankProgramcodes) {
 // credential was not yet active when the batch last ran. Resetting them to usiverified=0
 // causes the next scheduled batch to re-attempt them automatically.
 if ($stats['usi_pending_retry'] > 0) {
-    $retryurl = new moodle_url('/local/rtocompliance/students.php', [
-        'action'  => 'retry_pending_usi',
-        'sesskey' => sesskey(),
+    $retryurl = new moodle_url(
+        '/local/rtocompliance/students.php', [
+            'action'  => 'retry_pending_usi',
+            'sesskey' => sesskey(),
     ]);
     echo '<div class="rtoc-dob-sync-bar" style="border-left-color:#0ea5e9;">'
         . '<span class="rtoc-dob-sync-msg">'
@@ -1387,13 +1436,15 @@ foreach ($tas_records as $t) {
 }
 
 // ── Bulk action bar ────────────────────────────────────────────────────────────
-$bulkformurl = (new moodle_url('/local/rtocompliance/suitability_bulk.php', [
-    'action'  => 'bulk_send',
-    'sesskey' => sesskey(),
+$bulkformurl = (new moodle_url(
+    '/local/rtocompliance/suitability_bulk.php', [
+        'action'  => 'bulk_send',
+        'sesskey' => sesskey(),
 ]))->out(false);
 
-$fillgapsurl = (new moodle_url('/local/rtocompliance/suitability_bulk.php', [
-    'action' => 'fill_gaps',
+$fillgapsurl = (new moodle_url(
+    '/local/rtocompliance/suitability_bulk.php', [
+        'action' => 'fill_gaps',
 ]))->out(false);
 
 echo '<div class="rto-bulk-bar">';
@@ -1439,13 +1490,14 @@ echo '<input type="hidden" name="action"  value="bulk_unsuspend">';
 // ── Student table ─────────────────────────────────────────────────────────────
 // Build sortable "Name" column header.
 $nameNextDir   = ($sort === 'name' && $sortdir === 'asc') ? 'desc' : 'asc';
-$nameSortUrl   = new moodle_url('/local/rtocompliance/students.php', [
-    'filter'  => $filter,
-    'state'   => $state,
-    'search'  => $search,
-    'sort'    => 'name',
-    'sortdir' => $nameNextDir,
-    'page'    => 0,
+$nameSortUrl   = new moodle_url(
+    '/local/rtocompliance/students.php', [
+        'filter'  => $filter,
+        'state'   => $state,
+        'search'  => $search,
+        'sort'    => 'name',
+        'sortdir' => $nameNextDir,
+        'page'    => 0,
 ]);
 $nameSortArrow = '';
 if ($sort === 'name') {
@@ -1453,7 +1505,8 @@ if ($sort === 'name') {
         ? ' <svg style="width:10px;height:10px;vertical-align:middle" viewBox="0 0 10 10"><path d="M5 2L9 8H1z" fill="currentColor"/></svg>'
         : ' <svg style="width:10px;height:10px;vertical-align:middle" viewBox="0 0 10 10"><path d="M5 8L1 2h8z" fill="currentColor"/></svg>';
 }
-$nameHeader = html_writer::link($nameSortUrl, get_string('name') . $nameSortArrow,
+$nameHeader = html_writer::link(
+    $nameSortUrl, get_string('name') . $nameSortArrow,
     ['style' => 'white-space:nowrap;text-decoration:none;color:inherit;font-weight:bold']);
 
 $table = new html_table();
@@ -1594,10 +1647,11 @@ foreach ($students as $student) {
     // FIX-SUSPENDED-UNSUSPEND (v5.2.38): for suspended accounts show an Unsuspend button
     // instead of the normal Actions menu (suspended users can't be enrolled/edited anyway).
     if (!empty($student->suspended)) {
-        $unsuspendurl = new moodle_url('/local/rtocompliance/students.php', [
-            'action'       => 'unsuspend',
-            'actionuserid' => $student->id,
-            'sesskey'      => sesskey(),
+        $unsuspendurl = new moodle_url(
+            '/local/rtocompliance/students.php', [
+                'action'       => 'unsuspend',
+                'actionuserid' => $student->id,
+                'sesskey'      => sesskey(),
         ]);
         $actions = html_writer::link(
             $unsuspendurl,
@@ -1647,10 +1701,11 @@ foreach ($students as $student) {
 
         if ($ststatus === 'pending') {
             $suitcell  = '<span class="badge badge-info" title="The suitability checklist has been sent and is waiting for the learner to complete it.">' . get_string('suitability_status_pending', 'local_rtocompliance') . '</span><br>';
-            $resendurl = new moodle_url('/local/rtocompliance/suitability_send.php', [
-                'userid'   => $student->id,
-                'resendid' => $student->suitabilityid,
-                'sesskey'  => sesskey(),
+            $resendurl = new moodle_url(
+                '/local/rtocompliance/suitability_send.php', [
+                    'userid'   => $student->id,
+                    'resendid' => $student->suitabilityid,
+                    'sesskey'  => sesskey(),
             ]);
             $suitcell .= html_writer::link($resendurl, get_string('suitability_resend', 'local_rtocompliance'), ['class' => 'btn btn-sm btn-outline-secondary mt-1', 'title' => 'Resend the suitability checklist to this learner']);
         } else if ($ststatus === 'suitable') {
@@ -1696,10 +1751,11 @@ if (empty($students)) {
     echo '</div>';
     echo $OUTPUT->paging_bar($totalcount, $page, $perpage, $PAGE->url);
 }
-echo '</form>'; // closes student-action-form
+echo '</form>'; // Closes student-action-form
 
 // ── JS for checkboxes + bulk send ─────────────────────────────────────────────
-echo html_writer::script('
+echo html_writer::script(
+    '
 (function () {
     var selectAll  = document.getElementById("selectall-cb");
     var sendBtn    = document.getElementById("bulk-send-btn");

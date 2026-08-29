@@ -196,24 +196,26 @@ if ($deadlines) {
         $statusclass = $daysuntil <= 0 ? 'status-urgent' : ($daysuntil <= 7 ? 'status-urgent' : ($daysuntil <= 30 ? 'status-warning' : 'status-ok'));
 
         echo html_writer::start_tag('tr');
-        echo html_writer::tag('td',
-            html_writer::tag('strong', format_string($deadline->title)) .
-            ($deadline->description ? html_writer::empty_tag('br') . html_writer::tag('small', $deadline->description, ['class' => 'text-muted']) : '')
+        echo html_writer::tag(
+            'td',
+                html_writer::tag('strong', format_string($deadline->title)) .
+                ($deadline->description ? html_writer::empty_tag('br') . html_writer::tag('small', $deadline->description, ['class' => 'text-muted']) : '')
         );
         echo html_writer::tag('td', html_writer::tag('span', ucfirst($deadline->deadlinetype), ['class' => 'status-badge status-ok', 'title' => 'The kind of compliance obligation, for example TVA (Total VET Activity data) or QI (Quality Indicator data). VET means vocational education.']));
         echo html_writer::tag('td', userdate($deadline->duedate, '%d %b %Y'));
         echo html_writer::tag('td', html_writer::tag('span', ($daysuntil <= 0 ? 'Overdue' : $daysuntil . ' days'), ['class' => 'status-badge ' . $statusclass, 'title' => 'How long until this is due. Amber means due within 30 days; red means due within a week or already overdue.']));
-        echo html_writer::tag('td',
-            html_writer::link(
-                new moodle_url('/local/rtocompliance/deadlines.php', ['action' => 'complete', 'id' => $deadline->id, 'sesskey' => sesskey()]),
-                'Complete',
-                ['class' => 'btn btn-sm btn-primary', 'title' => 'Mark this deadline as completed']
-            ) . ' ' .
-            html_writer::link(
-                new moodle_url('/local/rtocompliance/deadlines.php', ['action' => 'delete', 'id' => $deadline->id, 'sesskey' => sesskey()]),
-                'Delete',
-                ['class' => 'btn btn-sm btn-secondary', 'title' => 'Delete this deadline', 'onclick' => "return confirm('Delete this deadline?');"]
-            )
+        echo html_writer::tag(
+            'td',
+                html_writer::link(
+                    new moodle_url('/local/rtocompliance/deadlines.php', ['action' => 'complete', 'id' => $deadline->id, 'sesskey' => sesskey()]),
+                    'Complete',
+                    ['class' => 'btn btn-sm btn-primary', 'title' => 'Mark this deadline as completed']
+                ) . ' ' .
+                html_writer::link(
+                    new moodle_url('/local/rtocompliance/deadlines.php', ['action' => 'delete', 'id' => $deadline->id, 'sesskey' => sesskey()]),
+                    'Delete',
+                    ['class' => 'btn btn-sm btn-secondary', 'title' => 'Delete this deadline', 'onclick' => "return confirm('Delete this deadline?');"]
+                )
         );
         echo html_writer::end_tag('tr');
     }

@@ -153,12 +153,13 @@ if ($tab == 'complaints') {
             echo html_writer::tag('td', html_writer::tag('span', ucfirst($complaint->status), ['class' => 'badge ' . $statusclass, 'title' => $statustitle]));
             echo html_writer::tag('td', ucfirst($complaint->priority));
             echo html_writer::tag('td', $complaint->assignedto ?: '-');
-            echo html_writer::tag('td',
-                html_writer::link(
-                    new moodle_url('/local/rtocompliance/complaint_edit.php', ['id' => $complaint->id]),
-                    'View',
-                    ['class' => 'btn btn-sm btn-secondary', 'title' => 'View the full complaint record']
-                )
+            echo html_writer::tag(
+                'td',
+                    html_writer::link(
+                        new moodle_url('/local/rtocompliance/complaint_edit.php', ['id' => $complaint->id]),
+                        'View',
+                        ['class' => 'btn btn-sm btn-secondary', 'title' => 'View the full complaint record']
+                    )
             );
             echo html_writer::end_tag('tr');
         }
@@ -223,12 +224,13 @@ if ($tab == 'complaints') {
             echo html_writer::tag('td', userdate($appeal->datelodged, '%d %b %Y'));
             echo html_writer::tag('td', html_writer::tag('span', ucfirst($appeal->status), ['class' => 'badge ' . $statusclass, 'title' => $statustitle]));
             echo html_writer::tag('td', $appeal->outcome ? ucfirst(str_replace('_', ' ', $appeal->outcome)) : '-');
-            echo html_writer::tag('td',
-                html_writer::link(
-                    new moodle_url('/local/rtocompliance/appeal_edit.php', ['id' => $appeal->id]),
-                    'View',
-                    ['class' => 'btn btn-sm btn-secondary', 'title' => 'View the full appeal record']
-                )
+            echo html_writer::tag(
+                'td',
+                    html_writer::link(
+                        new moodle_url('/local/rtocompliance/appeal_edit.php', ['id' => $appeal->id]),
+                        'View',
+                        ['class' => 'btn btn-sm btn-secondary', 'title' => 'View the full appeal record']
+                    )
             );
             echo html_writer::end_tag('tr');
         }
@@ -295,12 +297,13 @@ if ($tab == 'complaints') {
             echo html_writer::tag('td', userdate($item->dateidentified, '%d %b %Y'));
             echo html_writer::tag('td', $item->targetdate ? userdate($item->targetdate, '%d %b %Y') : '-');
             echo html_writer::tag('td', html_writer::tag('span', ucfirst($item->status), ['class' => 'badge ' . $statusclass, 'title' => $statustitle]));
-            echo html_writer::tag('td',
-                html_writer::link(
-                    new moodle_url('/local/rtocompliance/improvement_edit.php', ['id' => $item->id]),
-                    'Edit',
-                    ['class' => 'btn btn-sm btn-secondary', 'title' => 'Edit this improvement action']
-                )
+            echo html_writer::tag(
+                'td',
+                    html_writer::link(
+                        new moodle_url('/local/rtocompliance/improvement_edit.php', ['id' => $item->id]),
+                        'Edit',
+                        ['class' => 'btn btn-sm btn-secondary', 'title' => 'Edit this improvement action']
+                    )
             );
             echo html_writer::end_tag('tr');
         }

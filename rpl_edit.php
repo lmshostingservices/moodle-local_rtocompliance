@@ -168,7 +168,7 @@ if ($action === 'save' && confirm_sesskey()) {
     }
 
     if ($dbman->table_exists('local_rtocompliance_rpl')) {
-        // v5.9.381: an APPROVED (or partially approved) decision linked to a real
+        // Version 5.9.381: an APPROVED (or partially approved) decision linked to a real
         // student + unit posts the RPL/CT outcome into the results register.
         $postoutcome = function () use ($data, $id) {
             if (in_array($data->decision, ['approved', 'partially_approved'], true)
@@ -210,7 +210,8 @@ if ($action === 'save' && confirm_sesskey()) {
                         return;
                     }
                 }
-                local_rtocompliance_apply_rpl_outcome((int)$data->studentid, (string)$data->unitcode,
+                local_rtocompliance_apply_rpl_outcome(
+                    (int)$data->studentid, (string)$data->unitcode,
                     (string)$data->unitname, (string)$data->qualcode, (string)$data->qualname, (string)$data->rpltype);
             }
         };
@@ -273,7 +274,8 @@ if ($action === 'delfile' && $id && confirm_sesskey()) {
         local_rtocompliance_delete_rpl_evidence_file($id, $delarea, $delname);
         local_rtocompliance_log_action('update', 'rpl', $id, ['deleted_file' => $delname]);
     }
-    redirect(new moodle_url('/local/rtocompliance/rpl_edit.php', ['id' => $id, 'tab' => $tab]),
+    redirect(
+        new moodle_url('/local/rtocompliance/rpl_edit.php', ['id' => $id, 'tab' => $tab]),
         'Evidence file removed.', null, \core\output\notification::NOTIFY_SUCCESS);
 }
 
@@ -290,12 +292,13 @@ $_rtoc_apikey = function_exists('local_aiconfig_get_apikey')
     ? (local_aiconfig_get_apikey('local_rtocompliance') ?: get_config('local_rtocompliance', 'apikey') ?: '')
     : (get_config('local_rtocompliance', 'apikey') ?: '');
 $_rtoc_apibase = rtrim(get_config('local_rtocompliance', 'apiurl') ?: 'https://lms-labs.com', '/');
-echo html_writer::tag('div', '', [
-    'id'            => 'rtoc-ai-config',
-    'data-api-key'  => $_rtoc_apikey,
-    'data-api-base' => $_rtoc_apibase,
-    'style'         => 'display:none',
-    'aria-hidden'   => 'true',
+echo html_writer::tag(
+    'div', '', [
+        'id'            => 'rtoc-ai-config',
+        'data-api-key'  => $_rtoc_apikey,
+        'data-api-base' => $_rtoc_apibase,
+        'style'         => 'display:none',
+        'aria-hidden'   => 'true',
 ]);
 
 echo local_rtocompliance_render_nav_header('RPL & Credit Transfer');
@@ -313,11 +316,12 @@ echo html_writer::end_div();
 
 $formdata = $record ?: new stdClass();
 
-echo html_writer::start_tag('form', [
-    'method'  => 'post',
-    'action'  => $PAGE->url->out_omit_querystring(),
-    'enctype' => 'multipart/form-data',
-    'style'   => 'max-width: 780px;',
+echo html_writer::start_tag(
+    'form', [
+        'method'  => 'post',
+        'action'  => $PAGE->url->out_omit_querystring(),
+        'enctype' => 'multipart/form-data',
+        'style'   => 'max-width: 780px;',
 ]);
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'action', 'value' => 'save']);
@@ -333,7 +337,8 @@ $renderEvidenceUpload = function (string $filearea, string $inputname, string $h
         string $instructions, string $emptyhint) use ($id) {
     echo html_writer::start_div('form-group', ['style' => 'margin-top: 12px;']);
     echo html_writer::tag('label', $heading, ['class' => 'form-label', 'style' => 'font-weight:600;']);
-    echo html_writer::tag('p', $instructions,
+    echo html_writer::tag(
+        'p', $instructions,
         ['class' => 'text-muted', 'style' => 'font-size:0.85rem; margin:4px 0 8px;']);
 
     if ($id) {
@@ -342,37 +347,44 @@ $renderEvidenceUpload = function (string $filearea, string $inputname, string $h
             echo html_writer::start_tag('ul', ['style' => 'list-style:none; padding:0; margin:0 0 10px;']);
             foreach ($existing as $ef) {
                 $kb = $ef['size'] > 0 ? ' (' . ceil($ef['size'] / 1024) . ' KB)' : '';
-                $delurl = new moodle_url('/local/rtocompliance/rpl_edit.php', [
-                    'id' => $id, 'action' => 'delfile', 'filearea' => $filearea,
-                    'filename' => $ef['filename'], 'sesskey' => sesskey(),
+                $delurl = new moodle_url(
+                    '/local/rtocompliance/rpl_edit.php', [
+                        'id' => $id, 'action' => 'delfile', 'filearea' => $filearea,
+                        'filename' => $ef['filename'], 'sesskey' => sesskey(),
                 ]);
                 echo html_writer::start_tag('li', ['style' => 'display:flex; align-items:center; gap:10px; padding:6px 10px; background:#f8fafc; border:1px solid #e5e7eb; border-radius:6px; margin-bottom:6px;']);
                 echo html_writer::tag('span', '📎', ['aria-hidden' => 'true']);
-                echo html_writer::link($ef['url'], s($ef['filename']) . $kb,
+                echo html_writer::link(
+                    $ef['url'], s($ef['filename']) . $kb,
                     ['target' => '_blank', 'rel' => 'noopener', 'style' => 'flex:1; word-break:break-all;']);
-                echo html_writer::link($delurl, 'Remove', [
-                    'class' => 'btn btn-sm btn-outline-danger',
-                    'onclick' => 'return confirm("Remove this file? This cannot be undone.");',
+                echo html_writer::link(
+                    $delurl, 'Remove', [
+                        'class' => 'btn btn-sm btn-outline-danger',
+                        'onclick' => 'return confirm("Remove this file? This cannot be undone.");',
                 ]);
                 echo html_writer::end_tag('li');
             }
             echo html_writer::end_tag('ul');
         } else {
-            echo html_writer::tag('p', 'No files uploaded yet.',
+            echo html_writer::tag(
+                'p', 'No files uploaded yet.',
                 ['class' => 'text-muted', 'style' => 'font-size:0.85rem;']);
         }
-        echo html_writer::empty_tag('input', [
-            'type' => 'file', 'name' => $inputname . '[]', 'id' => $inputname,
-            'multiple' => 'multiple', 'class' => 'form-control',
-            'accept' => '.pdf,.jpg,.jpeg,.png,.gif,.webp,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.rtf,.odt,.heic',
+        echo html_writer::empty_tag(
+            'input', [
+                'type' => 'file', 'name' => $inputname . '[]', 'id' => $inputname,
+                'multiple' => 'multiple', 'class' => 'form-control',
+                'accept' => '.pdf,.jpg,.jpeg,.png,.gif,.webp,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.rtf,.odt,.heic',
         ]);
-        echo html_writer::tag('small',
-            'You can select multiple files. Accepted: PDF, image, Word, Excel, PowerPoint, text — up to 20 MB each.',
+        echo html_writer::tag(
+            'small',
+                'You can select multiple files. Accepted: PDF, image, Word, Excel, PowerPoint, text — up to 20 MB each.',
             ['class' => 'form-text text-muted']);
     } else {
-        echo html_writer::tag('div', $emptyhint, [
-            'class' => 'alert alert-info',
-            'style' => 'font-size:0.85rem; padding:10px 12px;',
+        echo html_writer::tag(
+            'div', $emptyhint, [
+                'class' => 'alert alert-info',
+                'style' => 'font-size:0.85rem; padding:10px 12px;',
         ]);
     }
     echo html_writer::end_div();
@@ -389,7 +401,7 @@ echo html_writer::tag('label', 'Application Type *', ['for' => 'rpltype', 'class
 echo html_writer::select($typeOptions, 'rpltype', $currentType, null, ['id' => 'rpltype', 'class' => 'form-control', 'required' => 'required']);
 echo html_writer::end_div();
 
-// v5.9.381: link the record to a real student so an APPROVED decision writes the
+// Version 5.9.381: link the record to a real student so an APPROVED decision writes the
 // RPL (51) / Credit Transfer (60) outcome into the results register automatically.
 $studentopts = ['' => '-- Select a student --'];
 $strecs = $DB->get_records_sql(
@@ -404,19 +416,22 @@ foreach ($strecs as $sr) {
 }
 echo html_writer::start_div('form-group');
 echo html_writer::tag('label', 'Student *', ['for' => 'studentid', 'class' => 'form-label']);
-echo html_writer::select($studentopts, 'studentid', $formdata->studentid ?? '', false,
+echo html_writer::select(
+    $studentopts, 'studentid', $formdata->studentid ?? '', false,
     ['id' => 'studentid', 'class' => 'form-control']);
-echo html_writer::tag('small',
-    'Linking a student lets an approved RPL / Credit Transfer decision post the outcome to Student Results automatically.',
+echo html_writer::tag(
+    'small',
+        'Linking a student lets an approved RPL / Credit Transfer decision post the outcome to Student Results automatically.',
     ['class' => 'form-text text-muted']);
 echo html_writer::end_div();
 
 echo html_writer::start_div('form-group');
 echo html_writer::tag('label', 'Student Name', ['for' => 'studentname', 'class' => 'form-label']);
-echo html_writer::empty_tag('input', [
-    'type' => 'text', 'name' => 'studentname', 'id' => 'studentname',
-    'value' => s($formdata->studentname ?? ''),
-    'class' => 'form-control', 'placeholder' => 'Auto-filled from the selected student if left blank',
+echo html_writer::empty_tag(
+    'input', [
+        'type' => 'text', 'name' => 'studentname', 'id' => 'studentname',
+        'value' => s($formdata->studentname ?? ''),
+        'class' => 'form-control', 'placeholder' => 'Auto-filled from the selected student if left blank',
 ]);
 echo html_writer::end_div();
 
@@ -428,18 +443,20 @@ echo html_writer::tag('h4', 'Unit / Qualification Details', ['style' => 'margin-
 echo html_writer::start_div('form-row', ['style' => 'display: grid; grid-template-columns: 1fr 2fr; gap: 16px;']);
 echo html_writer::start_div('form-group');
 echo html_writer::tag('label', 'Unit Code', ['for' => 'unitcode', 'class' => 'form-label']);
-echo html_writer::empty_tag('input', [
-    'type' => 'text', 'name' => 'unitcode', 'id' => 'unitcode',
-    'value' => s($formdata->unitcode ?? ''),
-    'class' => 'form-control', 'placeholder' => 'e.g. BSBWHS411',
+echo html_writer::empty_tag(
+    'input', [
+        'type' => 'text', 'name' => 'unitcode', 'id' => 'unitcode',
+        'value' => s($formdata->unitcode ?? ''),
+        'class' => 'form-control', 'placeholder' => 'e.g. BSBWHS411',
 ]);
 echo html_writer::end_div();
 echo html_writer::start_div('form-group');
 echo html_writer::tag('label', 'Unit Name', ['for' => 'unitname', 'class' => 'form-label']);
-echo html_writer::empty_tag('input', [
-    'type' => 'text', 'name' => 'unitname', 'id' => 'unitname',
-    'value' => s($formdata->unitname ?? ''),
-    'class' => 'form-control', 'placeholder' => 'Unit of competency name',
+echo html_writer::empty_tag(
+    'input', [
+        'type' => 'text', 'name' => 'unitname', 'id' => 'unitname',
+        'value' => s($formdata->unitname ?? ''),
+        'class' => 'form-control', 'placeholder' => 'Unit of competency name',
 ]);
 echo html_writer::end_div();
 echo html_writer::end_div();
@@ -447,18 +464,20 @@ echo html_writer::end_div();
 echo html_writer::start_div('form-row', ['style' => 'display: grid; grid-template-columns: 1fr 2fr; gap: 16px; margin-top: 12px;']);
 echo html_writer::start_div('form-group');
 echo html_writer::tag('label', 'Qualification Code', ['for' => 'qualcode', 'class' => 'form-label']);
-echo html_writer::empty_tag('input', [
-    'type' => 'text', 'name' => 'qualcode', 'id' => 'qualcode',
-    'value' => s($formdata->qualcode ?? ''),
-    'class' => 'form-control', 'placeholder' => 'e.g. BSB50120',
+echo html_writer::empty_tag(
+    'input', [
+        'type' => 'text', 'name' => 'qualcode', 'id' => 'qualcode',
+        'value' => s($formdata->qualcode ?? ''),
+        'class' => 'form-control', 'placeholder' => 'e.g. BSB50120',
 ]);
 echo html_writer::end_div();
 echo html_writer::start_div('form-group');
 echo html_writer::tag('label', 'Qualification Name', ['for' => 'qualname', 'class' => 'form-label']);
-echo html_writer::empty_tag('input', [
-    'type' => 'text', 'name' => 'qualname', 'id' => 'qualname',
-    'value' => s($formdata->qualname ?? ''),
-    'class' => 'form-control', 'placeholder' => 'e.g. Diploma of Business',
+echo html_writer::empty_tag(
+    'input', [
+        'type' => 'text', 'name' => 'qualname', 'id' => 'qualname',
+        'value' => s($formdata->qualname ?? ''),
+        'class' => 'form-control', 'placeholder' => 'e.g. Diploma of Business',
 ]);
 echo html_writer::end_div();
 echo html_writer::end_div();
@@ -468,13 +487,15 @@ echo html_writer::end_div();
 echo html_writer::start_div('form-row', ['style' => 'display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 12px;']);
 echo html_writer::start_div('form-group');
 echo html_writer::tag('label', 'Superseded unit held (optional)', ['for' => 'supersededunitcode', 'class' => 'form-label']);
-echo html_writer::empty_tag('input', [
-    'type' => 'text', 'name' => 'supersededunitcode', 'id' => 'supersededunitcode',
-    'value' => s($formdata->supersededunitcode ?? ''),
-    'class' => 'form-control', 'placeholder' => 'e.g. BSBWHS401 (prior version the student holds)',
+echo html_writer::empty_tag(
+    'input', [
+        'type' => 'text', 'name' => 'supersededunitcode', 'id' => 'supersededunitcode',
+        'value' => s($formdata->supersededunitcode ?? ''),
+        'class' => 'form-control', 'placeholder' => 'e.g. BSBWHS401 (prior version the student holds)',
 ]);
-echo html_writer::tag('div',
-    'If the student holds an older, superseded version of the unit above, enter that code here. Credit for the current unit is then justified by the mapping.',
+echo html_writer::tag(
+    'div',
+        'If the student holds an older, superseded version of the unit above, enter that code here. Credit for the current unit is then justified by the mapping.',
     ['class' => 'form-text text-muted', 'style' => 'font-size:0.82rem;']);
 echo html_writer::end_div();
 echo html_writer::start_div('form-group');
@@ -485,10 +506,12 @@ $equivOptions = [
     'not_equivalent' => 'Not equivalent (N) — gap assessment required',
     'not_applicable' => 'Not applicable',
 ];
-echo html_writer::select($equivOptions, 'unitequivalence', $formdata->unitequivalence ?? '', false,
+echo html_writer::select(
+    $equivOptions, 'unitequivalence', $formdata->unitequivalence ?? '', false,
     ['id' => 'unitequivalence', 'class' => 'form-control']);
-echo html_writer::tag('div',
-    'TGA marks superseded-unit relationships as Equivalent (E) or Not Equivalent (N). An "N" mapping cannot be credited on its own — the gap must be assessed.',
+echo html_writer::tag(
+    'div',
+        'TGA marks superseded-unit relationships as Equivalent (E) or Not Equivalent (N). An "N" mapping cannot be credited on its own — the gap must be assessed.',
     ['class' => 'form-text text-muted', 'style' => 'font-size:0.82rem;']);
 echo html_writer::end_div();
 echo html_writer::end_div();
@@ -501,18 +524,20 @@ echo html_writer::tag('h4', 'Credit Transfer Details (Standard 1.7)', ['style' =
 echo html_writer::start_div('form-row', ['style' => 'display: grid; grid-template-columns: 1fr 1fr; gap: 16px;']);
 echo html_writer::start_div('form-group');
 echo html_writer::tag('label', 'Source Qualification Code', ['for' => 'sourcequalcode', 'class' => 'form-label']);
-echo html_writer::empty_tag('input', [
-    'type' => 'text', 'name' => 'sourcequalcode', 'id' => 'sourcequalcode',
-    'value' => s($formdata->sourcequalcode ?? ''),
-    'class' => 'form-control', 'placeholder' => 'Code of previously held qualification',
+echo html_writer::empty_tag(
+    'input', [
+        'type' => 'text', 'name' => 'sourcequalcode', 'id' => 'sourcequalcode',
+        'value' => s($formdata->sourcequalcode ?? ''),
+        'class' => 'form-control', 'placeholder' => 'Code of previously held qualification',
 ]);
 echo html_writer::end_div();
 echo html_writer::start_div('form-group');
 echo html_writer::tag('label', 'Source RTO Identifier', ['for' => 'sourcertoid', 'class' => 'form-label']);
-echo html_writer::empty_tag('input', [
-    'type' => 'text', 'name' => 'sourcertoid', 'id' => 'sourcertoid',
-    'value' => s($formdata->sourcertoid ?? ''),
-    'class' => 'form-control', 'placeholder' => 'RTO code of issuing provider',
+echo html_writer::empty_tag(
+    'input', [
+        'type' => 'text', 'name' => 'sourcertoid', 'id' => 'sourcertoid',
+        'value' => s($formdata->sourcertoid ?? ''),
+        'class' => 'form-control', 'placeholder' => 'RTO code of issuing provider',
 ]);
 echo html_writer::end_div();
 echo html_writer::end_div();
@@ -520,13 +545,16 @@ echo html_writer::end_div();
 echo html_writer::start_div('form-group', ['style' => 'margin-top: 12px;']);
 $usiChecked = !empty($formdata->usitranscriptverified) ? ['checked' => 'checked'] : [];
 echo html_writer::start_div('', ['style' => 'display: flex; align-items: center; gap: 8px;']);
-echo html_writer::empty_tag('input', array_merge([
-    'type' => 'checkbox', 'name' => 'usitranscriptverified', 'id' => 'usitranscriptverified',
-    'value' => '1', 'class' => 'form-check-input',
+echo html_writer::empty_tag(
+    'input', array_merge(
+    [
+            'type' => 'checkbox', 'name' => 'usitranscriptverified', 'id' => 'usitranscriptverified',
+            'value' => '1', 'class' => 'form-check-input',
 ], $usiChecked));
-echo html_writer::tag('label', 'USI Transcript Verified -- Clause 12 requirement: USI transcript sighted or verified before credit granted', [
-    'for' => 'usitranscriptverified', 'class' => 'form-check-label',
-    'style' => 'font-weight: 500; color: #374151;',
+echo html_writer::tag(
+    'label', 'USI Transcript Verified -- Clause 12 requirement: USI transcript sighted or verified before credit granted', [
+        'for' => 'usitranscriptverified', 'class' => 'form-check-label',
+        'style' => 'font-weight: 500; color: #374151;',
 ]);
 echo html_writer::end_div();
 echo html_writer::end_div();
@@ -576,23 +604,27 @@ try {
 
 echo html_writer::start_div('form-group');
 echo html_writer::tag('label', 'Assessor (registered trainer)', ['for' => 'assessoruserid', 'class' => 'form-label']);
-echo html_writer::select($assessorOptions, 'assessoruserid', (int) ($formdata->assessoruserid ?? 0), false,
+echo html_writer::select(
+    $assessorOptions, 'assessoruserid', (int) ($formdata->assessoruserid ?? 0), false,
     ['id' => 'assessoruserid', 'class' => 'form-control']);
 $selassessor = (int) ($formdata->assessoruserid ?? 0);
 if ($selassessor && isset($trainerTae[$selassessor])) {
     $ti = $trainerTae[$selassessor];
     if (!$ti['hastae']) {
-        echo html_writer::tag('div',
-            '⚠ This trainer has no TAE credential recorded. Standard 1.5 requires the assessor to hold the '
-            . 'relevant TAE qualification (or be supervised by someone who does).',
+        echo html_writer::tag(
+            'div',
+                '⚠ This trainer has no TAE credential recorded. Standard 1.5 requires the assessor to hold the '
+                . 'relevant TAE qualification (or be supervised by someone who does).',
             ['class' => 'form-text', 'style' => 'color:#b45309;margin-top:4px;']);
     } else if (!$ti['current']) {
-        echo html_writer::tag('div',
-            '⚠ This trainer\'s TAE credential has an expiry date in the past. Confirm currency before relying on '
-            . 'this assessment (Standard 1.5).',
+        echo html_writer::tag(
+            'div',
+                '⚠ This trainer\'s TAE credential has an expiry date in the past. Confirm currency before relying on '
+                . 'this assessment (Standard 1.5).',
             ['class' => 'form-text', 'style' => 'color:#b45309;margin-top:4px;']);
     } else {
-        echo html_writer::tag('div', '✓ Selected assessor holds a current TAE credential.',
+        echo html_writer::tag(
+            'div', '✓ Selected assessor holds a current TAE credential.',
             ['class' => 'form-text', 'style' => 'color:#15803d;margin-top:4px;']);
     }
 }
@@ -600,19 +632,21 @@ echo html_writer::end_div();
 
 echo html_writer::start_div('form-group', ['style' => 'margin-top: 12px;']);
 echo html_writer::tag('label', 'Assessor name (if not a registered trainer)', ['for' => 'assessorname', 'class' => 'form-label']);
-echo html_writer::empty_tag('input', [
-    'type' => 'text', 'name' => 'assessorname', 'id' => 'assessorname',
-    'value' => s($formdata->assessorname ?? ''),
-    'class' => 'form-control', 'placeholder' => 'Optional — use only when the assessor is not in the Trainers register',
+echo html_writer::empty_tag(
+    'input', [
+        'type' => 'text', 'name' => 'assessorname', 'id' => 'assessorname',
+        'value' => s($formdata->assessorname ?? ''),
+        'class' => 'form-control', 'placeholder' => 'Optional — use only when the assessor is not in the Trainers register',
 ]);
 echo html_writer::end_div();
 
 echo html_writer::start_div('form-group', ['style' => 'margin-top: 12px;']);
 echo html_writer::tag('label', 'Evidence Description', ['for' => 'evidencedescription', 'class' => 'form-label']);
-echo html_writer::tag('textarea', s($formdata->evidencedescription ?? ''), [
-    'name' => 'evidencedescription', 'id' => 'evidencedescription',
-    'class' => 'form-control', 'rows' => '4',
-    'placeholder' => 'Describe the evidence provided: portfolio, work samples, references, statements, prior certificates, employer declarations, etc.',
+echo html_writer::tag(
+    'textarea', s($formdata->evidencedescription ?? ''), [
+        'name' => 'evidencedescription', 'id' => 'evidencedescription',
+        'class' => 'form-control', 'rows' => '4',
+        'placeholder' => 'Describe the evidence provided: portfolio, work samples, references, statements, prior certificates, employer declarations, etc.',
 ]);
 echo html_writer::end_div();
 
@@ -629,8 +663,9 @@ if (!empty($formdata->evidencematrix)) {
 }
 echo html_writer::start_div('form-group', ['style' => 'margin-top: 16px;']);
 echo html_writer::tag('label', 'Evidence-to-criteria matrix', ['class' => 'form-label']);
-echo html_writer::tag('p',
-    'Map each item of evidence to the unit requirement (element / performance criterion / performance or knowledge evidence) it addresses, and record the assessor judgement. This demonstrates the evidence is valid, sufficient, current and authentic (Standard 1.2).',
+echo html_writer::tag(
+    'p',
+        'Map each item of evidence to the unit requirement (element / performance criterion / performance or knowledge evidence) it addresses, and record the assessor judgement. This demonstrates the evidence is valid, sufficient, current and authentic (Standard 1.2).',
     ['class' => 'text-muted', 'style' => 'font-size: 0.85rem; margin-bottom: 8px;']);
 echo '<table class="table table-sm" id="rpl-matrix-table" style="margin-bottom:8px;">';
 echo '<thead><tr>'
@@ -639,16 +674,19 @@ echo '<thead><tr>'
     . '<th style="width:20%;">Judgement</th>'
     . '<th style="width:6%;"></th>'
     . '</tr></thead><tbody id="rpl-matrix-body"></tbody></table>';
-echo html_writer::tag('button', '+ Add evidence row', [
-    'type' => 'button', 'id' => 'rpl-matrix-add', 'class' => 'btn btn-sm btn-outline-secondary',
+echo html_writer::tag(
+    'button', '+ Add evidence row', [
+        'type' => 'button', 'id' => 'rpl-matrix-add', 'class' => 'btn btn-sm btn-outline-secondary',
 ]);
-echo html_writer::empty_tag('input', [
-    'type' => 'hidden', 'name' => 'evidencematrix', 'id' => 'evidencematrix',
-    'value' => s($formdata->evidencematrix ?? ''),
+echo html_writer::empty_tag(
+    'input', [
+        'type' => 'hidden', 'name' => 'evidencematrix', 'id' => 'evidencematrix',
+        'value' => s($formdata->evidencematrix ?? ''),
 ]);
 echo html_writer::end_div();
 // Seed data for the JS renderer (safe JSON in a data island).
-echo html_writer::tag('script', json_encode(array_values(array_filter($matrixrows, 'is_array'))),
+echo html_writer::tag(
+    'script', json_encode(array_values(array_filter($matrixrows, 'is_array'))),
     ['type' => 'application/json', 'id' => 'rpl-matrix-seed']);
 
 // RPL-CT-EVIDENCE-UPLOAD (v5.9.410): real RPL evidence file upload.
@@ -666,10 +704,11 @@ $renderEvidenceUpload(
 
 echo html_writer::start_div('form-group', ['style' => 'margin-top: 12px;']);
 echo html_writer::tag('label', 'Evidence notes / external references (optional)', ['for' => 'evidencefiles', 'class' => 'form-label']);
-echo html_writer::tag('textarea', s($formdata->evidencefiles ?? ''), [
-    'name' => 'evidencefiles', 'id' => 'evidencefiles',
-    'class' => 'form-control', 'rows' => '3',
-    'placeholder' => 'Optional: note any evidence held outside this system (e.g. original hard-copy documents on file, external drive references).',
+echo html_writer::tag(
+    'textarea', s($formdata->evidencefiles ?? ''), [
+        'name' => 'evidencefiles', 'id' => 'evidencefiles',
+        'class' => 'form-control', 'rows' => '3',
+        'placeholder' => 'Optional: note any evidence held outside this system (e.g. original hard-copy documents on file, external drive references).',
 ]);
 echo html_writer::end_div();
 
@@ -692,9 +731,10 @@ echo html_writer::end_div();
 echo html_writer::start_div('form-group');
 echo html_writer::tag('label', 'Decision Date', ['for' => 'decisiondate', 'class' => 'form-label']);
 $decdateVal = !empty($formdata->decisiondate) ? date('Y-m-d', $formdata->decisiondate) : '';
-echo html_writer::empty_tag('input', [
-    'type' => 'date', 'name' => 'decisiondate', 'id' => 'decisiondate',
-    'value' => $decdateVal, 'class' => 'form-control',
+echo html_writer::empty_tag(
+    'input', [
+        'type' => 'date', 'name' => 'decisiondate', 'id' => 'decisiondate',
+        'value' => $decdateVal, 'class' => 'form-control',
 ]);
 echo html_writer::end_div();
 echo html_writer::end_div();
@@ -702,10 +742,11 @@ echo html_writer::end_div();
 echo html_writer::start_div('form-group', ['style' => 'margin-top: 12px;']);
 echo html_writer::tag('label', 'Decision Reason / Justification *', ['for' => 'decisionreason', 'class' => 'form-label']);
 echo html_writer::tag('p', 'ASQA requires documented rationale for all RPL/credit transfer decisions.', ['class' => 'text-muted', 'style' => 'font-size: 0.875rem; margin-bottom: 6px;']);
-echo html_writer::tag('textarea', s($formdata->decisionreason ?? ''), [
-    'name' => 'decisionreason', 'id' => 'decisionreason',
-    'class' => 'form-control', 'rows' => '5',
-    'placeholder' => 'Provide written justification for the decision. For RPL: explain how evidence demonstrates competency. For credit transfer: describe equivalence mapping. For not approved: explain gap in evidence.',
+echo html_writer::tag(
+    'textarea', s($formdata->decisionreason ?? ''), [
+        'name' => 'decisionreason', 'id' => 'decisionreason',
+        'class' => 'form-control', 'rows' => '5',
+        'placeholder' => 'Provide written justification for the decision. For RPL: explain how evidence demonstrates competency. For credit transfer: describe equivalence mapping. For not approved: explain gap in evidence.',
 ]);
 echo html_writer::end_div();
 
@@ -714,23 +755,28 @@ echo html_writer::end_div();
 // when, and how, so the register evidences the whole decision-to-notification loop.
 echo html_writer::start_div('form-group', ['style' => 'margin-top: 16px; padding-top: 12px; border-top: 1px solid #e5e7eb;']);
 echo html_writer::start_div('form-check');
-echo html_writer::empty_tag('input', array_merge([
-    'type' => 'checkbox', 'name' => 'outcomecommunicated', 'id' => 'outcomecommunicated',
-    'value' => '1', 'class' => 'form-check-input',
+echo html_writer::empty_tag(
+    'input', array_merge(
+    [
+            'type' => 'checkbox', 'name' => 'outcomecommunicated', 'id' => 'outcomecommunicated',
+            'value' => '1', 'class' => 'form-check-input',
 ], !empty($formdata->outcomecommunicated) ? ['checked' => 'checked'] : []));
-echo html_writer::tag('label', 'Outcome communicated to the student',
+echo html_writer::tag(
+    'label', 'Outcome communicated to the student',
     ['for' => 'outcomecommunicated', 'class' => 'form-check-label', 'style' => 'margin-left: 6px;']);
 echo html_writer::end_div();
-echo html_writer::tag('p',
-    'Tick once the student has been notified of the decision. Standard 1.6 requires the applicant be informed of the outcome of their RPL / credit-transfer application.',
+echo html_writer::tag(
+    'p',
+        'Tick once the student has been notified of the decision. Standard 1.6 requires the applicant be informed of the outcome of their RPL / credit-transfer application.',
     ['class' => 'text-muted', 'style' => 'font-size: 0.85rem; margin: 6px 0;']);
 echo html_writer::start_div('form-row', ['style' => 'display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 8px;']);
 echo html_writer::start_div('form-group');
 echo html_writer::tag('label', 'Date communicated', ['for' => 'outcomecommunicateddate', 'class' => 'form-label']);
 $occdateVal = !empty($formdata->outcomecommunicateddate) ? date('Y-m-d', $formdata->outcomecommunicateddate) : '';
-echo html_writer::empty_tag('input', [
-    'type' => 'date', 'name' => 'outcomecommunicateddate', 'id' => 'outcomecommunicateddate',
-    'value' => $occdateVal, 'class' => 'form-control',
+echo html_writer::empty_tag(
+    'input', [
+        'type' => 'date', 'name' => 'outcomecommunicateddate', 'id' => 'outcomecommunicateddate',
+        'value' => $occdateVal, 'class' => 'form-control',
 ]);
 echo html_writer::end_div();
 echo html_writer::start_div('form-group');
@@ -743,7 +789,8 @@ $occMethods = [
     'portal'    => 'Student portal',
     'phone'     => 'Phone',
 ];
-echo html_writer::select($occMethods, 'outcomecommunicatedmethod', $formdata->outcomecommunicatedmethod ?? '', false,
+echo html_writer::select(
+    $occMethods, 'outcomecommunicatedmethod', $formdata->outcomecommunicatedmethod ?? '', false,
     ['id' => 'outcomecommunicatedmethod', 'class' => 'form-control']);
 echo html_writer::end_div();
 echo html_writer::end_div();
@@ -752,8 +799,9 @@ echo html_writer::end_div();
 echo html_writer::end_div();
 
 echo html_writer::start_div('', ['style' => 'margin-top: 24px; display: flex; gap: 12px; align-items: center;']);
-echo html_writer::tag('button', $id ? 'Update Record' : 'Save Record', [
-    'type' => 'submit', 'class' => 'btn btn-primary',
+echo html_writer::tag(
+    'button', $id ? 'Update Record' : 'Save Record', [
+        'type' => 'submit', 'class' => 'btn btn-primary',
 ]);
 echo html_writer::link(
     new moodle_url('/local/rtocompliance/rpl.php', ['tab' => $tab]),
@@ -773,7 +821,8 @@ echo html_writer::end_tag('form');
 
 echo html_writer::end_div();
 
-echo html_writer::tag('script', '
+echo html_writer::tag(
+    'script', '
 document.addEventListener("DOMContentLoaded", function () {
     var typeSelect = document.getElementById("rpltype");
     var creditSection = document.getElementById("credit-transfer-section");

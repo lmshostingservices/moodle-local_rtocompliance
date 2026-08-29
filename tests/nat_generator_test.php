@@ -51,15 +51,17 @@ class nat_generator_test extends \advanced_testcase {
 
         $this->generator = new nat_generator(date('Y'));
 
-        $this->testuser = $this->getDataGenerator()->create_user([
-            'firstname' => 'John',
-            'lastname' => 'Smith',
-            'email' => 'john.smith@test.com',
+        $this->testuser = $this->getDataGenerator()->create_user(
+            [
+                'firstname' => 'John',
+                'lastname' => 'Smith',
+                'email' => 'john.smith@test.com',
         ]);
 
-        $this->testcourse = $this->getDataGenerator()->create_course([
-            'fullname' => 'Test Course',
-            'shortname' => 'TEST001',
+        $this->testcourse = $this->getDataGenerator()->create_course(
+            [
+                'fullname' => 'Test Course',
+                'shortname' => 'TEST001',
         ]);
     }
 
@@ -232,9 +234,10 @@ class nat_generator_test extends \advanced_testcase {
      */
     public function test_validation_warns_missing_outcomes() {
         $student = $this->create_test_student();
-        $this->create_test_enrolment($student->id, [
-            'activitystartdate' => strtotime(date('Y') . '-03-01'),
-            'outcomeidentifier' => '',
+        $this->create_test_enrolment(
+            $student->id, [
+                'activitystartdate' => strtotime(date('Y') . '-03-01'),
+                'outcomeidentifier' => '',
         ]);
 
         $result = $this->generator->validate();
@@ -309,9 +312,10 @@ class nat_generator_test extends \advanced_testcase {
     }
 
     public function test_generate_nat00090_contains_disability_data() {
-        $student = $this->create_test_student([
-            'disabilityflag' => 'Y',
-            'disabilitytypes' => '12,14',
+        $student = $this->create_test_student(
+            [
+                'disabilityflag' => 'Y',
+                'disabilitytypes' => '12,14',
         ]);
 
         $output = $this->generator->generate_nat00090();
@@ -323,8 +327,9 @@ class nat_generator_test extends \advanced_testcase {
 
     public function test_generate_nat00120_contains_enrolment_data() {
         $student = $this->create_test_student();
-        $enrolment = $this->create_test_enrolment($student->id, [
-            'activitystartdate' => strtotime(date('Y') . '-03-01'),
+        $enrolment = $this->create_test_enrolment(
+            $student->id, [
+                'activitystartdate' => strtotime(date('Y') . '-03-01'),
         ]);
 
         $output = $this->generator->generate_nat00120();
@@ -336,10 +341,11 @@ class nat_generator_test extends \advanced_testcase {
 
     public function test_generate_nat00130_contains_completion_data() {
         $student = $this->create_test_student();
-        $this->create_test_enrolment($student->id, [
-            'programoutcome' => '01',
-            'programcompletedyear' => date('Y'),
-            'activityenddate' => strtotime(date('Y') . '-06-30'),
+        $this->create_test_enrolment(
+            $student->id, [
+                'programoutcome' => '01',
+                'programcompletedyear' => date('Y'),
+                'activityenddate' => strtotime(date('Y') . '-06-30'),
         ]);
 
         $output = $this->generator->generate_nat00130();
@@ -350,8 +356,9 @@ class nat_generator_test extends \advanced_testcase {
 
     public function test_generate_all_creates_all_nat_files() {
         $student = $this->create_test_student();
-        $this->create_test_enrolment($student->id, [
-            'activitystartdate' => strtotime(date('Y') . '-03-01'),
+        $this->create_test_enrolment(
+            $student->id, [
+                'activitystartdate' => strtotime(date('Y') . '-03-01'),
         ]);
 
         $files = $this->generator->generate_all();
@@ -385,8 +392,9 @@ class nat_generator_test extends \advanced_testcase {
      */
     public function test_record_counts_are_accurate() {
         $student = $this->create_test_student();
-        $this->create_test_enrolment($student->id, [
-            'activitystartdate' => strtotime(date('Y') . '-03-01'),
+        $this->create_test_enrolment(
+            $student->id, [
+                'activitystartdate' => strtotime(date('Y') . '-03-01'),
         ]);
 
         $this->generator->validate();
@@ -474,27 +482,28 @@ class nat_generator_test extends \advanced_testcase {
         // Student with 3 disability types.
         $user = $this->getDataGenerator()->create_user(['firstname' => 'Dis', 'lastname' => 'Abled']);
         global $DB;
-        $DB->insert_record('local_rtocompliance_students', (object)[
-            'userid' => $user->id,
-            'clientid' => '0000000020',
-            'usi' => 'DIS2ABLED1',
-            'usiverified' => 1,
-            'dateofbirth' => strtotime('1988-03-10'),
-            'sex' => 'M',
-            'indigenousstatus' => '4',
-            'countryofbirth' => '1101',
-            'languageathome' => '1201',
-            'postcode' => '3000',
-            'statecode' => '02',
-            'suburb' => 'Brisbane',
-            'atschoolflag' => 'N',
-            'highestschoollevel' => '12',
-            'disabilityflag' => 'Y',
-            'disabilitytypes' => '11,14,53',
-            'surveycontactstatus' => 'A',
-            'profilecomplete' => 1,
-            'timecreated' => time(),
-            'timemodified' => time(),
+        $DB->insert_record(
+            'local_rtocompliance_students', (object)[
+                'userid' => $user->id,
+                'clientid' => '0000000020',
+                'usi' => 'DIS2ABLED1',
+                'usiverified' => 1,
+                'dateofbirth' => strtotime('1988-03-10'),
+                'sex' => 'M',
+                'indigenousstatus' => '4',
+                'countryofbirth' => '1101',
+                'languageathome' => '1201',
+                'postcode' => '3000',
+                'statecode' => '02',
+                'suburb' => 'Brisbane',
+                'atschoolflag' => 'N',
+                'highestschoollevel' => '12',
+                'disabilityflag' => 'Y',
+                'disabilitytypes' => '11,14,53',
+                'surveycontactstatus' => 'A',
+                'profilecomplete' => 1,
+                'timecreated' => time(),
+                'timemodified' => time(),
         ]);
 
         $gen = new nat_generator(date('Y'));
@@ -518,7 +527,8 @@ class nat_generator_test extends \advanced_testcase {
         // Strip \r\n to get the bare record.
         $lines = explode("\r\n", rtrim($output, "\r\n"));
         $this->assertCount(1, $lines, 'NAT00010 should have exactly 1 record');
-        $this->assertEquals(448, strlen($lines[0]),
+        $this->assertEquals(
+            448, strlen($lines[0]),
             'NAT00010 record must be 448 chars (268 national + 180 state-only fields)');
     }
 
@@ -531,7 +541,8 @@ class nat_generator_test extends \advanced_testcase {
         $lines = explode("\r\n", rtrim($output, "\r\n"));
         $this->assertNotEmpty($lines);
         foreach ($lines as $line) {
-            $this->assertEquals(180, strlen($line),
+            $this->assertEquals(
+                180, strlen($line),
                 "NAT00020 record must be 180 chars, got " . strlen($line) . ": '$line'");
         }
     }
@@ -548,7 +559,8 @@ class nat_generator_test extends \advanced_testcase {
 
         $this->assertNotEmpty($lines);
         foreach ($lines as $line) {
-            $this->assertEquals(130, strlen($line),
+            $this->assertEquals(
+                130, strlen($line),
                 "NAT00030 record must be 130 chars, got " . strlen($line));
         }
     }
@@ -565,7 +577,8 @@ class nat_generator_test extends \advanced_testcase {
 
         $this->assertNotEmpty($lines);
         foreach ($lines as $line) {
-            $this->assertEquals(123, strlen($line),
+            $this->assertEquals(
+                123, strlen($line),
                 "NAT00060 record must be 123 chars, got " . strlen($line));
         }
     }
@@ -582,7 +595,8 @@ class nat_generator_test extends \advanced_testcase {
 
         $this->assertNotEmpty($lines);
         foreach ($lines as $line) {
-            $this->assertEquals(327, strlen($line),
+            $this->assertEquals(
+                327, strlen($line),
                 "NAT00080 record must be 327 chars, got " . strlen($line));
         }
     }
@@ -599,7 +613,8 @@ class nat_generator_test extends \advanced_testcase {
 
         $this->assertNotEmpty($lines);
         foreach ($lines as $line) {
-            $this->assertEquals(557, strlen($line),
+            $this->assertEquals(
+                557, strlen($line),
                 "NAT00085 record must be 557 chars, got " . strlen($line));
         }
     }
@@ -608,9 +623,10 @@ class nat_generator_test extends \advanced_testcase {
      * NAT00090 record = 12 chars (client ID 10 + disability type 2).
      */
     public function test_nat00090_record_length_is_correct() {
-        $this->create_test_student([
-            'disabilityflag' => 'Y',
-            'disabilitytypes' => '12,14',
+        $this->create_test_student(
+            [
+                'disabilityflag' => 'Y',
+                'disabilitytypes' => '12,14',
         ]);
 
         $output = $this->generator->generate_nat00090();
@@ -618,7 +634,8 @@ class nat_generator_test extends \advanced_testcase {
 
         $this->assertCount(2, $lines, 'Should generate 2 disability records (one per type)');
         foreach ($lines as $line) {
-            $this->assertEquals(12, strlen($line),
+            $this->assertEquals(
+                12, strlen($line),
                 "NAT00090 record must be 12 chars, got " . strlen($line));
         }
     }
@@ -627,10 +644,11 @@ class nat_generator_test extends \advanced_testcase {
      * NAT00100 record = 13 chars (client ID 10 + prior achievement 3).
      */
     public function test_nat00100_record_length_is_correct() {
-        $this->create_test_student([
-            'prioreducationflag' => 'Y',
-            'priorachevement1' => '420',
-            'priorachevement2' => '514',
+        $this->create_test_student(
+            [
+                'prioreducationflag' => 'Y',
+                'priorachevement1' => '420',
+                'priorachevement2' => '514',
         ]);
 
         $output = $this->generator->generate_nat00100();
@@ -638,7 +656,8 @@ class nat_generator_test extends \advanced_testcase {
 
         $this->assertCount(2, $lines, 'Should generate 2 prior achievement records');
         foreach ($lines as $line) {
-            $this->assertEquals(13, strlen($line),
+            $this->assertEquals(
+                13, strlen($line),
                 "NAT00100 record must be 13 chars, got " . strlen($line));
         }
     }
@@ -648,9 +667,10 @@ class nat_generator_test extends \advanced_testcase {
      */
     public function test_nat00120_record_length_is_correct() {
         $student = $this->create_test_student();
-        $this->create_test_enrolment($student->id, [
-            'activitystartdate' => strtotime(date('Y') . '-03-01'),
-            'activityenddate' => strtotime(date('Y') . '-06-30'),
+        $this->create_test_enrolment(
+            $student->id, [
+                'activitystartdate' => strtotime(date('Y') . '-03-01'),
+                'activityenddate' => strtotime(date('Y') . '-06-30'),
         ]);
 
         $output = $this->generator->generate_nat00120();
@@ -658,7 +678,8 @@ class nat_generator_test extends \advanced_testcase {
 
         $this->assertNotEmpty($lines);
         foreach ($lines as $line) {
-            $this->assertEquals(158, strlen($line),
+            $this->assertEquals(
+                158, strlen($line),
                 "NAT00120 record must be 158 chars (111 national + 47 state), got " . strlen($line));
         }
     }
@@ -668,9 +689,10 @@ class nat_generator_test extends \advanced_testcase {
      */
     public function test_nat00130_record_length_is_correct() {
         $student = $this->create_test_student();
-        $this->create_test_enrolment($student->id, [
-            'programoutcome' => '01',
-            'activityenddate' => strtotime(date('Y') . '-06-30'),
+        $this->create_test_enrolment(
+            $student->id, [
+                'programoutcome' => '01',
+                'activityenddate' => strtotime(date('Y') . '-06-30'),
         ]);
 
         $output = $this->generator->generate_nat00130();
@@ -678,7 +700,8 @@ class nat_generator_test extends \advanced_testcase {
 
         $this->assertNotEmpty($lines);
         foreach ($lines as $line) {
-            $this->assertEquals(72, strlen($line),
+            $this->assertEquals(
+                72, strlen($line),
                 "NAT00130 record must be 72 chars (39 national + 33 state), got " . strlen($line));
         }
     }
@@ -689,8 +712,9 @@ class nat_generator_test extends \advanced_testcase {
 
     public function test_create_zip_generates_valid_zip() {
         $student = $this->create_test_student();
-        $this->create_test_enrolment($student->id, [
-            'activitystartdate' => strtotime(date('Y') . '-03-01'),
+        $this->create_test_enrolment(
+            $student->id, [
+                'activitystartdate' => strtotime(date('Y') . '-03-01'),
         ]);
 
         $files = $this->generator->generate_all();
@@ -751,9 +775,10 @@ class nat_generator_test extends \advanced_testcase {
 
         $users = [];
         for ($i = 1; $i <= 5; $i++) {
-            $user = $this->getDataGenerator()->create_user([
-                'firstname' => "Student$i",
-                'lastname' => "Test",
+            $user = $this->getDataGenerator()->create_user(
+                [
+                    'firstname' => "Student$i",
+                    'lastname' => "Test",
             ]);
 
             $usiChars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -800,14 +825,16 @@ class nat_generator_test extends \advanced_testcase {
 
         $student = $this->create_test_student();
 
-        $this->create_test_enrolment($student->id, [
-            'activitystartdate' => strtotime(date('Y') . '-03-01'),
-            'unitcode' => 'BSBCMM511',
+        $this->create_test_enrolment(
+            $student->id, [
+                'activitystartdate' => strtotime(date('Y') . '-03-01'),
+                'unitcode' => 'BSBCMM511',
         ]);
 
-        $this->create_test_enrolment($student->id, [
-            'activitystartdate' => strtotime((date('Y') - 2) . '-03-01'),
-            'unitcode' => 'BSBOPS502',
+        $this->create_test_enrolment(
+            $student->id, [
+                'activitystartdate' => strtotime((date('Y') - 2) . '-03-01'),
+                'unitcode' => 'BSBOPS502',
         ]);
 
         $output = $this->generator->generate_nat00120();
@@ -828,24 +855,28 @@ class nat_generator_test extends \advanced_testcase {
         $student = $this->create_test_student();
 
         // This enrolment has outcome '00' — should be excluded.
-        $this->create_test_enrolment($student->id, [
-            'activitystartdate' => strtotime(date('Y') . '-02-01'),
-            'unitcode' => 'BSBSKIP001',
-            'outcomeidentifier' => '00',
+        $this->create_test_enrolment(
+            $student->id, [
+                'activitystartdate' => strtotime(date('Y') . '-02-01'),
+                'unitcode' => 'BSBSKIP001',
+                'outcomeidentifier' => '00',
         ]);
 
         // This one has a valid outcome — should be included.
-        $this->create_test_enrolment($student->id, [
-            'activitystartdate' => strtotime(date('Y') . '-02-01'),
-            'unitcode' => 'BSBKEEP001',
-            'outcomeidentifier' => '20',
+        $this->create_test_enrolment(
+            $student->id, [
+                'activitystartdate' => strtotime(date('Y') . '-02-01'),
+                'unitcode' => 'BSBKEEP001',
+                'outcomeidentifier' => '20',
         ]);
 
         $output = $this->generator->generate_nat00120();
 
-        $this->assertStringNotContainsString('BSBSKIP001', $output,
+        $this->assertStringNotContainsString(
+            'BSBSKIP001', $output,
             'NAT00120 must not include enrolments with outcome code 00');
-        $this->assertStringContainsString('BSBKEEP001', $output,
+        $this->assertStringContainsString(
+            'BSBKEEP001', $output,
             'NAT00120 must include enrolments with valid outcome codes');
     }
 
@@ -855,15 +886,17 @@ class nat_generator_test extends \advanced_testcase {
     public function test_nat00120_skips_empty_outcome_enrolments() {
         $student = $this->create_test_student();
 
-        $this->create_test_enrolment($student->id, [
-            'activitystartdate' => strtotime(date('Y') . '-02-01'),
-            'unitcode' => 'BSBSKIP002',
-            'outcomeidentifier' => '',
+        $this->create_test_enrolment(
+            $student->id, [
+                'activitystartdate' => strtotime(date('Y') . '-02-01'),
+                'unitcode' => 'BSBSKIP002',
+                'outcomeidentifier' => '',
         ]);
 
         $output = $this->generator->generate_nat00120();
 
-        $this->assertStringNotContainsString('BSBSKIP002', $output,
+        $this->assertStringNotContainsString(
+            'BSBSKIP002', $output,
             'NAT00120 must not include enrolments with empty outcome identifier');
     }
 
@@ -895,9 +928,10 @@ class nat_generator_test extends \advanced_testcase {
     public function test_nat00130_empty_when_no_completions() {
         $student = $this->create_test_student();
         // Create an enrolment that is NOT a completion (outcome '03' = not completed).
-        $this->create_test_enrolment($student->id, [
-            'programoutcome' => '03',
-            'activityenddate' => strtotime(date('Y') . '-06-30'),
+        $this->create_test_enrolment(
+            $student->id, [
+                'programoutcome' => '03',
+                'activityenddate' => strtotime(date('Y') . '-06-30'),
         ]);
 
         $output = $this->generator->generate_nat00130();
@@ -913,33 +947,37 @@ class nat_generator_test extends \advanced_testcase {
         $student = $this->create_test_student();
 
         // '01' = AQF completion — INCLUDE.
-        $this->create_test_enrolment($student->id, [
-            'programcode' => 'BSB50420',
-            'programoutcome' => '01',
-            'activityenddate' => strtotime(date('Y') . '-06-30'),
-            'unitcode' => 'COMPLETE01',
+        $this->create_test_enrolment(
+            $student->id, [
+                'programcode' => 'BSB50420',
+                'programoutcome' => '01',
+                'activityenddate' => strtotime(date('Y') . '-06-30'),
+                'unitcode' => 'COMPLETE01',
         ]);
 
         // '03' = not completed — EXCLUDE.
-        $this->create_test_enrolment($student->id, [
-            'programcode' => 'BSB50420',
-            'programoutcome' => '03',
-            'activityenddate' => strtotime(date('Y') . '-06-30'),
-            'unitcode' => 'NOCOMP001',
+        $this->create_test_enrolment(
+            $student->id, [
+                'programcode' => 'BSB50420',
+                'programoutcome' => '03',
+                'activityenddate' => strtotime(date('Y') . '-06-30'),
+                'unitcode' => 'NOCOMP001',
         ]);
 
         // '04' = withdrawn — EXCLUDE.
-        $this->create_test_enrolment($student->id, [
-            'programcode' => 'BSB50420',
-            'programoutcome' => '04',
-            'activityenddate' => strtotime(date('Y') . '-06-30'),
-            'unitcode' => 'WITHD001',
+        $this->create_test_enrolment(
+            $student->id, [
+                'programcode' => 'BSB50420',
+                'programoutcome' => '04',
+                'activityenddate' => strtotime(date('Y') . '-06-30'),
+                'unitcode' => 'WITHD001',
         ]);
 
         $output = $this->generator->generate_nat00130();
 
         $lines = array_filter(explode("\r\n", rtrim($output, "\r\n")));
-        $this->assertCount(1, $lines,
+        $this->assertCount(
+            1, $lines,
             'NAT00130 must contain exactly 1 record (only the AQF completion)');
     }
 
@@ -948,19 +986,22 @@ class nat_generator_test extends \advanced_testcase {
      * but no prior achievement codes populated.
      */
     public function test_nat00100_emits_placeholder_for_missing_achievements() {
-        $this->create_test_student([
-            'prioreducationflag' => 'Y',
-            'priorachevement1' => null,
-            'priorachevement2' => null,
-            'priorachevement3' => null,
-            'priorachevement4' => null,
+        $this->create_test_student(
+            [
+                'prioreducationflag' => 'Y',
+                'priorachevement1' => null,
+                'priorachevement2' => null,
+                'priorachevement3' => null,
+                'priorachevement4' => null,
         ]);
 
         $output = $this->generator->generate_nat00100();
 
-        $this->assertNotEmpty(trim($output),
+        $this->assertNotEmpty(
+            trim($output),
             'NAT00100 must emit a record for students with prioreducationflag=Y even when no achievements are set');
-        $this->assertStringContainsString('@@', $output,
+        $this->assertStringContainsString(
+            '@@', $output,
             'NAT00100 placeholder record should use @@ for unknown prior achievement');
     }
 
@@ -969,9 +1010,10 @@ class nat_generator_test extends \advanced_testcase {
      * A single-digit code like '5' must be space-padded to '5 '.
      */
     public function test_nat00090_disability_type_is_two_chars() {
-        $this->create_test_student([
-            'disabilityflag' => 'Y',
-            'disabilitytypes' => '11',
+        $this->create_test_student(
+            [
+                'disabilityflag' => 'Y',
+                'disabilitytypes' => '11',
         ]);
 
         $output = $this->generator->generate_nat00090();
@@ -979,7 +1021,8 @@ class nat_generator_test extends \advanced_testcase {
 
         $this->assertCount(1, $lines);
         // Last 2 chars of the 12-char record are the disability type code.
-        $this->assertEquals(2, strlen(substr($lines[0], 10, 2)),
+        $this->assertEquals(
+            2, strlen(substr($lines[0], 10, 2)),
             'Disability type field at pos 11-12 must be exactly 2 chars');
     }
 
@@ -989,32 +1032,34 @@ class nat_generator_test extends \advanced_testcase {
      * This ensures fixed-width fields are not corrupted by multi-byte sequences.
      */
     public function test_nat00080_utf8_names_transliterated_to_ascii() {
-        $user = $this->getDataGenerator()->create_user([
-            'firstname' => 'Hélène',
-            'lastname' => 'Müller',
+        $user = $this->getDataGenerator()->create_user(
+            [
+                'firstname' => 'Hélène',
+                'lastname' => 'Müller',
         ]);
 
         global $DB;
-        $DB->insert_record('local_rtocompliance_students', (object)[
-            'userid' => $user->id,
-            'clientid' => '0000000030',
-            'usi' => 'HELENE3001',
-            'usiverified' => 1,
-            'dateofbirth' => strtotime('1992-08-20'),
-            'sex' => 'F',
-            'indigenousstatus' => '4',
-            'countryofbirth' => '1101',
-            'languageathome' => '1201',
-            'postcode' => '3000',
-            'statecode' => '02',
-            'suburb' => 'Sydney',
-            'atschoolflag' => 'N',
-            'highestschoollevel' => '12',
-            'disabilityflag' => 'N',
-            'surveycontactstatus' => 'A',
-            'profilecomplete' => 1,
-            'timecreated' => time(),
-            'timemodified' => time(),
+        $DB->insert_record(
+            'local_rtocompliance_students', (object)[
+                'userid' => $user->id,
+                'clientid' => '0000000030',
+                'usi' => 'HELENE3001',
+                'usiverified' => 1,
+                'dateofbirth' => strtotime('1992-08-20'),
+                'sex' => 'F',
+                'indigenousstatus' => '4',
+                'countryofbirth' => '1101',
+                'languageathome' => '1201',
+                'postcode' => '3000',
+                'statecode' => '02',
+                'suburb' => 'Sydney',
+                'atschoolflag' => 'N',
+                'highestschoollevel' => '12',
+                'disabilityflag' => 'N',
+                'surveycontactstatus' => 'A',
+                'profilecomplete' => 1,
+                'timecreated' => time(),
+                'timemodified' => time(),
         ]);
 
         $gen = new nat_generator(date('Y'));
@@ -1022,13 +1067,16 @@ class nat_generator_test extends \advanced_testcase {
         $lines = explode("\r\n", rtrim($output, "\r\n"));
 
         // After transliteration the record must still be exactly 327 bytes.
-        $this->assertEquals(327, strlen($lines[0]),
+        $this->assertEquals(
+            327, strlen($lines[0]),
             'NAT00080 record must be 327 bytes even when student name contains UTF-8 characters');
 
         // The transliterated name should appear (é→e, ü→u, Ü→U).
-        $this->assertStringContainsString('MULLER', $output,
+        $this->assertStringContainsString(
+            'MULLER', $output,
             'NAT00080 must transliterate ü→u in family name for fixed-width ASCII compliance');
-        $this->assertStringContainsString('HELENE', $output,
+        $this->assertStringContainsString(
+            'HELENE', $output,
             'NAT00080 must transliterate é→e in given name for fixed-width ASCII compliance');
     }
 
@@ -1039,9 +1087,10 @@ class nat_generator_test extends \advanced_testcase {
      */
     public function test_nat00120_float_tuition_fee_rounded_correctly() {
         $student = $this->create_test_student();
-        $this->create_test_enrolment($student->id, [
-            'activitystartdate' => strtotime(date('Y') . '-03-01'),
-            'tuitionfee' => 1500.75,  // Should round to 1501.
+        $this->create_test_enrolment(
+            $student->id, [
+                'activitystartdate' => strtotime(date('Y') . '-03-01'),
+                'tuitionfee' => 1500.75,  // Should round to 1501.
         ]);
 
         $output = $this->generator->generate_nat00120();
@@ -1050,11 +1099,13 @@ class nat_generator_test extends \advanced_testcase {
         $this->assertCount(1, $lines);
         // Tuition fee is at pos 118-122 (0-indexed: 117-121) in the full 158-char record.
         $feeField = substr($lines[0], 117, 5);
-        $this->assertEquals('01501', $feeField,
+        $this->assertEquals(
+            '01501', $feeField,
             'NAT00120 tuition fee field (pos 118-122) must be zero-padded integer, got: ' . $feeField);
 
         // Total record length must still be correct.
-        $this->assertEquals(158, strlen($lines[0]),
+        $this->assertEquals(
+            158, strlen($lines[0]),
             'NAT00120 record must remain 158 chars after float fee rounding');
     }
 
@@ -1063,15 +1114,18 @@ class nat_generator_test extends \advanced_testcase {
      * Bug 40: AVETMISS contact email takes precedence.
      */
     public function test_nat00085_uses_survey_contact_email_over_moodle_email() {
-        $this->create_test_student([
-            'surveycontactemail' => 'survey@student.com',
+        $this->create_test_student(
+            [
+                'surveycontactemail' => 'survey@student.com',
         ]);
 
         $output = $this->generator->generate_nat00085();
 
-        $this->assertStringContainsString('survey@student.com', $output,
+        $this->assertStringContainsString(
+            'survey@student.com', $output,
             'NAT00085 must use surveycontactemail when it is set');
-        $this->assertStringNotContainsString('john.smith@test.com', $output,
+        $this->assertStringNotContainsString(
+            'john.smith@test.com', $output,
             'NAT00085 must not use Moodle login email when surveycontactemail is set');
     }
 
@@ -1079,13 +1133,15 @@ class nat_generator_test extends \advanced_testcase {
      * NAT00085 falls back to Moodle email when surveycontactemail is empty.
      */
     public function test_nat00085_falls_back_to_moodle_email_when_no_survey_email() {
-        $this->create_test_student([
-            'surveycontactemail' => '',
+        $this->create_test_student(
+            [
+                'surveycontactemail' => '',
         ]);
 
         $output = $this->generator->generate_nat00085();
 
-        $this->assertStringContainsString('john.smith@test.com', $output,
+        $this->assertStringContainsString(
+            'john.smith@test.com', $output,
             'NAT00085 must fall back to Moodle email when surveycontactemail is empty');
     }
 
@@ -1102,7 +1158,8 @@ class nat_generator_test extends \advanced_testcase {
 
         // Phone field is at pos 329-348 (0-indexed: 328-347) in the full 448-char record.
         $phoneField = substr(rtrim($output, "\r\n"), 328, 20);
-        $this->assertDoesNotMatchRegularExpression('/[A-Za-z\/]/', $phoneField,
+        $this->assertDoesNotMatchRegularExpression(
+            '/[A-Za-z\/]/', $phoneField,
             'NAT00010 phone field must not contain letters or slashes: "' . $phoneField . '"');
     }
 
@@ -1112,9 +1169,11 @@ class nat_generator_test extends \advanced_testcase {
     public function test_nat00020_generates_main_location_when_no_locations_configured() {
         $output = $this->generator->generate_nat00020();
 
-        $this->assertStringContainsString('MAIN      ', $output,
+        $this->assertStringContainsString(
+            'MAIN      ', $output,
             'NAT00020 must include a MAIN delivery location when no locations are configured');
-        $this->assertStringContainsString('12345     ', $output,
+        $this->assertStringContainsString(
+            '12345     ', $output,
             'NAT00020 MAIN record must start with the RTO code');
     }
 
@@ -1132,7 +1191,8 @@ class nat_generator_test extends \advanced_testcase {
         $this->assertNotEmpty($lines);
         // Nominal hours at pos 111-114 (0-indexed: 110-113).
         $hoursField = substr($lines[0], 110, 4);
-        $this->assertEquals('0060', $hoursField,
+        $this->assertEquals(
+            '0060', $hoursField,
             'NAT00030 nominal hours field must be zero-padded 4 digits, got: ' . $hoursField);
     }
 
@@ -1149,7 +1209,8 @@ class nat_generator_test extends \advanced_testcase {
 
         $this->assertNotEmpty($lines);
         $vetFlag = substr($lines[0], 118, 1);
-        $this->assertEquals('Y', $vetFlag,
+        $this->assertEquals(
+            'Y', $vetFlag,
             'NAT00060 VET flag (pos 119) must be Y for VET subjects');
     }
 
@@ -1159,9 +1220,10 @@ class nat_generator_test extends \advanced_testcase {
      */
     public function test_nat00120_defaults_location_to_main_when_null() {
         $student = $this->create_test_student();
-        $this->create_test_enrolment($student->id, [
-            'activitystartdate' => strtotime(date('Y') . '-03-01'),
-            'deliverylocationid' => null,
+        $this->create_test_enrolment(
+            $student->id, [
+                'activitystartdate' => strtotime(date('Y') . '-03-01'),
+                'deliverylocationid' => null,
         ]);
 
         $output = $this->generator->generate_nat00120();
@@ -1170,7 +1232,8 @@ class nat_generator_test extends \advanced_testcase {
         $this->assertNotEmpty($lines);
         // Delivery location is at pos 11-20 (0-indexed: 10-19).
         $locField = substr($lines[0], 10, 10);
-        $this->assertEquals('MAIN      ', $locField,
+        $this->assertEquals(
+            'MAIN      ', $locField,
             'NAT00120 delivery location must default to MAIN (space-padded to 10) when null');
     }
 
@@ -1180,11 +1243,12 @@ class nat_generator_test extends \advanced_testcase {
      */
     public function test_nat00130_program_id_truncated_to_10_chars() {
         $student = $this->create_test_student();
-        $this->create_test_enrolment($student->id, [
-            'programid' => 'BSB50120TOOLONG',  // 15 chars — must be truncated to 10.
-            'programcode' => 'BSB50120',
-            'programoutcome' => '01',
-            'activityenddate' => strtotime(date('Y') . '-06-30'),
+        $this->create_test_enrolment(
+            $student->id, [
+                'programid' => 'BSB50120TOOLONG',  // 15 chars — must be truncated to 10.
+                'programcode' => 'BSB50120',
+                'programoutcome' => '01',
+                'activityenddate' => strtotime(date('Y') . '-06-30'),
         ]);
 
         $output = $this->generator->generate_nat00130();
@@ -1193,11 +1257,13 @@ class nat_generator_test extends \advanced_testcase {
         $this->assertNotEmpty($lines);
         // Program ID is at pos 11-20 (0-indexed: 10-19).
         $progField = substr($lines[0], 10, 10);
-        $this->assertEquals(10, strlen($progField),
+        $this->assertEquals(
+            10, strlen($progField),
             'NAT00130 program ID field must always be exactly 10 chars');
 
         // Total record length must still be correct.
-        $this->assertEquals(72, strlen($lines[0]),
+        $this->assertEquals(
+            72, strlen($lines[0]),
             'NAT00130 record must remain 72 chars after program ID truncation');
     }
 
@@ -1206,9 +1272,10 @@ class nat_generator_test extends \advanced_testcase {
      */
     public function test_nat00130_issued_flag_is_Y() {
         $student = $this->create_test_student();
-        $this->create_test_enrolment($student->id, [
-            'programoutcome' => '01',
-            'activityenddate' => strtotime(date('Y') . '-06-30'),
+        $this->create_test_enrolment(
+            $student->id, [
+                'programoutcome' => '01',
+                'activityenddate' => strtotime(date('Y') . '-06-30'),
         ]);
 
         $output = $this->generator->generate_nat00130();
@@ -1216,7 +1283,8 @@ class nat_generator_test extends \advanced_testcase {
 
         $this->assertNotEmpty($lines);
         $issuedFlag = substr($lines[0], 38, 1);
-        $this->assertEquals('Y', $issuedFlag,
+        $this->assertEquals(
+            'Y', $issuedFlag,
             'NAT00130 issued flag (pos 39) must be Y');
     }
 
@@ -1224,8 +1292,9 @@ class nat_generator_test extends \advanced_testcase {
      * NAT00080 date of birth is formatted as DDMMYYYY at pos 74-81 (0-indexed: 73-80).
      */
     public function test_nat00080_date_of_birth_formatted_ddmmyyyy() {
-        $this->create_test_student([
-            'dateofbirth' => strtotime('1990-05-15'),  // Expect '15051990'.
+        $this->create_test_student(
+            [
+                'dateofbirth' => strtotime('1990-05-15'),  // Expect '15051990'.
         ]);
 
         $output = $this->generator->generate_nat00080();
@@ -1233,7 +1302,8 @@ class nat_generator_test extends \advanced_testcase {
 
         $this->assertNotEmpty($lines);
         $dob = substr($lines[0], 73, 8);
-        $this->assertEquals('15051990', $dob,
+        $this->assertEquals(
+            '15051990', $dob,
             'NAT00080 date of birth (pos 74-81) must be DDMMYYYY format');
     }
 
@@ -1248,7 +1318,8 @@ class nat_generator_test extends \advanced_testcase {
 
         $this->assertNotEmpty($lines);
         $usiField = substr($lines[0], 149, 10);
-        $this->assertEquals('ABC2DEF3GH', $usiField,
+        $this->assertEquals(
+            'ABC2DEF3GH', $usiField,
             'NAT00080 USI must appear at pos 150-159 exactly as provided');
     }
 }

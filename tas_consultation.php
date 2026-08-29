@@ -46,10 +46,12 @@ $tas = $DB->get_record('local_rtocompliance_tas', ['id' => $tasid], '*', MUST_EX
 // qualified_me() returns the correct action URL for the Moodle form — prevents
 // the URL query string from losing addnew=1 on installs with aggressive URL
 // rewriting or reverse-proxy configurations.
-$PAGE->set_url(new moodle_url('/local/rtocompliance/tas_consultation.php', [
-    'tasid'  => $tasid,
-    'addnew' => $addnew,
-    'editid' => $editid,
+$PAGE->set_url(
+    new moodle_url(
+    '/local/rtocompliance/tas_consultation.php', [
+            'tasid'  => $tasid,
+            'addnew' => $addnew,
+            'editid' => $editid,
 ]));
 $PAGE->set_title('Industry Consultation - ' . $tas->qualificationcode);
 $PAGE->navbar->add(get_string('tas', 'local_rtocompliance'), new moodle_url('/local/rtocompliance/tas.php'));
@@ -306,13 +308,14 @@ class consultation_form extends moodleform {
         // impactassessment) — wired to ajax.php new contexttypes.
         $mform->addElement('textarea', 'feedback', 'Key Feedback', ['rows' => 3, 'cols' => 60, 'placeholder' => 'What key feedback was provided by the industry representative?']);
         $mform->setType('feedback', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
-        $mform->addElement('static', 'feedbackaihelp', '',
-            '<div class="rtoc-ai-box">' .
-            '<button type="button" id="rtoc-ai-consult-feedback" class="btn btn-primary" title="Draft a key-feedback summary from the participant details and ticked feedback categories" data-target="id_feedback" data-context="consult_feedback">' .
-            '<i class="fa fa-magic" aria-hidden="true"></i> AI: Generate Key Feedback' .
-            '</button>' .
-            '<span id="rtoc-ai-consult-feedback-status" class="rtoc-ai-status"></span>' .
-            '<small class="rtoc-ai-hint d-block mt-1 text-muted">Uses the participant role/organisation, consultation method and ticked feedback categories to draft a 3-5 sentence summary of the key feedback.</small>' .
+        $mform->addElement(
+            'static', 'feedbackaihelp', '',
+                '<div class="rtoc-ai-box">' .
+                '<button type="button" id="rtoc-ai-consult-feedback" class="btn btn-primary" title="Draft a key-feedback summary from the participant details and ticked feedback categories" data-target="id_feedback" data-context="consult_feedback">' .
+                '<i class="fa fa-magic" aria-hidden="true"></i> AI: Generate Key Feedback' .
+                '</button>' .
+                '<span id="rtoc-ai-consult-feedback-status" class="rtoc-ai-status"></span>' .
+                '<small class="rtoc-ai-hint d-block mt-1 text-muted">Uses the participant role/organisation, consultation method and ticked feedback categories to draft a 3-5 sentence summary of the key feedback.</small>' .
             '</div>');
 
         $trainingOptions = [
@@ -339,13 +342,14 @@ class consultation_form extends moodleform {
 
         $mform->addElement('textarea', 'impacttraining', 'Impact on Training Delivery', ['rows' => 3, 'cols' => 60, 'placeholder' => 'How has this feedback been incorporated into training delivery?']);
         $mform->setType('impacttraining', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
-        $mform->addElement('static', 'impacttrainingaihelp', '',
-            '<div class="rtoc-ai-box">' .
-            '<button type="button" id="rtoc-ai-consult-training" class="btn btn-primary" title="Draft a statement on how this feedback shapes training delivery" data-target="id_impacttraining" data-context="consult_impact_training">' .
-            '<i class="fa fa-magic" aria-hidden="true"></i> AI: Generate Impact on Training Delivery' .
-            '</button>' .
-            '<span id="rtoc-ai-consult-training-status" class="rtoc-ai-status"></span>' .
-            '<small class="rtoc-ai-hint d-block mt-1 text-muted">Drafts a 3-5 sentence statement explaining how the feedback above and the ticked training-delivery categories will be incorporated into the qualification\'s training plan.</small>' .
+        $mform->addElement(
+            'static', 'impacttrainingaihelp', '',
+                '<div class="rtoc-ai-box">' .
+                '<button type="button" id="rtoc-ai-consult-training" class="btn btn-primary" title="Draft a statement on how this feedback shapes training delivery" data-target="id_impacttraining" data-context="consult_impact_training">' .
+                '<i class="fa fa-magic" aria-hidden="true"></i> AI: Generate Impact on Training Delivery' .
+                '</button>' .
+                '<span id="rtoc-ai-consult-training-status" class="rtoc-ai-status"></span>' .
+                '<small class="rtoc-ai-hint d-block mt-1 text-muted">Drafts a 3-5 sentence statement explaining how the feedback above and the ticked training-delivery categories will be incorporated into the qualification\'s training plan.</small>' .
             '</div>');
 
         $assessmentOptions = [
@@ -370,20 +374,22 @@ class consultation_form extends moodleform {
 
         $mform->addElement('textarea', 'impactassessment', 'Impact on Assessment Design', ['rows' => 3, 'cols' => 60, 'placeholder' => 'How has this feedback been incorporated into assessment design?']);
         $mform->setType('impactassessment', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — Moodle editor/textarea field; PARAM_RAW is the correct type for rich-text content, which is escaped on output by format_text()
-        $mform->addElement('static', 'impactassessmentaihelp', '',
-            '<div class="rtoc-ai-box">' .
-            '<button type="button" id="rtoc-ai-consult-assessment" class="btn btn-primary" title="Draft a statement on how this feedback shapes assessment design" data-target="id_impactassessment" data-context="consult_impact_assessment">' .
-            '<i class="fa fa-magic" aria-hidden="true"></i> AI: Generate Impact on Assessment Design' .
-            '</button>' .
-            '<span id="rtoc-ai-consult-assessment-status" class="rtoc-ai-status"></span>' .
-            '<small class="rtoc-ai-hint d-block mt-1 text-muted">Drafts a 3-5 sentence statement explaining how the feedback above and the ticked assessment-design categories will be incorporated into the qualification\'s assessment instruments.</small>' .
+        $mform->addElement(
+            'static', 'impactassessmentaihelp', '',
+                '<div class="rtoc-ai-box">' .
+                '<button type="button" id="rtoc-ai-consult-assessment" class="btn btn-primary" title="Draft a statement on how this feedback shapes assessment design" data-target="id_impactassessment" data-context="consult_impact_assessment">' .
+                '<i class="fa fa-magic" aria-hidden="true"></i> AI: Generate Impact on Assessment Design' .
+                '</button>' .
+                '<span id="rtoc-ai-consult-assessment-status" class="rtoc-ai-status"></span>' .
+                '<small class="rtoc-ai-hint d-block mt-1 text-muted">Drafts a 3-5 sentence statement explaining how the feedback above and the ticked assessment-design categories will be incorporated into the qualification\'s assessment instruments.</small>' .
             '</div>');
 
         $mform->addElement('date_selector', 'nextmeetingdate', 'Next Meeting Date', ['optional' => true]);
 
-        $mform->addElement('filepicker', 'evidencefile', 'Upload Evidence Document', null, [
-            'maxbytes' => 10485760,
-            'accepted_types' => ['*'],
+        $mform->addElement(
+            'filepicker', 'evidencefile', 'Upload Evidence Document', null, [
+                'maxbytes' => 10485760,
+                'accepted_types' => ['*'],
         ]);
         // FIX-MAY4-FILETYPE-HINT (v4.4.44): addElement('static',...) wraps the
         // hint in Moodle's fitem/felement divs which renders as a bordered box in
@@ -406,11 +412,12 @@ if ($editid || $addnew) {
         $entry = $DB->get_record($tablename, ['id' => $editid, 'tasid' => $tasid], '*', MUST_EXIST);
     }
 
-    $form = new consultation_form(null, [
-        'entry'   => $entry,
-        'tasid'   => $tasid,
-        'methods' => $consultationmethods,
-        'addnew'  => $addnew,
+    $form = new consultation_form(
+        null, [
+            'entry'   => $entry,
+            'tasid'   => $tasid,
+            'methods' => $consultationmethods,
+            'addnew'  => $addnew,
     ]);
 
     if ($entry) {
@@ -468,7 +475,7 @@ if ($form && ($data = $form->get_data())) {
     } else {
         $record->timecreated = time();
         $record->createdby = $USER->id;
-        // v4.2.57 #6: initialise evidencedocument to empty string (never NULL)
+        // Version 4.2.57 #6: initialise evidencedocument to empty string (never NULL)
         // so subsequent $DB->set_field() updates behave consistently across
         // all Moodle DB drivers.
         $record->evidencedocument = '';
@@ -476,7 +483,7 @@ if ($form && ($data = $form->get_data())) {
         $message = 'Consultation record added.';
     }
 
-    // v4.2.57 #6 (FIX-RTO-EVIDENCE-NOTSHOW): a customer reported that uploaded
+    // Version 4.2.57 #6 (FIX-RTO-EVIDENCE-NOTSHOW): a customer reported that uploaded
     // evidence files were not showing in the consultation list table after
     // hitting Save.  Two defensive changes vs. the previous flow:
     //   (a) Capture the expected filename from the DRAFT area BEFORE
@@ -496,7 +503,7 @@ if ($form && ($data = $form->get_data())) {
         $usercontext = context_user::instance($USER->id);
         $draftfiles = $fs->get_area_files($usercontext->id, 'user', 'draft', $evidenceitemid, 'id', false);
         if (!empty($draftfiles)) {
-            // v4.4.15 #6: iterate to find the first real (non-placeholder) file.
+            // Version 4.4.15 #6: iterate to find the first real (non-placeholder) file.
             // reset() may return the '.' placeholder Moodle inserts to mark non-empty
             // draft areas; that left evidencedocument as '.' and the set_field() guard
             // below would skip the DB update, so evidence never appeared after save.
@@ -567,7 +574,8 @@ if ($consultations) {
 // applies a Content-Security-Policy nonce to Moodle-generated scripts but NOT to raw
 // echo'd <script> blocks, causing the browser to refuse to execute the function and the
 // "Add Selected" / "Clear field" buttons to produce a ReferenceError on click.
-$PAGE->requires->js_init_code('
+$PAGE->requires->js_init_code(
+    '
 function rtocAppendDropdown(selectId, textareaId) {
     var sel = document.getElementById(selectId);
     var ta  = document.getElementById(textareaId);
@@ -616,9 +624,10 @@ echo html_writer::start_div('compliance-container');
 
 echo html_writer::start_div('info-card', ['style' => 'margin-bottom: 20px;']);
 echo html_writer::tag('h3', $tas->qualificationcode . ' ' . ($tas->qualificationname ?: 'Unnamed'), ['style' => 'margin: 0 0 8px 0;']);
-echo html_writer::tag('p', 'Manage industry consultation evidence for this Training and Assessment Strategy. '
-    . 'Download the pre-filled consultation log template, record consultation details, and upload completed evidence documents. '
-    . 'The TAS "Industry Consultation Evidence" section will be auto-generated from your records.',
+echo html_writer::tag(
+    'p', 'Manage industry consultation evidence for this Training and Assessment Strategy. '
+        . 'Download the pre-filled consultation log template, record consultation details, and upload completed evidence documents. '
+        . 'The TAS "Industry Consultation Evidence" section will be auto-generated from your records.',
     ['class' => 'text-muted', 'style' => 'margin: 0;']);
 echo html_writer::end_div();
 
@@ -637,7 +646,8 @@ echo html_writer::end_div();
 
 $templateUrl = new moodle_url('/local/rtocompliance/tas_consultation.php', ['tasid' => $tasid, 'generatetemplate' => 1]);
 echo html_writer::start_div('', ['style' => 'margin-bottom: 24px;']);
-echo html_writer::tag('a', 'Download Industry Consultation Log Template (DOCX)',
+echo html_writer::tag(
+    'a', 'Download Industry Consultation Log Template (DOCX)',
     ['href' => $templateUrl->out(false), 'class' => 'btn btn-outline-primary', 'style' => 'margin-right: 12px;', 'title' => 'Download a Word template pre-filled for this qualification to record consultation details']);
 echo html_writer::tag('span', 'Pre-filled for ' . $tas->qualificationcode, ['style' => 'color: #888; font-size: 13px;']);
 echo html_writer::end_div();
@@ -662,11 +672,13 @@ if ($consultations) {
 
     $methodLabels = $consultationmethods;
     foreach ($consultations as $c) {
-        $deleteUrl = new moodle_url('/local/rtocompliance/tas_consultation.php', [
-            'tasid' => $tasid, 'deleteid' => $c->id, 'sesskey' => sesskey(),
+        $deleteUrl = new moodle_url(
+            '/local/rtocompliance/tas_consultation.php', [
+                'tasid' => $tasid, 'deleteid' => $c->id, 'sesskey' => sesskey(),
         ]);
-        $editUrl = new moodle_url('/local/rtocompliance/tas_consultation.php', [
-            'tasid' => $tasid, 'editid' => $c->id,
+        $editUrl = new moodle_url(
+            '/local/rtocompliance/tas_consultation.php', [
+                'tasid' => $tasid, 'editid' => $c->id,
         ]);
         $methodLabel = $methodLabels[$c->consultationtype] ?? $c->consultationtype;
         $age = $now - $c->consultationdate;
@@ -702,7 +714,8 @@ if ($consultations) {
 
     echo html_writer::start_div('info-card', ['style' => 'margin-bottom: 24px;']);
     echo html_writer::tag('h4', 'Auto-Generated TAS Narrative', ['style' => 'margin: 0 0 8px 0;']);
-    echo html_writer::tag('p', 'This text is automatically written into the TAS "Industry Consultation Evidence" field from your consultation records above.',
+    echo html_writer::tag(
+        'p', 'This text is automatically written into the TAS "Industry Consultation Evidence" field from your consultation records above.',
         ['style' => 'color: #888; font-size: 13px; margin: 0 0 8px 0;']);
     $narrative = local_rtocompliance_generate_consultation_narrative($tas, $consultations);
     echo html_writer::tag('pre', s($narrative), ['style' => 'white-space: pre-wrap; background: #f8f9fa; border: 1px solid #eee; padding: 12px; border-radius: 8px; font-size: 13px; max-height: 300px; overflow-y: auto;']);
@@ -717,7 +730,7 @@ if ($form) {
     echo html_writer::tag('a', 'Log New Consultation Record', ['href' => $addurl->out(false), 'class' => 'btn btn-primary', 'style' => 'margin-bottom: 24px; display: inline-block;', 'title' => 'Record a new industry consultation for this TAS']);
 }
 
-// rtocAppendDropdown is now registered via $PAGE->requires->js_init_code() above
+// RtocAppendDropdown is now registered via $PAGE->requires->js_init_code() above
 // to ensure it runs correctly under Moodle 4.x Content-Security-Policy nonce enforcement.
 
 // FIX-RTO-TESTER-FEEDBACK-MAY1 #6 (v4.2.42): wire the three "AI Generate"
@@ -725,7 +738,8 @@ if ($form) {
 // data-context + data-target attributes, gathers the relevant seed fields
 // (participant info, ticked categories, the other free-text answers above
 // it) and posts to ajax.php?action=ai_draft_text.
-echo html_writer::script('
+echo html_writer::script(
+    '
 (function () {
     var ajax = "' . $CFG->wwwroot . '/local/rtocompliance/ajax.php";
     var buttons = document.querySelectorAll("#rtoc-ai-consult-feedback, #rtoc-ai-consult-training, #rtoc-ai-consult-assessment");

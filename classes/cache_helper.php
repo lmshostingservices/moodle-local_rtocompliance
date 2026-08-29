@@ -308,10 +308,18 @@ class cache_helper {
             
             foreach ($alertcounts as $row) {
                 switch ($row->severity) {
-                    case 'critical': $critical = (int)$row->cnt; break;
-                    case 'high': $high = (int)$row->cnt; break;
-                    case 'medium': $medium = (int)$row->cnt; break;
-                    case 'low': $low = (int)$row->cnt; break;
+                    case 'critical':
+                        $critical = (int)$row->cnt;
+                        break;
+                    case 'high':
+                        $high = (int)$row->cnt;
+                        break;
+                    case 'medium':
+                        $medium = (int)$row->cnt;
+                        break;
+                    case 'low':
+                        $low = (int)$row->cnt;
+                        break;
                 }
             }
         }

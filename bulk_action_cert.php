@@ -21,7 +21,7 @@
  * @copyright  2025 LMS Labs
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-// v4.2.37 BULK-CERT-ACTIONS — POST endpoint for bulk operations on certificates.
+// Version 4.2.37 BULK-CERT-ACTIONS — POST endpoint for bulk operations on certificates.
 //
 // Three actions exposed via the certificates.php floating action bar after the
 // admin selects N rows via checkboxes:
@@ -212,32 +212,35 @@ if ($action === 'email') {
     }
 
     // Aggregate log entry.
-    $DB->insert_record('local_rtocompliance_log', [
-        'action'      => 'bulk_email_certificates',
-        'component'   => 'certificates',
-        'itemid'      => 0,
-        'userid'      => $USER->id,
-        'targetuserid'=> 0,
-        'details'     => json_encode([
-            'requested'    => count($rows),
-            'sent_count'   => count($results['sent']),
-            'skipped_count'=> count($results['skipped']),
-            'failed_count' => count($results['failed']),
-        ]),
-        'ipaddress'   => getremoteaddr(),
-        'timecreated' => time(),
+    $DB->insert_record(
+        'local_rtocompliance_log', [
+            'action'      => 'bulk_email_certificates',
+            'component'   => 'certificates',
+            'itemid'      => 0,
+            'userid'      => $USER->id,
+            'targetuserid'=> 0,
+            'details'     => json_encode(
+            [
+                    'requested'    => count($rows),
+                    'sent_count'   => count($results['sent']),
+                    'skipped_count'=> count($results['skipped']),
+                    'failed_count' => count($results['failed']),
+            ]),
+            'ipaddress'   => getremoteaddr(),
+            'timecreated' => time(),
     ]);
 
-    echo json_encode([
-        'ok'       => true,
-        'action'   => 'email',
-        'counts'   => [
-            'requested' => count($rows),
-            'sent'      => count($results['sent']),
-            'skipped'   => count($results['skipped']),
-            'failed'    => count($results['failed']),
-        ],
-        'results'  => $results,
+    echo json_encode(
+        [
+            'ok'       => true,
+            'action'   => 'email',
+            'counts'   => [
+                'requested' => count($rows),
+                'sent'      => count($results['sent']),
+                'skipped'   => count($results['skipped']),
+                'failed'    => count($results['failed']),
+            ],
+            'results'  => $results,
     ]);
     exit;
 }
@@ -300,19 +303,21 @@ if ($action === 'download_zip') {
     $zip->addFromString('manifest.txt', $manifest);
     $zip->close();
 
-    $DB->insert_record('local_rtocompliance_log', [
-        'action'      => 'bulk_download_certificates',
-        'component'   => 'certificates',
-        'itemid'      => 0,
-        'userid'      => $USER->id,
-        'targetuserid'=> 0,
-        'details'     => json_encode([
-            'requested' => count($rows),
-            'included'  => $included,
-            'skipped'   => $skipped,
-        ]),
-        'ipaddress'   => getremoteaddr(),
-        'timecreated' => time(),
+    $DB->insert_record(
+        'local_rtocompliance_log', [
+            'action'      => 'bulk_download_certificates',
+            'component'   => 'certificates',
+            'itemid'      => 0,
+            'userid'      => $USER->id,
+            'targetuserid'=> 0,
+            'details'     => json_encode(
+            [
+                    'requested' => count($rows),
+                    'included'  => $included,
+                    'skipped'   => $skipped,
+            ]),
+            'ipaddress'   => getremoteaddr(),
+            'timecreated' => time(),
     ]);
 
     $bundlename = 'certificates_' . date('Y-m-d_His') . '.zip';
@@ -340,58 +345,61 @@ if ($action === 'export_csv') {
     // UTF-8 BOM for Excel compatibility (customers may open these in Excel).
     fwrite($out, "\xEF\xBB\xBF");
 
-    fputcsv($out, [
-        'Certificate Number',
-        'Student First Name',
-        'Student Last Name',
-        'Student Email',
-        'Certificate Type',
-        'Qualification Code',
-        'Qualification Name',
-        'Issue Date',
-        'Expiry Date',
-        'USI',
-        'USI Verified',
-        'Email Sent',
-        'Email Sent Date',
-        'Status',
-        'Replacement Of (Original Cert ID)',
-        'Reissued At',
-        'Notes',
+    fputcsv(
+        $out, [
+            'Certificate Number',
+            'Student First Name',
+            'Student Last Name',
+            'Student Email',
+            'Certificate Type',
+            'Qualification Code',
+            'Qualification Name',
+            'Issue Date',
+            'Expiry Date',
+            'USI',
+            'USI Verified',
+            'Email Sent',
+            'Email Sent Date',
+            'Status',
+            'Replacement Of (Original Cert ID)',
+            'Reissued At',
+            'Notes',
     ]);
 
     foreach ($rows as $r) {
-        fputcsv($out, [
-            $r->certnumber,
-            $r->firstname,
-            $r->lastname,
-            $r->email,
-            $certtypes[$r->certtype] ?? $r->certtype,
-            $r->qualificationcode,
-            $r->qualificationname,
-            $r->issuedate ? userdate($r->issuedate, '%Y-%m-%d') : '',
-            !empty($r->expirydate) ? userdate($r->expirydate, '%Y-%m-%d') : '',
-            $studentsTableExists ? ($r->usi ?? '') : '',
-            $studentsTableExists ? (local_rtocompliance_usi_is_verified($r->usiverified) ? 'Yes' : 'No') : '',
-            !empty($r->emailsent) ? 'Yes' : 'No',
-            !empty($r->emailsentdate) ? userdate($r->emailsentdate, '%Y-%m-%d %H:%M') : '',
-            $r->status,
-            $r->replacement_of ?? '',
-            !empty($r->reissued_at) ? userdate($r->reissued_at, '%Y-%m-%d %H:%M') : '',
-            $r->notes,
+        fputcsv(
+            $out, [
+                $r->certnumber,
+                $r->firstname,
+                $r->lastname,
+                $r->email,
+                $certtypes[$r->certtype] ?? $r->certtype,
+                $r->qualificationcode,
+                $r->qualificationname,
+                $r->issuedate ? userdate($r->issuedate, '%Y-%m-%d') : '',
+                !empty($r->expirydate) ? userdate($r->expirydate, '%Y-%m-%d') : '',
+                $studentsTableExists ? ($r->usi ?? '') : '',
+                $studentsTableExists ? (local_rtocompliance_usi_is_verified($r->usiverified) ? 'Yes' : 'No') : '',
+                !empty($r->emailsent) ? 'Yes' : 'No',
+                !empty($r->emailsentdate) ? userdate($r->emailsentdate, '%Y-%m-%d %H:%M') : '',
+                $r->status,
+                $r->replacement_of ?? '',
+                !empty($r->reissued_at) ? userdate($r->reissued_at, '%Y-%m-%d %H:%M') : '',
+                $r->notes,
         ]);
     }
     fclose($out);
 
-    $DB->insert_record('local_rtocompliance_log', [
-        'action'      => 'bulk_export_certificates_csv',
-        'component'   => 'certificates',
-        'itemid'      => 0,
-        'userid'      => $USER->id,
-        'targetuserid'=> 0,
-        'details'     => json_encode(['exported' => count($rows)]),
-        'ipaddress'   => getremoteaddr(),
-        'timecreated' => time(),
+    $DB->insert_record(
+        'local_rtocompliance_log', [
+            'action'      => 'bulk_export_certificates_csv',
+            'component'   => 'certificates',
+            'itemid'      => 0,
+            'userid'      => $USER->id,
+            'targetuserid'=> 0,
+            'details'     => json_encode(['exported' => count($rows)]),
+            'ipaddress'   => getremoteaddr(),
+            'timecreated' => time(),
     ]);
 
     exit;

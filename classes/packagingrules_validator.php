@@ -123,7 +123,7 @@ class packagingrules_validator {
             $totalRequired   = $tgaRules['totalUnits'];
             $coreRequired    = $tgaRules['coreRequired'];
             $electiveRequired = $tgaRules['electiveRequired'];
-            $groupRules      = $tgaRules['groupRequirements'];  // e.g. ['A' => ['min'=>2,'max'=>3], …]
+            $groupRules      = $tgaRules['groupRequirements'];  // E.g. ['A' => ['min'=>2,'max'=>3], …]
             $pointsSystem    = $tgaRules['pointsSystem'];
             $pointsRequired  = $tgaRules['pointsRequired'];
             $rulesText       = $tgaRules['rulesText'];
@@ -206,9 +206,10 @@ class packagingrules_validator {
                 'passed'   => $passed,
             ];
             if (!$passed) {
-                $errors[] = get_string('error_total_units', 'local_rtocompliance', [
-                    'expected' => $totalRequired,
-                    'actual'   => $totalcount,
+                $errors[] = get_string(
+                    'error_total_units', 'local_rtocompliance', [
+                        'expected' => $totalRequired,
+                        'actual'   => $totalcount,
                 ]);
             }
         }
@@ -223,9 +224,10 @@ class packagingrules_validator {
                 'passed'   => $passed,
             ];
             if (!$passed) {
-                $errors[] = get_string('error_core_units', 'local_rtocompliance', [
-                    'expected' => $coreRequired,
-                    'actual'   => $corecount,
+                $errors[] = get_string(
+                    'error_core_units', 'local_rtocompliance', [
+                        'expected' => $coreRequired,
+                        'actual'   => $corecount,
                 ]);
             }
         }
@@ -274,16 +276,18 @@ class packagingrules_validator {
                     ];
                     if (!$passed) {
                         if ($groupcount < $min) {
-                            $errors[] = get_string('error_group_minimum', 'local_rtocompliance', [
-                                'group'   => $grp,
-                                'minimum' => $min,
-                                'actual'  => $groupcount,
+                            $errors[] = get_string(
+                                'error_group_minimum', 'local_rtocompliance', [
+                                    'group'   => $grp,
+                                    'minimum' => $min,
+                                    'actual'  => $groupcount,
                             ]);
                         } else {
-                            $errors[] = get_string('error_group_maximum', 'local_rtocompliance', [
-                                'group'   => $grp,
-                                'maximum' => $max,
-                                'actual'  => $groupcount,
+                            $errors[] = get_string(
+                                'error_group_maximum', 'local_rtocompliance', [
+                                    'group'   => $grp,
+                                    'maximum' => $max,
+                                    'actual'  => $groupcount,
                             ]);
                         }
                     }
@@ -306,9 +310,10 @@ class packagingrules_validator {
                         'passed'   => $passed,
                     ];
                     if (!$passed) {
-                        $errors[] = get_string('error_elective_units', 'local_rtocompliance', [
-                            'expected' => $electiveRequired > 0 ? $electiveRequired : 1,
-                            'actual'   => $actualElectives,
+                        $errors[] = get_string(
+                            'error_elective_units', 'local_rtocompliance', [
+                                'expected' => $electiveRequired > 0 ? $electiveRequired : 1,
+                                'actual'   => $actualElectives,
                         ]);
                     }
                 }
@@ -348,9 +353,10 @@ class packagingrules_validator {
                     'passed'   => $passed,
                 ];
                 if (!$passed) {
-                    $errors[] = get_string('error_imported_limit', 'local_rtocompliance', [
-                        'maximum' => $maxImported,
-                        'actual'  => $importedcount,
+                    $errors[] = get_string(
+                        'error_imported_limit', 'local_rtocompliance', [
+                            'maximum' => $maxImported,
+                            'actual'  => $importedcount,
                     ]);
                 }
             }
@@ -428,9 +434,10 @@ class packagingrules_validator {
             'passed'   => $linkedcount === $totalcount_selected,
         ];
         if ($linkedcount < $totalcount_selected) {
-            $warnings[] = get_string('warning_unlinked_units', 'local_rtocompliance', [
-                'count' => count($unlinkedunits),
-                'units' => implode(', ', array_slice($unlinkedunits, 0, 5)) . (count($unlinkedunits) > 5 ? '…' : ''),
+            $warnings[] = get_string(
+                'warning_unlinked_units', 'local_rtocompliance', [
+                    'count' => count($unlinkedunits),
+                    'units' => implode(', ', array_slice($unlinkedunits, 0, 5)) . (count($unlinkedunits) > 5 ? '…' : ''),
             ]);
         }
 

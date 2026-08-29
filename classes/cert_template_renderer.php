@@ -78,12 +78,12 @@ class cert_template_renderer {
         self::$last_ror_page_count = 1;
 
         $design = cert_template::decode_design($template);
-        // v4.2.48 BUG-MAY2-AUDIT — hydrate image filesystem paths from
+        // Version 4.2.48 BUG-MAY2-AUDIT — hydrate image filesystem paths from
         // stored itemids BEFORE rendering. Without this, $page['bg_image_path']
         // and per-field image_path keys are never set and the renderer
         // silently skips every uploaded background and per-field image.
         $design = self::hydrate_image_paths($design);
-        // v5.9.361: guarantee the mandatory certificate number + verification QR on
+        // Version 5.9.361: guarantee the mandatory certificate number + verification QR on
         // every render, including older templates saved before this rule.
         $design = cert_template::ensure_mandatory_fields($design);
         // STUDENT-DETAILS-TABLE AUTO-ADOPT (v6.2.52): on a Record of Results, upgrade the legacy
@@ -120,10 +120,10 @@ class cert_template_renderer {
         if ($orientation !== $templateOrientation) {
             $origW  = $width;
             $origH  = $height;
-            $width  = $origH;              // new page width  = old page height
-            $height = $origW;              // new page height = old page width
-            $scaleX = $width  / $origW;    // e.g. 210/297 ≈ 0.707  (L→P)
-            $scaleY = $height / $origH;    // e.g. 297/210 ≈ 1.414  (L→P)
+            $width  = $origH;              // New page width  = old page height
+            $height = $origW;              // New page height = old page width
+            $scaleX = $width  / $origW;    // E.g. 210/297 ≈ 0.707  (L→P)
+            $scaleY = $height / $origH;    // E.g. 297/210 ≈ 1.414  (L→P)
             $scaledFields = [];
             foreach (($design['fields'] ?? []) as $field) {
                 $field['x_mm'] = round(($field['x_mm'] ?? 0) * $scaleX, 2);
@@ -268,12 +268,13 @@ class cert_template_renderer {
             // Page number — every page of a multi-page document, bottom centre.
             $pdf->SetFont('helvetica', '', 7.5);
             $pdf->SetTextColor(100, 116, 139);
-            $pdf->MultiCell($wid, 4.0, 'Page ' . $p . ' of ' . $total, 0, 'C', false, 1,
+            $pdf->MultiCell(
+                $wid, 4.0, 'Page ' . $p . ' of ' . $total, 0, 'C', false, 1,
                 $margin, $pageh - 9.5, true, 0, false, true, 4.0, 'M', false);
         }
 
         $pdf->SetTextColor(0, 0, 0);
-        $pdf->setPage($total);   // leave the cursor on the last page for Output()
+        $pdf->setPage($total);   // Leave the cursor on the last page for Output()
     }
 
     /**
@@ -426,7 +427,7 @@ class cert_template_renderer {
             $traw = $payload['qualification.units_table_rows_json'] ?? '[]';
             $trows = json_decode($traw, true);
             if (is_array($trows) && !empty($trows)) {
-                $codew = 34.0;   // wider code column for the 12pt unit code
+                $codew = 34.0;   // Wider code column for the 12pt unit code
                 $datew = 30.0;
                 $titlew = max(40.0, $w - $codew - $datew);
                 self::render_units_table($pdf, $field, $payload, $pagew, $pageh, $page, $bg_to_paint, [$codew, $titlew, $datew]);
@@ -434,7 +435,7 @@ class cert_template_renderer {
             }
         }
 
-        // text | date | dynamic — all render as text (or QR for the qrcode dynamickey).
+        // Text | date | dynamic — all render as text (or QR for the qrcode dynamickey).
         $text = self::resolve_text($field, $payload);
 
         // QR code is a special dynamic kind.
@@ -491,6 +492,36 @@ class cert_template_renderer {
     }
 
     /**
+     * CERT-TABLE-HEADINGS (v6.3.20) — resolve the wording for one certificate table column
+     * heading. Three levels, most specific first:
+     *
+     *   1. this template field's own override  (field['head_<slot>'], set in the editor)
+     *   2. the site-wide admin setting          (Certificate Settings → column headings)
+     *   3. the built-in ASQA-conventional default
+     *
+     * This lets an RTO whose terminology differs ("COMPETENCY CODE", "OUTCOME", "MODULE")
+     * relabel every table without touching code, and lets one template deviate from the
+     * site default when it must.
+     *
+     * @param array  $field   the template field being painted
+     * @param array  $payload resolved payload (carries cert.table_headings)
+     * @param string $slot    code|title|date|result|enroldate|completiondate|student|usi|qual
+     * @param string $default built-in fallback wording
+     * @return string heading text to paint
+     */
+    private static function table_heading(array $field, array $payload, string $slot, string $default): string {
+        $override = trim((string) ($field['head_' . $slot] ?? ''));
+        if ($override !== '') {
+            return $override;
+        }
+        $admin = $payload['cert.table_headings'] ?? [];
+        if (is_array($admin) && trim((string) ($admin[$slot] ?? '')) !== '') {
+            return trim((string) $admin[$slot]);
+        }
+        return $default;
+    }
+
+    /**
      * STYLE-A-UNITS-TABLE (v5.9.447) — draw the shaded 3-column units table used
      * on both the Statement of Attainment and the Record of Results.
      *
@@ -539,8 +570,8 @@ class cert_template_renderer {
 
         // Colours.
         [$hr, $hg, $hb] = self::hex_to_rgb($payload['cert.header_colour'] ?? '#0f6cbf');
-        $zebra  = [246, 248, 251];   // very light blue-grey for alternate rows.
-        $border = [203, 213, 225];   // thin slate-200 cell borders.
+        $zebra  = [246, 248, 251];   // Very light blue-grey for alternate rows.
+        $border = [203, 213, 225];   // Thin slate-200 cell borders.
         $bodytx = [30, 41, 59];      // slate-800 body text.
 
         $padx = 1.6;
@@ -551,7 +582,13 @@ class cert_template_renderer {
         // Attainment (default 'date').
         $col3mode = (($field['col3mode'] ?? 'date') === 'result') ? 'result' : 'date';
         // SoA date column header simply reads "DATE" (v6.2.52, per request).
-        $c3head   = ($col3mode === 'result') ? 'RESULTS' : 'DATE';
+        // CERT-TABLE-HEADINGS (v6.3.20): all three headings are overridable — per template
+        // field first, then the site-wide Certificate Settings wording, then these defaults.
+        $c1head   = self::table_heading($field, $payload, 'code',  'UNIT CODE');
+        $c2head   = self::table_heading($field, $payload, 'title', 'UNIT TITLE');
+        $c3head   = ($col3mode === 'result')
+            ? self::table_heading($field, $payload, 'result', 'RESULTS')
+            : self::table_heading($field, $payload, 'date',   'DATE');
 
         // AUTO-FIT (v6.2.52): shrink the body font (from the author's size down to a low floor)
         // so the fixed columns — unit code and the date/result column — always fit on ONE line;
@@ -566,7 +603,7 @@ class cert_template_renderer {
 
         // Uniform TWO-ROW header: font shrinks so the longest heading word fits its column, and
         // the bar is a fixed two-line height so every caps heading fits neatly.
-        $heads = ['UNIT CODE', 'UNIT TITLE', $c3head];
+        $heads = [$c1head, $c2head, $c3head];
         $hwid  = [$c1w, $c2w, $c3w];
         $headwords = [];
         foreach ($heads as $i => $hd) {
@@ -582,15 +619,15 @@ class cert_template_renderer {
 
         // Closure to paint the header bar at the current Y.
         $drawHeader = function () use (&$curY, $pdf, $font, $headfs, $headH,
-            $hr, $hg, $hb, $border, $c1w, $c2w, $c3w, $c1x, $c2x, $c3x, $c3head): void {
+            $hr, $hg, $hb, $border, $c1w, $c2w, $c3w, $c1x, $c2x, $c3x, $c1head, $c2head, $c3head): void {
             $pdf->SetFont($font, 'B', $headfs);
             $pdf->SetFillColor($hr, $hg, $hb);
             $pdf->SetTextColor(255, 255, 255);
             $pdf->SetDrawColor($border[0], $border[1], $border[2]);
             $pdf->SetLineWidth(0.2);
-            $pdf->MultiCell($c1w, $headH, 'UNIT CODE',  1, 'L', true, 0, $c1x, $curY, true, 0, false, true, $headH, 'M', false);
-            $pdf->MultiCell($c2w, $headH, 'UNIT TITLE', 1, 'L', true, 0, $c2x, $curY, true, 0, false, true, $headH, 'M', false);
-            $pdf->MultiCell($c3w, $headH, $c3head,      1, 'C', true, 0, $c3x, $curY, true, 0, false, true, $headH, 'M', false);
+            $pdf->MultiCell($c1w, $headH, $c1head, 1, 'L', true, 0, $c1x, $curY, true, 0, false, true, $headH, 'M', false);
+            $pdf->MultiCell($c2w, $headH, $c2head, 1, 'L', true, 0, $c2x, $curY, true, 0, false, true, $headH, 'M', false);
+            $pdf->MultiCell($c3w, $headH, $c3head, 1, 'C', true, 0, $c3x, $curY, true, 0, false, true, $headH, 'M', false);
             $curY += $headH;
         };
 
@@ -662,7 +699,7 @@ class cert_template_renderer {
         while ($fs > $floor) {
             $ok = true;
             foreach ($cells as $c) {
-                $avail = (float)($c['w'] ?? 0) - 2 * $padx - 0.3; // usable width with a hair of safety.
+                $avail = (float)($c['w'] ?? 0) - 2 * $padx - 0.3; // Usable width with a hair of safety.
                 if ($avail <= 0) {
                     continue;
                 }
@@ -719,7 +756,10 @@ class cert_template_renderer {
             $fixed = $enrolw + $codew + $resultw + $compw;
             $avail = max(1.0, $w - 30.0);
             $scale = $avail / $fixed;
-            $enrolw *= $scale; $codew *= $scale; $resultw *= $scale; $compw *= $scale;
+            $enrolw *= $scale;
+            $codew *= $scale;
+            $resultw *= $scale;
+            $compw *= $scale;
             $titlew = $w - $enrolw - $codew - $resultw - $compw;
         }
         $colx = [
@@ -730,7 +770,15 @@ class cert_template_renderer {
             $x + $enrolw + $codew + $titlew + $resultw,
         ];
         $colw = [$enrolw, $codew, $titlew, $resultw, $compw];
-        $colhead = ['ENROLMENT DATE', 'UNIT CODE', 'UNIT TITLE', 'RESULT', 'COMPLETION DATE'];
+        // CERT-TABLE-HEADINGS (v6.3.20): every heading is overridable — per template field
+        // first, then the site-wide Certificate Settings wording, then these ASQA defaults.
+        $colhead = [
+            self::table_heading($field, $payload, 'enroldate',      'ENROLMENT DATE'),
+            self::table_heading($field, $payload, 'code',           'UNIT CODE'),
+            self::table_heading($field, $payload, 'title',          'UNIT TITLE'),
+            self::table_heading($field, $payload, 'result',         'RESULT'),
+            self::table_heading($field, $payload, 'completiondate', 'COMPLETION DATE'),
+        ];
         $colalign = ['C', 'L', 'L', 'C', 'C'];
 
         $font   = self::sanitise_font($field['font'] ?? 'helvetica');
@@ -783,7 +831,8 @@ class cert_template_renderer {
             $pdf->SetDrawColor($border[0], $border[1], $border[2]);
             $pdf->SetLineWidth(0.2);
             for ($i = 0; $i < 5; $i++) {
-                $pdf->MultiCell($colw[$i], $headH, $colhead[$i], 1, $colalign[$i], true, 0,
+                $pdf->MultiCell(
+                    $colw[$i], $headH, $colhead[$i], 1, $colalign[$i], true, 0,
                     $colx[$i], $curY, true, 0, false, true, $headH, 'M', false);
             }
             $curY += $headH;
@@ -828,7 +877,8 @@ class cert_template_renderer {
                 // Result column bold so the outcome code stands out. Fixed columns are guaranteed
                 // (by the fit above) to fit on one line; only the title may wrap.
                 $pdf->SetFont($font, ($i === 3 ? 'B' : ''), $bodyfs);
-                $pdf->MultiCell($colw[$i], $rowH, $vals[$i], 1, $colalign[$i], $fill, 0,
+                $pdf->MultiCell(
+                    $colw[$i], $rowH, $vals[$i], 1, $colalign[$i], $fill, 0,
                     $colx[$i], $curY, true, 0, false, true, $rowH, 'M', false);
             }
 
@@ -856,7 +906,7 @@ class cert_template_renderer {
         $pdf->setCellPaddings(1.4, 1.0, 1.4, 1.0);
         $pdf->SetFont($font, 'I', $keyfs);
         $pdf->SetTextColor(71, 85, 105);          // slate-600.
-        $pdf->SetFillColor(244, 247, 251);        // very light key band.
+        $pdf->SetFillColor(244, 247, 251);        // Very light key band.
         $pdf->SetDrawColor($border[0], $border[1], $border[2]);
         $pdf->SetLineWidth(0.15);
         $pdf->MultiCell($w, $keyH, $keytext, 0, 'L', true, 1, $x, $keyY, true, 0, false, true, 0, 'T', false);
@@ -893,7 +943,12 @@ class cert_template_renderer {
         $c3w = $w - $c1w - $c2w;
         $colx = [$x, $x + $c1w, $x + $c1w + $c2w];
         $colw = [$c1w, $c2w, $c3w];
-        $head = ['STUDENT NAME', 'USI', 'QUALIFICATION'];
+        // CERT-TABLE-HEADINGS (v6.3.20): overridable per template field, then site-wide.
+        $head = [
+            self::table_heading($field, $payload, 'student', 'STUDENT NAME'),
+            self::table_heading($field, $payload, 'usi',     'USI'),
+            self::table_heading($field, $payload, 'qual',    'QUALIFICATION'),
+        ];
         $vals = [$name, $usi, $qual];
 
         $font   = self::sanitise_font($field['font'] ?? 'helvetica');
@@ -932,7 +987,8 @@ class cert_template_renderer {
         $pdf->SetDrawColor($border[0], $border[1], $border[2]);
         $pdf->SetLineWidth(0.2);
         for ($i = 0; $i < 3; $i++) {
-            $pdf->MultiCell($colw[$i], $headH, $head[$i], 1, 'C', true, 0,
+            $pdf->MultiCell(
+                $colw[$i], $headH, $head[$i], 1, 'C', true, 0,
                 $colx[$i], $y, true, 0, false, true, $headH, 'M', false);
         }
 
@@ -952,7 +1008,8 @@ class cert_template_renderer {
         // Student name + USI slightly emphasised. Values CENTRED under their headings (v6.2.62).
         for ($i = 0; $i < 3; $i++) {
             $pdf->SetFont($font, ($i < 2 ? 'B' : ''), $bodyfs);
-            $pdf->MultiCell($colw[$i], $rowH, $vals[$i], 1, 'C', false, 0,
+            $pdf->MultiCell(
+                $colw[$i], $rowH, $vals[$i], 1, 'C', false, 0,
                 $colx[$i], $dataY, true, 0, false, true, $rowH, 'M', false);
         }
 
@@ -1027,15 +1084,15 @@ class cert_template_renderer {
             // Completion. Fall back to the SAME default the settings form defines so an unsaved
             // setting behaves exactly like the intended default instead of the opposite.
             $formdefaults = [
-                'cert_background_cert_types' => ['testamur'],              // settings.php default
-                'org_seal_cert_types'        => ['testamur', 'statement'], // settings.php default
+                'cert_background_cert_types' => ['testamur'],              // Default set in settings.php
+                'org_seal_cert_types'        => ['testamur', 'statement'], // Default set in settings.php
             ];
             if (array_key_exists($config_key, $formdefaults)) {
                 return in_array($certtype, $formdefaults[$config_key], true);
             }
-            return true; // unknown key — preserve the original permissive behaviour
+            return true; // Unknown key — preserve the original permissive behaviour
         }
-        // admin_setting_configmulticheckbox stores selected keys as
+        // The admin_setting_configmulticheckbox setting stores selected keys as
         // comma-separated values (e.g. "testamur,statement").
         $allowed = array_map('trim', explode(',', $raw));
         return in_array($certtype, $allowed, true);
@@ -1052,7 +1109,7 @@ class cert_template_renderer {
         }
 
         if ($kind === 'date') {
-            // v4.2.49 BUG-MAY2-AUDIT2 — the editor's date-format dropdown
+            // Version 4.2.49 BUG-MAY2-AUDIT2 — the editor's date-format dropdown
             // offers PHP date() tokens ('d M Y', 'd/m/Y', 'D, j F Y',
             // 'F j, Y'). The previous code passed those to userdate(),
             // which interprets strftime tokens — so every date field
@@ -1138,7 +1195,7 @@ class cert_template_renderer {
     public static function resolve_payload(\stdClass $cert, \stdClass $user): array {
         global $CFG;
 
-        // v4.2.48 BUG-MAY2-AUDIT — student.dob (and any other custom user
+        // Version 4.2.48 BUG-MAY2-AUDIT — student.dob (and any other custom user
         // profile field referenced via $user->profile_field_*) is empty
         // unless the custom-fields helper has been called. Be defensive:
         // require the lib, then load fields when the user has a real id.
@@ -1172,14 +1229,15 @@ class cert_template_renderer {
             }
             return get_config('local_rtocompliance', $key) ?: $default;
         };
-        // v5.9.442: fall back to the real Moodle site name (the RTO's own name) rather
+        // Version 5.9.442: fall back to the real Moodle site name (the RTO's own name) rather
         // than the generic "Training Organisation" when the RTO legal name isn't set yet,
         // so an issued certificate never prints a placeholder provider name.
         $rtoname        = $snapcfg('rtoname', format_string($SITE->fullname));
         $rtocode        = $snapcfg('rtocode', '');
         $signatoryname  = $snapcfg('signatoryname', '');
         $signatorytitle = $snapcfg('signatorytitle', '');
-        $aqfstatement   = $snapcfg('aqfstatement',
+        $aqfstatement   = $snapcfg(
+            'aqfstatement',
             'This qualification is recognised within the Australian Qualifications Framework.');
 
         // QR codes point to the AI Grader central registry so the certificate
@@ -1259,7 +1317,7 @@ class cert_template_renderer {
               )
             : '';
 
-        // v5.9.320 CERT-ASSETS — secondary logo slot (e.g. brand logo + trading-name logo,
+        // Version 5.9.320 CERT-ASSETS — secondary logo slot (e.g. brand logo + trading-name logo,
         // or consortium branding). Per-cert-type visibility: secondary_logo_cert_types.
         $seclogopath = self::asset_applies_to_certtype('secondary_logo_cert_types', $certtype)
             ? \local_rtocompliance\cert_template::resolve_compliance_asset_path(
@@ -1267,7 +1325,7 @@ class cert_template_renderer {
               )
             : '';
 
-        // v5.9.320 CERT-ASSETS — system-wide cert background image. Applied as the
+        // Version 5.9.320 CERT-ASSETS — system-wide cert background image. Applied as the
         // full-page background layer when the cert template has no template-specific
         // bg set. Per-cert-type visibility: cert_background_cert_types.
         $certbgpath = self::asset_applies_to_certtype('cert_background_cert_types', $certtype)
@@ -1276,7 +1334,7 @@ class cert_template_renderer {
               )
             : '';
 
-        // v4.4.0 NRT-LOGO-COMPLIANCE — admin-uploaded artwork is preferred
+        // Version 4.4.0 NRT-LOGO-COMPLIANCE — admin-uploaded artwork is preferred
         // over the bundled fallback. NRT and AQF have ASQA-supplied PNG/JPG
         // bundled in pix/ (correct ASQA colours + typography). The two
         // generic compliance-logo slots (state_training_authority_logo,
@@ -1300,7 +1358,7 @@ class cert_template_renderer {
             ''
         );
 
-        // v5.9.320: org seal now also respects per-cert-type applies-to config.
+        // Version 5.9.320: org seal now also respects per-cert-type applies-to config.
         $orgsealpath = self::asset_applies_to_certtype('org_seal_cert_types', $certtype)
             ? \local_rtocompliance\cert_template::resolve_compliance_asset_path(
                 \local_rtocompliance\cert_template::BRANDING_ITEMID_ORG_SEAL,
@@ -1308,7 +1366,7 @@ class cert_template_renderer {
               )
             : '';
 
-        // v5.9.321 ORPHAN-FIX: compliance_logo_2 was defined in settings.php but never
+        // Version 5.9.321 ORPHAN-FIX: compliance_logo_2 was defined in settings.php but never
         // assigned a branding itemid or wired into the renderer.  Now resolved as
         // BRANDING_ITEMID_COMPLIANCE_LOGO_2 = 9.  Dynamic key: 'compliance_logo_2'.
         $complogo2path = \local_rtocompliance\cert_template::resolve_compliance_asset_path(
@@ -1344,7 +1402,7 @@ class cert_template_renderer {
                 : 'These competencies form part of ' . $stmt_qcode . '.';
         }
 
-        // v4.6.103 FIX-CERT-UNITS-ISSUEDATE — two column-name bugs in resolve_payload():
+        // Version 4.6.103 FIX-CERT-UNITS-ISSUEDATE — two column-name bugs in resolve_payload():
         // (1) $cert->unitsofcompetency does not exist — the DB column is $cert->units
         //     (JSON-encoded array of {code,name,outcome}).  Read and format it.
         // (2) $cert->timeissued does not exist — the DB column is $cert->issuedate.
@@ -1427,11 +1485,13 @@ class cert_template_renderer {
             $_dbman = $DB->get_manager();
             if ($_dbman->table_exists('local_rtocompliance_students') &&
                 $_dbman->table_exists('local_rtocompliance_enrolments')) {
-                $_stud2 = $DB->get_record('local_rtocompliance_students',
+                $_stud2 = $DB->get_record(
+                    'local_rtocompliance_students',
                     ['userid' => (int)$cert->userid], 'id', IGNORE_MISSING);
                 if ($_stud2) {
-                    $_dateEnrols = $DB->get_records('local_rtocompliance_enrolments',
-                        ['studentid' => (int)$_stud2->id], '',
+                    $_dateEnrols = $DB->get_records(
+                        'local_rtocompliance_enrolments',
+                            ['studentid' => (int)$_stud2->id], '',
                         'id, unitcode, activityenddate, activitystartdate');
                     foreach ($_dateEnrols as $_de) {
                         $_uc = strtoupper(trim((string)($_de->unitcode ?? '')));
@@ -1455,7 +1515,9 @@ class cert_template_renderer {
             $unitsArr = json_decode($cert->units, true);
             if (is_array($unitsArr)) {
                 $lines = [];
-                $_col1 = []; $_col2 = []; $_col3 = [];
+                $_col1 = [];
+                $_col2 = [];
+                $_col3 = [];
                 $_tableRows = [];
                 foreach ($unitsArr as $u) {
                     $code    = isset($u['code'])    ? trim((string)$u['code'])    : '';
@@ -1537,7 +1599,7 @@ class cert_template_renderer {
                         'code'     => $code,
                         'title'    => ($name !== '' ? $name : $code),
                         'date'     => $_uts > 0 ? date('d M Y', $_uts) : '',
-                        // v6.2.51 Record of Results columns.
+                        // Version 6.2.51 Record of Results columns.
                         'enroldate' => $_ets > 0 ? date('d M Y', $_ets) : '',
                         'result'    => $_toResultCode($outcome),
                     ];
@@ -1573,7 +1635,8 @@ class cert_template_renderer {
             $dbman = $DB->get_manager();
             if ($dbman->table_exists('local_rtocompliance_students') &&
                 $dbman->table_exists('local_rtocompliance_enrolments')) {
-                $_stud = $DB->get_record('local_rtocompliance_students',
+                $_stud = $DB->get_record(
+                    'local_rtocompliance_students',
                     ['userid' => (int)$cert->userid], 'id', IGNORE_MISSING);
                 if ($_stud) {
                     require_once(__DIR__ . '/certificate_validator.php');
@@ -1605,13 +1668,18 @@ class cert_template_renderer {
                     }
 
                     if (!empty($_comp['units'])) {
-                        $lines  = []; $_col1 = []; $_col2 = []; $_col3 = []; $_rorRows = []; $_tableRows = [];
+                        $lines  = [];
+                        $_col1 = [];
+                        $_col2 = [];
+                        $_col3 = [];
+                        $_rorRows = [];
+                        $_tableRows = [];
                         foreach ($_comp['units'] as $_u) {
                             $_code    = isset($_u['code'])     ? trim((string)$_u['code'])    : '';
                             $_name    = isset($_u['name'])     ? trim((string)$_u['name'])    : '';
                             $_outcome = isset($_u['outcome'])  ? trim((string)$_u['outcome']) : '20';
                             $_sem     = isset($_u['semester']) ? trim((string)$_u['semester']): $_certSemester;
-                            // v6.3.11: normalise_unit_date() — see helper; stored values
+                            // Version 6.3.11: normalise_unit_date() — see helper; stored values
                             // may be timestamps or formatted strings.
                             $_uts2 = !empty($_u['date']) ? self::normalise_unit_date($_u['date']) : 0;
                             if ($_uts2 <= 0 && $_code !== '' && isset($_unitDateMap[strtoupper($_code)])) {
@@ -1631,20 +1699,26 @@ class cert_template_renderer {
                             }
                             if ($_code !== '' && $_name !== '') {
                                 $lines[] = $_code . ' ' . $_name;
-                            } elseif ($_code !== '') { $lines[] = $_code; }
-                            else { $lines[] = $_name; }
+                            } elseif ($_code !== '') {
+                            $lines[] = $_code;
+                        } else {
+                            $lines[] = $_name;
+                        }
                             $_col1[] = $_sem;
                             if ($_code !== '' && $_name !== '') {
                                 $_col2[] = $_code . ' ' . $_name;
-                            } elseif ($_code !== '') { $_col2[] = $_code; }
-                            else { $_col2[] = $_name; }
+                            } elseif ($_code !== '') {
+                            $_col2[] = $_code;
+                        } else {
+                            $_col2[] = $_name;
+                        }
                             $_col3[]    = $_outcomeLabels[$_outcome] ?? ($_outcome !== '' ? $_outcome : '');
                             $_rorRows[] = ['semester' => $_sem, 'name' => end($_col2), 'result' => end($_col3)];
                             $_tableRows[] = [
                                 'code'     => $_code,
                                 'title'    => ($_name !== '' ? $_name : $_code),
                                 'date'     => $_uts2 > 0 ? date('d M Y', $_uts2) : '',
-                                // v6.2.51 Record of Results columns.
+                                // Version 6.2.51 Record of Results columns.
                                 'enroldate' => $_ets2 > 0 ? date('d M Y', $_ets2) : '',
                                 'result'    => $_toResultCode($_outcome),
                             ];
@@ -1684,6 +1758,8 @@ class cert_template_renderer {
             'qualification.units_table_rows_json'       => $unitsTableRowsJson ?? '[]',
             // Header bar fill colour (admin setting; defaults to the site brand colour).
             'cert.header_colour'                        => local_rtocompliance_cert_header_colour(),
+            // CERT-TABLE-HEADINGS (v6.3.20): admin-configured column heading wording.
+            'cert.table_headings'                       => local_rtocompliance_cert_table_headings(),
             'qualification.partofstatement'             => $partofstmt,
             // ASQA-AUDIT-2 (v5.2.44) — auto-generate with qualification code inserted before
             // "course" per ASQA Sample Forms fact sheet p.4:
@@ -1722,14 +1798,14 @@ class cert_template_renderer {
             'rto.code'                                  => self::format_rto_code((string) $rtocode),
             'rto.logo'                                  => '',
             'rto.logo__path'                            => $rtologopath,
-            // v5.9.320 CERT-ASSETS: secondary logo (two-logo certs).
+            // Version 5.9.320 CERT-ASSETS: secondary logo (two-logo certs).
             'rto.secondary_logo'                        => '',
             'rto.secondary_logo__path'                  => $seclogopath,
             'signatory.name'                            => $signatoryname,
             'signatory.title'                           => $signatorytitle,
             'signatory.signature'                       => '',
             'signatory.signature__path'                 => $sigpath,
-            // v5.9.320 CERT-ASSETS: system-wide certificate background image.
+            // Version 5.9.320 CERT-ASSETS: system-wide certificate background image.
             // Injected as page bg fallback when the cert template has no own bg.
             'cert.background__path'                     => $certbgpath,
             // Mandatory phrases (typed text fields).
@@ -1754,13 +1830,13 @@ class cert_template_renderer {
             'state_training_authority_logo__path'       => $stalogopath,
             'organisation_seal'                         => '',
             'organisation_seal__path'                   => $orgsealpath,
-            // v5.9.321 ORPHAN-FIX: compliance_logo_2 wired.
+            // Version 5.9.321 ORPHAN-FIX: compliance_logo_2 wired.
             'compliance_logo_2'                         => '',
             'compliance_logo_2__path'                   => $complogo2path,
-            // v5.9.321 ORPHAN-FIX: certfooter wired as cert.footer payload key.
+            // Version 5.9.321 ORPHAN-FIX: certfooter wired as cert.footer payload key.
             // Template authors can now place a cert.footer dynamic field anywhere.
             'cert.footer'                               => get_config('local_rtocompliance', 'certfooter') ?: '',
-            // v5.9.366 ENABLEQR-GATE: the verification QR code is MANDATORY and
+            // Version 5.9.366 ENABLEQR-GATE: the verification QR code is MANDATORY and
             // always rendered (verify.url is always populated below). The enableqr
             // setting now only controls whether the human-readable "Verify at: <url>"
             // TEXT line is shown alongside the QR — some RTOs prefer the QR alone.
@@ -1822,6 +1898,9 @@ class cert_template_renderer {
             // STYLE-A-TABLE (v5.9.447): header bar colour + sample table rows so the
             // in-editor preview and Send-a-test render the shaded units table.
             'cert.header_colour'                   => local_rtocompliance_cert_header_colour(),
+            // CERT-TABLE-HEADINGS (v6.3.20): admin-configured column heading wording, so the
+            // in-editor preview and Send-a-test show the RTO's own terminology.
+            'cert.table_headings'                  => local_rtocompliance_cert_table_headings(),
             'qualification.units_table_rows_json'  => '[]',
             'rto.logo__path'                       => $rtologopath,
             'rto.secondary_logo'                   => '',
@@ -1868,26 +1947,27 @@ class cert_template_renderer {
         // Certificate-of-Completion (non-accredited) — different sample data
         // emphasising course title rather than qualification code/units.
         if ($certtype === 'completion') {
-            return array_merge($shared, [
-                'student.fullname'           => 'Jane Citizen',
-                'student.usi'                => '',
-                'student.dob'                => '',
-                'qualification.code'         => '',
-                'qualification.name'         => 'Workplace First Aid (Non-Accredited)',
-                'qualification.units'        => '',
-                'cert.coursetitle'           => 'Workplace First Aid (Non-Accredited)',
-                'cert.number'                => 'COMP-2026-PREVIEW',
-                'cert.issuedate'             => userdate($issuets, '%d %B %Y'),
-                'cert.issuedate_ts'          => $issuets,
-                'cert.completiondate'        => userdate($issuets - (3 * DAYSECS), '%d %B %Y'),
-                'rto.name'                   => get_config('local_rtocompliance', 'rtoname')        ?: 'National Compliance Training',
-                // TOID-PREFIX (v6.2.51): preview mirrors the issued cert ("TOID <code>").
-                'rto.code'                   => self::format_rto_code((string) (get_config('local_rtocompliance', 'rtocode') ?: '')),
-                'signatory.name'             => get_config('local_rtocompliance', 'signatoryname')  ?: 'Dr A. Authorised',
-                'signatory.title'            => get_config('local_rtocompliance', 'signatorytitle') ?: 'Course Coordinator',
-                'aqf_statement'              => '',
-                'not_a_testamur_statement'   => '',
-                'verify.url'                 => (new \moodle_url('/local/rtocompliance/verify.php', ['token' => 'PREVIEWTOKEN']))->out(false),
+            return array_merge(
+                $shared, [
+                    'student.fullname'           => 'Jane Citizen',
+                    'student.usi'                => '',
+                    'student.dob'                => '',
+                    'qualification.code'         => '',
+                    'qualification.name'         => 'Workplace First Aid (Non-Accredited)',
+                    'qualification.units'        => '',
+                    'cert.coursetitle'           => 'Workplace First Aid (Non-Accredited)',
+                    'cert.number'                => 'COMP-2026-PREVIEW',
+                    'cert.issuedate'             => userdate($issuets, '%d %B %Y'),
+                    'cert.issuedate_ts'          => $issuets,
+                    'cert.completiondate'        => userdate($issuets - (3 * DAYSECS), '%d %B %Y'),
+                    'rto.name'                   => get_config('local_rtocompliance', 'rtoname')        ?: 'National Compliance Training',
+                    // TOID-PREFIX (v6.2.51): preview mirrors the issued cert ("TOID <code>").
+                    'rto.code'                   => self::format_rto_code((string) (get_config('local_rtocompliance', 'rtocode') ?: '')),
+                    'signatory.name'             => get_config('local_rtocompliance', 'signatoryname')  ?: 'Dr A. Authorised',
+                    'signatory.title'            => get_config('local_rtocompliance', 'signatorytitle') ?: 'Course Coordinator',
+                    'aqf_statement'              => '',
+                    'not_a_testamur_statement'   => '',
+                    'verify.url'                 => (new \moodle_url('/local/rtocompliance/verify.php', ['token' => 'PREVIEWTOKEN']))->out(false),
             ]);
         }
 
@@ -1897,50 +1977,53 @@ class cert_template_renderer {
         // (validator still hard-blocks Submit-for-approval).
         $usisample = ($certtype === 'record') ? 'AB12CD34EF' : '';
 
-        return array_merge($shared, [
-            'student.fullname'           => 'Jane Citizen',
-            'student.usi'                => $usisample,
-            'student.dob'                => '01/01/1990',
-            'qualification.code'         => 'BSB30120',
-            'qualification.name'         => 'Certificate III in Business',
-            'qualification.units'        => "BSBCMM311 Apply critical thinking skills in a team environment\nBSBCRT311 Apply critical thinking skills\nBSBPEF301 Organise personal work priorities\nBSBSUS211 Participate in sustainable work practices\nBSBTWK301 Use inclusive work practices",
-            // ROR-3COL-FIX (v5.9.220): 3-column payload for the Record of Results preview.
-            'qualification.units_col_semester' => "Sem 1 2024\nSem 1 2024\nSem 2 2024\nSem 2 2024\nSem 1 2025",
-            'qualification.units_col_names'    => "BSBCMM311 Apply critical thinking skills in a team environment\nBSBCRT311 Apply critical thinking skills\nBSBPEF301 Organise personal work priorities\nBSBSUS211 Participate in sustainable work practices\nBSBTWK301 Use inclusive work practices",
-            'qualification.units_col_results'  => "Competent\nCompetent\nCompetent\nCompetent\nCompetent",
-            // ROR-TABLE-FIX (v5.9.246): structured row array for ror_table field kind.
-            'qualification.units_ror_rows_json' => json_encode([
-                ['semester' => 'Sem 1 2024', 'name' => 'BSBCMM311 Apply critical thinking skills in a team environment', 'result' => 'Competent'],
-                ['semester' => 'Sem 1 2024', 'name' => 'BSBCRT311 Apply critical thinking skills',                     'result' => 'Competent'],
-                ['semester' => 'Sem 2 2024', 'name' => 'BSBPEF301 Organise personal work priorities',                  'result' => 'Competent'],
-                ['semester' => 'Sem 2 2024', 'name' => 'BSBSUS211 Participate in sustainable work practices',          'result' => 'Competent'],
-                ['semester' => 'Sem 1 2025', 'name' => 'BSBTWK301 Use inclusive work practices',                       'result' => 'Competent'],
-            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-            // STYLE-A-TABLE (v5.9.447): [{code,title,date}] preview rows for the
-            // shaded units table on the SoA / Record of Results.
-            // STYLE-A / ROR-5COL: rows carry enrolment date + result code + completion date
-            // so both the 3-column SoA table and the 5-column Record of Results table preview
-            // with realistic data (results vary to show C / RPL / CT / NYC).
-            'qualification.units_table_rows_json' => json_encode([
-                ['code' => 'BSBCMM311', 'title' => 'Apply critical thinking skills in a team environment', 'enroldate' => '12 Feb 2024', 'result' => 'C',   'date' => '15 Mar 2024'],
-                ['code' => 'BSBCRT311', 'title' => 'Apply critical thinking skills',                        'enroldate' => '12 Feb 2024', 'result' => 'C',   'date' => '02 May 2024'],
-                ['code' => 'BSBPEF301', 'title' => 'Organise personal work priorities',                     'enroldate' => '12 Feb 2024', 'result' => 'RPL', 'date' => '18 Mar 2024'],
-                ['code' => 'BSBTEC301', 'title' => 'Design and produce business documents',                 'enroldate' => '05 Jan 2024', 'result' => 'CT',  'date' => '05 Jan 2024'],
-                ['code' => 'BSBSUS211', 'title' => 'Participate in sustainable work practices',             'enroldate' => '12 Feb 2024', 'result' => 'NYC', 'date' => ''],
-            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-            'cert.coursetitle'           => 'Certificate III in Business',
-            'cert.number'                => 'CERT-2026-PREVIEW',
-            'cert.issuedate'             => userdate($issuets, '%d %B %Y'),
-            'cert.issuedate_ts'          => $issuets,
-            'cert.completiondate'        => userdate($issuets - (15 * DAYSECS), '%d %B %Y'),
-            'rto.name'                   => get_config('local_rtocompliance', 'rtoname')        ?: 'National Compliance Training',
-            // TOID-PREFIX (v6.2.51): preview mirrors the issued cert ("TOID <code>").
-            'rto.code'                   => self::format_rto_code((string) (get_config('local_rtocompliance', 'rtocode') ?: '30772')),
-            'signatory.name'             => get_config('local_rtocompliance', 'signatoryname')  ?: 'Dr A. Authorised',
-            'signatory.title'            => get_config('local_rtocompliance', 'signatorytitle') ?: 'Chief Executive Officer',
-            'aqf_statement'              => get_config('local_rtocompliance', 'aqfstatement')   ?: 'This qualification is recognised within the Australian Qualifications Framework.',
-            'not_a_testamur_statement'   => get_config('local_rtocompliance', 'not_a_testamur_statement') ?: 'A STATEMENT OF ATTAINMENT IS ISSUED BY A REGISTERED TRAINING ORGANISATION WHEN AN INDIVIDUAL HAS COMPLETED ONE OR MORE ACCREDITED UNITS. THIS IS NOT A TESTAMUR.',
-            'verify.url'                 => (new \moodle_url('/local/rtocompliance/verify.php', ['token' => 'PREVIEWTOKEN']))->out(false),
+        return array_merge(
+            $shared, [
+                'student.fullname'           => 'Jane Citizen',
+                'student.usi'                => $usisample,
+                'student.dob'                => '01/01/1990',
+                'qualification.code'         => 'BSB30120',
+                'qualification.name'         => 'Certificate III in Business',
+                'qualification.units'        => "BSBCMM311 Apply critical thinking skills in a team environment\nBSBCRT311 Apply critical thinking skills\nBSBPEF301 Organise personal work priorities\nBSBSUS211 Participate in sustainable work practices\nBSBTWK301 Use inclusive work practices",
+                // ROR-3COL-FIX (v5.9.220): 3-column payload for the Record of Results preview.
+                'qualification.units_col_semester' => "Sem 1 2024\nSem 1 2024\nSem 2 2024\nSem 2 2024\nSem 1 2025",
+                'qualification.units_col_names'    => "BSBCMM311 Apply critical thinking skills in a team environment\nBSBCRT311 Apply critical thinking skills\nBSBPEF301 Organise personal work priorities\nBSBSUS211 Participate in sustainable work practices\nBSBTWK301 Use inclusive work practices",
+                'qualification.units_col_results'  => "Competent\nCompetent\nCompetent\nCompetent\nCompetent",
+                // ROR-TABLE-FIX (v5.9.246): structured row array for ror_table field kind.
+                'qualification.units_ror_rows_json' => json_encode(
+                [
+                        ['semester' => 'Sem 1 2024', 'name' => 'BSBCMM311 Apply critical thinking skills in a team environment', 'result' => 'Competent'],
+                        ['semester' => 'Sem 1 2024', 'name' => 'BSBCRT311 Apply critical thinking skills',                     'result' => 'Competent'],
+                        ['semester' => 'Sem 2 2024', 'name' => 'BSBPEF301 Organise personal work priorities',                  'result' => 'Competent'],
+                        ['semester' => 'Sem 2 2024', 'name' => 'BSBSUS211 Participate in sustainable work practices',          'result' => 'Competent'],
+                        ['semester' => 'Sem 1 2025', 'name' => 'BSBTWK301 Use inclusive work practices',                       'result' => 'Competent'],
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                // STYLE-A-TABLE (v5.9.447): [{code,title,date}] preview rows for the
+                // shaded units table on the SoA / Record of Results.
+                // STYLE-A / ROR-5COL: rows carry enrolment date + result code + completion date
+                // so both the 3-column SoA table and the 5-column Record of Results table preview
+                // with realistic data (results vary to show C / RPL / CT / NYC).
+                'qualification.units_table_rows_json' => json_encode(
+                [
+                        ['code' => 'BSBCMM311', 'title' => 'Apply critical thinking skills in a team environment', 'enroldate' => '12 Feb 2024', 'result' => 'C',   'date' => '15 Mar 2024'],
+                        ['code' => 'BSBCRT311', 'title' => 'Apply critical thinking skills',                        'enroldate' => '12 Feb 2024', 'result' => 'C',   'date' => '02 May 2024'],
+                        ['code' => 'BSBPEF301', 'title' => 'Organise personal work priorities',                     'enroldate' => '12 Feb 2024', 'result' => 'RPL', 'date' => '18 Mar 2024'],
+                        ['code' => 'BSBTEC301', 'title' => 'Design and produce business documents',                 'enroldate' => '05 Jan 2024', 'result' => 'CT',  'date' => '05 Jan 2024'],
+                        ['code' => 'BSBSUS211', 'title' => 'Participate in sustainable work practices',             'enroldate' => '12 Feb 2024', 'result' => 'NYC', 'date' => ''],
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                'cert.coursetitle'           => 'Certificate III in Business',
+                'cert.number'                => 'CERT-2026-PREVIEW',
+                'cert.issuedate'             => userdate($issuets, '%d %B %Y'),
+                'cert.issuedate_ts'          => $issuets,
+                'cert.completiondate'        => userdate($issuets - (15 * DAYSECS), '%d %B %Y'),
+                'rto.name'                   => get_config('local_rtocompliance', 'rtoname')        ?: 'National Compliance Training',
+                // TOID-PREFIX (v6.2.51): preview mirrors the issued cert ("TOID <code>").
+                'rto.code'                   => self::format_rto_code((string) (get_config('local_rtocompliance', 'rtocode') ?: '30772')),
+                'signatory.name'             => get_config('local_rtocompliance', 'signatoryname')  ?: 'Dr A. Authorised',
+                'signatory.title'            => get_config('local_rtocompliance', 'signatorytitle') ?: 'Chief Executive Officer',
+                'aqf_statement'              => get_config('local_rtocompliance', 'aqfstatement')   ?: 'This qualification is recognised within the Australian Qualifications Framework.',
+                'not_a_testamur_statement'   => get_config('local_rtocompliance', 'not_a_testamur_statement') ?: 'A STATEMENT OF ATTAINMENT IS ISSUED BY A REGISTERED TRAINING ORGANISATION WHEN AN INDIVIDUAL HAS COMPLETED ONE OR MORE ACCREDITED UNITS. THIS IS NOT A TESTAMUR.',
+                'verify.url'                 => (new \moodle_url('/local/rtocompliance/verify.php', ['token' => 'PREVIEWTOKEN']))->out(false),
         ]);
     }
 

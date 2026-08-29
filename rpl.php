@@ -56,7 +56,8 @@ echo html_writer::end_div();
 
 echo html_writer::start_div('info-card');
 echo html_writer::tag('h4', 'Standards 1.6 and 1.7 — Recognition of Prior Learning & Credit Transfer');
-echo html_writer::tag('p', '
+echo html_writer::tag(
+    'p', '
     <strong>Standard 1.6 (RPL):</strong> The RTO must have fair, flexible, and consistent processes for recognising the current skills and knowledge of applicants.
     Evidence must be assessed against unit requirements. Decisions must be documented.<br>
     <strong>Standard 1.7 (Credit Transfer):</strong> The RTO must provide credit for AQF qualifications, statements of attainment, and other evidence from NRT providers.
@@ -223,12 +224,13 @@ if ($records) {
                 : 'The student USI (unique student identifier) transcript has not been checked yet.';
             echo html_writer::tag('td', html_writer::tag('span', $usiLabel, ['class' => 'badge ' . $usiClass, 'title' => $usiTitle]));
         }
-        echo html_writer::tag('td',
-            html_writer::link(
-                new moodle_url('/local/rtocompliance/rpl_edit.php', ['id' => $rec->id]),
-                'Edit',
-                ['class' => 'btn btn-sm btn-secondary', 'title' => 'Edit this RPL or credit transfer record']
-            )
+        echo html_writer::tag(
+            'td',
+                html_writer::link(
+                    new moodle_url('/local/rtocompliance/rpl_edit.php', ['id' => $rec->id]),
+                    'Edit',
+                    ['class' => 'btn btn-sm btn-secondary', 'title' => 'Edit this RPL or credit transfer record']
+                )
         );
         echo html_writer::end_tag('tr');
     }

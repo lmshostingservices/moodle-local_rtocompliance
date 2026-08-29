@@ -100,15 +100,16 @@ if ($form->is_cancelled()) {
     $record->mandatoryclausesaqf = $data->mandatoryclausesaqf;
     $record->mandatoryclausestransparency = $data->mandatoryclausestransparency;
     // Serialize extra mandatory clauses to JSON
-    $record->mandatoryclausesextra = json_encode([
-        'priortodelivery'    => (int)($data->clause_priortodelivery ?? 0),
-        'cooperateregulator' => (int)($data->clause_cooperateregulator ?? 0),
-        'accurateresponses'  => (int)($data->clause_accurateresponses ?? 0),
-        'rtocertification'   => (int)($data->clause_rtocertification ?? 0),
-        'partiesnames'       => (int)($data->clause_partiesnames ?? 0),
-        'datesincluded'      => (int)($data->clause_datesincluded ?? 0),
-        'obligations'        => (int)($data->clause_obligations ?? 0),
-        'monitorquality'     => (int)($data->clause_monitorquality ?? 0),
+    $record->mandatoryclausesextra = json_encode(
+        [
+            'priortodelivery'    => (int)($data->clause_priortodelivery ?? 0),
+            'cooperateregulator' => (int)($data->clause_cooperateregulator ?? 0),
+            'accurateresponses'  => (int)($data->clause_accurateresponses ?? 0),
+            'rtocertification'   => (int)($data->clause_rtocertification ?? 0),
+            'partiesnames'       => (int)($data->clause_partiesnames ?? 0),
+            'datesincluded'      => (int)($data->clause_datesincluded ?? 0),
+            'obligations'        => (int)($data->clause_obligations ?? 0),
+            'monitorquality'     => (int)($data->clause_monitorquality ?? 0),
     ]);
     $record->agreementdocument = $data->agreementdocument ?? '';
     $record->monitoringfrequency = $data->monitoringfrequency;

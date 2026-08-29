@@ -98,7 +98,8 @@ if ($form->is_cancelled()) {
     // id is not already set and the complaint is not anonymous.
     $record->complainantuserid = (!empty($data->complainantuserid)) ? (int)$data->complainantuserid : null;
     if (empty($record->complainantuserid) && !$data->isanonymous && !empty($record->complainantemail)) {
-        $complainantuser = $DB->get_record('user',
+        $complainantuser = $DB->get_record(
+            'user',
             ['email' => $record->complainantemail, 'deleted' => 0], 'id', IGNORE_MULTIPLE);
         if ($complainantuser) {
             $record->complainantuserid = $complainantuser->id;

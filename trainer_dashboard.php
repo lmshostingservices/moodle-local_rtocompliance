@@ -70,7 +70,7 @@ $PAGE->set_pagelayout('standard');
 $PAGE->set_title(get_string('trainerdashboard', 'local_rtocompliance'));
 $PAGE->set_heading(get_string('trainerdashboard', 'local_rtocompliance'));
 
-$PAGE->add_body_class('path-local-rtocompliance'); // v5.9.445: scoped CSS needs this on admin_externalpage pages.
+$PAGE->add_body_class('path-local-rtocompliance'); // Version 5.9.445: scoped CSS needs this on admin_externalpage pages.
 echo $OUTPUT->header();
 echo local_rtocompliance_render_nav_header(get_string('trainerdashboard', 'local_rtocompliance'), null, null, 'trainers');
 echo local_rtocompliance_page_banner(get_string('trainerdashboard', 'local_rtocompliance'));
@@ -176,8 +176,9 @@ if (empty($mycourses)) {
         echo '<table class="generaltable" style="width:100%;margin:0;">';
         // Sortable Name header for My Students table.
         $dashNameNextDir = ($sort === 'name' && $sortdir === 'asc') ? 'desc' : 'asc';
-        $dashNameSortUrl = (new moodle_url('/local/rtocompliance/trainer_dashboard.php', [
-            'sort' => 'name', 'sortdir' => $dashNameNextDir,
+        $dashNameSortUrl = (new moodle_url(
+            '/local/rtocompliance/trainer_dashboard.php', [
+                'sort' => 'name', 'sortdir' => $dashNameNextDir,
         ]))->out(false);
         $dashNameArrow = ($sort === 'name')
             ? ($sortdir === 'asc'

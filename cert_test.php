@@ -104,12 +104,13 @@ if ($generate && isset($validtypes[$certtype])) {
         'coursetitle'       => $certtype === 'completion'
             ? 'Workplace First Aid (Non-Accredited)'
             : '',
-        // v5.9.365: include outcome + semester so the Live preview's Record of Results
+        // Version 5.9.365: include outcome + semester so the Live preview's Record of Results
         // Semester/Results columns populate (outcome 20 = Competent, AVETMISS).
-        'units'             => json_encode([
-            ['code' => 'BSBCMM311', 'name' => 'Apply critical thinking skills in a team environment', 'outcome' => '20', 'semester' => 'Sem 1 ' . date('Y')],
-            ['code' => 'BSBCRT311', 'name' => 'Apply critical thinking skills', 'outcome' => '20', 'semester' => 'Sem 1 ' . date('Y')],
-            ['code' => 'BSBPEF301', 'name' => 'Organise personal work priorities', 'outcome' => '20', 'semester' => 'Sem 2 ' . date('Y')],
+        'units'             => json_encode(
+            [
+                ['code' => 'BSBCMM311', 'name' => 'Apply critical thinking skills in a team environment', 'outcome' => '20', 'semester' => 'Sem 1 ' . date('Y')],
+                ['code' => 'BSBCRT311', 'name' => 'Apply critical thinking skills', 'outcome' => '20', 'semester' => 'Sem 1 ' . date('Y')],
+                ['code' => 'BSBPEF301', 'name' => 'Organise personal work priorities', 'outcome' => '20', 'semester' => 'Sem 2 ' . date('Y')],
         ]),
         'issuedate'         => $issuets,
         'timeissued'        => $issuets,
@@ -129,15 +130,17 @@ if ($generate && isset($validtypes[$certtype])) {
         $certtypes   = local_rtocompliance_get_certificate_types();
         $certtypename = $certtypes[$certtype] ?? $certtype;
 
-        $subject = get_string('cert_test_email_subject', 'local_rtocompliance', [
-            'certtype' => $certtypename,
-            'rtoname'  => $rtoname,
+        $subject = get_string(
+            'cert_test_email_subject', 'local_rtocompliance', [
+                'certtype' => $certtypename,
+                'rtoname'  => $rtoname,
         ]);
-        $messagehtml = get_string('cert_test_email_body', 'local_rtocompliance', [
-            'fullname'   => fullname($sampleuser),
-            'certtype'   => $certtypename,
-            'certnumber' => $samplecert->certnumber,
-            'rtoname'    => $rtoname,
+        $messagehtml = get_string(
+            'cert_test_email_body', 'local_rtocompliance', [
+                'fullname'   => fullname($sampleuser),
+                'certtype'   => $certtypename,
+                'certnumber' => $samplecert->certnumber,
+                'rtoname'    => $rtoname,
         ]);
         $messagetext = html_to_text($messagehtml);
 
@@ -145,11 +148,12 @@ if ($generate && isset($validtypes[$certtype])) {
         $tempfilename = 'test-cert-email-' . $samplecert->certnumber . '.pdf';
         $temppath     = $CFG->tempdir . '/' . $tempfilename;
         file_put_contents($temppath, $pdfdata);
-        register_shutdown_function (function () use ($temppath) {
-            if (file_exists($temppath)) {
-                @unlink($temppath);
-            }
-        });
+        register_shutdown_function (
+            function () use ($temppath) {
+                if (file_exists($temppath)) {
+                    @unlink($temppath);
+                }
+            });
 
         // Send to the real admin user (not the synthetic $sampleuser) so the
         // email lands in the logged-in admin's inbox.
@@ -176,13 +180,14 @@ if ($generate && isset($validtypes[$certtype])) {
     // streams the PDF directly — no double-send occurs.
     // -----------------------------------------------------------------------
     if ($sendemail) {
-        $pdfurl = new moodle_url('/local/rtocompliance/cert_test.php', [
-            'generate'    => 1,
-            'certtype'    => $certtype,
-            'studentname' => $studentname,
-            'orientation' => $orientation,
-            'sendemail'   => 0,
-            'sesskey'     => sesskey(),
+        $pdfurl = new moodle_url(
+            '/local/rtocompliance/cert_test.php', [
+                'generate'    => 1,
+                'certtype'    => $certtype,
+                'studentname' => $studentname,
+                'orientation' => $orientation,
+                'sendemail'   => 0,
+                'sesskey'     => sesskey(),
         ]);
         $pdfurlesc = $pdfurl->out(false);
 
@@ -265,7 +270,7 @@ $PAGE->set_pagelayout('admin');
 $PAGE->set_title(get_string('cert_test_pagetitle', 'local_rtocompliance'));
 $PAGE->set_heading(get_string('cert_test_heading', 'local_rtocompliance'));
 
-$PAGE->add_body_class('path-local-rtocompliance'); // v5.9.445: scoped CSS needs this on admin_externalpage pages.
+$PAGE->add_body_class('path-local-rtocompliance'); // Version 5.9.445: scoped CSS needs this on admin_externalpage pages.
 echo $OUTPUT->header();
 echo local_rtocompliance_render_nav_header('Test Certificate', 'Certificate Templates', new moodle_url('/local/rtocompliance/cert_templates.php'));
 echo local_rtocompliance_page_banner('Test Certificate');
@@ -284,11 +289,12 @@ foreach ($validtypes as $key => $label) {
 
 $actionurl = new moodle_url('/local/rtocompliance/cert_test.php');
 
-echo html_writer::start_tag('form', [
-    'method' => 'post',
-    'action' => $actionurl->out(false),
-    'target' => '_blank',
-    'class'  => 'mt-3',
+echo html_writer::start_tag(
+    'form', [
+        'method' => 'post',
+        'action' => $actionurl->out(false),
+        'target' => '_blank',
+        'class'  => 'mt-3',
 ]);
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey',  'value' => sesskey()]);
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'generate', 'value' => 1]);
@@ -302,19 +308,21 @@ echo html_writer::label(
     true,
     ['class' => 'd-block fw-bold']
 );
-echo html_writer::start_tag('select', [
-    'name'  => 'orientation',
-    'id'    => 'cert_test_orientation',
-    'class' => 'form-select',
-    'style' => 'max-width: 480px;',
+echo html_writer::start_tag(
+    'select', [
+        'name'  => 'orientation',
+        'id'    => 'cert_test_orientation',
+        'class' => 'form-select',
+        'style' => 'max-width: 480px;',
 ]);
 echo html_writer::tag('option', get_string('cert_test_orientation_auto', 'local_rtocompliance'),      ['value' => '']);
 echo html_writer::tag('option', get_string('cert_test_orientation_portrait', 'local_rtocompliance'), ['value' => 'P']);
 echo html_writer::tag('option', get_string('cert_test_orientation_landscape', 'local_rtocompliance'),['value' => 'L']);
 echo html_writer::end_tag('select');
-echo html_writer::tag('p',
-    get_string('cert_test_orientation_hint', 'local_rtocompliance'),
-    ['class' => 'form-text text-muted mt-1']
+echo html_writer::tag(
+    'p',
+        get_string('cert_test_orientation_hint', 'local_rtocompliance'),
+        ['class' => 'form-text text-muted mt-1']
 );
 echo html_writer::end_div();
 
@@ -325,12 +333,13 @@ echo html_writer::label(
     true,
     ['class' => 'd-block fw-bold']
 );
-echo html_writer::start_tag('select', [
-    'name'  => 'certtype',
-    'id'    => 'cert_test_certtype',
-    'class' => 'form-select',
-    'style' => 'max-width: 480px;',
-    'required' => 'required',
+echo html_writer::start_tag(
+    'select', [
+        'name'  => 'certtype',
+        'id'    => 'cert_test_certtype',
+        'class' => 'form-select',
+        'style' => 'max-width: 480px;',
+        'required' => 'required',
 ]);
 foreach ($validtypes as $key => $label) {
     echo html_writer::tag('option', s($label . ' — ' . $statussummary[$key]), ['value' => $key]);
@@ -345,26 +354,28 @@ echo html_writer::label(
     true,
     ['class' => 'd-block fw-bold']
 );
-echo html_writer::empty_tag('input', [
-    'type'        => 'text',
-    'name'        => 'studentname',
-    'id'          => 'cert_test_studentname',
-    'class'       => 'form-control',
-    'style'       => 'max-width: 480px;',
-    'placeholder' => get_string('cert_test_studentname_placeholder', 'local_rtocompliance'),
-    'maxlength'   => 100,
+echo html_writer::empty_tag(
+    'input', [
+        'type'        => 'text',
+        'name'        => 'studentname',
+        'id'          => 'cert_test_studentname',
+        'class'       => 'form-control',
+        'style'       => 'max-width: 480px;',
+        'placeholder' => get_string('cert_test_studentname_placeholder', 'local_rtocompliance'),
+        'maxlength'   => 100,
 ]);
 echo html_writer::end_div();
 
 // "Send to my email" checkbox — shows the admin's real email address.
 echo html_writer::start_div('form-group mb-3');
 echo html_writer::start_div('form-check');
-echo html_writer::empty_tag('input', [
-    'type'  => 'checkbox',
-    'name'  => 'sendemail',
-    'id'    => 'cert_test_sendemail',
-    'class' => 'form-check-input',
-    'value' => 1,
+echo html_writer::empty_tag(
+    'input', [
+        'type'  => 'checkbox',
+        'name'  => 'sendemail',
+        'id'    => 'cert_test_sendemail',
+        'class' => 'form-check-input',
+        'value' => 1,
 ]);
 echo html_writer::label(
     get_string('cert_test_sendemail_label', 'local_rtocompliance', s($USER->email)),
@@ -373,15 +384,17 @@ echo html_writer::label(
     ['class' => 'form-check-label']
 );
 echo html_writer::end_div();
-echo html_writer::tag('p',
-    get_string('cert_test_sendemail_hint', 'local_rtocompliance'),
-    ['class' => 'form-text text-muted mt-1']
+echo html_writer::tag(
+    'p',
+        get_string('cert_test_sendemail_hint', 'local_rtocompliance'),
+        ['class' => 'form-text text-muted mt-1']
 );
 echo html_writer::end_div();
 
-echo html_writer::tag('button',
-    get_string('cert_test_generate', 'local_rtocompliance'),
-    ['type' => 'submit', 'class' => 'btn btn-primary']
+echo html_writer::tag(
+    'button',
+        get_string('cert_test_generate', 'local_rtocompliance'),
+        ['type' => 'submit', 'class' => 'btn btn-primary']
 );
 
 echo html_writer::end_tag('form');

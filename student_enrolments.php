@@ -178,10 +178,11 @@ if ($action === 'import' && confirm_sesskey()) {
         if (!empty($linked_units)) {
             // Create one record per linked unit (correct AVETMISS granularity).
             foreach ($linked_units as $lu) {
-                if ($DB->record_exists('local_rtocompliance_enrolments', [
-                    'studentid' => $student->id,
-                    'courseid'  => $me->courseid,
-                    'unitcode'  => $lu->unitcode,
+                if ($DB->record_exists(
+                    'local_rtocompliance_enrolments', [
+                        'studentid' => $student->id,
+                        'courseid'  => $me->courseid,
+                        'unitcode'  => $lu->unitcode,
                 ])) {
                     $skipped++;
                     continue;
@@ -385,10 +386,12 @@ if ($action === 'edit' || $action === 'add') {
     // missing action= and enrolid=.  On POST submission PHP saw $action='' and skipped
     // the entire save block — nothing was saved and no error was shown.
     // Re-setting $PAGE->url here ensures the form posts back with all required params.
-    $PAGE->set_url(new moodle_url('/local/rtocompliance/student_enrolments.php', [
-        'userid'  => $userid,
-        'action'  => $action,
-        'enrolid' => $enrolid,
+    $PAGE->set_url(
+        new moodle_url(
+        '/local/rtocompliance/student_enrolments.php', [
+                'userid'  => $userid,
+                'action'  => $action,
+                'enrolid' => $enrolid,
     ]));
 
     $enrolment = null;
@@ -413,12 +416,13 @@ if ($action === 'edit' || $action === 'add') {
     // so the new hidden inputs (added in enrolment_form.php for the same bug)
     // can carry these values in the POST BODY — making the save survive any
     // theme/layout that strips the query string from the form action URL.
-    $form = new enrolment_form(null, [
-        'studentid' => $student->id,
-        'enrolment' => $enrolment,
-        'userid'    => $userid,
-        'action'    => $action,
-        'enrolid'   => $enrolid,
+    $form = new enrolment_form(
+        null, [
+            'studentid' => $student->id,
+            'enrolment' => $enrolment,
+            'userid'    => $userid,
+            'action'    => $action,
+            'enrolid'   => $enrolid,
     ]);
 
     // BUG-SR-OUTCOME-SAVE-3 (v4.2.26): set_data() must NOT be called before
@@ -464,7 +468,7 @@ if ($action === 'edit' || $action === 'add') {
             'status'              => 'active',
         ];
         foreach ($defaults as $field => $default) {
-            // empty('00') === false in PHP, but empty('0') === true — guard against both.
+            // Note that empty('00') === false in PHP, but empty('0') === true — guard against both.
             $current = $data->$field ?? null;
             if ($current === null || $current === '' || $current === false) {
                 $data->$field = $default;
@@ -616,12 +620,13 @@ if ($action === 'edit' || $action === 'add') {
         // outcome/status pair so admins can grep error_log for "[rto/enrolment-save-debug]"
         // and confirm the form actually transmitted the user's selection.  Same
         // diagnostic pattern as BUG-USI-PLATFORM-MSG (v4.2.18).
-        error_log('[rto/enrolment-save-debug] action=' . $action
-            . ' enrolid=' . ($enrolid ?: 'new')
-            . ' studentid=' . $student->id
-            . ' iscreate=' . ($iscreate ? '1' : '0')
-            . ' submitted_outcome=' . var_export($data->outcomeidentifier ?? null, true)
-            . ' submitted_status=' . var_export($data->status ?? null, true)
+        error_log(
+            '[rto/enrolment-save-debug] action=' . $action
+                . ' enrolid=' . ($enrolid ?: 'new')
+                . ' studentid=' . $student->id
+                . ' iscreate=' . ($iscreate ? '1' : '0')
+                . ' submitted_outcome=' . var_export($data->outcomeidentifier ?? null, true)
+                . ' submitted_status=' . var_export($data->status ?? null, true)
             . ' submitted_id=' . var_export($data->id ?? null, true));
 
         try {
@@ -651,15 +656,17 @@ if ($action === 'edit' || $action === 'add') {
                 $userfacing .= ' [' . $detail . ']';
             }
             // Always log the full trace server-side so we can grep for "[rto/enrolment-save]".
-            error_log('[rto/enrolment-save] ' . $cls . ' studentid=' . $student->id
-                . ' enrolid=' . ($enrolid ?: 'new') . ' action=' . $action . ' :: '
+            error_log(
+                '[rto/enrolment-save] ' . $cls . ' studentid=' . $student->id
+                    . ' enrolid=' . ($enrolid ?: 'new') . ' action=' . $action . ' :: '
                 . $msg . "\n" . $e->getTraceAsString());
 
             redirect(
-                new moodle_url('/local/rtocompliance/student_enrolments.php', [
-                    'userid'  => $userid,
-                    'action'  => $action,
-                    'enrolid' => $enrolid,
+                new moodle_url(
+                    '/local/rtocompliance/student_enrolments.php', [
+                        'userid'  => $userid,
+                        'action'  => $action,
+                        'enrolid' => $enrolid,
                 ]),
                 $userfacing,
                 null,
@@ -712,8 +719,9 @@ if ($action === 'edit' || $action === 'add') {
         if ($saved) {
             $verifymsg .= ' (outcome=' . ($saved->outcomeidentifier ?? '?')
                 . ', status=' . ($saved->status ?? '?') . ')';
-            error_log('[rto/enrolment-save-debug] PERSISTED enrolid=' . $saved->id
-                . ' outcome=' . var_export($saved->outcomeidentifier, true)
+            error_log(
+                '[rto/enrolment-save-debug] PERSISTED enrolid=' . $saved->id
+                    . ' outcome=' . var_export($saved->outcomeidentifier, true)
                 . ' status=' . var_export($saved->status, true));
         }
 
@@ -782,9 +790,10 @@ if ($action === 'edit' || $action === 'add') {
             $banner .= '</ul>';
         }
         \core\notification::error($banner);
-        error_log('[rto/enrolment-save-validfail] action=' . $action
-            . ' enrolid=' . ($enrolid ?: 'new')
-            . ' studentid=' . $student->id
+        error_log(
+            '[rto/enrolment-save-validfail] action=' . $action
+                . ' enrolid=' . ($enrolid ?: 'new')
+                . ' studentid=' . $student->id
             . ' errors=' . json_encode(array_keys($errors)));
     }
 
@@ -853,16 +862,17 @@ if (!empty($unimported)) {
             $label .= ' <small class="text-muted">(' . s($mc->shortname) . ')</small>';
         }
         if ($mc->timestart) {
-            $label .= ' — enrolled ' . userdate($mc->timestart, get_string('strftimedate', 'langconfig')); // v5.9.405: include year.
+            $label .= ' — enrolled ' . userdate($mc->timestart, get_string('strftimedate', 'langconfig')); // Version 5.9.405: include year.
         }
         echo html_writer::tag('li', $label);
     }
     echo html_writer::end_tag('ul');
 
-    $import_url = new moodle_url('/local/rtocompliance/student_enrolments.php', [
-        'userid'  => $userid,
-        'action'  => 'import',
-        'sesskey' => sesskey(),
+    $import_url = new moodle_url(
+        '/local/rtocompliance/student_enrolments.php', [
+            'userid'  => $userid,
+            'action'  => 'import',
+            'sesskey' => sesskey(),
     ]);
     echo html_writer::start_tag('form', ['method' => 'post', 'action' => $import_url->out(false)]);
     echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'action',  'value' => 'import']);
@@ -887,14 +897,16 @@ if (!empty($unimported)) {
         }
 
         $select_html = html_writer::start_div('form-group d-flex align-items-center mb-2', ['style' => 'gap:0.5rem']);
-        $select_html .= html_writer::tag('label',
-            get_string('purchasingcontract_slot', 'local_rtocompliance') . ':',
+        $select_html .= html_writer::tag(
+            'label',
+                get_string('purchasingcontract_slot', 'local_rtocompliance') . ':',
             ['for' => 'import_contract_slot', 'class' => 'mb-0 font-weight-bold', 'style' => 'white-space:nowrap']);
         $select_opts = '';
         foreach ($imp_slots as $val => $label) {
             $select_opts .= html_writer::tag('option', s($label), ['value' => $val]);
         }
-        $select_html .= html_writer::tag('select', $select_opts,
+        $select_html .= html_writer::tag(
+            'select', $select_opts,
             ['name' => 'purchasingcontract_slot', 'id' => 'import_contract_slot', 'class' => 'custom-select custom-select-sm', 'style' => 'max-width:280px']);
         $select_html .= html_writer::end_div();
         echo $select_html;
@@ -973,10 +985,10 @@ if (empty($enrolments)) {
             }
         }
         
-        // v5.9.405: use the FULL date (with year) — strftimedateshort omits the year.
+        // Version 5.9.405: use the FULL date (with year) — strftimedateshort omits the year.
         $startdate = $enrolment->activitystartdate ? userdate($enrolment->activitystartdate, get_string('strftimedate', 'langconfig')) : '-';
 
-        // v5.9.405: '00'/'10'/blank are not valid AVETMISS national outcomes — they mean
+        // Version 5.9.405: '00'/'10'/blank are not valid AVETMISS national outcomes — they mean
         // "no result recorded yet". Show a clear label instead of the raw code.
         $oc = trim((string)$enrolment->outcomeidentifier);
         $outcomename = $outcomes[$oc] ?? (($oc === '' || $oc === '00' || $oc === '10') ? 'Not yet assessed' : $oc);

@@ -144,7 +144,7 @@ function rtoc_build_usi_cell(object $student): string {
 
     return $html;
 }
-} // end function_exists('rtoc_build_usi_cell')
+} // End function_exists('rtoc_build_usi_cell')
 
 $cellhtml = rtoc_build_usi_cell($student);
 $success  = !empty($result['success']);
@@ -152,10 +152,11 @@ $message  = $result['message'] ?? ($success ? 'USI verified successfully.' : 'Ve
 
 if ($ajax) {
     header('Content-Type: application/json');
-    echo json_encode([
-        'success' => $success,
-        'html'    => $cellhtml,
-        'message' => $message,
+    echo json_encode(
+        [
+            'success' => $success,
+            'html'    => $cellhtml,
+            'message' => $message,
     ]);
     exit;
 }

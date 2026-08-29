@@ -130,7 +130,8 @@ foreach ($sync['skipped'] as $s) {
 
 purge_all_caches();
 cli_writeln('');
-cli_writeln('Done. ' . count($sync['tables']) . ' table(s) created, '
-    . count($sync['fields']) . ' column(s) added, '
+cli_writeln(
+    'Done. ' . count($sync['tables']) . ' table(s) created, '
+        . count($sync['fields']) . ' column(s) added, '
     . count($sync['skipped']) . ' skipped. Caches purged.');
 exit(0);

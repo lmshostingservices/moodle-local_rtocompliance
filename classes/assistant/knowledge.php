@@ -48,7 +48,6 @@ defined('MOODLE_INTERNAL') || die();
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 final class knowledge {
-
     /**
      * Hard ceiling on the assembled knowledge base, in characters.
      *
@@ -286,9 +285,11 @@ final class knowledge {
         try {
             $total = (int) $DB->count_records('local_rtocompliance_students');
             if ($total > 0) {
-                $verified = (int) $DB->count_records('local_rtocompliance_students',
+                $verified = (int) $DB->count_records(
+                    'local_rtocompliance_students',
                     ['usiverified' => \local_rtocompliance\usi\usi_verification_service::STATUS_VERIFIED]);
-                $blank = (int) $DB->count_records_select('local_rtocompliance_students',
+                $blank = (int) $DB->count_records_select(
+                    'local_rtocompliance_students',
                     $DB->sql_isempty('local_rtocompliance_students', 'usi', true, true) . ' OR usi IS NULL');
                 $facts[] = 'Students on this site: ' . $total . '. USI verified with the Registry: ' . $verified
                     . '. No USI recorded at all: ' . $blank . '. The remaining '
@@ -389,7 +390,8 @@ final class knowledge {
 
         try {
             if ($qualid > 0 && in_array($script, ['generate_qual_certs.php', 'qual_cert_hub.php'], true)) {
-                $qual = $DB->get_record('local_rtocompliance_qualbuilder', ['id' => $qualid],
+                $qual = $DB->get_record(
+                    'local_rtocompliance_qualbuilder', ['id' => $qualid],
                     'id, qualificationcode, qualificationname', IGNORE_MISSING);
                 if ($qual) {
                     $facts[] = 'The admin is looking at qualification ' . $qual->qualificationcode
@@ -401,10 +403,11 @@ final class knowledge {
                 // Not IGNORE_MULTIPLE: with more than one student row that silently picks one,
                 // so the assistant could report "verified, can be issued" while the generation
                 // page shows the row disabled as a duplicate. Detect it instead.
-                $sturows = $DB->get_records('local_rtocompliance_students', ['userid' => $userid],
+                $sturows = $DB->get_records(
+                    'local_rtocompliance_students', ['userid' => $userid],
                     'id ASC', 'id, usi, usiverified');
                 $stu     = empty($sturows) ? false : reset($sturows);
-                // fullname() must get a COMPLETE user object: called with a partial one it
+                // The fullname() call must get a COMPLETE user object: called with a partial one it
                 // emits a debugging notice per alternate-name field on developer-mode sites.
                 $user = \core_user::get_user($userid, '*', IGNORE_MISSING);
                 $name = $user ? \fullname($user) : ('user #' . $userid);

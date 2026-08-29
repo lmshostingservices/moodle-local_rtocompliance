@@ -126,43 +126,51 @@ class thirdparty_form extends \moodleform {
         $mform->addHelpButton('mandatoryclausestransparency', 'mandatoryclausestransparency', 'local_rtocompliance');
 
         // --- Additional mandatory clauses (stored as JSON in mandatoryclausesextra) ---
-        $mform->addElement('advcheckbox', 'clause_priortodelivery',
-            'Agreement entered into PRIOR to delivery and assessment',
+        $mform->addElement(
+            'advcheckbox', 'clause_priortodelivery',
+                'Agreement entered into PRIOR to delivery and assessment',
             'Confirmed — the written agreement was entered into before any training or assessment commenced');
         $mform->setDefault('clause_priortodelivery', 0);
 
-        $mform->addElement('advcheckbox', 'clause_cooperateregulator',
-            'Cooperate with the National VET Regulator (ASQA)',
+        $mform->addElement(
+            'advcheckbox', 'clause_cooperateregulator',
+                'Cooperate with the National VET Regulator (ASQA)',
             'Confirmed — the third party agrees to cooperate with the National VET Regulator as required');
         $mform->setDefault('clause_cooperateregulator', 0);
 
-        $mform->addElement('advcheckbox', 'clause_accurateresponses',
-            'Provide accurate responses to Regulator information requests',
+        $mform->addElement(
+            'advcheckbox', 'clause_accurateresponses',
+                'Provide accurate responses to Regulator information requests',
             'Confirmed — the third party agrees to provide accurate and timely responses to requests for information from the Regulator');
         $mform->setDefault('clause_accurateresponses', 0);
 
-        $mform->addElement('advcheckbox', 'clause_rtocertification',
-            'RTO maintains sole responsibility for certification issuance',
+        $mform->addElement(
+            'advcheckbox', 'clause_rtocertification',
+                'RTO maintains sole responsibility for certification issuance',
             'Confirmed — the agreement specifies that the RTO (not the third party) is solely responsible for issuing AQF certification documentation');
         $mform->setDefault('clause_rtocertification', 0);
 
-        $mform->addElement('advcheckbox', 'clause_partiesnames',
-            'Agreement contains full business/trading names of all parties',
+        $mform->addElement(
+            'advcheckbox', 'clause_partiesnames',
+                'Agreement contains full business/trading names of all parties',
             'Confirmed — the written agreement includes the full legal business and trading names of the RTO and the third party');
         $mform->setDefault('clause_partiesnames', 0);
 
-        $mform->addElement('advcheckbox', 'clause_datesincluded',
-            'Agreement contains the commencement and end dates',
+        $mform->addElement(
+            'advcheckbox', 'clause_datesincluded',
+                'Agreement contains the commencement and end dates',
             'Confirmed — the written agreement specifies the start date and (where applicable) the end date of the arrangement');
         $mform->setDefault('clause_datesincluded', 0);
 
-        $mform->addElement('advcheckbox', 'clause_obligations',
-            'Agreement contains the obligations of each party',
+        $mform->addElement(
+            'advcheckbox', 'clause_obligations',
+                'Agreement contains the obligations of each party',
             'Confirmed — the written agreement clearly sets out the obligations, roles and responsibilities of each party to the arrangement');
         $mform->setDefault('clause_obligations', 0);
 
-        $mform->addElement('advcheckbox', 'clause_monitorquality',
-            'RTO regularly monitors the third party for quality and compliance',
+        $mform->addElement(
+            'advcheckbox', 'clause_monitorquality',
+                'RTO regularly monitors the third party for quality and compliance',
             'Confirmed — the agreement includes provisions for the RTO to regularly monitor the quality of training and assessment delivered by the third party');
         $mform->setDefault('clause_monitorquality', 0);
 
@@ -172,10 +180,12 @@ class thirdparty_form extends \moodleform {
 
         // Copy of Agreement document
         $mform->addElement('header', 'agreementdocheader', 'Copy of Agreement');
-        $mform->addElement('text', 'agreementdocument', 'Agreement Document Link / Reference',
+        $mform->addElement(
+            'text', 'agreementdocument', 'Agreement Document Link / Reference',
             ['size' => 80, 'maxlength' => 255, 'placeholder' => 'e.g. SharePoint link, DMS reference, or filename']);
         $mform->setType('agreementdocument', PARAM_TEXT);
-        $mform->addElement('static', 'agreementdocument_note', '',
+        $mform->addElement(
+            'static', 'agreementdocument_note', '',
             '<p style="color:#666;font-size:12px;margin-top:4px;">Paste a link to the signed copy of this agreement (SharePoint, Google Drive, DMS) or enter the document reference number. This is displayed in the Third-Party Register so auditors can quickly access the agreement.</p>');
 
         $mform->addElement('header', 'monitoring', 'Monitoring & Risk');
@@ -206,8 +216,9 @@ class thirdparty_form extends \moodleform {
         $mform->setDefault('riskrating', 'low');
         $mform->addHelpButton('riskrating', 'riskrating', 'local_rtocompliance');
 
-        $mform->addElement('static', 'credentialshelp', '', 
-            '<div class="alert alert-info" style="margin-bottom: 12px;">
+        $mform->addElement(
+            'static', 'credentialshelp', '', 
+                '<div class="alert alert-info" style="margin-bottom: 12px;">
             <strong>Staff Credentials Verification:</strong> RTOs must verify that all trainers and assessors engaged through third parties hold the required credentials (TAE40122/TAE50122 and vocational competencies).
             <br><br>Check below to confirm credentials have been verified. For ongoing arrangements, re-verify credentials at each monitoring review.</div>');
 

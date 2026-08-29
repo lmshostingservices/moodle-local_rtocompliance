@@ -22,7 +22,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 require_once(__DIR__ . '/../../config.php');
-// v4.2.39 hotfix: lib.php must be explicitly included so that
+// Version 4.2.39 hotfix: lib.php must be explicitly included so that
 // local_rtocompliance_get_certificate_types() (defined in lib.php) is
 // available.  Moodle does NOT auto-load a plugin's lib.php for standalone
 // scripts; every other caller (mycerts.php, download_cert.php, etc.)
@@ -128,7 +128,7 @@ if ($cert) {
         echo html_writer::end_div();
     }
 
-    echo html_writer::end_div();   // close .verify-details
+    echo html_writer::end_div();   // Close .verify-details
 
     // ── AVETMISS cross-reference (staff only) ──────────────────────────────
     // v4.9.115: For staff with issuecerts capability, cross-reference the
@@ -272,7 +272,7 @@ if ($cert) {
             array_merge(['class' => 'btn btn-primary', 'target' => '_blank', 'data-testid' => $usiVerified ? 'link-download-cert' : 'link-download-cert-warn'], $usiWarnAttrs)
         );
 
-        // email_cert.php exposes a legacy GET path that shows a confirm
+        // The email_cert.php page exposes a legacy GET path that shows a confirm
         // dialog before sending — perfect for a manual click here.  (The
         // certificates list uses the X-Requested-With AJAX path; we keep
         // the deliberate confirm step on the verify page so a casual
@@ -283,10 +283,10 @@ if ($cert) {
             array_merge(['class' => 'btn btn-secondary', 'data-testid' => $usiVerified ? 'link-email-cert' : 'link-email-cert-warn'], $usiWarnAttrs)
         );
 
-        echo html_writer::end_div();   // close .verify-actions
+        echo html_writer::end_div();   // Close .verify-actions
     }
 
-    echo html_writer::end_div();   // close .verify-card
+    echo html_writer::end_div();   // Close .verify-card
 } else {
     echo html_writer::start_div('verify-card verify-failed');
     echo html_writer::tag('div', '✗', ['class' => 'verify-icon']);

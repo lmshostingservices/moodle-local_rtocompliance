@@ -23,7 +23,7 @@
  */
 require_once(__DIR__ . '/../../config.php');
 require_once($CFG->libdir . '/adminlib.php');
-// v4.2.39 hotfix: lib.php must be explicitly included so that
+// Version 4.2.39 hotfix: lib.php must be explicitly included so that
 // local_rtocompliance_render_nav_header() is available on this page.
 require_once(__DIR__ . '/lib.php');
 
@@ -169,7 +169,8 @@ $setup_quals     = $dbman->table_exists('local_rtocompliance_qualbuilder')
 // completions flow into results (primary link OR any course-map row).
 $setup_mapping = false;
 if ($dbman->table_exists('local_rtocompliance_qualunits')) {
-    $setup_mapping = $DB->record_exists_select('local_rtocompliance_qualunits',
+    $setup_mapping = $DB->record_exists_select(
+        'local_rtocompliance_qualunits',
         'courseid IS NOT NULL AND courseid > 0 AND selected = 1');
 }
 if (!$setup_mapping && $dbman->table_exists('local_rtocompliance_course_map')) {
@@ -252,11 +253,12 @@ echo html_writer::start_div('setup-progress-title-row');
 echo rtoc_icon($setup_all_done ? 'check-circle' : 'rocket', 'setup-progress-icon');
 echo html_writer::start_div('setup-progress-title-wrap');
 echo html_writer::tag('h3', $setup_all_done ? 'Setup Complete — You\'re Ready!' : 'Setup Progress', ['class' => 'setup-progress-title']);
-echo html_writer::tag('p',
-    $setup_all_done
-        ? 'All core setup steps are complete. Your compliance system is operational.'
-        : $setup_complete . ' of ' . $setup_total . ' setup steps complete',
-    ['class' => 'setup-progress-subtitle']
+echo html_writer::tag(
+    'p',
+        $setup_all_done
+            ? 'All core setup steps are complete. Your compliance system is operational.'
+            : $setup_complete . ' of ' . $setup_total . ' setup steps complete',
+        ['class' => 'setup-progress-subtitle']
 );
 echo html_writer::end_div();
 echo html_writer::tag('span', $setup_pct . '%', ['class' => 'setup-pct-badge' . ($setup_all_done ? ' pct-done' : '')]);
@@ -265,9 +267,10 @@ echo html_writer::end_div();
 // Progress bar
 echo html_writer::start_div('setup-progress-bar-wrap');
 echo html_writer::start_div('setup-progress-bar');
-echo html_writer::tag('div', '', [
-    'class' => 'setup-progress-fill' . ($setup_all_done ? ' fill-done' : ''),
-    'style' => 'width:' . $setup_pct . '%',
+echo html_writer::tag(
+    'div', '', [
+        'class' => 'setup-progress-fill' . ($setup_all_done ? ' fill-done' : ''),
+        'style' => 'width:' . $setup_pct . '%',
 ]);
 echo html_writer::end_div();
 echo html_writer::end_div();
@@ -297,9 +300,10 @@ foreach ($setup_checks as $check) {
     echo html_writer::end_div();
 
     if (!$check['done']) {
-        echo html_writer::tag('a', 'Go', [
-            'href'  => $check['url'],
-            'class' => 'check-action-btn',
+        echo html_writer::tag(
+            'a', 'Go', [
+                'href'  => $check['url'],
+                'class' => 'check-action-btn',
         ]);
     }
 
@@ -653,7 +657,8 @@ echo html_writer::start_div('modules-section');
 echo html_writer::tag('h3', get_string('student_results', 'local_rtocompliance'), ['class' => 'section-heading mt-4']);
 echo html_writer::tag('p', get_string('student_results_desc', 'local_rtocompliance'), ['class' => 'section-subtitle text-muted mb-3']);
 
-$qualproducts = $DB->get_records_sql("SELECT qb.id, qb.qualificationcode, qb.qualificationname, qb.producttype,
+$qualproducts = $DB->get_records_sql(
+    "SELECT qb.id, qb.qualificationcode, qb.qualificationname, qb.producttype,
     (SELECT COUNT(DISTINCT s.id) FROM {local_rtocompliance_students} s 
      JOIN {local_rtocompliance_enrolments} e ON e.studentid = s.id 
      WHERE e.programcode = qb.qualificationcode) as studentcount

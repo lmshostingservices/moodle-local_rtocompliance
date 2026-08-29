@@ -115,7 +115,8 @@ if ($form->is_cancelled()) {
     // id is not already set.
     $record->appellantuserid = (!empty($data->appellantuserid)) ? (int)$data->appellantuserid : null;
     if (empty($record->appellantuserid) && !empty($record->appellantemail)) {
-        $appellantuser = $DB->get_record('user',
+        $appellantuser = $DB->get_record(
+            'user',
             ['email' => $record->appellantemail, 'deleted' => 0], 'id', IGNORE_MULTIPLE);
         if ($appellantuser) {
             $record->appellantuserid = $appellantuser->id;

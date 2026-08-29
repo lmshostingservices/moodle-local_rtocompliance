@@ -216,7 +216,8 @@ $dataimport = (new moodle_url('/local/rtocompliance/data_import.php'))->out();
   <div class="hiw-h2">Getting started &mdash; the simple order</div>
   <ol class="hiw-do">
     <li>Build your qualifications and their units in the <a href="<?php echo $qbuilder; ?>">Qualification Builder</a>.</li>
-    <li>Check each unit is linked to the Moodle course that teaches it, then click <b>&ldquo;Build Course Map from Links&rdquo;</b> in the <a href="<?php echo $qbuilder; ?>">Qualification Builder</a> so the <a href="<?php echo $coursemap; ?>">Course Map</a> is filled from those links (this is what lets completions and certificates find the right courses).</li>
+    <li>Check each unit is linked to the Moodle course that teaches it, then click <b>&ldquo;Build Course Map from Links&rdquo;</b> in the <a href="<?php echo $qbuilder;
+    ?>">Qualification Builder</a> so the <a href="<?php echo $coursemap; ?>">Course Map</a> is filled from those links (this is what lets completions and certificates find the right courses).</li>
     <li>Bring in completions &mdash; live ones flow in automatically; older ones can be imported in <a href="<?php echo $dataimport; ?>">Data Import</a>.</li>
     <li>Open <a href="<?php echo $results; ?>">Student Results</a> to see everyone's progress in one table.</li>
     <li>Issue certificates to students who have finished, and export your AVETMISS reports when it's time.</li>
@@ -242,11 +243,13 @@ $dataimport = (new moodle_url('/local/rtocompliance/data_import.php'))->out();
     </div>
     <div class="hiw-q">
       <div class="q"><span class="qmark">Q.</span> How do I view a student's AVETMISS data?</div>
-      <div class="a">Open <a href="<?php echo (new moodle_url('/local/rtocompliance/students.php'))->out(); ?>">Student Records</a> and click a student to see their AVETMISS profile &mdash; demographics, USI, prior education and address. Their unit outcomes are on <a href="<?php echo $results; ?>">Student Results</a>.</div>
+      <div class="a">Open <a href="<?php echo (new moodle_url('/local/rtocompliance/students.php'))->out();
+      ?>">Student Records</a> and click a student to see their AVETMISS profile &mdash; demographics, USI, prior education and address. Their unit outcomes are on <a href="<?php echo $results; ?>">Student Results</a>.</div>
     </div>
     <div class="hiw-q">
       <div class="q"><span class="qmark">Q.</span> How do I issue a qualification (Testamur)?</div>
-      <div class="a">Go to <a href="<?php echo $results; ?>">Student Results</a>, open the qualification, and click <strong>Issue Certificate</strong> for a student whose units are all complete &mdash; or use the <a href="<?php echo (new moodle_url('/local/rtocompliance/qual_cert_hub.php'))->out(); ?>">Qualification Certificate Hub</a> to issue in bulk.</div>
+      <div class="a">Go to <a href="<?php echo $results;
+      ?>">Student Results</a>, open the qualification, and click <strong>Issue Certificate</strong> for a student whose units are all complete &mdash; or use the <a href="<?php echo (new moodle_url('/local/rtocompliance/qual_cert_hub.php'))->out(); ?>">Qualification Certificate Hub</a> to issue in bulk.</div>
     </div>
     <div class="hiw-q">
       <div class="q"><span class="qmark">Q.</span> How do I issue a multi-unit Statement of Attainment?</div>
@@ -258,7 +261,8 @@ $dataimport = (new moodle_url('/local/rtocompliance/data_import.php'))->out();
     </div>
     <div class="hiw-q">
       <div class="q"><span class="qmark">Q.</span> How do I bring in past completions and older records?</div>
-      <div class="a">On <a href="<?php echo $results; ?>">Student Results</a> click <strong>Sync results from Moodle completions</strong> to pull in Moodle completions, and use <a href="<?php echo $dataimport; ?>">Data Import</a> to load historical NAT files from an older system.</div>
+      <div class="a">On <a href="<?php echo $results;
+      ?>">Student Results</a> click <strong>Sync results from Moodle completions</strong> to pull in Moodle completions, and use <a href="<?php echo $dataimport; ?>">Data Import</a> to load historical NAT files from an older system.</div>
     </div>
     <div class="hiw-q">
       <div class="q"><span class="qmark">Q.</span> How do I set up a qualification and its units?</div>
@@ -270,7 +274,8 @@ $dataimport = (new moodle_url('/local/rtocompliance/data_import.php'))->out();
     </div>
     <div class="hiw-q">
       <div class="q"><span class="qmark">Q.</span> How do I check a student was properly pre-enrolled?</div>
-      <div class="a">Open the student from <a href="<?php echo (new moodle_url('/local/rtocompliance/students.php'))->out(); ?>">Student Records</a> — their profile shows a pre-enrolment readiness card with four gates: suitability assessed, student declaration signed, USI verified, and information provided. <a href="<?php echo (new moodle_url('/local/rtocompliance/compliance_health.php'))->out(); ?>">Compliance Health</a> flags any student who has results but no completed suitability review.</div>
+      <div class="a">Open the student from <a href="<?php echo (new moodle_url('/local/rtocompliance/students.php'))->out();
+      ?>">Student Records</a> — their profile shows a pre-enrolment readiness card with four gates: suitability assessed, student declaration signed, USI verified, and information provided. <a href="<?php echo (new moodle_url('/local/rtocompliance/compliance_health.php'))->out(); ?>">Compliance Health</a> flags any student who has results but no completed suitability review.</div>
     </div>
     <div class="hiw-q">
       <div class="q"><span class="qmark">Q.</span> Where do nominal hours come from?</div>

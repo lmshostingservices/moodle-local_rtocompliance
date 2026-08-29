@@ -178,32 +178,35 @@ class trainer_voccomp_form extends moodleform {
         // ajax.php?action=ai_voccomp_description and pipes the seed fields
         // (activity title, qualification, organisation, dates) so the backend
         // can produce a tailored draft the trainer can edit.
-        $mform->addElement('textarea', 'description', 'Description of Vocational Practice', [
-            'rows'        => 5,
-            'cols'        => 60,
-            'placeholder' => 'Describe what vocational skills were applied or maintained through this activity and how they relate to the qualification being delivered...',
+        $mform->addElement(
+            'textarea', 'description', 'Description of Vocational Practice', [
+                'rows'        => 5,
+                'cols'        => 60,
+                'placeholder' => 'Describe what vocational skills were applied or maintained through this activity and how they relate to the qualification being delivered...',
         ]);
         $mform->setType('description', PARAM_TEXT);
-        $mform->addElement('static', 'voccompaihelp', '',
-            '<div class="rtoc-ai-box">' .
-            // FIX-MAY4-AI-BUTTON-STYLE (v4.4.44): btn-outline-primary rendered as a
-            // hollow/ghost button that appeared visually broken inside the rtoc-ai-box
-            // div when the form was loaded in edit mode.  Changed to btn-primary to
-            // match the solid AI buttons used throughout the rest of the plugin.
-            '<button type="button" id="rtoc-ai-voccomp-desc" class="btn btn-sm btn-primary" title="Draft the description with AI from the activity title, qualification, organisation and dates above">' .
-            '<i class="fa fa-magic" aria-hidden="true"></i> AI Generate Description' .
-            '</button>' .
-            '<span id="rtoc-ai-voccomp-desc-status" class="rtoc-ai-status"></span>' .
-            '<small class="rtoc-ai-hint d-block mt-1 text-muted">Drafts a description from the activity title, qualification, organisation and dates above.  You can edit the result before saving.</small>' .
+        $mform->addElement(
+            'static', 'voccompaihelp', '',
+                '<div class="rtoc-ai-box">' .
+                // FIX-MAY4-AI-BUTTON-STYLE (v4.4.44): btn-outline-primary rendered as a
+                // hollow/ghost button that appeared visually broken inside the rtoc-ai-box
+                // div when the form was loaded in edit mode.  Changed to btn-primary to
+                // match the solid AI buttons used throughout the rest of the plugin.
+                '<button type="button" id="rtoc-ai-voccomp-desc" class="btn btn-sm btn-primary" title="Draft the description with AI from the activity title, qualification, organisation and dates above">' .
+                '<i class="fa fa-magic" aria-hidden="true"></i> AI Generate Description' .
+                '</button>' .
+                '<span id="rtoc-ai-voccomp-desc-status" class="rtoc-ai-status"></span>' .
+                '<small class="rtoc-ai-hint d-block mt-1 text-muted">Drafts a description from the activity title, qualification, organisation and dates above.  You can edit the result before saving.</small>' .
             '</div>');
 
         $mform->addElement('header', 'evidenceheader', 'Evidence');
         
         $mform->addElement('select', 'evidencetype', 'Evidence Type', $evidencetypes);
         
-        $mform->addElement('filepicker', 'evidencefile', 'Upload Evidence', null, [
-            'maxbytes' => 10485760,
-            'accepted_types' => ['*'],
+        $mform->addElement(
+            'filepicker', 'evidencefile', 'Upload Evidence', null, [
+                'maxbytes' => 10485760,
+                'accepted_types' => ['*'],
         ]);
         // FIX-MAY4-FILETYPE-HINT (v4.4.44): same as tas_consultation.php fix —
         // addElement('static') wrapped the text in fitem/felement divs that render
@@ -240,11 +243,12 @@ if ($id) {
     $activity = $DB->get_record($tablename, ['id' => $id, 'trainerid' => $trainerid], '*', MUST_EXIST);
 }
 
-$form = new trainer_voccomp_form(null, [
-    'activity' => $activity,
-    'activitytypes' => $activitytypes,
-    'evidencetypes' => $evidencetypes,
-    'trainerid' => $trainerid,
+$form = new trainer_voccomp_form(
+    null, [
+        'activity' => $activity,
+        'activitytypes' => $activitytypes,
+        'evidencetypes' => $evidencetypes,
+        'trainerid' => $trainerid,
 ]);
 
 if ($activity) {
@@ -316,7 +320,8 @@ if ($form->is_cancelled()) {
     // in a shared area). file_save_draft_area_files() was previously never called, so
     // the file was lost on draft cleanup.
     if (!empty($evidenceitemid)) {
-        file_save_draft_area_files($evidenceitemid, context_system::instance()->id,
+        file_save_draft_area_files(
+            $evidenceitemid, context_system::instance()->id,
             'local_rtocompliance', 'trainer_voccomp_evidence', $record->id, ['maxfiles' => 1]);
         $DB->set_field($tablename, 'evidencefileid', $record->id, ['id' => $record->id]);
     }
@@ -485,7 +490,8 @@ echo html_writer::end_div();
 // FIX-RTO-TESTER-FEEDBACK-MAY1 #5 (v4.2.42): wire the "AI Generate Description"
 // button.  Posts seed fields to ajax.php?action=ai_draft_text and writes the
 // returned text into the textarea.
-echo html_writer::script('
+echo html_writer::script(
+    '
 (function () {
     var btn = document.getElementById("rtoc-ai-voccomp-desc");
     if (!btn) return;

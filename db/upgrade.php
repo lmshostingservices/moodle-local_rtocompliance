@@ -923,7 +923,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2025120702, 'local', 'rtocompliance');
     }
 
-    // v1.8.0: AVETMISS Edition 2.3 compliance + AI features.
+    // Version 1.8.0: AVETMISS Edition 2.3 compliance + AI features.
     if ($oldversion < 2025120800) {
         $table = new xmldb_table('local_rtocompliance_students');
 
@@ -969,7 +969,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2025120800, 'local', 'rtocompliance');
     }
 
-    // v1.8.0 Phase 2: Create AI Survey Insights table.
+    // Version 1.8.0 Phase 2: Create AI Survey Insights table.
     if ($oldversion < 2025120801) {
         $table = new xmldb_table('local_rtocompliance_ai_survey');
         $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
@@ -1006,7 +1006,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2025120801, 'local', 'rtocompliance');
     }
 
-    // v1.8.0 Phase 3: Create AI Compliance Alerts table.
+    // Version 1.8.0 Phase 3: Create AI Compliance Alerts table.
     if ($oldversion < 2025120802) {
         $table = new xmldb_table('local_rtocompliance_ai_alerts');
         $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
@@ -1051,7 +1051,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2025120802, 'local', 'rtocompliance');
     }
 
-    // v2.0.0: ASQA 2025 Practice Guide Compliance Tables
+    // Version 2.0.0: ASQA 2025 Practice Guide Compliance Tables
     if ($oldversion < 2025121000) {
         
         // Table: Complaints Register
@@ -1891,31 +1891,31 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         // Add new trainer fields for ASQA Credential Policy
         $table = new xmldb_table('local_rtocompliance_trainers');
         
-        // credentialrole field
+        // Credentialrole field
         $field = new xmldb_field('credentialrole', XMLDB_TYPE_CHAR, '5', null, null, null, null, 'scopenotes');
         if (!$dbman->field_exists($table, $field)) {
             $dbman->add_field($table, $field);
         }
         
-        // industrycurrencytype field
+        // Industrycurrencytype field
         $field = new xmldb_field('industrycurrencytype', XMLDB_TYPE_CHAR, '50', null, null, null, null, 'credentialrole');
         if (!$dbman->field_exists($table, $field)) {
             $dbman->add_field($table, $field);
         }
         
-        // managersignoff field
+        // Managersignoff field
         $field = new xmldb_field('managersignoff', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0', 'industrycurrencytype');
         if (!$dbman->field_exists($table, $field)) {
             $dbman->add_field($table, $field);
         }
         
-        // managersignoffby field
+        // Managersignoffby field
         $field = new xmldb_field('managersignoffby', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'managersignoff');
         if (!$dbman->field_exists($table, $field)) {
             $dbman->add_field($table, $field);
         }
         
-        // managersignoffdate field
+        // Managersignoffdate field
         $field = new xmldb_field('managersignoffdate', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'managersignoffby');
         if (!$dbman->field_exists($table, $field)) {
             $dbman->add_field($table, $field);
@@ -1977,19 +1977,19 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     if ($oldversion < 2025121200) {
         $table = new xmldb_table('local_rtocompliance_trainers');
         
-        // resumefilename field for storing uploaded resume filename
+        // Resumefilename field for storing uploaded resume filename
         $field = new xmldb_field('resumefilename', XMLDB_TYPE_CHAR, '255', null, null, null, null, 'managersignoffdate');
         if (!$dbman->field_exists($table, $field)) {
             $dbman->add_field($table, $field);
         }
         
-        // resumefileid field for file storage reference
+        // Resumefileid field for file storage reference
         $field = new xmldb_field('resumefileid', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'resumefilename');
         if (!$dbman->field_exists($table, $field)) {
             $dbman->add_field($table, $field);
         }
         
-        // fullname field - computed from user record but cached for queries
+        // Fullname field - computed from user record but cached for queries
         $field = new xmldb_field('fullname', XMLDB_TYPE_CHAR, '255', null, null, null, null, 'resumefileid');
         if (!$dbman->field_exists($table, $field)) {
             $dbman->add_field($table, $field);
@@ -2011,7 +2011,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     if ($oldversion < 2025121600) {
         $table = new xmldb_table('local_rtocompliance_trainers');
         
-        // vocationalevidence field for storing selected evidence types as comma-separated values
+        // Vocationalevidence field for storing selected evidence types as comma-separated values
         $field = new xmldb_field('vocationalevidence', XMLDB_TYPE_TEXT, null, null, null, null, null, 'vocationalcompetency');
         if (!$dbman->field_exists($table, $field)) {
             $dbman->add_field($table, $field);
@@ -2162,7 +2162,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2025121700, 'local', 'rtocompliance');
     }
 
-    // v3.7.32 - Comprehensive check for all missing student fields
+    // Version 3.7.32 - Comprehensive check for all missing student fields
     if ($oldversion < 2025122600) {
         $table = new xmldb_table('local_rtocompliance_students');
         
@@ -2195,7 +2195,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2025122600, 'local', 'rtocompliance');
     }
 
-    // v3.7.38 - Add trainer currency activities table for multiple currency records per trainer
+    // Version 3.7.38 - Add trainer currency activities table for multiple currency records per trainer
     if ($oldversion < 2025122900) {
         $table = new xmldb_table('local_rtocompliance_trainer_currency');
         
@@ -2232,7 +2232,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2025122900, 'local', 'rtocompliance');
     }
 
-    // v3.7.41 - Add trainer vocational competency activities table for multiple competency records per trainer
+    // Version 3.7.41 - Add trainer vocational competency activities table for multiple competency records per trainer
     if ($oldversion < 2025123000) {
         $table = new xmldb_table('local_rtocompliance_trainer_voccomp');
         
@@ -2271,7 +2271,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2025123000, 'local', 'rtocompliance');
     }
 
-    // v3.7.49 - Fix credentialrole column size and add taeexpirydate
+    // Version 3.7.49 - Fix credentialrole column size and add taeexpirydate
     // CRITICAL: Previous upgrade block (2025010100) had version LOWER than preceding blocks
     // so it NEVER executed on existing installations. This block re-applies those fixes.
     if ($oldversion < 2026030400) {
@@ -2466,17 +2466,17 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026030600) {
-        // v3.7.65 — version bump. No schema changes.
+        // Version 3.7.65 — version bump. No schema changes.
         upgrade_plugin_savepoint(true, 2026030600, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026030601) {
-        // v3.7.66 — Moodle enrolment import feature. No schema changes.
+        // Version 3.7.66 — Moodle enrolment import feature. No schema changes.
         upgrade_plugin_savepoint(true, 2026030601, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026030602) {
-        // v3.7.67 — Plugin-wide "not connected" audit fixes. No schema changes.
+        // Version 3.7.67 — Plugin-wide "not connected" audit fixes. No schema changes.
         // trainers.php: detect panel for Moodle teachers with no RTO profile + import.
         // student_enrolments.php: import now auto-detects programcode and unitcodes from
         //   Qual Builder unit-course linkages, creating unit-level AVETMISS records.
@@ -2486,17 +2486,17 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026030603) {
-        // v3.7.68 — Version bump to force Moodle upgrade detection. No schema changes.
+        // Version 3.7.68 — Version bump to force Moodle upgrade detection. No schema changes.
         upgrade_plugin_savepoint(true, 2026030603, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026030604) {
-        // v3.7.69 — Full version bump to force Moodle DB recognition. No schema changes.
+        // Version 3.7.69 — Full version bump to force Moodle DB recognition. No schema changes.
         upgrade_plugin_savepoint(true, 2026030604, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026030605) {
-        // v3.7.70 — ROOT CAUSE FIX: Test Data Generator (Test Students) added to the
+        // Version 3.7.70 — ROOT CAUSE FIX: Test Data Generator (Test Students) added to the
         // Site Administration sidebar navigation. The item was registered in settings.php
         // (Moodle admin tree) but was missing from the $menuitems array inside
         // local_rtocompliance_extend_settings_navigation() in lib.php — which is the
@@ -2506,7 +2506,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026030606) {
-        // v3.7.71 — Added configurable audit log retention setting (log_retentiondays,
+        // Version 3.7.71 — Added configurable audit log retention setting (log_retentiondays,
         // default 730 days / 2 years). The nightly cleanup task now reads this value
         // from config instead of using the hardcoded RETENTION_DAYS class constant.
         // A new Maintenance settings page appears in Site Admin → RTO Compliance.
@@ -2518,13 +2518,13 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026032300) {
-        // v3.7.73 — Fix audit log "Array to string conversion" warning when
+        // Version 3.7.73 — Fix audit log "Array to string conversion" warning when
         // log details contain nested arrays/objects. No DB changes.
         upgrade_plugin_savepoint(true, 2026032300, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026032600) {
-        // v3.7.75 — Fix local_rtocompliance_exports schema mismatch.
+        // Version 3.7.75 — Fix local_rtocompliance_exports schema mismatch.
         // The original table created at v2025120500 was missing three columns
         // (natfiles, validationwarnings, validationlog) that are required by
         // natexport.php and defined in install.xml. Add them if absent.
@@ -2572,7 +2572,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032600, 'local', 'rtocompliance');
     }
 
-    // v3.7.76: BUG FIX — Scoped debug popup error interceptors to prevent site admin
+    // Version 3.7.76: BUG FIX — Scoped debug popup error interceptors to prevent site admin
     //          primary/secondary menu disappearing.
     //          ROOT CAUSE: window.onerror and window.fetch in the before_footer debug
     //          popup were unscoped — they caught ALL JS errors site-wide, including
@@ -2589,7 +2589,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026032602) {
-        // v3.7.77 — Add RPL/Credit Transfer, Risk Management, Roles & Responsibilities,
+        // Version 3.7.77 — Add RPL/Credit Transfer, Risk Management, Roles & Responsibilities,
         //           and Meeting Minutes tables. Fix navigation links for RPL, Risk Management,
         //           and Audit Log. Add Roles & Responsibilities and Meeting Minutes tabs to
         //           governance.php. Add Clause 9/12 compliance indicators to certificates.php.
@@ -2688,7 +2688,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032602, 'local', 'rtocompliance');
     }
 
-    // v3.7.78: BUG FIX — Removed debug error popup from before_footer hook.
+    // Version 3.7.78: BUG FIX — Removed debug error popup from before_footer hook.
     //          ROOT CAUSE: The debug popup (position:fixed; z-index:99999) in
     //          before_footer_html_generation.php was STILL hiding site admin
     //          primary/secondary navigation menus. v3.7.76 scoped window.onerror
@@ -2708,7 +2708,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032603, 'local', 'rtocompliance');
     }
 
-    // v3.7.79: BUGFIX — CSS :contains() selector removed, :root variables scoped to path class,
+    // Version 3.7.79: BUGFIX — CSS :contains() selector removed, :root variables scoped to path class,
     //          exit; replaced with return; after $OUTPUT->footer() in 7 page files.
     //          No DB schema changes.
     if ($oldversion < 2026032700) {
@@ -2716,7 +2716,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
 
-    // v3.7.92: NEW — Nominal hours auto-lookup via NCVER API in Qualification Builder.
+    // Version 3.7.92: NEW — Nominal hours auto-lookup via NCVER API in Qualification Builder.
     //          Added nominalhours_autofill AMD module to qualbuilder_edit.php (training product)
     //          and qualbuilder_unit.php (unit of competency). Entering a code auto-fetches
     //          and fills the Nominal Hours field from the NCVER database via the
@@ -2727,7 +2727,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
 
-    // v3.7.93: BUGFIX — Create 4 tables missing from upgrade.php for existing installations.
+    // Version 3.7.93: BUGFIX — Create 4 tables missing from upgrade.php for existing installations.
     //          All four tables exist in install.xml (fresh installs work fine) but were never
     //          added to upgrade.php, so any site installed before this version is missing them,
     //          causing dml_read_exception errors:
@@ -2856,25 +2856,25 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026032703) {
-        // v3.7.94 — Testing Engine added (testing.php + settings.php nav entry + lang strings).
+        // Version 3.7.94 — Testing Engine added (testing.php + settings.php nav entry + lang strings).
         // No new DB tables required.
         upgrade_plugin_savepoint(true, 2026032703, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026032704) {
-        // v3.7.95 — BUGFIX: Testing Engine — fixed infra_caps, qual_table, comp_risk, trainer_credentials, nat_locations tests.
+        // Version 3.7.95 — BUGFIX: Testing Engine — fixed infra_caps, qual_table, comp_risk, trainer_credentials, nat_locations tests.
         // No new DB tables required.
         upgrade_plugin_savepoint(true, 2026032704, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026032800) {
-        // v3.7.96 — VERSION-BUMP: Routine release. Adds missing upgrade.php savepoint for v3.7.95.
+        // Version 3.7.96 — VERSION-BUMP: Routine release. Adds missing upgrade.php savepoint for v3.7.95.
         // No new DB tables required.
         upgrade_plugin_savepoint(true, 2026032800, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026032801) {
-        // v3.7.97 — BUGFIX: Fix false-positive RTO-USI-005 diagnostic (usi_pending test).
+        // Version 3.7.97 — BUGFIX: Fix false-positive RTO-USI-005 diagnostic (usi_pending test).
         // usiverified status counts now scoped to students who actually have a USI entered
         // (usi IS NOT NULL AND usi != ''). Previously count_records(['usiverified' => 0]) counted
         // ALL student rows (usiverified defaults to 0), inflating the unverified count.
@@ -2883,7 +2883,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026032802) {
-        // v3.7.98 — FIX: Add apiurl to API settings page so admins can configure the
+        // Version 3.7.98 — FIX: Add apiurl to API settings page so admins can configure the
         // lms-labs.com base URL via Moodle admin UI. Fixes NCVER nominal hours lookup
         // when no API URL was previously persisted in plugin config.
         // No DB schema change.
@@ -2891,7 +2891,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026032803) {
-        // v3.8.0 — FEATURE: Smart Qualification Builder.
+        // Version 3.8.0 — FEATURE: Smart Qualification Builder.
         // - New Express endpoint GET /api/tga/qualbuilder/:code returns packaging rules,
         //   AQF level, grouped units (Core / Group A-D / General) using TGA REST API.
         // - New external web service tga_get_builder_data($code): fetches TGA builder data
@@ -2906,7 +2906,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032803, 'local', 'rtocompliance');
     }
 
-    // v3.8.1 — SAVEPOINT FIX: This savepoint was absent from the v3.8.1 release ZIP,
+    // Version 3.8.1 — SAVEPOINT FIX: This savepoint was absent from the v3.8.1 release ZIP,
     // causing Moodle to report "can't upgrade a lower version" on sites that had
     // processed 2026032800021 and needed the DB version record advanced to 2026032800022.
     // No code change. No DB schema change.
@@ -2914,14 +2914,14 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032804, 'local', 'rtocompliance');
     }
 
-    // v3.8.2 — VERSION-BUMP: Jumps numeric version to 2026032800030 to guarantee this
+    // Version 3.8.2 — VERSION-BUMP: Jumps numeric version to 2026032800030 to guarantee this
     // release installs cleanly over any version a site may have reached during testing.
     // Includes the missing v3.8.1 savepoint above. No code change. No DB schema change.
     if ($oldversion < 2026032805) {
         upgrade_plugin_savepoint(true, 2026032805, 'local', 'rtocompliance');
     }
 
-    // v3.8.3 — FIX: Tester-reported crashes and UI issues.
+    // Version 3.8.3 — FIX: Tester-reported crashes and UI issues.
     // (1) Added local_rtocompliance_log_action() to lib.php — fixes fatal crash on RPL
     //     save/update/delete ("Call to undefined function local_rtocompliance_log_action()").
     // (2) PARAM_DIGITS → PARAM_INT in location_edit.php — fixes "Undefined constant
@@ -2937,7 +2937,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032806, 'local', 'rtocompliance');
     }
 
-    // v3.8.4 — FIX: TGA fetch "Class curl not found" error.
+    // Version 3.8.4 — FIX: TGA fetch "Class curl not found" error.
     // Root cause: classes/external.php included externallib.php but NOT filelib.php,
     // which is where Moodle defines its \curl wrapper class. Any call to new \curl()
     // in tga_get_builder_data() and qualbuilder_auto_build() threw a fatal exception:
@@ -2949,7 +2949,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032807, 'local', 'rtocompliance');
     }
 
-    // v3.8.5 — FEATURE: Qualification Builder full UX overhaul.
+    // Version 3.8.5 — FEATURE: Qualification Builder full UX overhaul.
     // Points system support (MEM/engineering quals): detects creditPoints-based quals from TGA rules text,
     // shows points tally in compliance dashboard. One-click category accept + map all courses (multi-tier
     // matching: shortname prefix → contains → fullname contains → fuzzy word match). Groups A-Y full
@@ -2961,7 +2961,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032808, 'local', 'rtocompliance');
     }
 
-    // v3.8.6 — FEATURE: Testing Engine fix actions.
+    // Version 3.8.6 — FEATURE: Testing Engine fix actions.
     // Each failing test now has an action button: 'navigate' types open the relevant Moodle
     // settings page in a new tab and mark the test as Fixing; 'autofix' types call a new PHP
     // AJAX handler (rto_autofix()) to apply the fix server-side then immediately re-run the test.
@@ -2974,7 +2974,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032809, 'local', 'rtocompliance');
     }
 
-    // v3.8.7 — FIX: trainer_credentials autofix honesty.
+    // Version 3.8.7 — FIX: trainer_credentials autofix honesty.
     // Auto-fix previously returned ok:true (misleading — TAE qualifications still require manual entry).
     // Now returns ok:false with "STEP 1 DONE / STEP 2 REQUIRED" message explaining that activating
     // trainers is step 1 (done automatically) but entering TAE qualification evidence per trainer
@@ -2983,7 +2983,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032810, 'local', 'rtocompliance');
     }
 
-    // v3.8.8 — FEATURE: Platform config push pipeline.
+    // Version 3.8.8 — FEATURE: Platform config push pipeline.
     // New webhook.php endpoint receives config POSTs from lms-labs.com SaaS platform.
     // Authenticated via X-Webhook-Key header matching stored webhookapikey config.
     // Whitelisted keys: siteid, apikey, apiurl, usi_organization_id, usi_test_mode,
@@ -2999,7 +2999,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032811, 'local', 'rtocompliance');
     }
 
-    // v3.8.9 — FEATURE: USI verification proxied through lms-labs.com platform.
+    // Version 3.8.9 — FEATURE: USI verification proxied through lms-labs.com platform.
     // usi_platform_client.php replaces usi_registry_client.php as the verification backend.
     // All USI checks now route through POST /api/usi/verify on the Replit platform.
     // The platform holds the shared ATO machine credential (P12 cert + org ID) for all customers.
@@ -3012,7 +3012,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032900, 'local', 'rtocompliance');
     }
 
-    // v3.8.10 — Re-release bump.
+    // Version 3.8.10 — Re-release bump.
     // Ensures clean install on all customer sites after USI proxy architecture change.
     // AMD src=build=min verified identical (md5 a8ebe23fd8e5cb0a61499d4a030a5a5a).
     // No code change. No DB schema change.
@@ -3020,7 +3020,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032901, 'local', 'rtocompliance');
     }
 
-    // v3.8.11 — FIX: Central Config integration for USI proxy.
+    // Version 3.8.11 — FIX: Central Config integration for USI proxy.
     // usi_platform_client.php now checks local_aiconfig (Central Config) first for
     // siteid and apikey, falling back to plugin-specific settings if Central Config
     // is not installed. Matches the pattern used by all other plugins.
@@ -3030,14 +3030,14 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032902, 'local', 'rtocompliance');
     }
 
-    // v3.8.12 — CLEAN BUMP: Re-release of v3.8.11 changes assembled in a single clean pass.
+    // Version 3.8.12 — CLEAN BUMP: Re-release of v3.8.11 changes assembled in a single clean pass.
     // Includes: Central Config integration (siteid/apikey via local_aiconfig with fallback),
     // settings page renamed to 'Platform API Settings'. No DB schema change.
     if ($oldversion < 2026032903) {
         upgrade_plugin_savepoint(true, 2026032903, 'local', 'rtocompliance');
     }
 
-    // v3.8.13 — FIX: qualbuilder_edit.php blank white screen on Moodle 4.0 – 4.2.
+    // Version 3.8.13 — FIX: qualbuilder_edit.php blank white screen on Moodle 4.0 – 4.2.
     // $PAGE->requires->js_amd_inline() was added in Moodle 4.3 and does not exist on
     // older 4.x sites. Calling it threw a fatal error after the page header was already
     // output, producing a blank white screen. Now uses method_exists() to fall back to
@@ -3046,7 +3046,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032904, 'local', 'rtocompliance');
     }
 
-    // v3.8.14 — BUMP: Consolidation release.
+    // Version 3.8.14 — BUMP: Consolidation release.
     // Includes all v3.8.11–3.8.13 changes: Central Config integration (siteid/apikey via
     // local_aiconfig with fallback), settings page renamed to 'Platform API Settings',
     // qualbuilder_edit.php Moodle 4.0–4.2 compatibility fix (js_amd_inline fallback).
@@ -3055,20 +3055,20 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032905, 'local', 'rtocompliance');
     }
 
-    // v3.8.15 — AMD FIX: Extracted qualbuilder_edit.php inline JS into proper AMD module.
+    // Version 3.8.15 — AMD FIX: Extracted qualbuilder_edit.php inline JS into proper AMD module.
     // qualbuilder_edit.js added to amd/src + amd/build. Now called via js_call_amd().
     // No DB schema change.
     if ($oldversion < 2026032906) {
         upgrade_plugin_savepoint(true, 2026032906, 'local', 'rtocompliance');
     }
 
-    // v3.8.16 — BUMP: Consolidation release. All 6 locations synced via master release process.
+    // Version 3.8.16 — BUMP: Consolidation release. All 6 locations synced via master release process.
     // No DB schema change.
     if ($oldversion < 2026032907) {
         upgrade_plugin_savepoint(true, 2026032907, 'local', 'rtocompliance');
     }
 
-    // v3.8.17 — Certificate credit deduction: 5 credits consumed per certificate issued.
+    // Version 3.8.17 — Certificate credit deduction: 5 credits consumed per certificate issued.
     // Added consume_credits() + get_credit_balance() to usi_platform_client.php.
     // issue_certificate.php now calls consume_credits(5) before DB insert; hard-blocks on
     // INSUFFICIENT_CREDITS (fail-open on network/config errors). Live balance panel shown in UI.
@@ -3077,7 +3077,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032908, 'local', 'rtocompliance');
     }
 
-    // v3.8.18 — CRITICAL AMD FIX: ReferenceError: setup is not defined.
+    // Version 3.8.18 — CRITICAL AMD FIX: ReferenceError: setup is not defined.
     // Root cause: inner function at amd/src/qualbuilder_edit.js:58 was named 'init' (shadowing
     // the outer exported init(INIT)), but line 879 called setup(). Renamed inner function to
     // setup() so the call resolves correctly. This caused a ReferenceError every time anyone
@@ -3089,7 +3089,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032909, 'local', 'rtocompliance');
     }
 
-    // v3.8.19: BUG FIX — Site admin primary/secondary navigation menus disappearing on
+    // Version 3.8.19: BUG FIX — Site admin primary/secondary navigation menus disappearing on
     //          all RTO Compliance pages.
     //          ROOT CAUSE: before_footer_html_generation hook (and legacy lib.php callback)
     //          were pre-defining core/first as an empty noop module {} in the page footer.
@@ -3109,7 +3109,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032910, 'local', 'rtocompliance');
     }
 
-    // v3.8.20: BUMP — Consolidation release following master release process (Replit Hardened Edition).
+    // Version 3.8.20: BUMP — Consolidation release following master release process (Replit Hardened Edition).
     //          Confirms v3.8.19 nav fix is cleanly packaged. All 6 locations synced and verified.
     //          AMD src=build=min triple-verified: qualbuilder_edit MD5 06525e3e0d13626959bfb53c3dc82029,
     //          nominalhours_autofill MD5 a8ebe23fd8e5cb0a61499d4a030a5a5a.
@@ -3118,7 +3118,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032911, 'local', 'rtocompliance');
     }
 
-    // v3.8.21: NAV FIX — qualbuilder_edit.php JS init payload moved from js_call_amd() inline args
+    // Version 3.8.21: NAV FIX — qualbuilder_edit.php JS init payload moved from js_call_amd() inline args
     //          into a <script type="application/json" id="qb-init-data"> DOM element.
     //          Root cause: large/complex PHP arrays passed via js_call_amd() are json_encode()d inline
     //          inside a RequireJS require() call; any encoding anomaly (invalid UTF-8, double-encoded
@@ -3133,7 +3133,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032912, 'local', 'rtocompliance');
     }
 
-    // v3.8.22: AMD ASCII CLEAN — All non-ASCII characters (em dashes U+2014, box-drawing U+2500)
+    // Version 3.8.22: AMD ASCII CLEAN — All non-ASCII characters (em dashes U+2014, box-drawing U+2500)
     //          in amd/src/qualbuilder_edit.js escaped to \uXXXX unicode escapes.
     //          Root cause: non-ASCII bytes in a JS file served without an explicit charset=utf-8
     //          Content-Type header cause the browser (or RequireJS XHR loader) to interpret the
@@ -3149,7 +3149,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032913, 'local', 'rtocompliance');
     }
 
-    // v3.8.23: CONSOLIDATION BUMP — No code or DB schema changes.
+    // Version 3.8.23: CONSOLIDATION BUMP — No code or DB schema changes.
     //          Confirms v3.8.22 ASCII-clean AMD packaging is correct.
     //          Byte-level audit: zero non-ASCII chars (em dashes U+2014, box-drawing U+2500,
     //          smart quotes, NBSP, BOM) in all three AMD files — src=build=min MD5 26185137ea276241c8faa0d32aad1ef1.
@@ -3159,7 +3159,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032914, 'local', 'rtocompliance');
     }
 
-    // v3.8.24: HTML-ENTITY CLEAN — All HTML numeric entities inside JS string literals in
+    // Version 3.8.24: HTML-ENTITY CLEAN — All HTML numeric entities inside JS string literals in
     //          amd/src/qualbuilder_edit.js converted to \uXXXX JavaScript unicode escapes:
     //          &#10003; -> \u2713  (checkmark ✓)
     //          &#9888;  -> \u26A0  (warning ⚠)
@@ -3180,7 +3180,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032915, 'local', 'rtocompliance');
     }
 
-    // v3.8.25: REBUMP — Full master release process (Replit Hardened Edition).
+    // Version 3.8.25: REBUMP — Full master release process (Replit Hardened Edition).
     //          Reality checks passed: single ZIP in downloads, no stale JS outside amd/,
     //          no hardcoded version refs in src, MD5 triple-match 3aab0da42f8103d0c84af40ea68e3894
     //          (src=build=min). Carries all fixes from v3.8.22-3.8.24:
@@ -3191,7 +3191,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032916, 'local', 'rtocompliance');
     }
 
-    // v3.8.26: ENCODING FIX FINAL — Replaced ALL corrupted UTF-8/Latin-1 byte sequences
+    // Version 3.8.26: ENCODING FIX FINAL — Replaced ALL corrupted UTF-8/Latin-1 byte sequences
     //          (ae-em-dash: â€", box-drawing: â"€) with plain ASCII hyphens ( - and --)
     //          per ChatGPT master process direction. These corrupted bytes were the root
     //          cause of "Uncaught SyntaxError: Invalid or unexpected token" in first.js
@@ -3204,7 +3204,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032917, 'local', 'rtocompliance');
     }
 
-    // v3.8.27: Full ChatGPT master release process bump. All reality checks passed:
+    // Version 3.8.27: Full ChatGPT master release process bump. All reality checks passed:
     //          single ZIP in downloads, no stale JS outside amd/, no hardcoded version
     //          refs in src, MD5 triple-match a9a508ac86f6c47a92db06fa9a2d293e (qualbuilder_edit)
     //          a8ebe23fd8e5cb0a61499d4a030a5a5a (nominalhours_autofill). Zero non-ASCII bytes,
@@ -3213,7 +3213,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032918, 'local', 'rtocompliance');
     }
 
-    // v3.8.28: ChatGPT-confirmed final fix for Moodle nav crash bug.
+    // Version 3.8.28: ChatGPT-confirmed final fix for Moodle nav crash bug.
     //          (1) electiverules and validationerrors now decoded with json_decode() in PHP
     //              before json_encode() so they arrive in JS as native objects, not
     //              double-encoded strings that would explode on JSON.parse().
@@ -3229,7 +3229,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032919, 'local', 'rtocompliance');
     }
 
-    // v3.8.29: CRITICAL SYNTAX FIX — JS SyntaxError confirmed root cause of nav crash.
+    // Version 3.8.29: CRITICAL SYNTAX FIX — JS SyntaxError confirmed root cause of nav crash.
     //          Lines 692-693 in qualbuilder_edit.js had broken escape sequences:
     //          \\'visible\\' and \\'hidden\\' inside single-quoted strings.
     //          In JS, \\' = escaped backslash (\) then ' closes the string — syntax error!
@@ -3242,7 +3242,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032920, 'local', 'rtocompliance');
     }
 
-    // v3.8.30: Qual Builder UX -- auto-link flow + compact course badges + QPR banner + bulk nominal hours.
+    // Version 3.8.30: Qual Builder UX -- auto-link flow + compact course badges + QPR banner + bulk nominal hours.
     //   1. Category auto-accept: qual code matched in Moodle category name => instant accept, no click needed.
     //   2. Compact unit rows: linked units show green badge (click to change); only unlinked show dropdown.
     //   3. QPR overall banner: green "QPR COMPLIANT" or red "NOT YET COMPLIANT" above compliance cards.
@@ -3253,7 +3253,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032921, 'local', 'rtocompliance');
     }
 
-    // v3.8.31: Fix 5 critical AVETMISS enrolment/completion pipeline bugs + AVETMISS 2.3 code audit.
+    // Version 3.8.31: Fix 5 critical AVETMISS enrolment/completion pipeline bugs + AVETMISS 2.3 code audit.
     //   1. unitcode now populated on enrolment create via local_rtocompliance_qualunits lookup (courseid match).
     //      programcode/name also derived from qualbuilder (Qual Builder as primary source of truth).
     //      Also triggers enrolment creation for courses linked in Qual Builder even if not flagged nationally recognised.
@@ -3274,7 +3274,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032922, 'local', 'rtocompliance');
     }
 
-    // v3.8.32: nat_generator.php full rewrite (schema-verified v3, all 10 NAT files).
+    // Version 3.8.32: nat_generator.php full rewrite (schema-verified v3, all 10 NAT files).
     //   Fixes against AVETMISS VET Provider Collection Specifications Release 8.0 and install.xml schema:
     //   1. pad(): transliterates UTF-8 to ASCII via iconv before str_pad — prevents multi-byte chars
     //      from corrupting fixed-width field lengths (é->e, ü->u, ā->a, etc.).
@@ -3297,7 +3297,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032923, 'local', 'rtocompliance');
     }
 
-    // v3.8.33: 50-bug compliance audit -- no DB schema changes.
+    // Version 3.8.33: 50-bug compliance audit -- no DB schema changes.
     //   Security: require_login() moved before DB queries in download_cert.php (Bug B).
     //   Audit logger: get_client_ip() now uses Moodle's getremoteaddr() -- prevents
     //     IP spoofing via HTTP_CLIENT_IP / X-Forwarded-For headers (Bug D).
@@ -3318,7 +3318,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032924, 'local', 'rtocompliance');
     }
 
-    // v3.8.34 - Security audit pass 2: 4 additional bugs fixed.
+    // Version 3.8.34 - Security audit pass 2: 4 additional bugs fixed.
     //   (M) email_cert.php: require_login()/capability check moved before DB queries --
     //     closes unauthenticated certificate/user record enumeration via cert ID.
     //   (N) lib.php log_action(): $_SERVER['REMOTE_ADDR'] replaced with getremoteaddr() --
@@ -3333,7 +3333,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032925, 'local', 'rtocompliance');
     }
 
-    // v3.8.35 - CSRF fix: qualbuilder_unit.php delete confirm path.
+    // Version 3.8.35 - CSRF fix: qualbuilder_unit.php delete confirm path.
     //   qualbuilder_unit.php delete action confirmed with $confirm=1 parameter but
     //   had no require_sesskey() check. An attacker could delete any qual unit by
     //   tricking an authenticated admin into visiting a crafted URL. require_sesskey()
@@ -3342,7 +3342,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032926, 'local', 'rtocompliance');
     }
 
-    // v3.8.36 - CSRF sweep pass: 3 additional require_sesskey() fixes.
+    // Version 3.8.36 - CSRF sweep pass: 3 additional require_sesskey() fixes.
     //   (Q) qualbuilder.php: confirm-delete of entire qualification product lacked sesskey.
     //   (R) student_enrolments.php: confirm-delete of AVETMISS enrolment record lacked sesskey.
     //     ASQA requires 30-year retention; CSRF could destroy records required for compliance.
@@ -3353,7 +3353,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026032927, 'local', 'rtocompliance');
     }
 
-    // v3.8.37 - Master release process validation pass.
+    // Version 3.8.37 - Master release process validation pass.
     //   AMD src/build/min CRC parity confirmed. BUILD_INFO.json synced.
     //   Stale ZIP sweep clean. No functional changes. No DB schema changes.
     if ($oldversion < 2026032928) {
@@ -3373,7 +3373,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026032930) {
-        // v3.8.39: 8-bug fix pass — no DB schema changes.
+        // Version 3.8.39: 8-bug fix pass — no DB schema changes.
         // (1) max(1,...) on totalunits removed from external.php (allowed 0 for points-based quals).
         // (2) JS save now sends totalunits:0 for points-based quals.
         // (3) QPR banner changed from strict === to < for total unit check + !pointsSystem guard.
@@ -3384,7 +3384,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026033000) {
-        // v3.8.40: 5-bug fix pass — no DB schema changes.
+        // Version 3.8.40: 5-bug fix pass — no DB schema changes.
         // (1) issue_certificate.php: core_user::get_user() replaces $DB->get_record('user',...).
         // (2) issue_certificate.php: $eventdata->userto set to full $recipient user object (not integer).
         // (3) student_enrolments.php, verify.php, usi_verification_service.php: core_user::get_user() at all user-load sites.
@@ -3393,12 +3393,12 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026033000, 'local', 'rtocompliance');
     }
 
-    // v3.8.41: VERSION BUMP — No code changes. No DB schema changes.
+    // Version 3.8.41: VERSION BUMP — No code changes. No DB schema changes.
     if ($oldversion < 2026033001) {
         upgrade_plugin_savepoint(true, 2026033001, 'local', 'rtocompliance');
     }
 
-    // v3.8.42: BUG FIX — survey_send.php and classes/external.php user object handling.
+    // Version 3.8.42: BUG FIX — survey_send.php and classes/external.php user object handling.
     // (1) survey_send.php: $eventdata->userto was set to $recipient['userid'] (integer) when a Moodle
     //     user account existed. Moodle's message_send() requires a full user object, not an integer.
     //     Fixed to call \core_user::get_user() and skip deleted/missing users with a recorded error.
@@ -3410,7 +3410,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026033100, 'local', 'rtocompliance');
     }
 
-    // v3.8.43: BUG FIX — Two tester-reported bugs fixed.
+    // Version 3.8.43: BUG FIX — Two tester-reported bugs fixed.
     // (1) feeprotection_edit.php: user SELECT was 'id,firstname,lastname,email' — missing
     //     firstnamephonetic, lastnamephonetic, middlename, alternatename required by fullname().
     //     Fixed SELECT to include all 6 fullname fields.
@@ -3427,7 +3427,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026033101, 'local', 'rtocompliance');
     }
 
-    // v3.8.44: UPGRADE FIX — Corrected upgrade.php savepoint for v3.8.40. The savepoint
+    // Version 3.8.44: UPGRADE FIX — Corrected upgrade.php savepoint for v3.8.40. The savepoint
     //   value 202603303400 (12 digits) was numerically less than the preceding v3.8.39
     //   savepoint 2026032900120 (13 digits): 202,603,303,400 < 2,026,032,900,120. Any site
     //   upgrading from v3.8.39 or earlier would fail with "Cannot downgrade" when the
@@ -3439,14 +3439,14 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026033102, 'local', 'rtocompliance');
     }
 
-    // v3.8.45: Data Import tab added — moved WisenetImport/AVETMISS data import tool
+    // Version 3.8.45: Data Import tab added — moved WisenetImport/AVETMISS data import tool
     //   from a hidden below-tab section into a proper "Data Import" tab in the RTO
     //   Compliance documentation page so it is discoverable. No DB schema changes.
     if ($oldversion < 2026040200) {
         upgrade_plugin_savepoint(true, 2026040200, 'local', 'rtocompliance');
     }
 
-    // v3.8.46: Data Import nav link — added 'Data Import' item to the plugin sidebar
+    // Version 3.8.46: Data Import nav link — added 'Data Import' item to the plugin sidebar
     //   (lib.php menuitems + settings.php admin_externalpage) below 'Support Docs on
     //   Essaygraderai.app', linking to https://lms-labs.com/docs/rto-compliance?tab=dataimport
     //   so site admins can reach the import tool directly from Moodle. Also added
@@ -3455,7 +3455,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026040201, 'local', 'rtocompliance');
     }
 
-    // v3.8.47: TAS Section 2 AQF cohort selector + Industry Consultation dropdown helpers.
+    // Version 3.8.47: TAS Section 2 AQF cohort selector + Industry Consultation dropdown helpers.
     //   tas_edit.php Section 2: Added Smart Cohort & Entry Requirements Builder — AQF level
     //   selector, 13 predefined learner cohorts with ACSF level data, school-year equivalence
     //   display, and "Apply to Section 2" button that auto-fills targetcohort, entryrequirements
@@ -3470,7 +3470,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
 
-    // v3.8.48: Student pre-enrolment suitability checklist system.
+    // Version 3.8.48: Student pre-enrolment suitability checklist system.
     //   Two new DB tables: local_rtocompliance_suitability (one checklist per student+TAS,
     //   holds token for public form link, status, override notes) and
     //   local_rtocompliance_suitability_answers (individual Yes/No answers derived from
@@ -3518,7 +3518,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026040204) {
-        // v3.8.49 — Bulk suitability checklist sending.
+        // Version 3.8.49 — Bulk suitability checklist sending.
         // No DB schema changes required; new functionality uses existing tables:
         //   local_rtocompliance_suitability and local_rtocompliance_suitability_answers
         // New features: bulk send from students.php, Fill Compliance Gaps admin button,
@@ -3527,7 +3527,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026040205) {
-        // v3.8.50 — AVETMISS Data Import: new data_import.php with PHP NAT file parser.
+        // Version 3.8.50 — AVETMISS Data Import: new data_import.php with PHP NAT file parser.
         // Creates 4 tables to store imported AVETMISS data from Wisenet/SMS exports.
 
         // Import batch table
@@ -3611,31 +3611,31 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026040206) {
-        // v3.8.51: Suitability Checklist bug fixes — missing lang key, silent-reset guard,
+        // Version 3.8.51: Suitability Checklist bug fixes — missing lang key, silent-reset guard,
         // graceful error pages, null-safe override view. No DB schema change.
         upgrade_plugin_savepoint(true, 2026040206, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026040207) {
-        // v3.8.52: Per-page deep-link help icons — render_nav_header() $help_anchor param,
+        // Version 3.8.52: Per-page deep-link help icons — render_nav_header() $help_anchor param,
         // support.php card id= anchors, all 40+ page calls updated. No DB schema change.
         upgrade_plugin_savepoint(true, 2026040207, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026040208) {
-        // v3.8.53: Quick Statistics cards at top of students, trainers, qualbuilder_results,
+        // Version 3.8.53: Quick Statistics cards at top of students, trainers, qualbuilder_results,
         // surveys, and complaints pages. stat-rose CSS added. No DB schema change.
         upgrade_plugin_savepoint(true, 2026040208, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026040209) {
-        // v3.8.54: Release checklist compliance pass — all stale ZIPs removed, BUILD_INFO.json
+        // Version 3.8.54: Release checklist compliance pass — all stale ZIPs removed, BUILD_INFO.json
         // updated, upgrade.php savepoints back-filled for 109-112. No DB schema change.
         upgrade_plugin_savepoint(true, 2026040209, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026040210) {
-        // v3.8.55: SCHEMA SOURCE FIX — Four XMLDB CHAR NOT NULL columns in the AVETMISS
+        // Version 3.8.55: SCHEMA SOURCE FIX — Four XMLDB CHAR NOT NULL columns in the AVETMISS
         // tables (name in _student, unitcode and qualcode in _enrolment, qualcode in
         // _completion) were declared with DEFAULT='' (empty string). XMLDB forbids empty
         // string defaults on CHAR NOT NULL columns and auto-corrects them at runtime,
@@ -3647,7 +3647,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026040211) {
-        // v3.8.56: SETTINGS FIX — Removed duplicate admin_externalpage registration for
+        // Version 3.8.56: SETTINGS FIX — Removed duplicate admin_externalpage registration for
         // 'local_rtocompliance_dataimport' from settings.php. The page was registered twice
         // (lines 75 and 208), causing Moodle to throw "Duplicate admin page name:
         // local_rtocompliance_dataimport" on every settings load. No DB schema changes.
@@ -3655,13 +3655,13 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026040212) {
-        // v3.8.57: FEATURE — Collapsible left-hand sidebar navigation injected on all
+        // Version 3.8.57: FEATURE — Collapsible left-hand sidebar navigation injected on all
         // plugin pages via the before_footer_html_generation hook. No DB schema changes.
         upgrade_plugin_savepoint(true, 2026040212, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026040213) {
-        // v3.8.58: FEATURE — Stats cards expanded to 2 full rows (8 cards each) on all
+        // Version 3.8.58: FEATURE — Stats cards expanded to 2 full rows (8 cards each) on all
         // 6 compliance pages. New metrics: TAE40116/TAE40122/WWCC on trainers; enrolments/
         // certs/competency on students; improvements/priority/logged-this-year on complaints;
         // response rates/all-time on surveys; not-approved/partial/students/this-year on
@@ -3671,7 +3671,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026040214) {
-        // v3.8.59: FIX — Sidebar not appearing on plugin pages. The legacy
+        // Version 3.8.59: FIX — Sidebar not appearing on plugin pages. The legacy
         // local_rtocompliance_before_footer() callback previously returned early when the
         // Moodle 4.3+ hook class was detected, but never injected the sidebar itself (only
         // table sorting). Added local_rtocompliance_inject_sidebar_once() with a PHP
@@ -3682,7 +3682,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026040215) {
-        // v3.8.60: FIX — Sidebar theme-agnostic rewrite. Inline CSS is now injected
+        // Version 3.8.60: FIX — Sidebar theme-agnostic rewrite. Inline CSS is now injected
         // directly with the sidebar HTML so the sidebar works regardless of whether
         // Moodle loads styles.css or whether the body has the path-local-rtocompliance
         // class. JS dynamically detects the page wrapper across all themes by trying
@@ -3694,7 +3694,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026040216) {
-        // v3.8.61: FIX — Sidebar not displaying on Moodle admin pages. Three-layer fix:
+        // Version 3.8.61: FIX — Sidebar not displaying on Moodle admin pages. Three-layer fix:
         // (1) render_nav_header() now calls inject_sidebar_once() directly so every page
         // that renders a nav header has the sidebar injected into the page body
         // immediately — no longer relies solely on before_footer callbacks, which can
@@ -3713,13 +3713,13 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026040216, 'local', 'rtocompliance');
     }
 
-    // v3.8.62: VERSION BUMP — Routine release increment. No code or DB schema changes.
+    // Version 3.8.62: VERSION BUMP — Routine release increment. No code or DB schema changes.
     if ($oldversion < 2026040217) {
         upgrade_plugin_savepoint(true, 2026040217, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026040218) {
-        // v3.8.63 — SIDEBAR FIX: Replace position:fixed with DOM-restructuring flex layout.
+        // Version 3.8.63 — SIDEBAR FIX: Replace position:fixed with DOM-restructuring flex layout.
         // position:fixed silently fails on Moodle 4.x when any ancestor element has
         // CSS contain/overflow/transform applied (e.g. Boost #region-main). New approach:
         // JS restructures DOM into a flexbox row [sidebar | main-content] with sidebar as
@@ -3728,7 +3728,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026040219) {
-        // v3.8.64 — SIDEBAR FIX: The v6 DOM-restructuring approach in v3.8.63 was correct
+        // Version 3.8.64 — SIDEBAR FIX: The v6 DOM-restructuring approach in v3.8.63 was correct
         // but the init script ran synchronously at HTML-parse time (before the page
         // content below the sidebar was in the DOM). Result: setupDesktop() moved only
         // the sidebar into #rtoc-main-wrap — the actual page content landed outside it.
@@ -3741,7 +3741,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026040220) {
-        // v3.8.65 — ASQA 2025 DASHBOARD AUDIT: Full tester audit of dashboard (index.php)
+        // Version 3.8.65 — ASQA 2025 DASHBOARD AUDIT: Full tester audit of dashboard (index.php)
         // and sidebar navigation (lib.php) to align with ASQA Standards for RTOs 2025
         // (effective 1 July 2025). Changes:
         // - QA1: "Assessment & Validation" split into "Assessment" (1.3-1.4) and
@@ -3762,7 +3762,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026040300) {
-        // v3.8.66 — SIDEBAR FIX (v7, definitive): Replaced DOM-restructuring flex approach
+        // Version 3.8.66 — SIDEBAR FIX (v7, definitive): Replaced DOM-restructuring flex approach
         // with position:fixed-on-body technique. JS now:
         // (1) Moves #rtoc-sidebar, #rtoc-sidebar-overlay, #rtoc-mobile-btn to be direct
         //     children of <body> synchronously, bypassing ALL CSS transform/contain/overflow
@@ -3775,7 +3775,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026040301) {
-        // v3.8.67 — SIDEBAR FIX (v8, server-side flex layout — definitive):
+        // Version 3.8.67 — SIDEBAR FIX (v8, server-side flex layout — definitive):
         // Replaced JS position:fixed approach with a pure PHP server-side flex layout.
         // render_nav_header() now opens <div class="rtoc-layout-wrap"> + <nav id="rtoc-sidebar">
         // + <div class="rtoc-main-content"> directly in PHP-rendered HTML. The sidebar is a
@@ -3788,7 +3788,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026040302) {
-        // v3.8.68 — SIDEBAR FIX (v9): index.php (dashboard) and data_import.php were calling
+        // Version 3.8.68 — SIDEBAR FIX (v9): index.php (dashboard) and data_import.php were calling
         // inject_sidebar_once() directly, which only outputs the raw sidebar HTML without the
         // .rtoc-layout-wrap flex container. Both pages now call render_nav_header() which
         // correctly wraps the sidebar in <div class="rtoc-layout-wrap"> ... <div class="rtoc-main-content">
@@ -3798,7 +3798,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026040303) {
-        // v3.8.69 — FIX: complaints.php stats-card queries referenced a non-existent 'type'
+        // Version 3.8.69 — FIX: complaints.php stats-card queries referenced a non-existent 'type'
         // column on local_rtocompliance_complaints. Complaints and appeals are stored in
         // separate tables (local_rtocompliance_complaints and local_rtocompliance_appeals).
         // Stats now query each table directly without a type discriminator.
@@ -3807,14 +3807,14 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026040304) {
-        // v3.8.70 — FIX: risk.php Risk Register table used html_writer::tag('br') with no
+        // Version 3.8.70 — FIX: risk.php Risk Register table used html_writer::tag('br') with no
         // content argument, causing ArgumentCountError on line 205. Self-closing <br> tags
         // must use html_writer::empty_tag('br') in Moodle. No DB schema changes.
         upgrade_plugin_savepoint(true, 2026040304, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026040305) {
-        // v3.8.71 — AUDIT: No DB schema changes.
+        // Version 3.8.71 — AUDIT: No DB schema changes.
         // - support.php: All clause_ref values remapped from retired 2015 Standards numbering
         //   (Clauses 1.x–8.x) to ASQA 2025 Quality Areas (QA1.1–QA4.4, Compliance Standards 5, 7, 8).
         //   Intro text updated "2015" → "2025". What's New panel updated to v3.8.71.
@@ -3829,7 +3829,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026040306) {
-        // v3.8.72 — QPR COMPLIANCE FIX: No DB schema changes.
+        // Version 3.8.72 — QPR COMPLIANCE FIX: No DB schema changes.
         // - server/routes.ts qualbuilder API (/api/tga/qualbuilder/:code):
         //   electiveRequired is now derived as totalUnits - coreRequired when TGA packaging
         //   rules do not include an explicit electiveRequired value (common for most quals
@@ -3844,7 +3844,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026040307) {
-        // v3.8.73 — QPR VALIDATOR FIX: No DB schema changes.
+        // Version 3.8.73 — QPR VALIDATOR FIX: No DB schema changes.
         // - packagingrules_validator.php: rewritten to call the live TGA qualbuilder
         //   API (/api/tga/qualbuilder/:code) and obtain authoritative packaging rules
         //   (totalUnits, coreRequired, electiveRequired, groupRequirements).
@@ -3857,7 +3857,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026040308) {
-        // v3.9.0 — v3.9.2: AI CONFIG AUDIT + 27 ASQA HELP BUTTONS. No DB schema changes.
+        // Version 3.9.0 — v3.9.2: AI CONFIG AUDIT + 27 ASQA HELP BUTTONS. No DB schema changes.
         // v3.9.0:
         // - tas_edit.php, trainer_edit.php, risk_edit.php, rpl_edit.php: Injected
         //   #rtoc-ai-config div and js/ai_suggest.js AMD include. Added 27 ASQA help
@@ -3876,7 +3876,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026040400) {
-        // v4.0.0 — WORLD-CLASS SIDEBAR + FULL AUDIT. No DB schema changes.
+        // Version 4.0.0 — WORLD-CLASS SIDEBAR + FULL AUDIT. No DB schema changes.
         //
         // SIDEBAR v9 (lib.php):
         // - Complete redesign using CSS custom properties (--sb-bg, --sb-accent, etc.)
@@ -3909,7 +3909,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026040400, 'local', 'rtocompliance');
     }
 
-    // v4.0.1: SIDEBAR FIX — removed path guard from local_rtocompliance_render_sidebar()
+    // Version 4.0.1: SIDEBAR FIX — removed path guard from local_rtocompliance_render_sidebar()
     // that was blocking the sidebar from rendering. The strpos($currentpath, '/rtocompliance/')
     // guard was unreliable across Moodle routing (admin vs local paths) and the function is
     // already only called from plugin pages via render_nav_header(). No DB schema changes.
@@ -3917,40 +3917,40 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026040401, 'local', 'rtocompliance');
     }
 
-    // v4.0.2 - DIAGNOSTIC: render_sidebar() replaced with hard test stub to isolate
+    // Version 4.0.2 - DIAGNOSTIC: render_sidebar() replaced with hard test stub to isolate
     // sidebar rendering issue. No DB schema changes.
     if ($oldversion < 2026040402) {
         upgrade_plugin_savepoint(true, 2026040402, 'local', 'rtocompliance');
     }
 
-    // v4.0.3 - FIX: Removed empty($PAGE->url) guard from render_sidebar() — this was the
+    // Version 4.0.3 - FIX: Removed empty($PAGE->url) guard from render_sidebar() — this was the
     // only return '' path in the function, causing the sidebar to silently output nothing.
     // $PAGE->url is not reliably set at the point render_sidebar() is called. No DB changes.
     if ($oldversion < 2026040403) {
         upgrade_plugin_savepoint(true, 2026040403, 'local', 'rtocompliance');
     }
 
-    // v4.0.4 - FIX: Added global $CFG declaration and $currentpath assignment to
+    // Version 4.0.4 - FIX: Added global $CFG declaration and $currentpath assignment to
     // render_sidebar(). $currentpath was undefined (causing strpos() deprecation warnings)
     // and $CFG was not declared global (causing dirroot null warnings). No DB changes.
     if ($oldversion < 2026040404) {
         upgrade_plugin_savepoint(true, 2026040404, 'local', 'rtocompliance');
     }
 
-    // v4.0.5 - UX: Sidebar auto-scrolls to active item on page load so the current
+    // Version 4.0.5 - UX: Sidebar auto-scrolls to active item on page load so the current
     // nav item is always visible regardless of sidebar scroll position. No DB changes.
     if ($oldversion < 2026040405) {
         upgrade_plugin_savepoint(true, 2026040405, 'local', 'rtocompliance');
     }
 
-    // v4.0.6 - UX: Page auto-scrolls past Moodle header/nav chrome on load to show
+    // Version 4.0.6 - UX: Page auto-scrolls past Moodle header/nav chrome on load to show
     // plugin content immediately. Targets #region-main / .main-inner / [role=main].
     // No DB changes.
     if ($oldversion < 2026040406) {
         upgrade_plugin_savepoint(true, 2026040406, 'local', 'rtocompliance');
     }
 
-    // v4.0.38: AMD SYNC FIX — amd/build/qualbuilder_edit.min.js was stale (MD5
+    // Version 4.0.38: AMD SYNC FIX — amd/build/qualbuilder_edit.min.js was stale (MD5
     //   4fce29738b8a2cf7060d298ece8bc1ac) while amd/src/qualbuilder_edit.js and
     //   amd/build/qualbuilder_edit.js had matching MD5 ff40a73e0ccd0e4971f6490fc2399f6b.
     //   Root cause: a previous release updated src and build/.js but omitted the .min.js copy.
@@ -3962,7 +3962,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026040407, 'local', 'rtocompliance');
     }
 
-    // v4.0.40 — Three tester-reported fixes:
+    // Version 4.0.40 — Three tester-reported fixes:
     //   (1) TAS section cards now flow horizontally (CSS grid !important + minmax 200px).
     //   (2) Assessment module card on dashboard now links to TAS Section 5 instead of validation.php.
     //   (3) Delivery Plan: apiurl self-check — if misconfigured to Moodle wwwroot, falls back to
@@ -3972,7 +3972,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026041000, 'local', 'rtocompliance');
     }
 
-    // v4.0.41 — Testing engine column-name fixes (no user-visible changes):
+    // Version 4.0.41 — Testing engine column-name fixes (no user-visible changes):
     //   (1) students_avetmiss test: gender → sex (AVETMISS column is 'sex', not 'gender').
     //   (2) trainer_credentials test: taequalification → taecredential (correct column name).
     //   (3) comp_risk test: riskrating = 'high' → likelihood >= 4 OR impact >= 4 (no riskrating
@@ -3984,7 +3984,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026041001, 'local', 'rtocompliance');
     }
 
-    // v4.0.42 — Release process correction: ZIP moved to public/downloads/ (correct server path for
+    // Version 4.0.42 — Release process correction: ZIP moved to public/downloads/ (correct server path for
     //   /api/downloads/rtocompliance endpoint). All 6 release locations re-synced: version.php,
     //   db/upgrade.php, BUILD_INFO.json, pluginConfig.ts, server/routes.ts, public/downloads/ ZIP.
     //   No PHP code changes. No DB schema changes. AMD src=build=min triple-match confirmed:
@@ -3993,7 +3993,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026041002, 'local', 'rtocompliance');
     }
 
-    // v4.0.43 — VERSION BUMP: No code changes. All 6 release locations updated and synced
+    // Version 4.0.43 — VERSION BUMP: No code changes. All 6 release locations updated and synced
     //   in the same session: version.php, db/upgrade.php savepoint, BUILD_INFO.json,
     //   pluginConfig.ts, server/routes.ts zipFile, public/downloads/ ZIP rebuilt.
     //   No DB schema changes. AMD src=build=min unchanged from v4.0.42.
@@ -4002,7 +4002,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026041100, 'local', 'rtocompliance');
     }
 
-    // v4.0.44 — AUTOFIX EXPANSION: Added three new auto-fix cases to testing.php:
+    // Version 4.0.44 — AUTOFIX EXPANSION: Added three new auto-fix cases to testing.php:
     //   (1) nat_export_file — inserts a sample AVETMISS TVA export record into
     //       local_rtocompliance_exports so the test confirms the export feature works.
     //   (2) comp_insurance — seeds public liability (Allianz $20M) and professional
@@ -4015,7 +4015,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026041101, 'local', 'rtocompliance');
     }
 
-    // v4.0.45 — RTO COMPLIANCE TESTER UX FIXES:
+    // Version 4.0.45 — RTO COMPLIANCE TESTER UX FIXES:
     //   (1) TAS Section 5 (Assessment Plan): replaced blank textarea with 12-category
     //       assessment method checklist (stored as JSON v2 in assessmentmethods TEXT column);
     //       replaced assessment mapping textarea with document link text field; removed
@@ -4039,7 +4039,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026041300, 'local', 'rtocompliance');
     }
 
-    // v4.0.46 — MAINTENANCE VERSION BUMP: No code changes. All 6 release locations updated
+    // Version 4.0.46 — MAINTENANCE VERSION BUMP: No code changes. All 6 release locations updated
     //   and synced in the same session: version.php, db/upgrade.php savepoint, BUILD_INFO.json,
     //   pluginConfig.ts, server/routes.ts zipFile, public/downloads/ ZIP rebuilt.
     //   No DB schema changes. No AMD changes. version.php → 2026041300046.
@@ -4047,7 +4047,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026041301, 'local', 'rtocompliance');
     }
 
-    // v4.0.47 — BUG FIXES: (1) Added missing lang strings volumeoflearning and
+    // Version 4.0.47 — BUG FIXES: (1) Added missing lang strings volumeoflearning and
     //   volumeoflearning_help to fix TAS form debugging errors on tas_edit.php.
     //   (2) Fixed TAS section headers rendering in broken 2-column layout — fieldsets now
     //   forced to display:block, float:none, width:100%. Added full mobile-responsive
@@ -4057,7 +4057,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026041302, 'local', 'rtocompliance');
     }
 
-    // v4.0.48 — BUG FIXES (Tester batch 1):
+    // Version 4.0.48 — BUG FIXES (Tester batch 1):
     //   F1: Added responsive .rtoc-table-scroll wrapper to complaints.php, transitions.php,
     //       validation.php — horizontal scroll on narrow screens; mobile-responsive header.
     //   F2: Fixed complaint save error — assignedto field stored empty string '' in INTEGER
@@ -4076,7 +4076,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026041303, 'local', 'rtocompliance');
     }
 
-    // v4.0.49 — Bug fixes (batch 2):
+    // Version 4.0.49 — Bug fixes (batch 2):
     //   A: Fixed Moodle 4.x form section header CSS — previous CSS targeted legend.ftoggler
     //      (Moodle 3.x) which is now sr-only. New CSS targets div.ftoggler and h3 inside it;
     //      fixes section header overflow on tas_edit.php, complaint_edit.php and all mforms.
@@ -4089,7 +4089,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026041304, 'local', 'rtocompliance');
     }
 
-    // v4.0.50 — ROOT-CAUSE CSS FIX: Replaced the entire broken mform accordion CSS block.
+    // Version 4.0.50 — ROOT-CAUSE CSS FIX: Replaced the entire broken mform accordion CSS block.
     //   The old code targeted .d-flex.align-items-center.mb-2 (fragile Bootstrap class combo),
     //   applied overflow:hidden 5 levels deep (breaking Bootstrap collapse animation and
     //   clipping help tooltips), set white-space:nowrap on h3 (truncating long section titles),
@@ -4103,7 +4103,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026041305, 'local', 'rtocompliance');
     }
 
-    // v4.0.51 — CSS FULL-WIDTH FIX (CSS only, no DB changes):
+    // Version 4.0.51 — CSS FULL-WIDTH FIX (CSS only, no DB changes):
     //   A: Removed max-width:840px from .mform — form card was capped at 840px regardless of
     //      available screen width, leaving a large gray gap to the right on wide monitors. Now
     //      max-width:100% so the form fills the Moodle content area.
@@ -4117,7 +4117,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026041306, 'local', 'rtocompliance');
     }
 
-    // v4.0.53 — T&A REGISTER EXPANSION + 6 IMPROVEMENTS (PHP only, no DB schema changes):
+    // Version 4.0.53 — T&A REGISTER EXPANSION + 6 IMPROVEMENTS (PHP only, no DB schema changes):
     //   Issue 1 (workforce_management.php): Added interactive student-to-trainer ratio calculator
     //     with live JavaScript inputs (trainer count, student count, delivery mode, FTE hours),
     //     benchmark guidance (face-to-face 1:20, online 1:30, workplace 1:15, mixed 1:25),
@@ -4146,7 +4146,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026041700, 'local', 'rtocompliance');
     }
 
-    // v4.0.54 — TESTER FEEDBACK: 4-ISSUE FIX (PHP + DB schema changes):
+    // Version 4.0.54 — TESTER FEEDBACK: 4-ISSUE FIX (PHP + DB schema changes):
     //   Issue 1 (trainers.php): Trainer & Assessor Register column reorder + 3 new columns.
     //     New DB fields on local_rtocompliance_trainers: industryexperienceyears (INT 3),
     //     llncapability (VARCHAR 100), vetcurrencyyears (INT 3).
@@ -4190,7 +4190,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026041701, 'local', 'rtocompliance');
     }
 
-    // v4.0.55 — MARKETING_INFO STANDARD 2.1 RENAME + REMOVE COMPLAINTS BUTTON
+    // Version 4.0.55 — MARKETING_INFO STANDARD 2.1 RENAME + REMOVE COMPLAINTS BUTTON
     //   (PHP only, no DB schema changes):
     //   Per spec dated 17 Apr 2026, the Marketing Information page header was relabelled
     //   from "Standard 2.1 — Marketing and Pre-Enrolment Information" to
@@ -4207,7 +4207,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026042100, 'local', 'rtocompliance');
     }
 
-    // v4.0.56 — STANDARDS 2.3-2.6 FUNCTIONAL SYSTEM + TRAINER INPUT AI AUTO-FILL +
+    // Version 4.0.56 — STANDARDS 2.3-2.6 FUNCTIONAL SYSTEM + TRAINER INPUT AI AUTO-FILL +
     //   STANDARD 2.1 INFORMATION CARDS PAGE (PHP / inline JS only, no DB schema changes):
     //
     //   Per spec dated 17 Apr 2026, three pages were rebuilt to deliver the full
@@ -4248,7 +4248,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026042101, 'local', 'rtocompliance');
     }
 
-    // v4.0.52 — 28-ISSUE AUDIT FIX (PHP/CSS only, no DB schema changes):
+    // Version 4.0.52 — 28-ISSUE AUDIT FIX (PHP/CSS only, no DB schema changes):
     //   A1-A6 (TAS Edit): Relabelled section 5 header "Assessment Plan"; hid sections 10,12,13,14,15
     //     (data preserved as hidden inputs); renumbered section 11 → 8 "Work Placement", 16 → 9
     //     "TAS Approval & Review" — TAS edit form now shows exactly 9 visible sections.
@@ -4277,12 +4277,12 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026042102, 'local', 'rtocompliance');
     }
 
-    // v4.0.53 - v4.0.56: No DB schema changes. See pluginConfig.ts changelog for details.
+    // Version 4.0.53 - v4.0.56: No DB schema changes. See pluginConfig.ts changelog for details.
     if ($oldversion < 2026042103) {
         upgrade_plugin_savepoint(true, 2026042103, 'local', 'rtocompliance');
     }
 
-    // v4.0.57: TESTER FEEDBACK FIXES (7 items, no DB schema changes).
+    // Version 4.0.57: TESTER FEEDBACK FIXES (7 items, no DB schema changes).
     //   (1) CERTIFICATES: Download/Email buttons disabled when student USI not verified.
     //   (2) DOWNLOAD_CERT: Server-side USI gate — blocks testamur/statement downloads if USI unverified.
     //   (3) EMAIL_CERT: Same server-side USI gate for email delivery of certs.
@@ -4299,7 +4299,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026042200, 'local', 'rtocompliance');
     }
 
-    // v4.0.58: CRITICAL AMD ENCODING FIX -- Site admin primary/secondary navigation menus
+    // Version 4.0.58: CRITICAL AMD ENCODING FIX -- Site admin primary/secondary navigation menus
     //          disappearing after installing v4.0.57.
     //          ROOT CAUSE: Four em dash characters (U+2014, UTF-8 bytes \xe2\x80\x94) were
     //          present in amd/src/qualbuilder_edit.js (lines 524, 536, 623, 650) including
@@ -4318,7 +4318,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026042201, 'local', 'rtocompliance');
     }
 
-    // v4.0.59: SYSTEMIC CLICK FIX — admin_externalpage_setup() added to 32 admin sub-pages.
+    // Version 4.0.59: SYSTEMIC CLICK FIX — admin_externalpage_setup() added to 32 admin sub-pages.
     //          ROOT CAUSE: All edit/sub-pages (trainer_edit, tas_edit, qualbuilder_edit, etc.)
     //          were using raw require_login() + require_capability() + $PAGE->set_context() +
     //          $PAGE->set_pagelayout('admin') instead of admin_externalpage_setup(). This
@@ -4339,7 +4339,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026042202, 'local', 'rtocompliance');
     }
 
-    // v4.0.60 - THREE TESTER BUG FIXES: (1) TAS accordion click-blocking fixed via
+    // Version 4.0.60 - THREE TESTER BUG FIXES: (1) TAS accordion click-blocking fixed via
     //           position:relative on .ftoggler (CSS). (2) Plain-JS collapsible fallback
     //           added to lib.php for cases where Moodle's AMD module fires late.
     //           (3) Validation Register / Locations buttons unclickable fixed via
@@ -4350,7 +4350,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026042300, 'local', 'rtocompliance');
     }
 
-    // v4.0.61 - VERSION BUMP: All 7 release locations synced. No DB schema changes.
+    // Version 4.0.61 - VERSION BUMP: All 7 release locations synced. No DB schema changes.
     //           Carries all bug fixes from v4.0.60: TAS accordion (position:relative on
     //           .ftoggler), JS collapsible fallback, Validation/Locations button fix
     //           (overflow-x:clip + z-index:2 + pointer-events:auto on hero buttons).
@@ -4358,7 +4358,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026042301, 'local', 'rtocompliance');
     }
 
-    // v4.0.62 - THREE BUG FIXES: (1) trainer_edit.php "Can't edit" crash fixed by
+    // Version 4.0.62 - THREE BUG FIXES: (1) trainer_edit.php "Can't edit" crash fixed by
     //           adding missing industryexperienceyears_help / llncapability_help /
     //           vetcurrencyyears_help lang strings that caused coding_exception in
     //           Moodle developer/strict debug mode. (2) download_cert.php and
@@ -4372,7 +4372,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026042400, 'local', 'rtocompliance');
     }
 
-    // v4.0.63: FIX — settings.php missing isset($settings) guard around all 8 $ADMIN->fulltree
+    // Version 4.0.63: FIX — settings.php missing isset($settings) guard around all 8 $ADMIN->fulltree
     // blocks. Each block calls $settings->add() but if $settings is unset in certain Moodle admin
     // tree build paths, this causes a fatal error that can corrupt the admin navigation. Added
     // isset($settings) check to all 8 if ($ADMIN->fulltree) conditions. No DB schema changes.
@@ -4380,7 +4380,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026042500, 'local', 'rtocompliance');
     }
 
-    // v4.0.64: MULTI-FIX — (1) Trainer table column reorder (Status under TGA moved after TAE
+    // Version 4.0.64: MULTI-FIX — (1) Trainer table column reorder (Status under TGA moved after TAE
     //          Achieved); VocComp column shows qualification name (removes date fallback); VET
     //          Currency column changed from "years" text to date picker (vetcurrencydate field
     //          added); Industry Currency date field added to trainer edit form. (2) Table overflow
@@ -4397,7 +4397,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026042501, 'local', 'rtocompliance');
     }
 
-    // v4.0.65: 8-BUG-FIX — (1) Student Records action buttons white-space:nowrap. (2) Site admin
+    // Version 4.0.65: 8-BUG-FIX — (1) Student Records action buttons white-space:nowrap. (2) Site admin
     //          exclusion from student list via $CFG->siteadmins. (3) Marketing Info Training Product
     //          Show Evidence links to RTO website. (4) Student Obligations card updated.
     //          (5) Policy URLs now admin-configurable (5 new admin_setting_configtext, no DB field).
@@ -4408,7 +4408,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026042600, 'local', 'rtocompliance');
     }
 
-    // v4.0.66: 8-BUG-FIX (actual code applied):
+    // Version 4.0.66: 8-BUG-FIX (actual code applied):
     // (1) Student Records action buttons → Bootstrap dropdown so Edit Profile + Enrolments are
     //     reachable on every screen width.
     // (2) Student stats count now excludes teacher/manager roles by shortname AND archetype.
@@ -4424,7 +4424,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         // Create the student declarations table (stores declaration send/respond records).
         $table = new xmldb_table('local_rtocompliance_declarations');
         if (!$dbman->table_exists($table)) {
-            // add_field($name, $type, $precision, $unsigned, $notnull, $sequence, $default)
+            // Signature: add_field($name, $type, $precision, $unsigned, $notnull, $sequence, $default)
             $table->add_field('id',            XMLDB_TYPE_INTEGER, '10',  null, XMLDB_NOTNULL, XMLDB_SEQUENCE);
             $table->add_field('userid',        XMLDB_TYPE_INTEGER, '10',  null, XMLDB_NOTNULL, null, '0');
             $table->add_field('token',         XMLDB_TYPE_CHAR,    '64',  null, XMLDB_NOTNULL);
@@ -4440,7 +4440,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026042601, 'local', 'rtocompliance');
     }
 
-    // v4.0.67: Version bump — no DB schema changes.
+    // Version 4.0.67: Version bump — no DB schema changes.
     // Ensures Moodle recognises a new release and triggers the upgrade path
     // so any environment that missed v4.0.66 receives all prior fixes.
     if ($oldversion < 2026042602) {
@@ -4823,7 +4823,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026042909, 'local', 'rtocompliance');
     }
 
-    // v4.2.12 (2026043000001): Remediation upgrade step — ensures local_rtocompliance_ai_survey
+    // Version 4.2.12 (2026043000001): Remediation upgrade step — ensures local_rtocompliance_ai_survey
     // exists on any site that upgraded through an intermediate state where the table was added
     // to upgrade.php (step 2025120801) but not install.xml, and somehow ended up without it.
     // Also guards against any future re-installs or restored databases missing this table.
@@ -4872,7 +4872,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026043002) {
-        // v4.2.14 remediation (30 Apr 2026):
+        // Version 4.2.14 remediation (30 Apr 2026):
         // FIX-ENROLMENT-SAVE: $PAGE->set_url inside edit/add block now includes action= and
         //   enrolid=.  No DB change.
         // FIX-TAS-CONSULTATION-BOX: category dropdown-helper divs now display:block;width:100%.
@@ -4886,7 +4886,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026043003) {
-        // v4.2.15 follow-up remediation (30 Apr 2026):
+        // Version 4.2.15 follow-up remediation (30 Apr 2026):
         // BUG-SR-OUTCOME: DB save + audit in student_enrolments.php now wrapped in
         //   try/catch; deliverylocationid empty→null coercion added; setDefault for
         //   outcomeidentifier corrected to '70'; setType for deliverylocationid added.
@@ -4901,7 +4901,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026043004) {
-        // v4.2.16 namespace fix (30 Apr 2026):
+        // Version 4.2.16 namespace fix (30 Apr 2026):
         // BUG-USI-NAMESPACE: bare `core_user::get_user()` calls in usi_verification_service.php
         //   (lines 76 and 215) fixed to `\core_user::get_user()`.  Without the leading \
         //   PHP resolved the class as local_rtocompliance\usi\core_user (not found), crashing
@@ -4913,7 +4913,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026043005) {
-        // v4.2.17 Survey AI HTTP-Array fix (30 Apr 2026):
+        // Version 4.2.17 Survey AI HTTP-Array fix (30 Apr 2026):
         // BUG-SURVEY-HTTP-ARRAY: Some older Moodle versions return the full curl_getinfo()
         //   array from \curl::get_info($opt) regardless of the $opt argument.  In
         //   classes/ai/survey_analyzer.php::call_platform_api() this caused $httpcode to be
@@ -4927,7 +4927,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026043006) {
-        // v4.2.18 USI platform error surfacing + TAS dropdown layout fix (30 Apr 2026):
+        // Version 4.2.18 USI platform error surfacing + TAS dropdown layout fix (30 Apr 2026):
         // BUG-USI-PLATFORM-MSG: classes/usi/usi_platform_client.php (verify_usi) was
         //   discarding the actual server-side error message and showing a generic
         //   "Platform error — please try again or contact support." toast for any
@@ -4953,7 +4953,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026043007) {
-        // v4.2.19 Validation methods/risk-factors persistence fix (30 Apr 2026):
+        // Version 4.2.19 Validation methods/risk-factors persistence fix (30 Apr 2026):
         // BUG-VALIDATION-METHODS-PERSIST: validation_edit.php was storing the
         //   methodology and risk-factor checkbox grids as a concatenated text
         //   blob ("tool_review, evidence_review\nfreeform notes...") and on
@@ -4970,7 +4970,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026043008) {
-        // v4.2.20 Survey AI error message + Run AI Analysis button colour fixes
+        // Version 4.2.20 Survey AI error message + Run AI Analysis button colour fixes
         // (30 Apr 2026):
         // BUG-SURVEY-AI-MSG: surveys "Run AI Analysis" toast no longer triple-wraps
         //   the error message ("Analysis failed: Error communicating with AI service:
@@ -4989,7 +4989,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026043009) {
-        // v4.2.21 Student Records save + TAS overlap fix (30 Apr 2026):
+        // Version 4.2.21 Student Records save + TAS overlap fix (30 Apr 2026):
         // BUG-SR-OUTCOME-SAVE-2: student_enrolments.php — bulletproof field
         //   cleaning before update_record/insert_record so date_selector boolean
         //   FALSE values, empty-string char-FK values, and bare numeric strings
@@ -5011,7 +5011,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026043010) {
-        // v4.2.22 Dashboard "Create Your First Enrolment" tile fix (30 Apr 2026):
+        // Version 4.2.22 Dashboard "Create Your First Enrolment" tile fix (30 Apr 2026):
         // BUG-DASH-FIRST-ENROL: index.php + student_enrolments.php — the
         //   dashboard "Setup Progress" tile linked directly to
         //   student_enrolments.php with no ?userid query parameter, dropping
@@ -5030,7 +5030,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026043011) {
-        // v4.2.23 Industry Consultation quick-add helper overflow fix (30 Apr 2026):
+        // Version 4.2.23 Industry Consultation quick-add helper overflow fix (30 Apr 2026):
         // BUG-TAS-OVERLAP-3: lib.php + tas_consultation.php — the v4.2.21
         //   flex-wrap checkbox grid still overflowed on the EDIT view because
         //   the helper was inserted via $mform->addElement('static', ...),
@@ -5049,7 +5049,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026043012) {
-        // v4.2.24 AI Analysis silent-no-op + upgrade savepoint order fixes (30 Apr 2026):
+        // Version 4.2.24 AI Analysis silent-no-op + upgrade savepoint order fixes (30 Apr 2026):
         // BUG-SURVEY-AI-NOOP: ai_analysis.php — the "Run AI Analysis — 5 Credits"
         //   button was an html_writer::link with an inline onclick="return
         //   confirm(...)" handler.  On stricter Moodle 4.x CSP/nonce policies the
@@ -5078,7 +5078,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026043013) {
-        // v4.2.26 BUG-SR-OUTCOME-SAVE-3 silent enrolment-save revert fix (30 Apr 2026):
+        // Version 4.2.26 BUG-SR-OUTCOME-SAVE-3 silent enrolment-save revert fix (30 Apr 2026):
         //   Editing an enrolment, changing Outcome to "Competency achieved/pass" (20)
         //   and Status to "Completed", then clicking SAVE produced no error and no
         //   success toast — the form re-rendered with the OLD values still selected.
@@ -5106,7 +5106,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026043014) {
-        // v4.2.27 BUG-SR-OUTCOME-AUTOREVERT silent enrolment-overwrite fix (30 Apr 2026):
+        // Version 4.2.27 BUG-SR-OUTCOME-AUTOREVERT silent enrolment-overwrite fix (30 Apr 2026):
         //   v4.2.26 fixed the form-layer set_data() ordering bug, but managers
         //   continued to report manual outcome edits silently reverting on the next
         //   page refresh.  Root cause was THREE separate auto-overwrite paths firing
@@ -5129,7 +5129,8 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         //   where manualoutcome = 1.  Idempotent column add — existing rows default
         //   to 0 (auto-grading still applies as before for any pre-v4.2.27 data).
         $table = new xmldb_table('local_rtocompliance_enrolments');
-        $field = new xmldb_field('manualoutcome', XMLDB_TYPE_INTEGER, '1', null,
+        $field = new xmldb_field(
+            'manualoutcome', XMLDB_TYPE_INTEGER, '1', null,
             XMLDB_NOTNULL, null, '0', 'outcomeidentifier');
         if (!$dbman->field_exists($table, $field)) {
             $dbman->add_field($table, $field);
@@ -5138,7 +5139,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026043015) {
-        // v4.2.29 BUG-RESULTS-NOID-BOUNCE + BUG-SURVEY-AI-NOSHOW (30 Apr 2026):
+        // Version 4.2.29 BUG-RESULTS-NOID-BOUNCE + BUG-SURVEY-AI-NOSHOW (30 Apr 2026):
         //   Two pure-PHP UX fixes — qualbuilder_results.php now renders a
         //   training-product picker when no ?id is supplied (instead of bouncing
         //   to qualbuilder.php with a confusing red error toast), and
@@ -5153,7 +5154,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026043016) {
-        // v4.2.30 PER-TENANT-USI + ROLE-SPLIT + NAV-PRIMARY (30 Apr 2026):
+        // Version 4.2.30 PER-TENANT-USI + ROLE-SPLIT + NAV-PRIMARY (30 Apr 2026):
         //   Three architectural changes, all in plugin-side PHP and platform
         //   API code; NO local DB schema change required on the Moodle install:
         //   (a) PER-TENANT-USI — usi_settings.php uploads .pfx + password +
@@ -5174,7 +5175,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026043017) {
-        // v4.2.31 USI-DISCOVERABILITY (30 Apr 2026):
+        // Version 4.2.31 USI-DISCOVERABILITY (30 Apr 2026):
         //   Pure UX polish on top of v4.2.30 — Settings tree menu reorder,
         //   legacy USI page redirect banner, dashboard "USI not configured"
         //   CTA card.  No DB schema change.  Savepoint exists only to bump
@@ -5183,7 +5184,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026050100) {
-        // v4.2.32 BUG-SR-OUTCOME-SAVE-4 + BUG-SURVEY-AI-NORESP (1 May 2026):
+        // Version 4.2.32 BUG-SR-OUTCOME-SAVE-4 + BUG-SURVEY-AI-NORESP (1 May 2026):
         //   Two pure-PHP UX fixes, no schema change:
         //   (a) BUG-SR-OUTCOME-SAVE-4 — enrolment_form.php now preserves the
         //       existing courseid in the dropdown when editing, even if the
@@ -5203,7 +5204,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026050101) {
-        // v4.2.33 BUG-SR-OUTCOME-SAVE-5 + BUG-SURVEY-AI-NORESP-2 (1 May 2026, AM):
+        // Version 4.2.33 BUG-SR-OUTCOME-SAVE-5 + BUG-SURVEY-AI-NORESP-2 (1 May 2026, AM):
         //   Two pure-PHP UX fixes, no schema change:
         //   (a) BUG-SR-OUTCOME-SAVE-5 — enrolment_form.php adds hidden
         //       userid/action/enrolid inputs so the enrolment-edit POST
@@ -5224,7 +5225,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026050102) {
-        // v4.2.34 BUG-SURVEY-AI-2CLICK (1 May 2026, AM):
+        // Version 4.2.34 BUG-SURVEY-AI-2CLICK (1 May 2026, AM):
         //   Pure-PHP UX fix, no schema change.  surveys.php now renders the
         //   per-card "Run AI Analysis (N responses)" buttons as POST forms
         //   that submit directly to ai_analysis.php?action=analyze (with a
@@ -5237,7 +5238,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026050103) {
-        // v4.2.35 BUG-SURVEY-AI-NOSHOW-2 (1 May 2026, mid-AM):
+        // Version 4.2.35 BUG-SURVEY-AI-NOSHOW-2 (1 May 2026, mid-AM):
         //   Pure-PHP fix, no schema change.  ai_analysis.php no longer
         //   redirects on successful analysis — the result is rendered
         //   inline on the same request that produced it, eliminating the
@@ -5255,7 +5256,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026050104) {
-        // v4.2.36 CERTIFICATES-REDESIGN (1 May 2026):
+        // Version 4.2.36 CERTIFICATES-REDESIGN (1 May 2026):
         //   Schema additions for one-click reissue with audit trail, plus
         //   a substantial UX overhaul of certificates.php (filters, search,
         //   sortable table view, pagination, one-click email AJAX, reissue
@@ -5490,7 +5491,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026050206) {
-        // v4.2.48 BUG-MAY2-AUDIT — code-only release. No schema change.
+        // Version 4.2.48 BUG-MAY2-AUDIT — code-only release. No schema change.
         // Fixes: cert_template_renderer::render() now hydrates background +
         // per-field image paths before painting (backgrounds and per-field
         // images previously rendered blank); resolve_payload() loads custom
@@ -5504,7 +5505,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026050207) {
-        // v4.2.49 BUG-MAY2-AUDIT2 — code-only release. No schema change.
+        // Version 4.2.49 BUG-MAY2-AUDIT2 — code-only release. No schema change.
         // Three more cert template defects fixed:
         //   1. resolve_text() now uses PHP date() instead of userdate() for
         //      'date' kind fields (the editor's date-format dropdown offers
@@ -5520,7 +5521,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026050208) {
-        // v4.2.50 — Suitability 4-stage rebuild + pluggable LLN adapter.
+        // Version 4.2.50 — Suitability 4-stage rebuild + pluggable LLN adapter.
         // Three new fields on local_rtocompliance_suitability to record
         // LLN provenance regardless of which adapter populated the level:
         //   - lln_source       which adapter (manual|webhook|...)
@@ -5545,7 +5546,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026050209) {
-        // v4.2.51 DECLARATION-SELFAUDIT - persist the typed-name signature
+        // Version 4.2.51 DECLARATION-SELFAUDIT - persist the typed-name signature
         // and the signed-at timestamp from Stage 4 of the suitability form.
         // Two new fields on local_rtocompliance_suitability:
         //   - declaration_name       char(200) - what the student typed
@@ -5568,7 +5569,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026050210) {
-        // v4.2.52 DECLARATION-SELFAUDIT-B7-SPACE - no schema change, just a
+        // Version 4.2.52 DECLARATION-SELFAUDIT-B7-SPACE - no schema change, just a
         // savepoint marker bumped in lockstep with version.php so the upgrade
         // engine recognises the release. The actual fix is server-side
         // validation in suitability_form.php that requires the typed-name
@@ -5578,7 +5579,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026050211) {
-        // v4.2.53 FIX-MAY2-IDX - savepoint marker only.  The actual fix
+        // Version 4.2.53 FIX-MAY2-IDX - savepoint marker only.  The actual fix
         // is inside the existing v4.2.47 block above (drop status index,
         // widen field, recreate index) so installs still on $oldversion <
         // 2026050200047 will benefit from the same code path.  This
@@ -5748,7 +5749,8 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
             // Seed failure must NEVER block the upgrade — admins can
             // re-run by importing default starters from the cert
             // template UI.  Log only.
-            debugging('v4.2.58 default template seed failed: ' . $e->getMessage(),
+            debugging(
+                'v4.2.58 default template seed failed: ' . $e->getMessage(),
                 DEBUG_DEVELOPER);
         }
         upgrade_plugin_savepoint(true, 2026050216, 'local', 'rtocompliance');
@@ -5814,14 +5816,16 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
                 $defaultorientation = \local_rtocompliance\cert_template::default_orientation($certtype);
                 foreach (['L', 'P'] as $orientation) {
                     $orientationlabel = ($orientation === 'L') ? 'Landscape' : 'Portrait';
-                    $certtypelabel = ucfirst($certtype === 'statement' ? 'Statement of Attainment'
-                                          : ($certtype === 'record' ? 'Record of Results'
-                                          : ($certtype === 'completion' ? 'Certificate of Completion'
+                    $certtypelabel = ucfirst(
+                        $certtype === 'statement' ? 'Statement of Attainment'
+                                              : ($certtype === 'record' ? 'Record of Results'
+                                              : ($certtype === 'completion' ? 'Certificate of Completion'
                                           : 'Testamur')));
                     $name = 'Default ' . $certtypelabel . ' (' . $orientationlabel . ')';
-                    $existing = $DB->get_record('local_rtocompliance_certtmpl', [
-                        'name'     => $name,
-                        'certtype' => $certtype,
+                    $existing = $DB->get_record(
+                        'local_rtocompliance_certtmpl', [
+                            'name'     => $name,
+                            'certtype' => $certtype,
                     ]);
                     if (!$existing) {
                         continue;
@@ -5835,7 +5839,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
                     }
                     $design = \local_rtocompliance\cert_template::build_starter_design($certtype, $orientation);
                     $existing->designjson   = json_encode($design, JSON_UNESCAPED_SLASHES);
-                    $existing->timemodified = $existing->timecreated; // preserve untouched marker
+                    $existing->timemodified = $existing->timecreated; // Preserve untouched marker
                     $DB->update_record('local_rtocompliance_certtmpl', $existing);
                 }
                 // First-install seed for sites that never ran v4.2.58.
@@ -5844,7 +5848,8 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
                 }
             }
         } catch (\Throwable $e) {
-            debugging('v4.2.59 default template refresh failed: ' . $e->getMessage(),
+            debugging(
+                'v4.2.59 default template refresh failed: ' . $e->getMessage(),
                 DEBUG_DEVELOPER);
         }
         upgrade_plugin_savepoint(true, 2026050217, 'local', 'rtocompliance');
@@ -5884,22 +5889,24 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         try {
             require_once($CFG->dirroot . '/local/rtocompliance/classes/cert_template.php');
             $name = 'Default Testamur (Portrait)';
-            $existing = $DB->get_record('local_rtocompliance_certtmpl', [
-                'name'     => $name,
-                'certtype' => 'testamur',
+            $existing = $DB->get_record(
+                'local_rtocompliance_certtmpl', [
+                    'name'     => $name,
+                    'certtype' => 'testamur',
             ]);
             if ($existing
                 && (int)$existing->createdby === 0
                 && (int)$existing->timecreated === (int)$existing->timemodified) {
                 $design = \local_rtocompliance\cert_template::build_starter_design('testamur', 'P');
                 $existing->designjson   = json_encode($design, JSON_UNESCAPED_SLASHES);
-                $existing->timemodified = $existing->timecreated; // preserve untouched marker
+                $existing->timemodified = $existing->timecreated; // Preserve untouched marker
                 $DB->update_record('local_rtocompliance_certtmpl', $existing);
             }
             // First-install seed for sites that never ran v4.2.58/v4.2.59.
             \local_rtocompliance\cert_template::seed_default_templates_if_empty();
         } catch (\Throwable $e) {
-            debugging('v4.2.60 testamur portrait re-seed failed: ' . $e->getMessage(),
+            debugging(
+                'v4.2.60 testamur portrait re-seed failed: ' . $e->getMessage(),
                 DEBUG_DEVELOPER);
         }
         upgrade_plugin_savepoint(true, 2026050218, 'local', 'rtocompliance');
@@ -5964,23 +5971,25 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
                 ['Default Record of Results (Landscape)',       'record',    'L'],
             ];
             foreach ($stockstarters as [$name, $certtype, $orientation]) {
-                $existing = $DB->get_record('local_rtocompliance_certtmpl', [
-                    'name'     => $name,
-                    'certtype' => $certtype,
+                $existing = $DB->get_record(
+                    'local_rtocompliance_certtmpl', [
+                        'name'     => $name,
+                        'certtype' => $certtype,
                 ]);
                 if ($existing
                     && (int)$existing->createdby === 0
                     && (int)$existing->timecreated === (int)$existing->timemodified) {
                     $design = \local_rtocompliance\cert_template::build_starter_design($certtype, $orientation);
                     $existing->designjson   = json_encode($design, JSON_UNESCAPED_SLASHES);
-                    $existing->timemodified = $existing->timecreated; // preserve untouched marker
+                    $existing->timemodified = $existing->timecreated; // Preserve untouched marker
                     $DB->update_record('local_rtocompliance_certtmpl', $existing);
                 }
             }
             // First-install seed for sites that never ran v4.2.58/v4.2.59/v4.2.60.
             \local_rtocompliance\cert_template::seed_default_templates_if_empty();
         } catch (\Throwable $e) {
-            debugging('v4.2.61 ASQA starter re-seed failed: ' . $e->getMessage(),
+            debugging(
+                'v4.2.61 ASQA starter re-seed failed: ' . $e->getMessage(),
                 DEBUG_DEVELOPER);
         }
         upgrade_plugin_savepoint(true, 2026050219, 'local', 'rtocompliance');
@@ -6013,23 +6022,25 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
                 ['Default Record of Results (Landscape)',       'record',    'L'],
             ];
             foreach ($stockstarters as [$name, $certtype, $orientation]) {
-                $existing = $DB->get_record('local_rtocompliance_certtmpl', [
-                    'name'     => $name,
-                    'certtype' => $certtype,
+                $existing = $DB->get_record(
+                    'local_rtocompliance_certtmpl', [
+                        'name'     => $name,
+                        'certtype' => $certtype,
                 ]);
                 if ($existing
                     && (int)$existing->createdby === 0
                     && (int)$existing->timecreated === (int)$existing->timemodified) {
                     $design = \local_rtocompliance\cert_template::build_starter_design($certtype, $orientation);
                     $existing->designjson   = json_encode($design, JSON_UNESCAPED_SLASHES);
-                    $existing->timemodified = $existing->timecreated; // preserve untouched marker
+                    $existing->timemodified = $existing->timecreated; // Preserve untouched marker
                     $DB->update_record('local_rtocompliance_certtmpl', $existing);
                 }
             }
             // First-install seed for sites that never ran v4.2.58/v4.2.59/v4.2.60/v4.2.61.
             \local_rtocompliance\cert_template::seed_default_templates_if_empty();
         } catch (\Throwable $e) {
-            debugging('v4.2.62 ASQA starter recovery re-seed failed: ' . $e->getMessage(),
+            debugging(
+                'v4.2.62 ASQA starter recovery re-seed failed: ' . $e->getMessage(),
                 DEBUG_DEVELOPER);
         }
         upgrade_plugin_savepoint(true, 2026050220, 'local', 'rtocompliance');
@@ -6067,26 +6078,30 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         $dbman = $DB->get_manager();
         $tmpltable = new xmldb_table('local_rtocompliance_certtmpl');
 
-        $audfield = new xmldb_field('audience', XMLDB_TYPE_CHAR, '32',
+        $audfield = new xmldb_field(
+            'audience', XMLDB_TYPE_CHAR, '32',
             null, XMLDB_NOTNULL, null, 'default', 'certtype');
         if (!$dbman->field_exists($tmpltable, $audfield)) {
             $dbman->add_field($tmpltable, $audfield);
         }
 
-        $audlabelfield = new xmldb_field('audiencelabel', XMLDB_TYPE_CHAR, '255',
+        $audlabelfield = new xmldb_field(
+            'audiencelabel', XMLDB_TYPE_CHAR, '255',
             null, null, null, null, 'audience');
         if (!$dbman->field_exists($tmpltable, $audlabelfield)) {
             $dbman->add_field($tmpltable, $audlabelfield);
         }
 
-        $audindex = new xmldb_index('certtype_audience_active',
+        $audindex = new xmldb_index(
+            'certtype_audience_active',
             XMLDB_INDEX_NOTUNIQUE, ['certtype', 'audience', 'isactive']);
         if (!$dbman->index_exists($tmpltable, $audindex)) {
             $dbman->add_index($tmpltable, $audindex);
         }
 
         $certstable = new xmldb_table('local_rtocompliance_certs');
-        $tmplidfield = new xmldb_field('certtmplid', XMLDB_TYPE_INTEGER, '10',
+        $tmplidfield = new xmldb_field(
+            'certtmplid', XMLDB_TYPE_INTEGER, '10',
             null, null, null, null, 'reissued_at');
         if (!$dbman->field_exists($certstable, $tmplidfield)) {
             $dbman->add_field($certstable, $tmplidfield);
@@ -7274,7 +7289,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026051002) {
-        // v4.5.98: Two bugs from errors_10_May_2026_(2).docx
+        // Version 4.5.98: Two bugs from errors_10_May_2026_(2).docx
         // (1) TAS Section 2 (Entry Requirements / Prerequisites) AI generate was citing
         //     "ASQA Standard 5.1" (wrong). Corrected to "Outcome Standard 2.2" in both
         //     the AI asqaGuide (server/routes.ts) and the help button text
@@ -7297,7 +7312,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026051200) {
-        // v4.5.100: FIX-QB-GROUP-RULES-SERVERSIDE (12 May 2026)
+        // Version 4.5.100: FIX-QB-GROUP-RULES-SERVERSIDE (12 May 2026)
         // Root-cause fix for MEM20413 group packaging rules showing "Min 1" for both groups.
         // (1) tgaService.ts: Removed `break` from content-bundle item loop. MEM-series
         //     qualifications store group details (Group A min, Group B max) in SEPARATE
@@ -7318,7 +7333,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026051201) {
-        // v4.6.101: MULTI-UNIT-SOA (12 May 2026)
+        // Version 4.6.101: MULTI-UNIT-SOA (12 May 2026)
         // New table local_rtocompliance_soa_snapshot stores an immutable
         // compliance snapshot of every unit listed on a multi-unit Statement
         // of Attainment at the exact moment of issue. Snapshot survives
@@ -7351,7 +7366,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026051201, 'local', 'rtocompliance');
     }
 
-    // v4.6.102: FIX-CURL-BATCH — usi_platform_client.php, packagingrules_validator.php, and
+    // Version 4.6.102: FIX-CURL-BATCH — usi_platform_client.php, packagingrules_validator.php, and
     //   lln/webhook_adapter.php switched from raw curl_init() to Moodle \curl wrapper +
     //   write_close(). No DB schema changes.
     if ($oldversion < 2026051202) {
@@ -7359,7 +7374,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026051400) {
-        // v4.9.108 STUDENT-DOC-REPOSITORY (14 May 2026)
+        // Version 4.9.108 STUDENT-DOC-REPOSITORY (14 May 2026)
         // New table local_rtocompliance_student_docs stores teacher-uploaded files
         // attached to a student's portfolio: RPL decisions, USI letters, suitability
         // assessments, credit transfer records, enrolment agreements, third-party
@@ -7393,51 +7408,51 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026051401) {
-        // v4.9.109 FIX-SMART-DETECT-BANNER — PHP/CSS only. No DB schema changes.
+        // Version 4.9.109 FIX-SMART-DETECT-BANNER — PHP/CSS only. No DB schema changes.
         upgrade_plugin_savepoint(true, 2026051401, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026051402) {
-        // v4.9.110 FIX-PURCHASE-CREDITS-URL — No DB schema changes.
+        // Version 4.9.110 FIX-PURCHASE-CREDITS-URL — No DB schema changes.
         upgrade_plugin_savepoint(true, 2026051402, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026051403) {
-        // v4.9.111 FIX-NAT00080-AVETMISS8 — No DB schema changes.
+        // Version 4.9.111 FIX-NAT00080-AVETMISS8 — No DB schema changes.
         upgrade_plugin_savepoint(true, 2026051403, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026051404) {
-        // v4.9.112 FIX-NAT00080-EXTENDED — No DB schema changes.
+        // Version 4.9.112 FIX-NAT00080-EXTENDED — No DB schema changes.
         upgrade_plugin_savepoint(true, 2026051404, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026051405) {
-        // v4.9.113 FIX-NAT00080-WISENET — No DB schema changes.
+        // Version 4.9.113 FIX-NAT00080-WISENET — No DB schema changes.
         upgrade_plugin_savepoint(true, 2026051405, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026051406) {
-        // v4.9.114 NAT00080-CONFIRM-STEP — No DB schema changes.
+        // Version 4.9.114 NAT00080-CONFIRM-STEP — No DB schema changes.
         upgrade_plugin_savepoint(true, 2026051406, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026051407) {
-        // v4.9.115 AVETMISS-PARCHMENT-VERIFY — No DB schema changes.
+        // Version 4.9.115 AVETMISS-PARCHMENT-VERIFY — No DB schema changes.
         // verify.php now cross-references avetmiss_completion parchment numbers
         // (AVETMISS DE 515) via USI join for staff viewers.
         upgrade_plugin_savepoint(true, 2026051407, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026051408) {
-        // v4.9.116 FIX-NAT00080-GENDER-AT — No DB schema changes.
+        // Version 4.9.116 FIX-NAT00080-GENDER-AT — No DB schema changes.
         // '@' (AVETMISS "not stated" gender code) now accepted in both sex parse
         // paths; no longer triggers sex_not_stated data-issue flag.
         upgrade_plugin_savepoint(true, 2026051408, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026051409) {
-        // v4.9.117 AUTOENROL-WIZARD — No DB schema changes.
+        // Version 4.9.117 AUTOENROL-WIZARD — No DB schema changes.
         // After NAT file import, a new Step 3 wizard groups imported enrolment
         // records by qualification code (from NAT00120) and lets the admin map
         // each qual to a Moodle course for automatic bulk enrolment.
@@ -7447,7 +7462,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026051410) {
-        // v4.9.118 AUTOENROL-HARDENING — No DB schema changes.
+        // Version 4.9.118 AUTOENROL-HARDENING — No DB schema changes.
         // Three production-readiness fixes to the auto-enrol wizard:
         // (1) SESSION-LOCK: write_close() now called in both finalizenat (before
         //     bulk DB inserts) and doenrol (before enrolment loop) so concurrent
@@ -7464,7 +7479,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026051411) {
-        // v4.9.119 FIX-LINK-COURSES-UX — No DB schema changes.
+        // Version 4.9.119 FIX-LINK-COURSES-UX — No DB schema changes.
         // qualbuilder_courses.php (Link Moodle Courses — Step 3 of Qual Builder):
         // Added contextual banner so admins can see which Moodle category the
         // dropdown is filtered to (qual = category, unit = course within it).
@@ -7479,7 +7494,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026051500) {
-        // v4.9.124 FIX-AUTOENROL-WIZARD-UX — No DB schema changes.
+        // Version 4.9.124 FIX-AUTOENROL-WIZARD-UX — No DB schema changes.
         // Three auto-enrol wizard UX fixes in data_import.php:
         // (1) POST-ENROL-REDIRECT: After the doenrol wizard submits, the redirect
         //     now includes search=<first_enrolled_qualcode> so the admin lands on
@@ -7499,7 +7514,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026051501) {
-        // v4.9.125 — NAT-IMPORT-PARSE-HARDENING + DIAG-PAGE (16 May 2026)
+        // Version 4.9.125 — NAT-IMPORT-PARSE-HARDENING + DIAG-PAGE (16 May 2026)
         // (1) ROBUST-QUOTE-STRIP: Two new helper functions
         //     (local_rtocompliance_strip_leading_quote and
         //     local_rtocompliance_find_field_quote) handle all quote variants —
@@ -7937,10 +7952,11 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
             if ($stud->dob === null) $issues[] = 'dob_not_stated';
             if ($stud->sex === null) $issues[] = 'sex_not_stated';
             if (!empty($issues)) {
-                $DB->update_record('local_rtocompliance_avetmiss_student', (object)[
-                    'id'              => $stud->id,
-                    'hasdataissues'   => 1,
-                    'dataissuefields' => json_encode($issues),
+                $DB->update_record(
+                    'local_rtocompliance_avetmiss_student', (object)[
+                        'id'              => $stud->id,
+                        'hasdataissues'   => 1,
+                        'dataissuefields' => json_encode($issues),
                 ]);
                 $fixedimports[$stud->importid] = true;
             }
@@ -8696,7 +8712,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026053004) {
-        // v5.2.71–v5.2.81: Various fixes (sidebar icons, missing nav headers on admin pages,
+        // Version 5.2.71–v5.2.81: Various fixes (sidebar icons, missing nav headers on admin pages,
         // SVG icon sizing, USI verification, cert builder, content/quiz plugin updates).
         // No DB schema changes — marker savepoint only.
         upgrade_plugin_savepoint(true, 2026053004, 'local', 'rtocompliance');
@@ -8956,7 +8972,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026060204) {
-        // v5.9.1: Fix missing upgrade savepoints (2026060200010/011 were absent,
+        // Version 5.9.1: Fix missing upgrade savepoints (2026060200010/011 were absent,
         // causing a perpetual "needs upgrade" loop that produced HTTP 500 on all
         // admin pages). Also fixes wrong meta key 'last_rebuilt_at' → 'last_rebuilt'
         // in the autoenrol stale-index banner. No DB schema changes.
@@ -8964,7 +8980,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026060205) {
-        // v5.9.2: Two critical data_import.php bugs fixed.
+        // Version 5.9.2: Two critical data_import.php bugs fixed.
         // Bug 1 (FIX-CONTEXT-UNDEFINED): $context was never defined; require_capability()
         //   calls in qcm_search/qcm_save/qcm_children threw TypeError on PHP 8+.
         // Bug 2 (FIX-AJAX-AFTER-HEADER): Those same three AJAX handlers were placed after
@@ -8974,118 +8990,118 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026060206) {
-        // v5.9.3: Version bump to provide a clean upgrade target for sites stuck in
+        // Version 5.9.3: Version bump to provide a clean upgrade target for sites stuck in
         // the HTTP 500 upgrade loop caused by v5.8.0/v5.9.0 missing savepoints.
         // No DB schema changes.
         upgrade_plugin_savepoint(true, 2026060206, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060207) {
-        // v5.9.4: DIAG build — PHP error display added to data_import.php.
+        // Version 5.9.4: DIAG build — PHP error display added to data_import.php.
         // No DB schema changes.
         upgrade_plugin_savepoint(true, 2026060207, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060208) {
-        // v5.9.5: Adds diag_500.php standalone diagnostic.
+        // Version 5.9.5: Adds diag_500.php standalone diagnostic.
         // No DB schema changes.
         upgrade_plugin_savepoint(true, 2026060208, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060209) {
-        // v5.9.6: Improves diag_500.php with session dump + log file + session lock release.
+        // Version 5.9.6: Improves diag_500.php with session dump + log file + session lock release.
         // No DB schema changes.
         upgrade_plugin_savepoint(true, 2026060209, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060210) {
-        // v5.9.7: Adds breadcrumb error_log() to data_import.php; diag_500.php reads log files.
+        // Version 5.9.7: Adds breadcrumb error_log() to data_import.php; diag_500.php reads log files.
         // No DB schema changes.
         upgrade_plugin_savepoint(true, 2026060210, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060211) {
-        // v5.9.8: FIX-DIAG-HEADERS-SENT: diag_500.php ob_start() before any output.
+        // Version 5.9.8: FIX-DIAG-HEADERS-SENT: diag_500.php ob_start() before any output.
         // No DB schema changes.
         upgrade_plugin_savepoint(true, 2026060211, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060212) {
-        // v5.9.9: FIX-DIAG-DB-QUERY: removed invalid $DB->record_exists('external_pages') call.
+        // Version 5.9.9: FIX-DIAG-DB-QUERY: removed invalid $DB->record_exists('external_pages') call.
         // No DB schema changes.
         upgrade_plugin_savepoint(true, 2026060212, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060213) {
-        // v5.9.10: FIX-DIAG-SHUTDOWN-HANDLER: shutdown fired on success, stealing output.
+        // Version 5.9.10: FIX-DIAG-SHUTDOWN-HANDLER: shutdown fired on success, stealing output.
         // No DB schema changes.
         upgrade_plugin_savepoint(true, 2026060213, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060214) {
-        // v5.9.11: FIX-DIAG-DB-CHECKPOINT: DB-based breadcrumb logging in data_import.php.
+        // Version 5.9.11: FIX-DIAG-DB-CHECKPOINT: DB-based breadcrumb logging in data_import.php.
         // No DB schema changes.
         upgrade_plugin_savepoint(true, 2026060214, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060215) {
-        // v5.9.12: FIX-PARSE-ERROR: Removed spurious extra } at end of data_import.php
+        // Version 5.9.12: FIX-PARSE-ERROR: Removed spurious extra } at end of data_import.php
         // (line 6058) that caused a PHP brace-depth imbalance (-1), preventing the file
         // from compiling at all — producing a 500 on every visit with zero log output.
         upgrade_plugin_savepoint(true, 2026060215, 'local', 'rtocompliance');
     }
 
-    // v5.9.13: OPCACHE-FIX — adds opcache_fix.php. No DB schema change.
+    // Version 5.9.13: OPCACHE-FIX — adds opcache_fix.php. No DB schema change.
     if ($oldversion < 2026060300) {
         upgrade_plugin_savepoint(true, 2026060300, 'local', 'rtocompliance');
     }
 
-    // v5.9.14: FIX-PARSE-ERROR — removed spurious } + added missing closing } in data_import.php. No DB schema change.
+    // Version 5.9.14: FIX-PARSE-ERROR — removed spurious } + added missing closing } in data_import.php. No DB schema change.
     if ($oldversion < 2026060301) {
         upgrade_plugin_savepoint(true, 2026060301, 'local', 'rtocompliance');
     }
 
-    // v5.9.15: UX — expanded "Archive index is empty" warning with steps + button. No DB schema change.
+    // Version 5.9.15: UX — expanded "Archive index is empty" warning with steps + button. No DB schema change.
     if ($oldversion < 2026060302) {
         upgrade_plugin_savepoint(true, 2026060302, 'local', 'rtocompliance');
     }
 
-    // v5.9.16: Removed diagnostic/testing PHP files (opcache_fix, diag_*, test_data, testing, trainers_diag). No DB schema change.
+    // Version 5.9.16: Removed diagnostic/testing PHP files (opcache_fix, diag_*, test_data, testing, trainers_diag). No DB schema change.
     if ($oldversion < 2026060303) {
         upgrade_plugin_savepoint(true, 2026060303, 'local', 'rtocompliance');
     }
 
-    // v5.9.17: AUTO-UNHIDE hidden archive categories at enrolment time. Preview now shows AUTO (not REVIEW) when category is hidden but otherwise ready.
+    // Version 5.9.17: AUTO-UNHIDE hidden archive categories at enrolment time. Preview now shows AUTO (not REVIEW) when category is hidden but otherwise ready.
     if ($oldversion < 2026060304) {
         upgrade_plugin_savepoint(true, 2026060304, 'local', 'rtocompliance');
     }
 
-    // v5.9.18: Added SC001 and ABC12345 to qual_to_family map.
+    // Version 5.9.18: Added SC001 and ABC12345 to qual_to_family map.
     if ($oldversion < 2026060305) {
         upgrade_plugin_savepoint(true, 2026060305, 'local', 'rtocompliance');
     }
 
-    // v5.9.19: Fixed $m[2] → $m[1] bug in archive_detect_year_sem(); 2-digit years (e.g. "22 XYZ S1")
+    // Version 5.9.19: Fixed $m[2] → $m[1] bug in archive_detect_year_sem(); 2-digit years (e.g. "22 XYZ S1")
     // were always resolving to year=2020 instead of 2022, causing false "duplicate" groupings.
     if ($oldversion < 2026060306) {
         upgrade_plugin_savepoint(true, 2026060306, 'local', 'rtocompliance');
     }
 
-    // v5.9.20: Archive index now skips categories with no S1/S2 semester (CPD/CBC/Summer School noise).
+    // Version 5.9.20: Archive index now skips categories with no S1/S2 semester (CPD/CBC/Summer School noise).
     // Improved Archive Index Manager UI — plain-English conflict explanations, correct conflict count,
     // red/green card headers showing resolved vs unresolved, and "X periods need your decision" banner.
     if ($oldversion < 2026060307) {
         upgrade_plugin_savepoint(true, 2026060307, 'local', 'rtocompliance');
     }
 
-    // v5.9.21: FIX — conflict groups were all keyed by 'family' in get_records_sql(), causing all but
+    // Version 5.9.21: FIX — conflict groups were all keyed by 'family' in get_records_sql(), causing all but
     // the last conflict group to be silently overwritten. Fixed by selecting a unique composite rowkey
     // (family-year-sem) as the first column so every group survives in the returned array.
     if ($oldversion < 2026060308) {
         upgrade_plugin_savepoint(true, 2026060308, 'local', 'rtocompliance');
     }
 
-    // v5.9.22: After NAT enrolment completes, a "Hide Archive Courses Now" card appears on the
+    // Version 5.9.22: After NAT enrolment completes, a "Hide Archive Courses Now" card appears on the
     // results page whenever the import auto-unhid one or more archive categories.  Clicking it
     // re-hides those categories (visible=0) so students no longer see old courses, while keeping
     // their enrolment records intact.
@@ -9093,7 +9109,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026060309, 'local', 'rtocompliance');
     }
 
-    // v5.9.23: Qual-code-aware archive matching.  When multiple archive categories exist for the
+    // Version 5.9.23: Qual-code-aware archive matching.  When multiple archive categories exist for the
     // same family+year+sem (e.g. ABC12345 and ABC12345 both indexing a qualification 2023 S2),
     // the NAT import now checks each candidate's fullpath for the student group's qual code and
     // auto-routes to the correct category without requiring the admin to manually set one active.
@@ -9103,7 +9119,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026060310, 'local', 'rtocompliance');
     }
 
-    // v5.9.24: Group-splitting for mixed-qual NAT groups.  Previously, when a NAT file contained
+    // Version 5.9.24: Group-splitting for mixed-qual NAT groups.  Previously, when a NAT file contained
     // students from two different qual codes that share the same archive family (e.g. ABC12345
     // and ABC12345 both → customs_broking), they were placed into a single group and the import
     // flagged REVIEW because it found 2 matching archives and couldn't auto-pick one.
@@ -9115,7 +9131,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026060311, 'local', 'rtocompliance');
     }
 
-    // v5.9.25: Archive Index now correctly counts and displays "truly unresolved" conflicts —
+    // Version 5.9.25: Archive Index now correctly counts and displays "truly unresolved" conflicts —
     // excluding any conflict where every candidate has a distinct qual code in its path (those
     // are auto-routed by the NAT import and need no admin decision).  The stat counter, the
     // summary alert, and the "X unresolved" badge all reflect this.  Auto-routeable conflict
@@ -9124,7 +9140,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026060312, 'local', 'rtocompliance');
     }
 
-    // v5.9.26: Auto-routeability check now uses breadcrumb-based qual-code detection.
+    // Version 5.9.26: Auto-routeability check now uses breadcrumb-based qual-code detection.
     // A conflict is auto-routeable if at least ONE candidate has a distinct qual code in its
     // fullpath (old check required ALL candidates to have qual codes).  Dead "Closed short
     // courses" candidates with no qual code are correctly treated as bypassed legacy folders,
@@ -9135,87 +9151,87 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026060314) {
-        // v5.9.27: Verify NAT Data tab — no DB schema changes.
+        // Version 5.9.27: Verify NAT Data tab — no DB schema changes.
         upgrade_plugin_savepoint(true, 2026060314, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060315) {
-        // v5.9.28: Fix Verify NAT Data DB queries — no DB schema changes.
+        // Version 5.9.28: Fix Verify NAT Data DB queries — no DB schema changes.
         upgrade_plugin_savepoint(true, 2026060315, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060316) {
-        // v5.9.29: Fix name blank for fixed-width NAT files — no DB schema changes.
+        // Version 5.9.29: Fix name blank for fixed-width NAT files — no DB schema changes.
         upgrade_plugin_savepoint(true, 2026060316, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060317) {
-        // v5.9.30: Verify NAT Data — add NAT00085 email-based Moodle account matching — no DB schema changes.
+        // Version 5.9.30: Verify NAT Data — add NAT00085 email-based Moodle account matching — no DB schema changes.
         upgrade_plugin_savepoint(true, 2026060317, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060318) {
-        // v5.9.31: Backfill Student Records action — no DB schema changes.
+        // Version 5.9.31: Backfill Student Records action — no DB schema changes.
         upgrade_plugin_savepoint(true, 2026060318, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060319) {
-        // v5.9.32: In-context help banners on NAT Import, Confirm, Auto-Enrol (Step 3), and Verify NAT Data pages — no DB schema changes.
+        // Version 5.9.32: In-context help banners on NAT Import, Confirm, Auto-Enrol (Step 3), and Verify NAT Data pages — no DB schema changes.
         upgrade_plugin_savepoint(true, 2026060319, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060320) {
-        // v5.9.33: Qual Builder prerequisite check on NAT Import page — shows blocking warning if no quals set up, or a subtle reminder with count if set up. No DB schema changes.
+        // Version 5.9.33: Qual Builder prerequisite check on NAT Import page — shows blocking warning if no quals set up, or a subtle reminder with count if set up. No DB schema changes.
         upgrade_plugin_savepoint(true, 2026060320, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060321) {
-        // v5.9.34: USI Verification setup popup on Student Records page — auto-shows modal when API not connected; softer banner when API connected but cert not uploaded. No DB schema changes.
+        // Version 5.9.34: USI Verification setup popup on Student Records page — auto-shows modal when API not connected; softer banner when API connected but cert not uploaded. No DB schema changes.
         upgrade_plugin_savepoint(true, 2026060321, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060322) {
-        // v5.9.35: FIX — "Open API Connection settings" button used wrong section name (local_rtocompliance vs local_rtocompliance_api), causing a 404. Fixed in usi_settings.php and tas_edit.php. No DB schema changes.
+        // Version 5.9.35: FIX — "Open API Connection settings" button used wrong section name (local_rtocompliance vs local_rtocompliance_api), causing a 404. Fixed in usi_settings.php and tas_edit.php. No DB schema changes.
         upgrade_plugin_savepoint(true, 2026060322, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060323) {
-        // v5.9.36: IMPROVE — Platform Webhook Key field in API Settings now clearly marked as optional with instructions. No DB schema changes.
+        // Version 5.9.36: IMPROVE — Platform Webhook Key field in API Settings now clearly marked as optional with instructions. No DB schema changes.
         upgrade_plugin_savepoint(true, 2026060323, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060324) {
-        // v5.9.37: FIX — Removed "SaaS dashboard" reference from USI settings tip; RTOs do not have access to lms-labs.com/admin. Tip now correctly explains they contact their account manager. No DB schema changes.
+        // Version 5.9.37: FIX — Removed "SaaS dashboard" reference from USI settings tip; RTOs do not have access to lms-labs.com/admin. Tip now correctly explains they contact their account manager. No DB schema changes.
         upgrade_plugin_savepoint(true, 2026060324, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060325) {
-        // v5.9.38: CSS — consistent padding on all edges of every plugin page. .rtoc-main-content now has padding: 0 24px 40px 24px (was left-only). Nav header margins updated to -1.5rem horizontal. No DB schema changes.
+        // Version 5.9.38: CSS — consistent padding on all edges of every plugin page. .rtoc-main-content now has padding: 0 24px 40px 24px (was left-only). Nav header margins updated to -1.5rem horizontal. No DB schema changes.
         upgrade_plugin_savepoint(true, 2026060325, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060326) {
-        // v5.9.39: COPY — Simplified webhook key descriptions to plain English. No DB schema changes.
+        // Version 5.9.39: COPY — Simplified webhook key descriptions to plain English. No DB schema changes.
         upgrade_plugin_savepoint(true, 2026060326, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060327) {
-        // v5.9.40: UX — Removed all disabled/greyed-out gates from USI machine credential form. No DB changes.
+        // Version 5.9.40: UX — Removed all disabled/greyed-out gates from USI machine credential form. No DB changes.
         upgrade_plugin_savepoint(true, 2026060327, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060328) {
-        // v5.9.41: UX — Added permanent Backfill Student Records shortcut button on main Data Import page. No DB changes.
+        // Version 5.9.41: UX — Added permanent Backfill Student Records shortcut button on main Data Import page. No DB changes.
         upgrade_plugin_savepoint(true, 2026060328, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060329) {
-        // v5.9.42: DOCS/UX — Full workflow guide in support.php and expanded 4-column how-it-works card in data_import.php. No DB changes.
+        // Version 5.9.42: DOCS/UX — Full workflow guide in support.php and expanded 4-column how-it-works card in data_import.php. No DB changes.
         upgrade_plugin_savepoint(true, 2026060329, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060330) {
-        // v5.9.43: STATE FUNDING — Add state-specific fields for Australian state/territory
+        // Version 5.9.43: STATE FUNDING — Add state-specific fields for Australian state/territory
         // funded training reporting (QLD DTET, NSW Smart & Skilled, VIC Skills First,
         // SA Skills for All, WA DTWD, TAS Skills Tasmania, NT DITT, ACT Skills Canberra).
         //
@@ -9260,73 +9276,73 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026060400) {
-        // v5.9.44: No DB schema changes. settings.php namespace fix for avetmiss_codes.
+        // Version 5.9.44: No DB schema changes. settings.php namespace fix for avetmiss_codes.
         upgrade_plugin_savepoint(true, 2026060400, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060401) {
-        // v5.9.45: No DB schema changes. State-funding audit fixes (3 bugs).
+        // Version 5.9.45: No DB schema changes. State-funding audit fixes (3 bugs).
         upgrade_plugin_savepoint(true, 2026060401, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060402) {
-        // v5.9.46: No DB schema changes. settings.php explicit require_once for avetmiss_codes.
+        // Version 5.9.46: No DB schema changes. settings.php explicit require_once for avetmiss_codes.
         upgrade_plugin_savepoint(true, 2026060402, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060403) {
-        // v5.9.47: No DB schema changes. State Funding UX overhaul + private-name purge.
+        // Version 5.9.47: No DB schema changes. State Funding UX overhaul + private-name purge.
         upgrade_plugin_savepoint(true, 2026060403, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060404) {
-        // v5.9.48: No DB schema changes. Expanded state/territory regulator dropdown from 4 to 11 entries.
+        // Version 5.9.48: No DB schema changes. Expanded state/territory regulator dropdown from 4 to 11 entries.
         upgrade_plugin_savepoint(true, 2026060404, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060405) {
-        // v5.9.49: No DB schema changes. Fixed State Funding tab in plugin_settings.php (missing from allowlist + tabs).
+        // Version 5.9.49: No DB schema changes. Fixed State Funding tab in plugin_settings.php (missing from allowlist + tabs).
         upgrade_plugin_savepoint(true, 2026060405, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060406) {
-        // v5.9.50: No DB schema changes. support.php HTTP 500 fix: added diagnostic breadcrumb logger
+        // Version 5.9.50: No DB schema changes. support.php HTTP 500 fix: added diagnostic breadcrumb logger
         // + function_exists guard on support_icon() + missing emerald CSS classes.
         upgrade_plugin_savepoint(true, 2026060406, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060407) {
-        // v5.9.51: No DB schema changes. ROOT-CAUSE FIX — settings.php require_once avetmiss_codes.php
+        // Version 5.9.51: No DB schema changes. ROOT-CAUSE FIX — settings.php require_once avetmiss_codes.php
         // wrapped in class_exists guard to prevent "Cannot redeclare class" 500 on symlinked Moodle.
         // Also added DIAG breadcrumb logging to soa_issue.php.
         upgrade_plugin_savepoint(true, 2026060407, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060408) {
-        // v5.9.52: No DB schema changes. ENROL-CONTINUING-ONLY — auto-enrol doenrol action now only
+        // Version 5.9.52: No DB schema changes. ENROL-CONTINUING-ONLY — auto-enrol doenrol action now only
         // processes students with outcome 70 (Continuing Enrolment). Terminal-outcome-only students
         // (completed/withdrawn/RPL/CT etc.) are skipped and should use Backfill Qual Builder.
         upgrade_plugin_savepoint(true, 2026060408, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060900) {
-        // v5.9.54: No DB schema changes. CSS-FIX — Fixed nav-header negative margins.
+        // Version 5.9.54: No DB schema changes. CSS-FIX — Fixed nav-header negative margins.
         upgrade_plugin_savepoint(true, 2026060900, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060901) {
-        // v5.9.54: No DB schema changes. (duplicate savepoint — padding belt-and-suspenders).
+        // Version 5.9.54: No DB schema changes. (duplicate savepoint — padding belt-and-suspenders).
         upgrade_plugin_savepoint(true, 2026060901, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060902) {
-        // v5.9.55: No DB schema changes. ROOT-CAUSE FIX — lib.php double-load on symlinked Moodle.
+        // Version 5.9.55: No DB schema changes. ROOT-CAUSE FIX — lib.php double-load on symlinked Moodle.
         // Added LOCAL_RTOCOMPLIANCE_LIB_LOADED define guard at top of lib.php.
         upgrade_plugin_savepoint(true, 2026060902, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026060903) {
-        // v5.9.56: No DB schema changes. BREADCRUMB-LAYOUT-FIX — fixed nav-header items stacking
+        // Version 5.9.56: No DB schema changes. BREADCRUMB-LAYOUT-FIX — fixed nav-header items stacking
         // vertically on admin pages. Root cause: @media (max-width: 640px) rule set flex-direction:column
         // on .rtoc-nav-header, triggering on Moodle admin layout narrower containers even at desktop
         // viewport widths. Fixes: (1) added flex-direction:row to .rtoc-nav-header main rule to
@@ -9338,7 +9354,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026060904) {
-        // v5.9.57: No DB schema changes. ENROL-UNIT-ACCURATE — new "Unit-accurate enrolment"
+        // Version 5.9.57: No DB schema changes. ENROL-UNIT-ACCURATE — new "Unit-accurate enrolment"
         // toggle on the Step 3 auto-enrol form (checked by default). When on, each student is
         // only enrolled into Moodle courses whose Course ID number matches a unit code in their
         // NAT00120 file. When off, previous behaviour (enrol into every visible course in the
@@ -9347,7 +9363,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026061000) {
-        // v5.9.58: No DB schema changes. FIX-SETTINGS-FUNCGUARD — replaced the bare
+        // Version 5.9.58: No DB schema changes. FIX-SETTINGS-FUNCGUARD — replaced the bare
         // require_once($CFG->dirroot.'/local/rtocompliance/lib.php') in settings.php with a
         // function_exists('local_rtocompliance_extend_navigation_frontpage') guard. The previous
         // constant-based guard (LOCAL_RTOCOMPLIANCE_LIB_LOADED, v5.9.55) is defeated when PHP
@@ -9648,7 +9664,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026070106) {
-        // v5.9.123: DOWNLOAD-FIX + STUDENT-DRILLDOWN
+        // Version 5.9.123: DOWNLOAD-FIX + STUDENT-DRILLDOWN
         // (1) ob_end_clean loop before CSV headers fixes Moodle output buffering corruption.
         // (2) Full analysis CSV (_full.csv) written for all 4 states (RESTORE/REPAIRED/UNCHANGED/REVIEW).
         // (3) Student Drill Down page (action=drilldown): search by name/username, shows classified
@@ -9660,7 +9676,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026070107) {
-        // v5.9.124: RESTORE-COUNT-DIAGNOSTICS + SUSPENDED-FIX
+        // Version 5.9.124: RESTORE-COUNT-DIAGNOSTICS + SUSPENDED-FIX
         // (1) SUSPENDED-FIX: currentEnrolments query changed from status=0 to status IN (0,1)
         //     so students re-enrolled as suspended after FoE are correctly classified as
         //     REPAIRED rather than inflating the RESTORE count.
@@ -9675,7 +9691,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026070108) {
-        // v5.9.125: HISTORICAL-AVETMISS-CLASSIFIER
+        // Version 5.9.125: HISTORICAL-AVETMISS-CLASSIFIER
         // NAT Reconciler unmapped unit classifier gains a fourth category:
         // "historical" — unit codes with no Moodle course found AND all NAT
         // enrolments dated more than 5 years ago. These are legacy AVETMISS-only
@@ -9693,7 +9709,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026070109) {
-        // v5.9.126: COMPLAINT-STUDENT-REGRESSION-TEST-ENGINE
+        // Version 5.9.126: COMPLAINT-STUDENT-REGRESSION-TEST-ENGINE
         // Adds regression_test.php — a built-in acceptance test suite that
         // automatically verifies the NAT reconciler produces the correct results
         // for the five complaint students after every code change.
@@ -9732,7 +9748,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026070112) {
-        // v5.9.129 — LOGSTORE-HISTORY: regression_test.php enriched with
+        // Version 5.9.129 — LOGSTORE-HISTORY: regression_test.php enriched with
         // logstore enrolment history sub-rows. recovery_analyzer.php enriched with
         // Step 5b logstore batch query; recovery_candidates.csv now includes
         // created_at, deleted_at, deleted_by columns; HTML table shows timeline.
@@ -9741,7 +9757,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026070113) {
-        // v5.9.130 — LOGSTORE-HISTORY-HARDENED: ChatGPT sign-off recommendations
+        // Version 5.9.130 — LOGSTORE-HISTORY-HARDENED: ChatGPT sign-off recommendations
         // applied to regression_test.php and recovery_analyzer.php.
         // Batch queries, full event array, history_status derived field, chronological
         // timeline, history_status CSV column, split HTML table columns.
@@ -9888,7 +9904,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026070119) {
-        // v5.9.136: Six critical bug fixes completing R1–R10 implementation.
+        // Version 5.9.136: Six critical bug fixes completing R1–R10 implementation.
         // (R1+R8) restore_start now batch-inserts selected candidates into
         //         local_rtocompliance_recov_candidate so restore_chunk can load them
         //         after a server restart — /tmp was the only storage before this fix.
@@ -10132,7 +10148,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
                 }
             }
         } elseif (function_exists('opcache_reset')) {
-            opcache_reset(); // fallback for hosts where invalidate is disabled
+            opcache_reset(); // Fallback for hosts where invalidate is disabled
         }
         upgrade_plugin_savepoint(true, 2026070315, 'local', 'rtocompliance');
     }
@@ -10379,7 +10395,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026070324) {
-        // v5.9.192 CALL-SITE DEBUG: Create local_rtocompliance_qualdebug table.
+        // Version 5.9.192 CALL-SITE DEBUG: Create local_rtocompliance_qualdebug table.
         // Stores one row per ABC12345/ABC12345 student-unit pair processed by the
         // reconciler's ADD engine. Readable via Adminer without needing PHP error log.
         //
@@ -10430,7 +10446,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026070325) {
-        // v5.9.193 QUAL-BRANCH-UNIQUE-95: New confidence tier — current + qual_branch +
+        // Version 5.9.193 QUAL-BRANCH-UNIQUE-95: New confidence tier — current + qual_branch +
         // topcount=1 → 95% (moodle_upload). No DB schema changes; opcache flush only.
         if (function_exists('opcache_invalidate')) {
             $_pluginDir = realpath(__DIR__ . '/..');
@@ -10447,7 +10463,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026070326) {
-        // v5.9.194 SEM-MATCH-DOMINANT: Two-part fix for 192 ABC12345/ABC12345 false-positive
+        // Version 5.9.194 SEM-MATCH-DOMINANT: Two-part fix for 192 ABC12345/ABC12345 false-positive
         // review_required rows. (1) Parser: _reconcile_delivery_key_from_text now handles ALL
         // archive category name formats ("Archive S1 - 2022", "Archive S2-2013", "Archive S1-
         // 2020", "Archive  S2 - 2021") via new leading regex /\bS\s*([12])\s*-?\s*(\d{4})\b/i.
@@ -10470,7 +10486,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026070327) {
-        // v5.9.195 POOL-TRUNCATION-FIX: The normUnitAllCids merge guard in the ADD engine
+        // Version 5.9.195 POOL-TRUNCATION-FIX: The normUnitAllCids merge guard in the ADD engine
         // candidate pool construction checked `$_normUc6 !== $_uc6` — i.e. "only merge
         // version-suffix variant courses if the NAT unit code itself needs normalisation".
         // For already-normalised NAT codes like 'ABC12345', the guard was always FALSE,
@@ -11440,9 +11456,10 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
             ];
 
             $design['fields'] = $newFields;
-            $DB->update_record('local_rtocompliance_certtmpl', (object)[
-                'id'         => $tmpl->id,
-                'designjson' => json_encode($design, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+            $DB->update_record(
+                'local_rtocompliance_certtmpl', (object)[
+                    'id'         => $tmpl->id,
+                    'designjson' => json_encode($design, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
             ]);
         }
         unset($oldRorTemplates, $tmpl, $design, $newFields);
@@ -11558,7 +11575,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
             $hasColSemester = false;
             $hasColNames    = false;
             $hasColResults  = false;
-            $oldUnitIdx     = false; // index of the old qualification.units field
+            $oldUnitIdx     = false; // Index of the old qualification.units field
             foreach ($fields as $idx => $f) {
                 $dk = $f['dynamickey'] ?? '';
                 if ($dk === 'qualification.units_col_semester') { $hasColSemester = true; }
@@ -11612,10 +11629,11 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
             array_splice($fields, $oldUnitIdx, 1, $newFields);
             $design['fields'] = $fields;
 
-            $DB->update_record('local_rtocompliance_certtmpl', (object) [
-                'id'           => (int) $rec->id,
-                'designjson'   => json_encode($design),
-                'timemodified' => time(),
+            $DB->update_record(
+                'local_rtocompliance_certtmpl', (object) [
+                    'id'           => (int) $rec->id,
+                    'designjson'   => json_encode($design),
+                    'timemodified' => time(),
             ]);
         }
 
@@ -11634,7 +11652,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026070800, 'local', 'rtocompliance');
     }
 
-    // v5.9.231 - FIX-XMLDB-DEFAULT: Removed empty-string DEFAULT from NOTNULL CHAR fields
+    // Version 5.9.231 - FIX-XMLDB-DEFAULT: Removed empty-string DEFAULT from NOTNULL CHAR fields
     // in install.xml (categoryname, sem x2, family, metakey). Source-only fix — no DB
     // schema changes. Stops XMLDB debugging warnings on sites running local_adminer or
     // similar XMLDB scanners.
@@ -11653,7 +11671,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026071500, 'local', 'rtocompliance');
     }
 
-    // v5.9.232 — INITIAL-COMPLETION-DATE-FIX: Certificate completion dates now
+    // Version 5.9.232 — INITIAL-COMPLETION-DATE-FIX: Certificate completion dates now
     // reflect the EARLIEST completion timestamp from {course_completion_crit_compl}
     // (written once per criterion, never updated on grade re-saves), falling back
     // to {course_completions}.timecompleted when no crit_compl rows exist.
@@ -11951,10 +11969,11 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
             array_splice($fields, $insertAt, 0, [$rorField]);
 
             $design['fields'] = $fields;
-            $DB->update_record('local_rtocompliance_certtmpl', (object) [
-                'id'           => (int) $tmplRec->id,
-                'designjson'   => json_encode($design),
-                'timemodified' => time(),
+            $DB->update_record(
+                'local_rtocompliance_certtmpl', (object) [
+                    'id'           => (int) $tmplRec->id,
+                    'designjson'   => json_encode($design),
+                    'timemodified' => time(),
             ]);
         }
 
@@ -11997,7 +12016,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026072713) {
-        // v5.9.253 — QB-COURSE-REFRESH-FIX (27 Jul 2026):
+        // Version 5.9.253 — QB-COURSE-REFRESH-FIX (27 Jul 2026):
         // QB.courses was only populated inside loadFromTGA(). When editing an existing
         // record or clicking Map All without reloading TGA this session, QB.courses was
         // empty, causing findCourseForUnit() to return undefined for every unit and
@@ -12015,7 +12034,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026072714) {
-        // v5.9.254 — CERT-ERRORS-FIX (27 Jul 2026):
+        // Version 5.9.254 — CERT-ERRORS-FIX (27 Jul 2026):
         // Three certificate bugs fixed:
         // (1) SOA-DELETED-COL-FIX: soa_compliance_engine.php had AND c.deleted = 0 in two
         //     SQL queries joining {course}. Moodle's course table has no deleted column
@@ -12035,7 +12054,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026072715) {
-        // v5.9.255 — QB-SEMESTER-SCOPE-FIX (27 Jul 2026):
+        // Version 5.9.255 — QB-SEMESTER-SCOPE-FIX (27 Jul 2026):
         // Two cooperating bugs caused the Qualbuilder to show "10/10 linked" immediately
         // after entering a qualification code, even when the selected semester category
         // contained far fewer than 10 courses.
@@ -12171,7 +12190,10 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
                 // Skip templates already using ror_table.
                 $hasRorTable = false;
                 foreach ($fields as $f) {
-                    if (($f['kind'] ?? '') === 'ror_table') { $hasRorTable = true; break; }
+                    if (($f['kind'] ?? '') === 'ror_table') {
+                        $hasRorTable = true;
+                        break;
+                    }
                 }
                 if ($hasRorTable) {
                     continue;
@@ -12217,10 +12239,11 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
                 array_splice($newFields, $insertAt, 0, [$rorField]);
 
                 $design['fields'] = $newFields;
-                $DB->update_record('local_rtocompliance_certtmpl', (object) [
-                    'id'           => (int) $tmplRec->id,
-                    'designjson'   => json_encode($design, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-                    'timemodified' => time(),
+                $DB->update_record(
+                    'local_rtocompliance_certtmpl', (object) [
+                        'id'           => (int) $tmplRec->id,
+                        'designjson'   => json_encode($design, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                        'timemodified' => time(),
                 ]);
             }
         }
@@ -12671,11 +12694,21 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
                 $isPortrait = ($pageW <= 215);
 
                 if ($isPortrait) {
-                    $rorX = 15; $rorY = 102; $rorW = 180; $rorH = 115;
-                    $c1w  = 30; $c2w  = 110; $c3w  = 36;
+                    $rorX = 15;
+                    $rorY = 102;
+                    $rorW = 180;
+                    $rorH = 115;
+                    $c1w  = 30;
+                    $c2w  = 110;
+                    $c3w  = 36;
                 } else {
-                    $rorX = 15; $rorY = 92;  $rorW = 267; $rorH = 76;
-                    $c1w  = 40; $c2w  = 175; $c3w  = 48;
+                    $rorX = 15;
+                    $rorY = 92;
+                    $rorW = 267;
+                    $rorH = 76;
+                    $c1w  = 40;
+                    $c2w  = 175;
+                    $c3w  = 48;
                 }
 
                 $fields  = $design['fields'];
@@ -12716,7 +12749,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
                         $dk = $f['dynamickey'] ?? '';
                         if (($f['kind'] ?? '') !== 'ror_table' && in_array($dk, $unitDisplayKeys, true)) {
                             $changed = true;
-                            continue; // drop it
+                            continue; // Drop it
                         }
                         $newFields[] = $f;
                     }
@@ -12733,7 +12766,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
                                 $firstIdx = count($newFields);
                             }
                             $changed = true;
-                            continue; // drop it
+                            continue; // Drop it
                         }
                         $newFields[] = $f;
                     }
@@ -12759,10 +12792,11 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
                 // Write orientation authoritatively so future migrations have it.
                 $design['page']['orientation']  = $isPortrait ? 'P' : 'L';
 
-                $DB->update_record('local_rtocompliance_certtmpl', (object) [
-                    'id'           => (int) $tmplRec->id,
-                    'designjson'   => json_encode($design, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-                    'timemodified' => time(),
+                $DB->update_record(
+                    'local_rtocompliance_certtmpl', (object) [
+                        'id'           => (int) $tmplRec->id,
+                        'designjson'   => json_encode($design, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                        'timemodified' => time(),
                 ]);
             }
         }
@@ -14182,7 +14216,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026073103) {
-        // v5.9.365: Cert-issuance pipeline fixes (cert_template, cert_template_renderer,
+        // Version 5.9.365: Cert-issuance pipeline fixes (cert_template, cert_template_renderer,
         // issue_certificate, reissue_cert, soa_ajax, lib, settings, lang).
         // Tasks #90 (Partially Complete tab timeout), #91 (cancel autocert entry),
         // #93 (orphaned autocert row handling) — qual_cert_hub.php improvements.
@@ -14191,7 +14225,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026073104) {
-        // v5.9.368 TIMECOMPLETED-COLUMN: programmatic_issue_cert() has always set
+        // Version 5.9.368 TIMECOMPLETED-COLUMN: programmatic_issue_cert() has always set
         // $cert->timecompleted, but local_rtocompliance_certs had no such column, so
         // insert_record silently dropped it and the completion date was never stored
         // (breaking Clause 9 "issue within 30 days of completion" reporting). Add it.
@@ -14204,7 +14238,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026073105) {
-        // v5.9.387 ASQA PRACTICE-GUIDE AUDIT REMEDIATION — schema for the P1 fixes.
+        // Version 5.9.387 ASQA PRACTICE-GUIDE AUDIT REMEDIATION — schema for the P1 fixes.
 
         // (T-P1-1 / T-P1-2) Assessment validation: independence declaration + a
         // computed next-due date for the five-year validation cycle.
@@ -14262,7 +14296,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026073106) {
-        // v5.9.389 CERTIFICATE-INTEGRITY (audit F1): snapshot the RTO identity settings
+        // Version 5.9.389 CERTIFICATE-INTEGRITY (audit F1): snapshot the RTO identity settings
         // on each certificate at issue time so re-rendering a historical certificate is
         // not rewritten by later settings changes.
         $table = new xmldb_table('local_rtocompliance_certs');
@@ -14274,7 +14308,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026073107) {
-        // v5.9.396 ADDRESS PROPAGATION: the NAT00085 street address (postcode, building,
+        // Version 5.9.396 ADDRESS PROPAGATION: the NAT00085 street address (postcode, building,
         // unit, street) is now parsed and staged so it can flow into the student profile.
         $table = new xmldb_table('local_rtocompliance_avetmiss_student');
         foreach ([
@@ -14291,7 +14325,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026073108) {
-        // v5.9.401 COMPLAINTS/APPEALS PROCEDURAL FAIRNESS (Std 2.7/2.8).
+        // Version 5.9.401 COMPLAINTS/APPEALS PROCEDURAL FAIRNESS (Std 2.7/2.8).
         $table = new xmldb_table('local_rtocompliance_complaints');
         foreach ([
             new xmldb_field('respondentname', XMLDB_TYPE_CHAR, '255', null, null, null, null, 'notes'),
@@ -14316,7 +14350,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026073109) {
-        // v5.9.407 SANITISE EXISTING SAVED CERT TEMPLATES.
+        // Version 5.9.407 SANITISE EXISTING SAVED CERT TEMPLATES.
         //
         // v5.9.406 fixed the STARTER (new templates) and the RENDER path, but a
         // template already saved in local_rtocompliance_certtmpl keeps whatever
@@ -14352,7 +14386,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
                         $dk = (isset($f['kind']) && $f['kind'] === 'dynamic') ? ($f['dynamickey'] ?? '') : '';
                         if ($dk === 'qualification.completionofcoursestatement' || $dk === 'authenticity_measure') {
                             $changed = true;
-                            continue; // drop this field
+                            continue; // Drop this field
                         }
                         if ($dk === 'qualification.partofstatement') {
                             // Give the surviving statement room for a two-line wrap.
@@ -14366,7 +14400,8 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
                     }
                     if ($changed) {
                         $design['fields'] = $newfields;
-                        $DB->set_field('local_rtocompliance_certtmpl', 'designjson',
+                        $DB->set_field(
+                            'local_rtocompliance_certtmpl', 'designjson',
                             json_encode($design), ['id' => $tpl->id]);
                     }
                 }
@@ -14410,19 +14445,22 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         // (assessoruserid already exists in the schema; the form now populates it.)
         $table = new xmldb_table('local_rtocompliance_rpl');
 
-        $field = new xmldb_field('outcomecommunicated', XMLDB_TYPE_INTEGER, '1', null,
+        $field = new xmldb_field(
+            'outcomecommunicated', XMLDB_TYPE_INTEGER, '1', null,
             XMLDB_NOTNULL, null, '0', 'usitranscriptverified');
         if (!$dbman->field_exists($table, $field)) {
             $dbman->add_field($table, $field);
         }
 
-        $field = new xmldb_field('outcomecommunicateddate', XMLDB_TYPE_INTEGER, '10', null,
+        $field = new xmldb_field(
+            'outcomecommunicateddate', XMLDB_TYPE_INTEGER, '10', null,
             null, null, null, 'outcomecommunicated');
         if (!$dbman->field_exists($table, $field)) {
             $dbman->add_field($table, $field);
         }
 
-        $field = new xmldb_field('outcomecommunicatedmethod', XMLDB_TYPE_CHAR, '100', null,
+        $field = new xmldb_field(
+            'outcomecommunicatedmethod', XMLDB_TYPE_CHAR, '100', null,
             null, null, null, 'outcomecommunicateddate');
         if (!$dbman->field_exists($table, $field)) {
             $dbman->add_field($table, $field);
@@ -14435,19 +14473,22 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         // RPL-P1 (v5.9.424): superseded→current unit mapping + evidence-to-criteria matrix.
         $table = new xmldb_table('local_rtocompliance_rpl');
 
-        $field = new xmldb_field('supersededunitcode', XMLDB_TYPE_CHAR, '20', null,
+        $field = new xmldb_field(
+            'supersededunitcode', XMLDB_TYPE_CHAR, '20', null,
             null, null, null, 'outcomecommunicatedmethod');
         if (!$dbman->field_exists($table, $field)) {
             $dbman->add_field($table, $field);
         }
 
-        $field = new xmldb_field('unitequivalence', XMLDB_TYPE_CHAR, '20', null,
+        $field = new xmldb_field(
+            'unitequivalence', XMLDB_TYPE_CHAR, '20', null,
             null, null, null, 'supersededunitcode');
         if (!$dbman->field_exists($table, $field)) {
             $dbman->add_field($table, $field);
         }
 
-        $field = new xmldb_field('evidencematrix', XMLDB_TYPE_TEXT, null, null,
+        $field = new xmldb_field(
+            'evidencematrix', XMLDB_TYPE_TEXT, null, null,
             null, null, null, 'unitequivalence');
         if (!$dbman->field_exists($table, $field)) {
             $dbman->add_field($table, $field);
@@ -14485,7 +14526,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026080401) {
-        // v6.0.0 — force a visible DB upgrade and guarantee the AVETMISS round-trip columns.
+        // Version 6.0.0 — force a visible DB upgrade and guarantee the AVETMISS round-trip columns.
         // The NAT00090 (disability) and NAT00100 (prior educational achievement) round-trip
         // added in v5.9.460 writes disability + prior-education detail back onto live student
         // records. This step ensures every one of those columns exists on the live table, so the
@@ -14515,165 +14556,165 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026080402) {
-        // v6.0.1 — no schema change; this savepoint simply advances the recorded database
+        // Version 6.0.1 — no schema change; this savepoint simply advances the recorded database
         // version so the new visible version badge reflects a genuine, committed DB upgrade.
         upgrade_plugin_savepoint(true, 2026080402, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026080403) {
-        // v6.0.2 — no schema change (Semester Builder unit-set inference is scan-time logic only).
+        // Version 6.0.2 — no schema change (Semester Builder unit-set inference is scan-time logic only).
         upgrade_plugin_savepoint(true, 2026080403, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026080404) {
-        // v6.0.3 — no schema change (Semester Builder category/course links are display-only).
+        // Version 6.0.3 — no schema change (Semester Builder category/course links are display-only).
         upgrade_plugin_savepoint(true, 2026080404, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026080405) {
-        // v6.0.4 — no schema change (Semester Builder parent-category grouping is display-only).
+        // Version 6.0.4 — no schema change (Semester Builder parent-category grouping is display-only).
         upgrade_plugin_savepoint(true, 2026080405, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026080406) {
-        // v6.0.5 — no schema change (Semester Builder width + display tidy only).
+        // Version 6.0.5 — no schema change (Semester Builder width + display tidy only).
         upgrade_plugin_savepoint(true, 2026080406, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026080407) {
-        // v6.0.6 — no schema change (sticky table headers are CSS-only).
+        // Version 6.0.6 — no schema change (sticky table headers are CSS-only).
         upgrade_plugin_savepoint(true, 2026080407, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026080408) {
-        // v6.0.7 — no schema change (Build Course Map button reuses existing seeding logic).
+        // Version 6.0.7 — no schema change (Build Course Map button reuses existing seeding logic).
         upgrade_plugin_savepoint(true, 2026080408, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026080409) {
-        // v6.0.8 — no schema change (help/assistant content refresh only).
+        // Version 6.0.8 — no schema change (help/assistant content refresh only).
         upgrade_plugin_savepoint(true, 2026080409, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026080410) {
-        // v6.0.9 — no schema change (help-accuracy fixes + assistant KB enrichment only).
+        // Version 6.0.9 — no schema change (help-accuracy fixes + assistant KB enrichment only).
         upgrade_plugin_savepoint(true, 2026080410, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026080411) {
-        // v6.1.0 — no schema change (State Funding label/help corrections + assistant funding KB).
+        // Version 6.1.0 — no schema change (State Funding label/help corrections + assistant funding KB).
         upgrade_plugin_savepoint(true, 2026080411, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026080412) {
-        // v6.1.1 — no schema change (cert cost confirmations + assistant page links).
+        // Version 6.1.1 — no schema change (cert cost confirmations + assistant page links).
         upgrade_plugin_savepoint(true, 2026080412, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026080413) {
-        // v6.1.2 — no schema change (USI status page admin_externalpage_setup fix).
+        // Version 6.1.2 — no schema change (USI status page admin_externalpage_setup fix).
         upgrade_plugin_savepoint(true, 2026080413, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026080414) {
-        // v6.1.3 — no schema change (plugin-wide width CSS + My Documents card styling).
+        // Version 6.1.3 — no schema change (plugin-wide width CSS + My Documents card styling).
         upgrade_plugin_savepoint(true, 2026080414, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026080415) {
-        // v6.1.4 — no schema change (cert hub variant column/card + state funding link).
+        // Version 6.1.4 — no schema change (cert hub variant column/card + state funding link).
         upgrade_plugin_savepoint(true, 2026080415, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026080416) {
-        // v6.2.0 — no schema change (FAQ page + plugin-wide tooltips/cards + filter fix).
+        // Version 6.2.0 — no schema change (FAQ page + plugin-wide tooltips/cards + filter fix).
         upgrade_plugin_savepoint(true, 2026080416, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026080417) {
-        // v6.2.1 — no schema change (simple-language help what/why + pipeline fixes).
+        // Version 6.2.1 — no schema change (simple-language help what/why + pipeline fixes).
         upgrade_plugin_savepoint(true, 2026080417, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026080418) {
-        // v6.2.2 — no schema change (simple-language how/features + sticky bar + pill tooltips).
+        // Version 6.2.2 — no schema change (simple-language how/features + sticky bar + pill tooltips).
         upgrade_plugin_savepoint(true, 2026080418, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026080419) {
-        // v6.2.3 — no schema change (help pills repointed to lms-labs guide mirror).
+        // Version 6.2.3 — no schema change (help pills repointed to lms-labs guide mirror).
         upgrade_plugin_savepoint(true, 2026080419, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026080420) {
-        // v6.2.4 — no schema change (changelog wording fix for the style scanner).
+        // Version 6.2.4 — no schema change (changelog wording fix for the style scanner).
         upgrade_plugin_savepoint(true, 2026080420, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026080421) {
-        // v6.2.5 — no schema change (plugin-wide pill/badge/stat-tile tooltips + capability checks on 5 admin pages).
+        // Version 6.2.5 — no schema change (plugin-wide pill/badge/stat-tile tooltips + capability checks on 5 admin pages).
         upgrade_plugin_savepoint(true, 2026080421, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026080422) {
-        // v6.2.6 — no schema change (cert editor nested-form fix, min-font-12 in editor,
+        // Version 6.2.6 — no schema change (cert editor nested-form fix, min-font-12 in editor,
         // sample checkbox removed, ASQA wording fix, cert orientation filter setting).
         upgrade_plugin_savepoint(true, 2026080422, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026080423) {
-        // v6.2.7 — no schema change (AI certificate auto-design: new editor button + proxy
+        // Version 6.2.7 — no schema change (AI certificate auto-design: new editor button + proxy
         // endpoint calling the platform vision endpoint).
         upgrade_plugin_savepoint(true, 2026080423, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026080424) {
-        // v6.2.8 — no schema change (USI-verified accuracy: centralised STATUS_VERIFIED===1
+        // Version 6.2.8 — no schema change (USI-verified accuracy: centralised STATUS_VERIFIED===1
         // semantics across exports/displays/issuance gates; certificate header theme colour).
         upgrade_plugin_savepoint(true, 2026080424, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026080425) {
-        // v6.2.9 — no schema change (Record of Results 'Results' column via col3mode + duplicate
+        // Version 6.2.9 — no schema change (Record of Results 'Results' column via col3mode + duplicate
         // header removal; AVETMISS terminology on the roster CSV export).
         upgrade_plugin_savepoint(true, 2026080425, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026080426) {
-        // v6.2.10 — no schema change (branding: AI Grader / Essay Grader AI → LMS-Labs.com).
+        // Version 6.2.10 — no schema change (branding: AI Grader / Essay Grader AI → LMS-Labs.com).
         upgrade_plugin_savepoint(true, 2026080426, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026080427) {
-        // v6.2.11 — no schema change (outline-button hover contrast + 10mm minimum text-field height).
+        // Version 6.2.11 — no schema change (outline-button hover contrast + 10mm minimum text-field height).
         upgrade_plugin_savepoint(true, 2026080427, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026080428) {
-        // v6.2.12 — no schema change (auto-design curl/filelib fix; per-cert-type background
+        // Version 6.2.12 — no schema change (auto-design curl/filelib fix; per-cert-type background
         // default fix; certificate-editor button hover contrast).
         upgrade_plugin_savepoint(true, 2026080428, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026080429) {
-        // v6.2.13 — no schema change (auto-design replaces the layout instead of appending).
+        // Version 6.2.13 — no schema change (auto-design replaces the layout instead of appending).
         upgrade_plugin_savepoint(true, 2026080429, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026080430) {
-        // v6.2.14 — no schema change (bigger certificate-editor Properties panel: capped
+        // Version 6.2.14 — no schema change (bigger certificate-editor Properties panel: capped
         // validator + wider right column).
         upgrade_plugin_savepoint(true, 2026080430, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026080431) {
-        // v6.2.15 — no schema change (live preview honours per-cert-type background/org-seal
+        // Version 6.2.15 — no schema change (live preview honours per-cert-type background/org-seal
         // applies-to config, matching the issued certificate).
         upgrade_plugin_savepoint(true, 2026080431, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026080432) {
-        // v6.2.16 — no schema change (live ASQA re-validation: new read-only AJAX endpoint
+        // Version 6.2.16 — no schema change (live ASQA re-validation: new read-only AJAX endpoint
         // cert_template_validate.php + shared certificate_validator::render_validation_panel_html();
         // the editor swaps the validator panel after every field add/delete so recommendations
         // and errors clear the instant they are satisfied, without a save + reload).
@@ -14681,7 +14722,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026080433) {
-        // v6.2.17 — no schema change (USI Verification page gains a student dashboard:
+        // Version 6.2.17 — no schema change (USI Verification page gains a student dashboard:
         // coverage %, stat cards, filter/search/paginated table, re-verify-all action,
         // CSV export of the current view, CSV export of students missing a DOB, and a
         // CSV upload to backfill missing dates of birth). Uses existing student columns.
@@ -14689,28 +14730,28 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026080434) {
-        // v6.2.18 — no schema change (self-service USI credential upload on the USI
+        // Version 6.2.18 — no schema change (self-service USI credential upload on the USI
         // Verification page: the .pfx/.p12 keystore + password are forwarded to the
         // platform via usi_platform_client::upload_cert() and never stored in Moodle).
         upgrade_plugin_savepoint(true, 2026080434, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026080435) {
-        // v6.2.19 — no schema change (self-service upload now persists the platform-
+        // Version 6.2.19 — no schema change (self-service upload now persists the platform-
         // issued API key returned when a fresh client is created, so later USI verify
         // calls authenticate without a stale/mismatched key).
         upgrade_plugin_savepoint(true, 2026080435, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026080436) {
-        // v6.2.20 — no schema change (credential upload panel now accepts the ABR
+        // Version 6.2.20 — no schema change (credential upload panel now accepts the ABR
         // keystore .xml format in addition to .pfx/.p12; the file is forwarded to the
         // platform which extracts the newest non-revoked credential from the store).
         upgrade_plugin_savepoint(true, 2026080436, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026080437) {
-        // v6.2.21 — no schema change (Student Records missing-DOB view gains a simple
+        // Version 6.2.21 — no schema change (Student Records missing-DOB view gains a simple
         // DOB CSV round-trip: export a template of students missing a DOB and re-upload
         // it to backfill dates of birth, matched by client ID, then USI, then email).
         upgrade_plugin_savepoint(true, 2026080437, 'local', 'rtocompliance');
@@ -14799,9 +14840,10 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         // them with no way to comply. It stays part of the completeness definition
         // (and of certificate issuance), and an administrator can tick it on.
         if (get_config('local_rtocompliance', 'mandatoryprofilefields') === false) {
-            set_config('mandatoryprofilefields',
-                'dateofbirth,sex,postcode,statecode,suburb,indigenousstatus,'
-                . 'countryofbirth,languageathome,labourforcestatus,highestschoollevel',
+            set_config(
+                'mandatoryprofilefields',
+                    'dateofbirth,sex,postcode,statecode,suburb,indigenousstatus,'
+                    . 'countryofbirth,languageathome,labourforcestatus,highestschoollevel',
                 'local_rtocompliance');
         }
 
@@ -14816,15 +14858,18 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         $syncdbman = $DB->get_manager();
         $sync = local_rtocompliance_upgrade_sync_schema($syncdbman);
         if (!empty($sync['tables'])) {
-            upgrade_log(UPGRADE_LOG_NORMAL, 'local_rtocompliance',
+            upgrade_log(
+                UPGRADE_LOG_NORMAL, 'local_rtocompliance',
                 'Schema sync created table(s): ' . implode(', ', $sync['tables']));
         }
         if (!empty($sync['fields'])) {
-            upgrade_log(UPGRADE_LOG_NORMAL, 'local_rtocompliance',
+            upgrade_log(
+                UPGRADE_LOG_NORMAL, 'local_rtocompliance',
                 'Schema sync added column(s): ' . implode(', ', $sync['fields']));
         }
         if (!empty($sync['skipped'])) {
-            upgrade_log(UPGRADE_LOG_NOTICE, 'local_rtocompliance',
+            upgrade_log(
+                UPGRADE_LOG_NOTICE, 'local_rtocompliance',
                 'Schema sync skipped (needs a human): ' . implode('; ', $sync['skipped']));
         }
 
@@ -14833,7 +14878,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026081700) {
-        // v6.3.10 PRE-1970 DATE OF BIRTH FIX. A DOB before 1 Jan 1970 is a
+        // Version 6.3.10 PRE-1970 DATE OF BIRTH FIX. A DOB before 1 Jan 1970 is a
         // NEGATIVE unix timestamp, but the shared "answered?" rule
         // (local_rtocompliance_avetmiss_value_missing) treated any value <= 0
         // as missing. Self-service students could not save a pre-1970 DOB at
@@ -14843,7 +14888,8 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         // blocker was a negative-timestamp DOB. Additive only — flips 0 -> 1
         // when the full recompute now passes, never the reverse.
         require_once($CFG->dirroot . '/local/rtocompliance/lib.php');
-        $rs = $DB->get_recordset_select('local_rtocompliance_students',
+        $rs = $DB->get_recordset_select(
+            'local_rtocompliance_students',
             'dateofbirth < 0 AND (profilecomplete = 0 OR profilecomplete IS NULL)');
         $healed = 0;
         foreach ($rs as $row) {
@@ -14854,7 +14900,8 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         }
         $rs->close();
         if ($healed > 0) {
-            upgrade_log(UPGRADE_LOG_NORMAL, 'local_rtocompliance',
+            upgrade_log(
+                UPGRADE_LOG_NORMAL, 'local_rtocompliance',
                 "Pre-1970 DOB fix: {$healed} student profile(s) recomputed as complete.");
         }
 
@@ -14862,7 +14909,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026081901) {
-        // v6.3.13 CERTIFICATE GENERATION USI PREFLIGHT. No schema change: the fix is
+        // Version 6.3.13 CERTIFICATE GENERATION USI PREFLIGHT. No schema change: the fix is
         // entirely in the generation pages (a USI column, disabled tick boxes for students
         // the issuance gate would refuse, honest skip reporting, and a summary banner that
         // survives write_close()), plus an autocert queue row that no longer marks itself
@@ -14875,7 +14922,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026081902) {
-        // v6.3.14 ASSISTANT KNOWLEDGE SOURCES. No schema change: the assistant gains a
+        // Version 6.3.14 ASSISTANT KNOWLEDGE SOURCES. No schema change: the assistant gains a
         // docs/*.md tree, release notes parsed from version.php, and read-only live site
         // facts. The only persistent artefact is the new 'assistant_kb' cache definition,
         // which Moodle creates from db/caches.php during the upgrade.
@@ -14883,27 +14930,27 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026081903) {
-        // v6.3.15 ASSISTANT REQUEST PARAMETER TIGHTENING. No schema change and no stored data
+        // Version 6.3.15 ASSISTANT REQUEST PARAMETER TIGHTENING. No schema change and no stored data
         // touched: the change is entirely in how the assistant widget's request is typed.
         upgrade_plugin_savepoint(true, 2026081903, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026082000) {
-        // v6.3.16 — code-only release. lib.php prints the source unit on transcripts
+        // Version 6.3.16 — code-only release. lib.php prints the source unit on transcripts
         // where an enrolment row carries a supersededfrom link, and the qualification
         // picker distinguishes semester intakes. No schema change.
         upgrade_plugin_savepoint(true, 2026082000, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026082001) {
-        // v6.3.17 — code-only release. Multi-page Record of Results no longer strands
+        // Version 6.3.17 — code-only release. Multi-page Record of Results no longer strands
         // the student identity block on the final page, and the "Notify students"
         // checkbox can now actually be turned off. No schema change.
         upgrade_plugin_savepoint(true, 2026082001, 'local', 'rtocompliance');
     }
 
     if ($oldversion < 2026082002) {
-        // v6.3.18 — code-only. Corrects the v6.3.17 approach to the missing page-1
+        // Version 6.3.18 — code-only. Corrects the v6.3.17 approach to the missing page-1
         // student identity block: the render-time identity-table transform now inserts
         // the replacement field at the position of the block it replaces instead of
         // appending it after the units table. No schema change.
@@ -14911,7 +14958,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026082003) {
-        // v6.3.19 — USI EXEMPTION FOR OFFSHORE INTERNATIONAL STUDENTS.
+        // Version 6.3.19 — USI EXEMPTION FOR OFFSHORE INTERNATIONAL STUDENTS.
         // The USI Registrar exempts a student who completes all study outside Australia
         // from holding a USI. Until now the certificate gate hard-blocked issuance for any
         // student without a verified USI, with no exemption pathway, which prevented lawful
@@ -14929,6 +14976,21 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
             }
         }
         upgrade_plugin_savepoint(true, 2026082003, 'local', 'rtocompliance');
+    }
+
+    if ($oldversion < 2026082104) {
+        // Version 6.3.20 — no schema change. Certificate table column headings became configurable
+        // (site-wide in Certificate Settings, and per table field in the template editor), and
+        // the stale plain-text caption row above a self-heading table is now stripped at render
+        // time so existing Record of Results templates stop printing two header rows.
+        upgrade_plugin_savepoint(true, 2026082104, 'local', 'rtocompliance');
+    }
+
+    if ($oldversion < 2026082105) {
+        // Version 6.3.21 — no schema change, and no behaviour change either: a coding-style and
+        // release-pipeline sweep (statement-per-line, multi-line call layout, comment
+        // capitalisation, AMD strings via core/str, language-string wording).
+        upgrade_plugin_savepoint(true, 2026082105, 'local', 'rtocompliance');
     }
 
     return true;

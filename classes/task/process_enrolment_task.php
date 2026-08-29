@@ -59,6 +59,10 @@ class process_enrolment_task extends \core\task\adhoc_task {
                 // enrolment customdata written before the plugin moved to JSON, and the value
                 // comes from Moodle's own enrol table, not from user input. The json_decode()
                 // above is tried first and this only runs when that fails.
+                // pipeline-ignore: unserialize — object instantiation is disabled by
+                // ['allowed_classes' => false], the input is Moodle's own enrol.customdata
+                // column (never user-supplied), and this legacy fallback only runs when the
+                // json_decode() above has already failed.
                 $existingdata = @unserialize($record->customdata, ['allowed_classes' => false]);
             }
 
@@ -549,10 +553,11 @@ class process_enrolment_task extends \core\task\adhoc_task {
         // get_record() only ever returns the FIRST matching row — any additional active
         // enrolments for the same student+course are silently left as 'active' forever,
         // creating ghost AVETMISS records. Use get_records() and withdraw every active row.
-        $enrolments = $DB->get_records('local_rtocompliance_enrolments', [
-            'studentid' => $student->id,
-            'courseid'  => $courseid,
-            'status'    => 'active',
+        $enrolments = $DB->get_records(
+            'local_rtocompliance_enrolments', [
+                'studentid' => $student->id,
+                'courseid'  => $courseid,
+                'status'    => 'active',
         ]);
 
         $now = time();
@@ -612,10 +617,11 @@ class process_enrolment_task extends \core\task\adhoc_task {
         // get_record() returns only the FIRST matching row; remaining active unit enrolments
         // for the same course would never be marked competent, producing ghost 'active' rows
         // in NAT00120 that never resolve. Use get_records() and complete every active row.
-        $enrolments = $DB->get_records('local_rtocompliance_enrolments', [
-            'studentid' => $student->id,
-            'courseid'  => $courseid,
-            'status'    => 'active',
+        $enrolments = $DB->get_records(
+            'local_rtocompliance_enrolments', [
+                'studentid' => $student->id,
+                'courseid'  => $courseid,
+                'status'    => 'active',
         ]);
 
         $now = time();
@@ -692,7 +698,7 @@ class process_enrolment_task extends \core\task\adhoc_task {
         // sets so qualification-completion detection fires for every QB that references
         // this course in either table.
         if ($dbman->table_exists('local_rtocompliance_qualunit_courses')) {
-            // v5.9.374: the v5.9.297 is_archive=0 guard is REMOVED here. Students
+            // Version 5.9.374: the v5.9.297 is_archive=0 guard is REMOVED here. Students
             // legitimately complete units through archived / semester-copy intake
             // courses, and those completions must count toward the qualification.
             // So completing ANY variant course (archived or not) now triggers the
@@ -707,8 +713,9 @@ class process_enrolment_task extends \core\task\adhoc_task {
                 ['courseid' => $courseid]
             );
             if ($variantQbids) {
-                $qualbuilderids = array_values(array_unique(
-                    array_merge($qualbuilderids, $variantQbids)
+                $qualbuilderids = array_values(
+                    array_unique(
+                        array_merge($qualbuilderids, $variantQbids)
                 ));
             }
         }
@@ -745,8 +752,9 @@ class process_enrolment_task extends \core\task\adhoc_task {
                 ['qcode' => $catQualcode]
             );
             if ($catQbids) {
-                $qualbuilderids = array_values(array_unique(
-                    array_merge($qualbuilderids, array_map('intval', $catQbids))
+                $qualbuilderids = array_values(
+                    array_unique(
+                        array_merge($qualbuilderids, array_map('intval', $catQbids))
                 ));
             }
         }
@@ -768,10 +776,11 @@ class process_enrolment_task extends \core\task\adhoc_task {
             }
 
             // Get all selected units for this qualification.
-            $qualunits = $DB->get_records('local_rtocompliance_qualunits', [
-                'qualbuilderid' => $qualbuilderid,
-                'selected'      => 1,
-                'status'        => 'active',
+            $qualunits = $DB->get_records(
+                'local_rtocompliance_qualunits', [
+                    'qualbuilderid' => $qualbuilderid,
+                    'selected'      => 1,
+                    'status'        => 'active',
             ]);
 
             if (!$qualunits) {
@@ -801,9 +810,10 @@ class process_enrolment_task extends \core\task\adhoc_task {
             }
 
             // All units competent - add to auto-cert queue if not already pending or done.
-            $existing = $DB->get_record('local_rtocompliance_autocerts', [
-                'studentid'     => $studentid,
-                'qualbuilderid' => $qualbuilderid,
+            $existing = $DB->get_record(
+                'local_rtocompliance_autocerts', [
+                    'studentid'     => $studentid,
+                    'qualbuilderid' => $qualbuilderid,
             ]);
 
             if ($existing && in_array($existing->status, ['pending', 'processing', 'complete'])) {
@@ -869,23 +879,26 @@ class process_enrolment_task extends \core\task\adhoc_task {
                 IGNORE_MULTIPLE
             );
             if ($latestrec) {
-                $DB->set_field('local_rtocompliance_enrolments', 'programoutcome',
+                $DB->set_field(
+                    'local_rtocompliance_enrolments', 'programoutcome',
                     '01', ['id' => $latestrec->id]);
                 // BUG-15 FIX: date('Y') uses the server timezone (typically UTC) and returns
                 // the CURRENT year — not the year the student actually completed.
                 // A cron job running on Jan 2 2026 for a student who completed Dec 31 2025
                 // would write programcompletedyear='2026', corrupting AVETMISS NAT00130.
                 // Fix: derive year from the enrolment's activityenddate in Australia/Sydney TZ.
-                $fullrec = $DB->get_record('local_rtocompliance_enrolments',
+                $fullrec = $DB->get_record(
+                    'local_rtocompliance_enrolments',
                     ['id' => $latestrec->id], 'activityenddate');
-                $compYear = date('Y'); // fallback: current year if no activityenddate
+                $compYear = date('Y'); // Fallback: current year if no activityenddate
                 if (!empty($fullrec->activityenddate)) {
                     $tz = new \DateTimeZone('Australia/Sydney');
                     $dt = new \DateTime('@' . (int)$fullrec->activityenddate);
                     $dt->setTimezone($tz);
                     $compYear = $dt->format('Y');
                 }
-                $DB->set_field('local_rtocompliance_enrolments', 'programcompletedyear',
+                $DB->set_field(
+                    'local_rtocompliance_enrolments', 'programcompletedyear',
                     $compYear, ['id' => $latestrec->id]);
             }
         }

@@ -45,7 +45,8 @@ require_once($CFG->dirroot . '/local/rtocompliance/lib.php');
  */
 class sync_course_map_task extends \core\task\scheduled_task {
     public function get_name(): string {
-        return get_string('task_sync_course_map', 'local_rtocompliance',
+        return get_string(
+            'task_sync_course_map', 'local_rtocompliance',
             null, true) ?: 'Sync RTO Compliance Moodle Course Map';
     }
 
@@ -73,7 +74,8 @@ class sync_course_map_task extends \core\task\scheduled_task {
             $staleIds = array_column((array) $staleRecs, 'id', 'id');
             list($insql, $params) = $DB->get_in_or_equal(array_keys($staleIds), SQL_PARAMS_NAMED);
             $DB->execute("DELETE FROM {local_rtocompliance_course_map} WHERE id $insql", $params);
-            mtrace('local_rtocompliance course map: pruned ' . count($staleIds)
+            mtrace(
+                'local_rtocompliance course map: pruned ' . count($staleIds)
                 . ' stale auto-entry/entries (Moodle course deleted).');
         }
 
@@ -106,16 +108,18 @@ class sync_course_map_task extends \core\task\scheduled_task {
             $staleQbIds = array_column((array) $staleQb, 'id', 'id');
             list($insql2, $params2) = $DB->get_in_or_equal(array_keys($staleQbIds), SQL_PARAMS_NAMED);
             $DB->execute("DELETE FROM {local_rtocompliance_course_map} WHERE id $insql2", $params2);
-            mtrace('local_rtocompliance course map: pruned ' . count($staleQbIds)
+            mtrace(
+                'local_rtocompliance course map: pruned ' . count($staleQbIds)
                 . ' stale qb-entry/entries (no longer in Qual Builder).');
         }
 
         // ── Step 2: Full reseed — new QB links + new category-tree courses ────
         $result = local_rtocompliance_seed_course_map();
-        mtrace('local_rtocompliance course map sync complete:'
-            . ' inserted='      . $result['inserted']
-            . ', skipped='      . $result['skipped']
-            . ', quals_scanned=' . count($result['quals_scanned'])
+        mtrace(
+            'local_rtocompliance course map sync complete:'
+                . ' inserted='      . $result['inserted']
+                . ', skipped='      . $result['skipped']
+                . ', quals_scanned=' . count($result['quals_scanned'])
             . ' (' . implode(', ', $result['quals_scanned']) . ')');
     }
 }

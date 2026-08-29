@@ -107,12 +107,13 @@ $_rtoc_apikey = function_exists('local_aiconfig_get_apikey')
     ? (local_aiconfig_get_apikey('local_rtocompliance') ?: get_config('local_rtocompliance', 'apikey') ?: '')
     : (get_config('local_rtocompliance', 'apikey') ?: '');
 $_rtoc_apibase = rtrim(get_config('local_rtocompliance', 'apiurl') ?: 'https://lms-labs.com', '/');
-echo html_writer::tag('div', '', [
-    'id'            => 'rtoc-ai-config',
-    'data-api-key'  => $_rtoc_apikey,
-    'data-api-base' => $_rtoc_apibase,
-    'style'         => 'display:none',
-    'aria-hidden'   => 'true',
+echo html_writer::tag(
+    'div', '', [
+        'id'            => 'rtoc-ai-config',
+        'data-api-key'  => $_rtoc_apikey,
+        'data-api-base' => $_rtoc_apibase,
+        'style'         => 'display:none',
+        'aria-hidden'   => 'true',
 ]);
 
 echo local_rtocompliance_render_nav_header('Risk Management');
@@ -136,10 +137,11 @@ if (!$id) {
     $formdata->status       = 'open';
 }
 
-echo html_writer::start_tag('form', [
-    'method' => 'post',
-    'action' => $PAGE->url->out_omit_querystring(),
-    'style'  => 'max-width: 720px;',
+echo html_writer::start_tag(
+    'form', [
+        'method' => 'post',
+        'action' => $PAGE->url->out_omit_querystring(),
+        'style'  => 'max-width: 720px;',
 ]);
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'action', 'value' => 'save']);
@@ -157,11 +159,12 @@ $categoryOptions = [
 
 echo html_writer::start_div('form-group');
 echo html_writer::tag('label', 'Risk Title *', ['for' => 'risktitle', 'class' => 'form-label']);
-echo html_writer::empty_tag('input', [
-    'type' => 'text', 'name' => 'risktitle', 'id' => 'risktitle',
-    'value' => s($formdata->risktitle ?? ''),
-    'class' => 'form-control', 'required' => 'required',
-    'placeholder' => 'e.g. Cash flow insufficient to maintain operations',
+echo html_writer::empty_tag(
+    'input', [
+        'type' => 'text', 'name' => 'risktitle', 'id' => 'risktitle',
+        'value' => s($formdata->risktitle ?? ''),
+        'class' => 'form-control', 'required' => 'required',
+        'placeholder' => 'e.g. Cash flow insufficient to maintain operations',
 ]);
 echo html_writer::end_div();
 
@@ -172,10 +175,11 @@ echo html_writer::end_div();
 
 echo html_writer::start_div('form-group', ['style' => 'margin-top: 12px;']);
 echo html_writer::tag('label', 'Description', ['for' => 'riskdescription', 'class' => 'form-label']);
-echo html_writer::tag('textarea', s($formdata->riskdescription ?? ''), [
-    'name' => 'riskdescription', 'id' => 'riskdescription',
-    'class' => 'form-control', 'rows' => '3',
-    'placeholder' => 'Describe the risk in detail, its causes, and potential consequences',
+echo html_writer::tag(
+    'textarea', s($formdata->riskdescription ?? ''), [
+        'name' => 'riskdescription', 'id' => 'riskdescription',
+        'class' => 'form-control', 'rows' => '3',
+        'placeholder' => 'Describe the risk in detail, its causes, and potential consequences',
 ]);
 echo html_writer::end_div();
 
@@ -202,19 +206,21 @@ echo html_writer::end_div();
 
 echo html_writer::start_div('form-group', ['style' => 'margin-top: 16px;']);
 echo html_writer::tag('label', 'Risk Owner', ['for' => 'riskowner', 'class' => 'form-label']);
-echo html_writer::empty_tag('input', [
-    'type' => 'text', 'name' => 'riskowner', 'id' => 'riskowner',
-    'value' => s($formdata->riskowner ?? ''),
-    'class' => 'form-control', 'placeholder' => 'Name or role responsible for managing this risk',
+echo html_writer::empty_tag(
+    'input', [
+        'type' => 'text', 'name' => 'riskowner', 'id' => 'riskowner',
+        'value' => s($formdata->riskowner ?? ''),
+        'class' => 'form-control', 'placeholder' => 'Name or role responsible for managing this risk',
 ]);
 echo html_writer::end_div();
 
 echo html_writer::start_div('form-group', ['style' => 'margin-top: 12px;']);
 echo html_writer::tag('label', 'Mitigation Plan', ['for' => 'mitigationplan', 'class' => 'form-label']);
-echo html_writer::tag('textarea', s($formdata->mitigationplan ?? ''), [
-    'name' => 'mitigationplan', 'id' => 'mitigationplan',
-    'class' => 'form-control', 'rows' => '4',
-    'placeholder' => 'Describe controls, actions, and treatments in place to reduce likelihood or impact of this risk',
+echo html_writer::tag(
+    'textarea', s($formdata->mitigationplan ?? ''), [
+        'name' => 'mitigationplan', 'id' => 'mitigationplan',
+        'class' => 'form-control', 'rows' => '4',
+        'placeholder' => 'Describe controls, actions, and treatments in place to reduce likelihood or impact of this risk',
 ]);
 echo html_writer::end_div();
 
@@ -223,9 +229,10 @@ echo html_writer::start_div('', ['style' => 'display: grid; grid-template-column
 echo html_writer::start_div('form-group');
 echo html_writer::tag('label', 'Review Date', ['for' => 'reviewdate', 'class' => 'form-label']);
 $revdateVal = !empty($formdata->reviewdate) ? date('Y-m-d', $formdata->reviewdate) : '';
-echo html_writer::empty_tag('input', [
-    'type' => 'date', 'name' => 'reviewdate', 'id' => 'reviewdate',
-    'value' => $revdateVal, 'class' => 'form-control',
+echo html_writer::empty_tag(
+    'input', [
+        'type' => 'date', 'name' => 'reviewdate', 'id' => 'reviewdate',
+        'value' => $revdateVal, 'class' => 'form-control',
 ]);
 echo html_writer::end_div();
 
@@ -239,10 +246,11 @@ echo html_writer::end_div();
 
 echo html_writer::start_div('form-group', ['style' => 'margin-top: 12px;']);
 echo html_writer::tag('label', 'Additional Notes', ['for' => 'notes', 'class' => 'form-label']);
-echo html_writer::tag('textarea', s($formdata->notes ?? ''), [
-    'name' => 'notes', 'id' => 'notes',
-    'class' => 'form-control', 'rows' => '3',
-    'placeholder' => 'Any additional context, escalation path, or external references',
+echo html_writer::tag(
+    'textarea', s($formdata->notes ?? ''), [
+        'name' => 'notes', 'id' => 'notes',
+        'class' => 'form-control', 'rows' => '3',
+        'placeholder' => 'Any additional context, escalation path, or external references',
 ]);
 echo html_writer::end_div();
 

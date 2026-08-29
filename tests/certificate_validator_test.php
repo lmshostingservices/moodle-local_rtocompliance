@@ -38,15 +38,17 @@ class certificate_validator_test extends \advanced_testcase {
         parent::setUp();
         $this->resetAfterTest(true);
         
-        $this->testuser = $this->getDataGenerator()->create_user([
-            'firstname' => 'Jane',
-            'lastname' => 'Doe',
-            'email' => 'jane.doe@test.com',
+        $this->testuser = $this->getDataGenerator()->create_user(
+            [
+                'firstname' => 'Jane',
+                'lastname' => 'Doe',
+                'email' => 'jane.doe@test.com',
         ]);
         
-        $this->testcourse = $this->getDataGenerator()->create_course([
-            'fullname' => 'Certificate Test Course',
-            'shortname' => 'CERTTEST001',
+        $this->testcourse = $this->getDataGenerator()->create_course(
+            [
+                'fullname' => 'Certificate Test Course',
+                'shortname' => 'CERTTEST001',
         ]);
     }
     
@@ -162,13 +164,15 @@ class certificate_validator_test extends \advanced_testcase {
     public function test_can_issue_testamur_fails_without_complete_qualification() {
         $student = $this->create_test_student();
         
-        $this->create_test_enrolment($student->id, [
-            'outcomeidentifier' => '20',
+        $this->create_test_enrolment(
+            $student->id, [
+                'outcomeidentifier' => '20',
         ]);
-        $this->create_test_enrolment($student->id, [
-            'unitcode' => 'BSBCRT511',
-            'unitname' => 'Develop critical thinking',
-            'outcomeidentifier' => '70',
+        $this->create_test_enrolment(
+            $student->id, [
+                'unitcode' => 'BSBCRT511',
+                'unitname' => 'Develop critical thinking',
+                'outcomeidentifier' => '70',
         ]);
         
         $result = certificate_validator::can_issue_testamur($this->testuser->id, 'BSB50420');
@@ -179,17 +183,20 @@ class certificate_validator_test extends \advanced_testcase {
     public function test_can_issue_testamur_succeeds_with_all_units_complete() {
         $student = $this->create_test_student();
         
-        $this->create_test_enrolment($student->id, [
-            'unitcode' => 'BSBCMM511',
-            'outcomeidentifier' => '20',
+        $this->create_test_enrolment(
+            $student->id, [
+                'unitcode' => 'BSBCMM511',
+                'outcomeidentifier' => '20',
         ]);
-        $this->create_test_enrolment($student->id, [
-            'unitcode' => 'BSBCRT511',
-            'outcomeidentifier' => '51',
+        $this->create_test_enrolment(
+            $student->id, [
+                'unitcode' => 'BSBCRT511',
+                'outcomeidentifier' => '51',
         ]);
-        $this->create_test_enrolment($student->id, [
-            'unitcode' => 'BSBLDR523',
-            'outcomeidentifier' => '52',
+        $this->create_test_enrolment(
+            $student->id, [
+                'unitcode' => 'BSBLDR523',
+                'outcomeidentifier' => '52',
         ]);
         
         $result = certificate_validator::can_issue_testamur($this->testuser->id, 'BSB50420');
@@ -216,13 +223,15 @@ class certificate_validator_test extends \advanced_testcase {
     public function test_can_issue_statement_fails_without_competent_units() {
         $student = $this->create_test_student();
         
-        $this->create_test_enrolment($student->id, [
-            'outcomeidentifier' => '30',
-            'status' => 'completed',
+        $this->create_test_enrolment(
+            $student->id, [
+                'outcomeidentifier' => '30',
+                'status' => 'completed',
         ]);
         
-        $result = certificate_validator::can_issue_statement($this->testuser->id, [
-            ['outcomeidentifier' => '30'],
+        $result = certificate_validator::can_issue_statement(
+            $this->testuser->id, [
+                ['outcomeidentifier' => '30'],
         ]);
         
         $this->assertFalse($result['can_issue']);
@@ -231,9 +240,10 @@ class certificate_validator_test extends \advanced_testcase {
     public function test_can_issue_statement_succeeds_with_competent_units() {
         $student = $this->create_test_student();
         
-        $this->create_test_enrolment($student->id, [
-            'outcomeidentifier' => '20',
-            'status' => 'completed',
+        $this->create_test_enrolment(
+            $student->id, [
+                'outcomeidentifier' => '20',
+                'status' => 'completed',
         ]);
         
         $result = certificate_validator::can_issue_statement($this->testuser->id);
@@ -268,10 +278,11 @@ class certificate_validator_test extends \advanced_testcase {
         
         $student = $this->create_test_student();
         
-        $this->create_test_enrolment($student->id, [
-            'status' => 'hold',
-            'holduntil' => strtotime('+1 month'),
-            'holdreason' => 'Fee outstanding',
+        $this->create_test_enrolment(
+            $student->id, [
+                'status' => 'hold',
+                'holduntil' => strtotime('+1 month'),
+                'holdreason' => 'Fee outstanding',
         ]);
         
         $result = certificate_validator::can_issue_attendance($this->testuser->id);
@@ -284,10 +295,11 @@ class certificate_validator_test extends \advanced_testcase {
         
         $student = $this->create_test_student();
         
-        $this->create_test_enrolment($student->id, [
-            'status' => 'hold',
-            'holduntil' => strtotime('+1 month'),
-            'holdreason' => 'Academic misconduct investigation',
+        $this->create_test_enrolment(
+            $student->id, [
+                'status' => 'hold',
+                'holduntil' => strtotime('+1 month'),
+                'holdreason' => 'Academic misconduct investigation',
         ]);
         
         $holds = certificate_validator::check_holds($student->id);
@@ -301,10 +313,11 @@ class certificate_validator_test extends \advanced_testcase {
         
         $student = $this->create_test_student();
         
-        $this->create_test_enrolment($student->id, [
-            'status' => 'hold',
-            'holduntil' => strtotime('-1 month'),
-            'holdreason' => 'Expired hold',
+        $this->create_test_enrolment(
+            $student->id, [
+                'status' => 'hold',
+                'holduntil' => strtotime('-1 month'),
+                'holdreason' => 'Expired hold',
         ]);
         
         $holds = certificate_validator::check_holds($student->id);
@@ -315,13 +328,15 @@ class certificate_validator_test extends \advanced_testcase {
     public function test_check_qualification_completion_returns_correct_status() {
         $student = $this->create_test_student();
         
-        $this->create_test_enrolment($student->id, [
-            'unitcode' => 'BSBCMM511',
-            'outcomeidentifier' => '20',
+        $this->create_test_enrolment(
+            $student->id, [
+                'unitcode' => 'BSBCMM511',
+                'outcomeidentifier' => '20',
         ]);
-        $this->create_test_enrolment($student->id, [
-            'unitcode' => 'BSBCRT511',
-            'outcomeidentifier' => '20',
+        $this->create_test_enrolment(
+            $student->id, [
+                'unitcode' => 'BSBCRT511',
+                'outcomeidentifier' => '20',
         ]);
         
         $result = certificate_validator::check_qualification_completion($student->id, 'BSB50420');
@@ -334,13 +349,15 @@ class certificate_validator_test extends \advanced_testcase {
     public function test_check_qualification_completion_detects_continuing_units() {
         $student = $this->create_test_student();
         
-        $this->create_test_enrolment($student->id, [
-            'unitcode' => 'BSBCMM511',
-            'outcomeidentifier' => '20',
+        $this->create_test_enrolment(
+            $student->id, [
+                'unitcode' => 'BSBCMM511',
+                'outcomeidentifier' => '20',
         ]);
-        $this->create_test_enrolment($student->id, [
-            'unitcode' => 'BSBCRT511',
-            'outcomeidentifier' => '70',
+        $this->create_test_enrolment(
+            $student->id, [
+                'unitcode' => 'BSBCRT511',
+                'outcomeidentifier' => '70',
         ]);
         
         $result = certificate_validator::check_qualification_completion($student->id, 'BSB50420');
@@ -353,9 +370,10 @@ class certificate_validator_test extends \advanced_testcase {
     public function test_validate_certificate_issuance_dispatches_correctly() {
         $student = $this->create_test_student();
         
-        $this->create_test_enrolment($student->id, [
-            'outcomeidentifier' => '20',
-            'status' => 'completed',
+        $this->create_test_enrolment(
+            $student->id, [
+                'outcomeidentifier' => '20',
+                'status' => 'completed',
         ]);
         
         $testamurResult = certificate_validator::validate_certificate_issuance(
@@ -396,10 +414,11 @@ class certificate_validator_test extends \advanced_testcase {
     }
     
     public function test_get_student_avetmiss_status_detects_missing_fields() {
-        $student = $this->create_test_student([
-            'usi' => null,
-            'postcode' => null,
-            'profilecomplete' => 0,
+        $student = $this->create_test_student(
+            [
+                'usi' => null,
+                'postcode' => null,
+                'profilecomplete' => 0,
         ]);
         
         $status = certificate_validator::get_student_avetmiss_status($this->testuser->id);
@@ -412,15 +431,17 @@ class certificate_validator_test extends \advanced_testcase {
     public function test_get_issuable_units_returns_completed_units() {
         $student = $this->create_test_student();
         
-        $this->create_test_enrolment($student->id, [
-            'unitcode' => 'BSBCMM511',
-            'outcomeidentifier' => '20',
-            'status' => 'completed',
+        $this->create_test_enrolment(
+            $student->id, [
+                'unitcode' => 'BSBCMM511',
+                'outcomeidentifier' => '20',
+                'status' => 'completed',
         ]);
-        $this->create_test_enrolment($student->id, [
-            'unitcode' => 'BSBCRT511',
-            'outcomeidentifier' => '70',
-            'status' => 'active',
+        $this->create_test_enrolment(
+            $student->id, [
+                'unitcode' => 'BSBCRT511',
+                'outcomeidentifier' => '70',
+                'status' => 'active',
         ]);
         
         $units = certificate_validator::get_issuable_units($this->testuser->id);
@@ -434,10 +455,11 @@ class certificate_validator_test extends \advanced_testcase {
         
         $student = $this->create_test_student();
         
-        $this->create_test_enrolment($student->id, [
-            'unitcode' => 'BSBCMM511',
-            'outcomeidentifier' => '20',
-            'status' => 'completed',
+        $this->create_test_enrolment(
+            $student->id, [
+                'unitcode' => 'BSBCMM511',
+                'outcomeidentifier' => '20',
+                'status' => 'completed',
         ]);
         
         $cert = (object)[
@@ -464,15 +486,17 @@ class certificate_validator_test extends \advanced_testcase {
     public function test_get_issuable_qualifications_returns_qualification_status() {
         $student = $this->create_test_student();
         
-        $this->create_test_enrolment($student->id, [
-            'programcode' => 'BSB50420',
-            'programname' => 'Diploma of Leadership and Management',
-            'outcomeidentifier' => '20',
+        $this->create_test_enrolment(
+            $student->id, [
+                'programcode' => 'BSB50420',
+                'programname' => 'Diploma of Leadership and Management',
+                'outcomeidentifier' => '20',
         ]);
-        $this->create_test_enrolment($student->id, [
-            'programcode' => 'BSB40520',
-            'programname' => 'Certificate IV in Leadership and Management',
-            'outcomeidentifier' => '70',
+        $this->create_test_enrolment(
+            $student->id, [
+                'programcode' => 'BSB40520',
+                'programname' => 'Certificate IV in Leadership and Management',
+                'outcomeidentifier' => '70',
         ]);
         
         $quals = certificate_validator::get_issuable_qualifications($this->testuser->id);
@@ -506,20 +530,23 @@ class certificate_validator_test extends \advanced_testcase {
     public function test_multiple_rpl_outcomes_accepted() {
         $student = $this->create_test_student();
         
-        $this->create_test_enrolment($student->id, [
-            'unitcode' => 'BSBCMM511',
-            'outcomeidentifier' => '51',
-            'status' => 'completed',
+        $this->create_test_enrolment(
+            $student->id, [
+                'unitcode' => 'BSBCMM511',
+                'outcomeidentifier' => '51',
+                'status' => 'completed',
         ]);
-        $this->create_test_enrolment($student->id, [
-            'unitcode' => 'BSBCRT511',
-            'outcomeidentifier' => '52',
-            'status' => 'completed',
+        $this->create_test_enrolment(
+            $student->id, [
+                'unitcode' => 'BSBCRT511',
+                'outcomeidentifier' => '52',
+                'status' => 'completed',
         ]);
-        $this->create_test_enrolment($student->id, [
-            'unitcode' => 'BSBLDR523',
-            'outcomeidentifier' => '60',
-            'status' => 'completed',
+        $this->create_test_enrolment(
+            $student->id, [
+                'unitcode' => 'BSBLDR523',
+                'outcomeidentifier' => '60',
+                'status' => 'completed',
         ]);
         
         $result = certificate_validator::can_issue_statement($this->testuser->id);

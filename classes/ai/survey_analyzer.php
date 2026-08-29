@@ -244,23 +244,26 @@ class survey_analyzer {
      * @throws \moodle_exception on API or credential error.
      */
     private function call_platform_api(string $surveytype, string $responsestext): array {
-        $payload = json_encode([
-            'apiKey'        => $this->apikey,
-            'surveyType'    => $surveytype,
-            'responsesText' => $responsestext,
+        $payload = json_encode(
+            [
+                'apiKey'        => $this->apikey,
+                'surveyType'    => $surveytype,
+                'responsesText' => $responsestext,
         ]);
 
         // Release session lock before long-running API call.
         \core\session\manager::write_close();
 
         $c = new \curl(['ignoresecurity' => true]);
-        $c->setopt([
-            'CURLOPT_TIMEOUT'        => 120,
-            'CURLOPT_RETURNTRANSFER' => true,
+        $c->setopt(
+            [
+                'CURLOPT_TIMEOUT'        => 120,
+                'CURLOPT_RETURNTRANSFER' => true,
         ]);
-        $c->setHeader([
-            'Content-Type: application/json',
-            'X-API-Key: ' . $this->apikey,
+        $c->setHeader(
+            [
+                'Content-Type: application/json',
+                'X-API-Key: ' . $this->apikey,
         ]);
 
         $response = $c->post($this->apibase . '/api/rto/ai-survey-analyze', $payload);

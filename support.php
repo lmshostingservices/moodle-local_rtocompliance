@@ -83,7 +83,7 @@ function support_icon($name, $class = '') {
     $classes = 'support-icon' . ($class ? ' ' . $class : '');
     return '<span class="' . $classes . '">' . $svg . '</span>';
 }
-} // end if (!function_exists('support_icon'))
+} // End if (!function_exists('support_icon'))
 
 $PAGE->add_body_class("path-local-rtocompliance");
 echo $OUTPUT->header();
@@ -112,11 +112,12 @@ echo html_writer::tag('p', 'Help and compliance guides for ' . s($rtoname), ['cl
 echo html_writer::end_div();
 
 echo html_writer::start_div('support-intro');
-echo html_writer::tag('p', 
-    "Welcome to the RTO Compliance Support Centre. Whether you're new to the Standards for RTOs 2025 " .
-    "or preparing for an ASQA audit, these guides explain the <strong>what</strong>, <strong>why</strong>, " .
-    "and <strong>how</strong> of each compliance area in plain English.", 
-    ['class' => 'intro-text']
+echo html_writer::tag(
+    'p', 
+        "Welcome to the RTO Compliance Support Centre. Whether you're new to the Standards for RTOs 2025 " .
+        "or preparing for an ASQA audit, these guides explain the <strong>what</strong>, <strong>why</strong>, " .
+        "and <strong>how</strong> of each compliance area in plain English.", 
+        ['class' => 'intro-text']
 );
 echo html_writer::start_div('intro-badges');
 echo html_writer::tag('span', 'ASQA 2025 Aligned', ['class' => 'intro-badge badge-rose']);
@@ -210,9 +211,10 @@ foreach ($getStartedSteps as $step) {
     echo html_writer::tag('h3', $step['title'], ['class' => 'step-title']);
     echo html_writer::end_div();
     echo html_writer::tag('p', $step['description'], ['class' => 'step-description']);
-    echo html_writer::tag('a', $step['link_text'] . ' ' . support_icon('arrow-right'), [
-        'href' => $step['link'],
-        'class' => 'step-link link-' . $step['color']
+    echo html_writer::tag(
+        'a', $step['link_text'] . ' ' . support_icon('arrow-right'), [
+            'href' => $step['link'],
+            'class' => 'step-link link-' . $step['color']
     ]);
     echo html_writer::end_div();
     
@@ -223,10 +225,11 @@ echo html_writer::end_div();
 
 echo html_writer::start_div('get-started-tip');
 echo support_icon('lightbulb', 'tip-icon');
-echo html_writer::tag('p',
-    '<strong>Pro Tip:</strong> New here? Open <a href="' . (new moodle_url('/local/rtocompliance/how_it_works.php'))->out() . '"><strong>How It Works</strong></a> (top of the left menu) for a plain-English overview of the whole system first. ' .
-    'Then start with steps 1-3 to get your basic setup running — you can add trainers and configure advanced features as you go.',
-    ['class' => 'tip-text']
+echo html_writer::tag(
+    'p',
+        '<strong>Pro Tip:</strong> New here? Open <a href="' . (new moodle_url('/local/rtocompliance/how_it_works.php'))->out() . '"><strong>How It Works</strong></a> (top of the left menu) for a plain-English overview of the whole system first. ' .
+        'Then start with steps 1-3 to get your basic setup running — you can add trainers and configure advanced features as you go.',
+        ['class' => 'tip-text']
 );
 echo html_writer::end_div();
 
@@ -238,17 +241,18 @@ echo html_writer::start_div('whats-new-header');
 echo support_icon('star', 'whats-new-icon');
 echo html_writer::tag('h2', "What's New — v5.9.425", ['class' => 'whats-new-title']);
 echo html_writer::end_div();
-echo html_writer::tag('p',
-    'The latest releases (v5.9.420–425) sharpen the compliance depth and make the whole system easier to learn. '
-    . 'Highlights: every page now opens with a consistent <strong>What&nbsp;/&nbsp;Why&nbsp;/&nbsp;How</strong> orientation card; '
-    . '<strong>nominal hours</strong> are wired end-to-end (a real qualification total in the Qualification Builder and the TAS volume of learning, '
-    . 'sourced from the plugin&rsquo;s own authoritative reference table because training.gov.au does not publish them); '
-    . '<strong>RPL &amp; Credit Transfer</strong> now capture the assessor&rsquo;s identity with a live TAE-currency check, whether the student was told the outcome, '
-    . 'superseded&rarr;current unit mapping, and an evidence-to-criteria matrix; a per-student <strong>pre-enrolment readiness</strong> panel and a Compliance Health metric '
-    . 'surface the four pre-enrolment gates; and a declutter pass removed duplicated on-page noise. '
-    . 'These build on the v5.9.399 integrity foundation — the plugin still creates and deletes <strong>nothing</strong> in Moodle core; it only reads it. '
-    . 'The full list is below.',
-    ['class' => 'whats-new-intro']
+echo html_writer::tag(
+    'p',
+        'The latest releases (v5.9.420–425) sharpen the compliance depth and make the whole system easier to learn. '
+        . 'Highlights: every page now opens with a consistent <strong>What&nbsp;/&nbsp;Why&nbsp;/&nbsp;How</strong> orientation card; '
+        . '<strong>nominal hours</strong> are wired end-to-end (a real qualification total in the Qualification Builder and the TAS volume of learning, '
+        . 'sourced from the plugin&rsquo;s own authoritative reference table because training.gov.au does not publish them); '
+        . '<strong>RPL &amp; Credit Transfer</strong> now capture the assessor&rsquo;s identity with a live TAE-currency check, whether the student was told the outcome, '
+        . 'superseded&rarr;current unit mapping, and an evidence-to-criteria matrix; a per-student <strong>pre-enrolment readiness</strong> panel and a Compliance Health metric '
+        . 'surface the four pre-enrolment gates; and a declutter pass removed duplicated on-page noise. '
+        . 'These build on the v5.9.399 integrity foundation — the plugin still creates and deletes <strong>nothing</strong> in Moodle core; it only reads it. '
+        . 'The full list is below.',
+        ['class' => 'whats-new-intro']
 );
 echo html_writer::start_tag('ul', ['class' => 'whats-new-list']);
 $whatsNew = [
@@ -985,9 +989,10 @@ foreach ($supportModules as $module) {
         echo html_writer::end_div();
     }
     
-    echo html_writer::tag('a', $module['link_text'] . ' ' . support_icon('arrow-right'), [
-        'href' => $module['url'],
-        'class' => 'support-card-link link-' . $module['color']
+    echo html_writer::tag(
+        'a', $module['link_text'] . ' ' . support_icon('arrow-right'), [
+            'href' => $module['url'],
+            'class' => 'support-card-link link-' . $module['color']
     ]);
     
     echo html_writer::end_div();

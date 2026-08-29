@@ -103,7 +103,8 @@ if ($action === 'buildmap') {
         . ($skip ? ', ' . $skip . ' already mapped' : '')
         . ' across ' . $quals . ' qualification(s). Any unit still showing no map has no linked'
         . ' delivery course, or uses a retired unit code with no course of its own.';
-    redirect(new moodle_url('/local/rtocompliance/qualbuilder.php'),
+    redirect(
+        new moodle_url('/local/rtocompliance/qualbuilder.php'),
         $msg, null, \core\output\notification::NOTIFY_SUCCESS);
 }
 
@@ -172,19 +173,21 @@ foreach ($filters as $key => $label) {
 }
 echo html_writer::end_div();
 
-// v5.9.369 QB-COLUMN-CLARITY: a plain-language legend so the three "readiness" columns
+// Version 5.9.369 QB-COLUMN-CLARITY: a plain-language legend so the three "readiness" columns
 // (Units / Linked Courses / Course Map) are unambiguous. The old table showed a fourth,
 // redundant "Map Coverage" column that duplicated "Course Map" with a different number.
 echo html_writer::start_div('', ['style' => 'background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:12px 16px;margin:0 0 16px;font-size:0.85rem;color:#334155;']);
 echo html_writer::tag('div', 'What the columns mean', ['style' => 'font-weight:700;color:#0369a1;margin-bottom:6px;']);
-echo html_writer::tag('div',
-    '<strong>Units</strong> — how many units make up this qualification (from its packaging rules).<br>' .
-    '<strong>Linked Courses</strong> — of those units, how many have a Moodle delivery course attached here in the Builder. This is what tells the system “completing <em>this course</em> = completing <em>this unit</em>”.<br>' .
-    '<strong>Course Map</strong> — of those units, how many are confirmed in the Course → Unit → Qualification map. The map also recognises completions in <em>archive / semester copies</em> of a course, and is what the SoA and certificate tools use to find completers.<br>' .
-    '<strong>Status</strong> — <em>Draft</em> while you build it; <em>Active</em> once it’s live and students completing it are queued for certificates. A green tick = packaging rules validated.',
+echo html_writer::tag(
+    'div',
+        '<strong>Units</strong> — how many units make up this qualification (from its packaging rules).<br>' .
+        '<strong>Linked Courses</strong> — of those units, how many have a Moodle delivery course attached here in the Builder. This is what tells the system “completing <em>this course</em> = completing <em>this unit</em>”.<br>' .
+        '<strong>Course Map</strong> — of those units, how many are confirmed in the Course → Unit → Qualification map. The map also recognises completions in <em>archive / semester copies</em> of a course, and is what the SoA and certificate tools use to find completers.<br>' .
+        '<strong>Status</strong> — <em>Draft</em> while you build it; <em>Active</em> once it’s live and students completing it are queued for certificates. A green tick = packaging rules validated.',
     ['style' => 'line-height:1.6;']);
-echo html_writer::tag('div',
-    'For reliable auto-certificates, aim to get both <strong>Linked Courses</strong> and <strong>Course Map</strong> to the full count (green), then set the product to <strong>Active</strong>.',
+echo html_writer::tag(
+    'div',
+        'For reliable auto-certificates, aim to get both <strong>Linked Courses</strong> and <strong>Course Map</strong> to the full count (green), then set the product to <strong>Active</strong>.',
     ['style' => 'margin-top:6px;color:#475569;']);
 echo html_writer::end_div();
 
@@ -209,7 +212,7 @@ $sql .= " ORDER BY qb.status ASC, qb.qualificationcode ASC";
 
 $products = $DB->get_records_sql($sql, $params);
 
-// v5.9.369 QB-COLUMN-CLARITY: the old "Map Coverage" column counted confirmed
+// Version 5.9.369 QB-COLUMN-CLARITY: the old "Map Coverage" column counted confirmed
 // course_map unitcodes by qualcode WITHOUT restricting to the qualification's own
 // selected units, so it double-counted, disagreed with the "Map" column (which does
 // restrict to selected units), and could even read "15/12". It has been removed — the
@@ -245,10 +248,11 @@ if (empty($products)) {
         'no-deadlines'
     );
 } else {
-    // v5.9.369 QB-COLUMN-CLARITY: header cells carry a plain-language tooltip so each
+    // Version 5.9.369 QB-COLUMN-CLARITY: header cells carry a plain-language tooltip so each
     // column's meaning is obvious, and the redundant "Map Coverage" column is gone.
     $hcell = function ($label, $tip) {
-        return html_writer::tag('span', $label,
+        return html_writer::tag(
+            'span', $label,
             ['title' => $tip, 'style' => 'cursor:help;border-bottom:1px dotted #9ca3af;']);
     };
     $table = new html_table();
@@ -257,13 +261,17 @@ if (empty($products)) {
         get_string('qualification_code', 'local_rtocompliance'),
         get_string('qualification_name', 'local_rtocompliance'),
         'Stream / Variant',
-        $hcell(get_string('units', 'local_rtocompliance'),
+        $hcell(
+            get_string('units', 'local_rtocompliance'),
             'How many units this training product packages (from TGA / packaging rules).'),
-        $hcell(get_string('linked_courses', 'local_rtocompliance'),
+        $hcell(
+            get_string('linked_courses', 'local_rtocompliance'),
             'How many units have a Moodle delivery course attached in the Qualification Builder. This is how the system knows which course completion counts as which unit.'),
-        $hcell('Course Map',
+        $hcell(
+            'Course Map',
             'How many units are confirmed in the Course → Unit → Qualification map. This recognises completions even across semester / archive copies of a course, and is what the SoA and certificate generators rely on.'),
-        $hcell(get_string('status'),
+        $hcell(
+            get_string('status'),
             'Draft = still being set up. Active = live; completing students are queued for certificate issue. A green tick means the packaging rules passed validation.'),
         get_string('actions'),
     ];
@@ -289,7 +297,7 @@ if (empty($products)) {
             ? (int)$product->totalunits
             : (int)$product->unitcount;
 
-        // v5.9.369: cap the numerator so the fraction can never read e.g. "15/12"
+        // Version 5.9.369: cap the numerator so the fraction can never read e.g. "15/12"
         // when a product has more selected/linked units than its TGA total.
         $linkedCountDisp = min((int)$product->linkedcount, (int)$displayTotal);
         $linkedtext = $linkedCountDisp . '/' . $displayTotal;
@@ -329,7 +337,7 @@ if (empty($products)) {
         // TASK-50 (v5.9.349): Map coverage badge — shows how many selected units
         // have at least one confirmed entry in local_rtocompliance_course_map.
         $mapTotal     = (int)$displayTotal;
-        $mapConfirmed = min((int)($product->mapconfirmed ?? 0), $mapTotal); // v5.9.369: cap ≤ total
+        $mapConfirmed = min((int)($product->mapconfirmed ?? 0), $mapTotal); // Version 5.9.369: cap ≤ total
         if ($mapTotal === 0) {
             $mapbadge = html_writer::tag('span', '—', ['class' => 'text-muted', 'title' => 'No units selected']);
         } elseif ($mapConfirmed >= $mapTotal) {
@@ -372,10 +380,11 @@ if (empty($products)) {
 
 echo html_writer::start_div('info-card');
 echo html_writer::tag('h4', get_string('certificate_credits', 'local_rtocompliance'));
-echo html_writer::tag('ul', 
-    html_writer::tag('li', '<strong>' . get_string('product_type_singleunit', 'local_rtocompliance') . ':</strong> ' . get_string('soa_credits', 'local_rtocompliance')) .
-    html_writer::tag('li', '<strong>' . get_string('product_type_skillset', 'local_rtocompliance') . ':</strong> ' . get_string('soa_credits', 'local_rtocompliance')) .
-    html_writer::tag('li', '<strong>' . get_string('product_type_qualification', 'local_rtocompliance') . ':</strong> ' . get_string('qual_credits', 'local_rtocompliance'))
+echo html_writer::tag(
+    'ul', 
+        html_writer::tag('li', '<strong>' . get_string('product_type_singleunit', 'local_rtocompliance') . ':</strong> ' . get_string('soa_credits', 'local_rtocompliance')) .
+        html_writer::tag('li', '<strong>' . get_string('product_type_skillset', 'local_rtocompliance') . ':</strong> ' . get_string('soa_credits', 'local_rtocompliance')) .
+        html_writer::tag('li', '<strong>' . get_string('product_type_qualification', 'local_rtocompliance') . ':</strong> ' . get_string('qual_credits', 'local_rtocompliance'))
 );
 echo html_writer::end_div();
 

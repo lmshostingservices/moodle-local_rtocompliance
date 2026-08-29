@@ -77,7 +77,7 @@ $tasks = [
         'dayofweek' => '*',
         'disabled' => 0,
     ],
-    // v4.4.0 NRT-LOGO-COMPLIANCE — daily check that flags any cert
+    // Version 4.4.0 NRT-LOGO-COMPLIANCE — daily check that flags any cert
     // marked complete more than 30 days ago that has not yet been
     // issued (ASQA Practice Guide SLA: certificates must be issued
     // within 30 days of the unit/qualification completion date).

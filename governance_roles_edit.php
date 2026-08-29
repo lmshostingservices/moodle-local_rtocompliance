@@ -112,10 +112,11 @@ echo html_writer::end_div();
 
 $f = $record ?: new stdClass();
 
-echo html_writer::start_tag('form', [
-    'method' => 'post',
-    'action' => $PAGE->url->out_omit_querystring(),
-    'style'  => 'max-width: 720px;',
+echo html_writer::start_tag(
+    'form', [
+        'method' => 'post',
+        'action' => $PAGE->url->out_omit_querystring(),
+        'style'  => 'max-width: 720px;',
 ]);
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'action', 'value' => 'save']);
@@ -144,19 +145,21 @@ foreach ([
 ] as [$name, $label, $placeholder, $rows]) {
     echo html_writer::start_div('form-group', ['style' => 'margin-bottom: 14px;']);
     echo html_writer::tag('label', $label, ['for' => $name, 'class' => 'form-label']);
-    echo html_writer::tag('textarea', s($f->$name ?? ''), [
-        'name' => $name, 'id' => $name, 'class' => 'form-control',
-        'rows' => $rows, 'placeholder' => $placeholder,
+    echo html_writer::tag(
+        'textarea', s($f->$name ?? ''), [
+            'name' => $name, 'id' => $name, 'class' => 'form-control',
+            'rows' => $rows, 'placeholder' => $placeholder,
     ]);
     echo html_writer::end_div();
 }
 
 echo html_writer::start_div('form-group', ['style' => 'margin-bottom: 14px;']);
 echo html_writer::tag('label', 'Review Date', ['for' => 'reviewdate', 'class' => 'form-label']);
-echo html_writer::empty_tag('input', [
-    'type' => 'date', 'name' => 'reviewdate', 'id' => 'reviewdate',
-    'value' => !empty($f->reviewdate) ? date('Y-m-d', $f->reviewdate) : '',
-    'class' => 'form-control',
+echo html_writer::empty_tag(
+    'input', [
+        'type' => 'date', 'name' => 'reviewdate', 'id' => 'reviewdate',
+        'value' => !empty($f->reviewdate) ? date('Y-m-d', $f->reviewdate) : '',
+        'class' => 'form-control',
 ]);
 echo html_writer::end_div();
 

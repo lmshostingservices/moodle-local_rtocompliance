@@ -50,10 +50,10 @@ require_capability('local/rtocompliance:managecerttemplates', context_system::in
 $action       = optional_param('action',      '', PARAM_ALPHA);
 $certtype_new = optional_param('certtype',    '', PARAM_ALPHA);
 $name_new     = trim(optional_param('name',   '', PARAM_TEXT));
-// v4.3.0 CERT-TEMPLATE-AUDIENCES — optional audience pin at create time.
+// Version 4.3.0 CERT-TEMPLATE-AUDIENCES — optional audience pin at create time.
 $audience_new      = optional_param('audience',      'default', PARAM_ALPHANUMEXT);
 $audiencelabel_new = trim(optional_param('audiencelabel', '',   PARAM_TEXT));
-// v5.9.327 — orientation at create time.
+// Version 5.9.327 — orientation at create time.
 $orientation_new   = optional_param('orientation', '', PARAM_ALPHA);
 if ($orientation_new !== 'P' && $orientation_new !== 'L') {
     $orientation_new = '';
@@ -104,15 +104,17 @@ if ($action === 'seed' && data_submitted() && confirm_sesskey()) {
     $msg = $seeded > 0
         ? get_string('cert_template_seed_ok', 'local_rtocompliance', $seeded)
         : get_string('cert_template_seed_none', 'local_rtocompliance');
-    redirect(new moodle_url('/local/rtocompliance/cert_templates.php'),
+    redirect(
+        new moodle_url('/local/rtocompliance/cert_templates.php'),
         $msg, null, \core\output\notification::NOTIFY_SUCCESS);
 }
 
 // ── "Create" form submit (POST + sesskey) ──────────────────────────────────
 if ($action === 'create' && data_submitted() && confirm_sesskey()) {
     if (!in_array($certtype_new, cert_template::CERT_TYPES, true) || $name_new === '') {
-        redirect(new moodle_url('/local/rtocompliance/cert_templates.php'),
-            get_string('cert_template_action_err_notallowed', 'local_rtocompliance'),
+        redirect(
+            new moodle_url('/local/rtocompliance/cert_templates.php'),
+                get_string('cert_template_action_err_notallowed', 'local_rtocompliance'),
             null, \core\output\notification::NOTIFY_ERROR);
     }
     $newid = cert_template::create(
@@ -122,8 +124,9 @@ if ($action === 'create' && data_submitted() && confirm_sesskey()) {
         $audiencelabel_new !== '' ? $audiencelabel_new : null,
         $orientation_new !== '' ? $orientation_new : null
     );
-    redirect(new moodle_url('/local/rtocompliance/cert_template_edit.php', ['id' => $newid]),
-        get_string('cert_template_action_ok_saved', 'local_rtocompliance'),
+    redirect(
+        new moodle_url('/local/rtocompliance/cert_template_edit.php', ['id' => $newid]),
+            get_string('cert_template_action_ok_saved', 'local_rtocompliance'),
         null, \core\output\notification::NOTIFY_SUCCESS);
 }
 
@@ -139,7 +142,7 @@ $PAGE->set_heading(get_string('cert_templates', 'local_rtocompliance'));
 $PAGE->set_url(new moodle_url('/local/rtocompliance/cert_templates.php'));
 $PAGE->requires->css('/local/rtocompliance/styles.css');
 
-$PAGE->add_body_class('path-local-rtocompliance'); // v5.9.445: scoped CSS needs this on admin_externalpage pages.
+$PAGE->add_body_class('path-local-rtocompliance'); // Version 5.9.445: scoped CSS needs this on admin_externalpage pages.
 echo $OUTPUT->header();
 echo local_rtocompliance_render_nav_header(get_string('cert_templates', 'local_rtocompliance'), null, null, 'certificates');
 echo local_rtocompliance_page_banner(get_string('cert_templates', 'local_rtocompliance'));
@@ -150,23 +153,26 @@ echo html_writer::div(get_string('cert_templates_desc', 'local_rtocompliance'), 
 // Shows a single compact warning when any core branding asset is missing so the
 // admin knows to upload them before activating a template.
 $_branding_status = local_rtocompliance_get_branding_status();
-$_branding_missing = array_filter([
-    !$_branding_status['logo']         ? 'RTO logo'                    : null,
-    !$_branding_status['signature']    ? 'CEO / signatory signature'   : null,
-    !$_branding_status['seal']         ? 'Organisation seal'           : null,
-    !$_branding_status['nrt_override'] ? 'NRT logo (AQF certs)'       : null,
-    !$_branding_status['signatory']    ? 'Authorised signatory name'   : null,
+$_branding_missing = array_filter(
+    [
+        !$_branding_status['logo']         ? 'RTO logo'                    : null,
+        !$_branding_status['signature']    ? 'CEO / signatory signature'   : null,
+        !$_branding_status['seal']         ? 'Organisation seal'           : null,
+        !$_branding_status['nrt_override'] ? 'NRT logo (AQF certs)'       : null,
+        !$_branding_status['signatory']    ? 'Authorised signatory name'   : null,
 ]);
 if (!empty($_branding_missing)) {
     $_settings_url = (new moodle_url('/admin/settings.php', ['section' => 'local_rtocompliance_settings']))->out(false);
     echo html_writer::start_div('alert alert-warning rtoc-branding-status-notice mb-3');
     echo html_writer::tag('strong', '⚠ Some branding assets are not yet configured');
-    echo html_writer::tag('p',
-        'Certificates will render with placeholder boxes until these are set up. ' .
-        html_writer::link($_settings_url, 'Open RTO Settings →', ['class' => 'alert-link']),
+    echo html_writer::tag(
+        'p',
+            'Certificates will render with placeholder boxes until these are set up. ' .
+            html_writer::link($_settings_url, 'Open RTO Settings →', ['class' => 'alert-link']),
         ['class' => 'mb-1 mt-1 small']);
-    echo html_writer::tag('ul',
-        implode('', array_map(fn($item) => html_writer::tag('li', s($item)), $_branding_missing)),
+    echo html_writer::tag(
+        'ul',
+            implode('', array_map(fn($item) => html_writer::tag('li', s($item)), $_branding_missing)),
         ['class' => 'mb-0 small']);
     echo html_writer::end_div();
 }
@@ -191,24 +197,27 @@ if ($any_missing_active) {
     }
     echo html_writer::start_div('rtoc-tmpl-seed-banner card border-warning mb-4');
     echo html_writer::start_div('card-body');
-    echo html_writer::tag('h3',
-        get_string('cert_template_seed_heading', 'local_rtocompliance'),
+    echo html_writer::tag(
+        'h3',
+            get_string('cert_template_seed_heading', 'local_rtocompliance'),
         ['class' => 'h5 text-warning mb-2']);
-    echo html_writer::tag('p',
-        get_string('cert_template_seed_desc', 'local_rtocompliance') . ' ' .
-        implode(', ', $missing_types) . '.',
+    echo html_writer::tag(
+        'p',
+            get_string('cert_template_seed_desc', 'local_rtocompliance') . ' ' .
+            implode(', ', $missing_types) . '.',
         ['class' => 'mb-3']);
 
     $seedform_url = new moodle_url('/local/rtocompliance/cert_templates.php');
     echo html_writer::start_tag('form', ['method' => 'post', 'action' => $seedform_url->out(false)]);
     echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
     echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'action',  'value' => 'seed']);
-    echo html_writer::tag('button',
-        get_string('cert_template_seed_btn', 'local_rtocompliance'),
-        ['type' => 'submit', 'class' => 'btn btn-warning',
-         'title' => 'Create and activate ASQA default templates for the missing certificate types',
-         'onclick' => 'return confirm(' . json_encode(
-             get_string('cert_template_seed_confirm', 'local_rtocompliance')
+    echo html_writer::tag(
+        'button',
+            get_string('cert_template_seed_btn', 'local_rtocompliance'),
+            ['type' => 'submit', 'class' => 'btn btn-warning',
+             'title' => 'Create and activate ASQA default templates for the missing certificate types',
+             'onclick' => 'return confirm(' . json_encode(
+                 get_string('cert_template_seed_confirm', 'local_rtocompliance')
          ) . ')']);
     echo html_writer::end_tag('form');
     echo html_writer::end_div();
@@ -226,7 +235,7 @@ $cert_type_labels = [
     'record'     => '📋 ' . get_string('cert_template_certtype_record',      'local_rtocompliance'),
     'completion' => '🎓 ' . get_string('cert_template_certtype_completion',  'local_rtocompliance'),
 ];
-// v5.9.365 PREVIEW-ORIENTATION-FIX: '' (auto) so the preview renders the ACTIVE
+// Version 5.9.365 PREVIEW-ORIENTATION-FIX: '' (auto) so the preview renders the ACTIVE
 // template in ITS OWN orientation instead of forcing a rotate+rescale of every field.
 // CERT-ORIENTATION-FILTER (v6.2.6): when the RTO has restricted itself to a SINGLE
 // orientation in Certificate Settings, force the preview into that orientation so the
@@ -242,11 +251,13 @@ $cert_type_orientations = [
 
 echo html_writer::start_div('rtoc-cert-preview-panel card mb-4');
 echo html_writer::start_div('card-header d-flex justify-content-between align-items-center');
-echo html_writer::tag('h3',
-    get_string('cert_template_preview_panel_heading', 'local_rtocompliance'),
+echo html_writer::tag(
+    'h3',
+        get_string('cert_template_preview_panel_heading', 'local_rtocompliance'),
     ['class' => 'h5 mb-0']);
-echo html_writer::tag('small',
-    get_string('cert_template_preview_panel_intro', 'local_rtocompliance'),
+echo html_writer::tag(
+    'small',
+        get_string('cert_template_preview_panel_intro', 'local_rtocompliance'),
     ['class' => 'text-muted']);
 echo html_writer::end_div(); // card-header
 
@@ -261,14 +272,15 @@ foreach (cert_template::CERT_TYPES as $ct) {
         ? html_writer::span('✓ Active', 'badge bg-success ms-1 small')
         : html_writer::span('No active template', 'badge bg-warning text-dark ms-1 small');
     echo html_writer::start_tag('li', ['class' => 'nav-item', 'role' => 'presentation']);
-    echo html_writer::start_tag('button', [
-        'class'          => 'nav-link' . ($first ? ' active' : ''),
-        'id'             => 'rtoc-preview-tab-' . $ct,
-        'data-certtype'  => $ct,
-        'data-sesskey'   => $sk,
-        'data-orient'    => $cert_type_orientations[$ct],
-        'type'           => 'button',
-        'role'           => 'tab',
+    echo html_writer::start_tag(
+        'button', [
+            'class'          => 'nav-link' . ($first ? ' active' : ''),
+            'id'             => 'rtoc-preview-tab-' . $ct,
+            'data-certtype'  => $ct,
+            'data-sesskey'   => $sk,
+            'data-orient'    => $cert_type_orientations[$ct],
+            'type'           => 'button',
+            'role'           => 'tab',
     ]);
     echo s($cert_type_labels[$ct]) . ' ' . $statusbadge;
     echo html_writer::end_tag('button');
@@ -277,24 +289,27 @@ foreach (cert_template::CERT_TYPES as $ct) {
 }
 echo html_writer::end_tag('ul');
 
-// iframe container.
+// Iframe container.
 echo html_writer::start_div('rtoc-preview-iframe-wrap', ['style' => 'position:relative;']);
-echo html_writer::tag('div',
-    html_writer::tag('p', '⏳ Click a certificate type tab above to load the preview.', ['class' => 'text-muted m-0']),
+echo html_writer::tag(
+    'div',
+        html_writer::tag('p', '⏳ Click a certificate type tab above to load the preview.', ['class' => 'text-muted m-0']),
     ['id' => 'rtocPreviewPlaceholder', 'class' => 'p-4 text-center bg-light', 'style' => 'min-height:120px;display:flex;align-items:center;justify-content:center;']);
-echo html_writer::tag('iframe', '', [
-    'id'             => 'rtocPreviewIframe',
-    'src'            => '',
-    'style'          => 'width:100%;height:640px;border:0;display:none;',
-    'title'          => 'Certificate preview',
-    'allowfullscreen' => 'true',
+echo html_writer::tag(
+    'iframe', '', [
+        'id'             => 'rtocPreviewIframe',
+        'src'            => '',
+        'style'          => 'width:100%;height:640px;border:0;display:none;',
+        'title'          => 'Certificate preview',
+        'allowfullscreen' => 'true',
 ]);
 
 // "Open full size" link shown when a preview is loaded.
-echo html_writer::tag('div', '', [
-    'id'    => 'rtocPreviewActions',
-    'class' => 'p-2 bg-light border-top text-end',
-    'style' => 'display:none;',
+echo html_writer::tag(
+    'div', '', [
+        'id'    => 'rtocPreviewActions',
+        'class' => 'p-2 bg-light border-top text-end',
+        'style' => 'display:none;',
 ]);
 
 echo html_writer::end_div(); // rtoc-preview-iframe-wrap
@@ -302,11 +317,12 @@ echo html_writer::end_div(); // card-body
 echo html_writer::end_div(); // rtoc-cert-preview-panel
 
 // Preview JS — on tab click: set iframe src to cert_test.php with sesskey.
-echo html_writer::script('
+echo html_writer::script(
+    '
 (function () {
     var previewBase = ' . json_encode(
-        (new moodle_url('/local/rtocompliance/cert_test.php'))->out(false)
-    ) . ';
+            (new moodle_url('/local/rtocompliance/cert_test.php'))->out(false)
+        ) . ';
     var tabs = document.querySelectorAll("[data-certtype]");
     var iframe = document.getElementById("rtocPreviewIframe");
     var placeholder = document.getElementById("rtocPreviewPlaceholder");
@@ -355,106 +371,127 @@ echo html_writer::script('
 // ── CREATE FORM ────────────────────────────────────────────────────────────
 echo html_writer::start_div('rtoc-tmpl-create card mb-4');
 echo html_writer::start_div('card-body');
-echo html_writer::tag('h3',
-    get_string('cert_template_create_heading', 'local_rtocompliance'),
+echo html_writer::tag(
+    'h3',
+        get_string('cert_template_create_heading', 'local_rtocompliance'),
     ['class' => 'h5 mb-2']);
-echo html_writer::tag('p',
-    get_string('cert_template_create_intro', 'local_rtocompliance'),
+echo html_writer::tag(
+    'p',
+        get_string('cert_template_create_intro', 'local_rtocompliance'),
     ['class' => 'text-muted small mb-3']);
-echo html_writer::start_tag('form', [
-    'method' => 'post',
-    'action' => new moodle_url('/local/rtocompliance/cert_templates.php'),
-    'class'  => 'd-flex flex-wrap align-items-end gap-2',
+echo html_writer::start_tag(
+    'form', [
+        'method' => 'post',
+        'action' => new moodle_url('/local/rtocompliance/cert_templates.php'),
+        'class'  => 'd-flex flex-wrap align-items-end gap-2',
 ]);
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'action',  'value' => 'create']);
 
 // Cert type.
 echo html_writer::start_tag('div', ['class' => 'form-group mb-2']);
-echo html_writer::tag('label',
-    get_string('cert_template_certtype', 'local_rtocompliance'),
+echo html_writer::tag(
+    'label',
+        get_string('cert_template_certtype', 'local_rtocompliance'),
     ['for' => 'certtype', 'class' => 'd-block small fw-bold mb-1']);
-echo html_writer::start_tag('select', [
-    'id' => 'rtocCreateCerttype', 'name' => 'certtype',
+echo html_writer::start_tag(
+    'select', [
+        'id' => 'rtocCreateCerttype', 'name' => 'certtype',
     'class' => 'form-control', 'required' => 'required']);
 foreach (cert_template::CERT_TYPES as $ct) {
-    echo html_writer::tag('option',
-        get_string('cert_template_certtype_' . $ct, 'local_rtocompliance'),
+    echo html_writer::tag(
+        'option',
+            get_string('cert_template_certtype_' . $ct, 'local_rtocompliance'),
         ['value' => $ct]);
 }
 echo html_writer::end_tag('select');
 echo html_writer::end_tag('div');
 
-// v5.9.327 — Orientation at create time.
+// Version 5.9.327 — Orientation at create time.
 echo html_writer::start_tag('div', ['class' => 'form-group mb-2']);
-echo html_writer::tag('label',
-    get_string('cert_template_create_orientation', 'local_rtocompliance'),
+echo html_writer::tag(
+    'label',
+        get_string('cert_template_create_orientation', 'local_rtocompliance'),
     ['for' => 'rtocCreateOrientation', 'class' => 'd-block small fw-bold mb-1']);
-echo html_writer::start_tag('select', [
+echo html_writer::start_tag(
+    'select', [
     'id' => 'rtocCreateOrientation', 'name' => 'orientation', 'class' => 'form-control']);
-echo html_writer::tag('option',
-    get_string('cert_template_create_orientation_default', 'local_rtocompliance'),
+echo html_writer::tag(
+    'option',
+        get_string('cert_template_create_orientation_default', 'local_rtocompliance'),
     ['value' => '']);
-echo html_writer::tag('option',
-    get_string('cert_template_page_orientation_l', 'local_rtocompliance'),
+echo html_writer::tag(
+    'option',
+        get_string('cert_template_page_orientation_l', 'local_rtocompliance'),
     ['value' => 'L']);
-echo html_writer::tag('option',
-    get_string('cert_template_page_orientation_p', 'local_rtocompliance'),
+echo html_writer::tag(
+    'option',
+        get_string('cert_template_page_orientation_p', 'local_rtocompliance'),
     ['value' => 'P']);
 echo html_writer::end_tag('select');
 echo html_writer::end_tag('div');
 
-// v4.3.0 CERT-TEMPLATE-AUDIENCES — audience picker on the create form.
+// Version 4.3.0 CERT-TEMPLATE-AUDIENCES — audience picker on the create form.
 echo html_writer::start_tag('div', ['class' => 'form-group mb-2']);
-echo html_writer::tag('label',
-    get_string('cert_template_audience', 'local_rtocompliance'),
+echo html_writer::tag(
+    'label',
+        get_string('cert_template_audience', 'local_rtocompliance'),
     ['for' => 'audience', 'class' => 'd-block small fw-bold mb-1']);
-echo html_writer::start_tag('select', [
+echo html_writer::start_tag(
+    'select', [
     'id' => 'audience', 'name' => 'audience', 'class' => 'form-control']);
 foreach (cert_template::AUDIENCES as $aud) {
-    echo html_writer::tag('option',
-        get_string('cert_template_audience_' . $aud, 'local_rtocompliance'),
+    echo html_writer::tag(
+        'option',
+            get_string('cert_template_audience_' . $aud, 'local_rtocompliance'),
         ['value' => $aud] + ($aud === 'default' ? ['selected' => 'selected'] : []));
 }
 echo html_writer::end_tag('select');
 echo html_writer::end_tag('div');
 
 echo html_writer::start_tag('div', ['class' => 'form-group mb-2']);
-echo html_writer::tag('label',
-    get_string('cert_template_audiencelabel', 'local_rtocompliance'),
+echo html_writer::tag(
+    'label',
+        get_string('cert_template_audiencelabel', 'local_rtocompliance'),
     ['for' => 'audiencelabel', 'class' => 'd-block small fw-bold mb-1']);
-echo html_writer::empty_tag('input', [
-    'type' => 'text', 'id' => 'audiencelabel', 'name' => 'audiencelabel',
-    'class' => 'form-control', 'maxlength' => 255,
-    'placeholder' => get_string('cert_template_audiencelabel_placeholder', 'local_rtocompliance'),
-    'style' => 'min-width: 200px;',
+echo html_writer::empty_tag(
+    'input', [
+        'type' => 'text', 'id' => 'audiencelabel', 'name' => 'audiencelabel',
+        'class' => 'form-control', 'maxlength' => 255,
+        'placeholder' => get_string('cert_template_audiencelabel_placeholder', 'local_rtocompliance'),
+        'style' => 'min-width: 200px;',
 ]);
 echo html_writer::end_tag('div');
 
 echo html_writer::start_tag('div', ['class' => 'form-group mb-2']);
-echo html_writer::tag('label',
-    get_string('cert_template_name', 'local_rtocompliance'),
+echo html_writer::tag(
+    'label',
+        get_string('cert_template_name', 'local_rtocompliance'),
     ['for' => 'name', 'class' => 'd-block small fw-bold mb-1']);
-echo html_writer::empty_tag('input', [
-    'type' => 'text', 'id' => 'name', 'name' => 'name',
-    'class' => 'form-control', 'placeholder' => 'e.g. Testamur 2026',
-    'required' => 'required', 'maxlength' => 255, 'style' => 'min-width: 260px;',
+echo html_writer::empty_tag(
+    'input', [
+        'type' => 'text', 'id' => 'name', 'name' => 'name',
+        'class' => 'form-control', 'placeholder' => 'e.g. Testamur 2026',
+        'required' => 'required', 'maxlength' => 255, 'style' => 'min-width: 260px;',
 ]);
 echo html_writer::end_tag('div');
 
-echo html_writer::tag('div',
-    html_writer::tag('button',
-        get_string('cert_template_new', 'local_rtocompliance'),
-        ['type' => 'submit', 'class' => 'btn btn-primary mb-2',
-         'title' => 'Create the template and open it in the designer']),
+echo html_writer::tag(
+    'div',
+        html_writer::tag(
+        'button',
+                get_string('cert_template_new', 'local_rtocompliance'),
+                ['type' => 'submit', 'class' => 'btn btn-primary mb-2',
+             'title' => 'Create the template and open it in the designer']),
     ['class' => 'form-group mb-2 align-self-end']);
 
 echo html_writer::end_tag('form');
 echo html_writer::end_div(); // card-body
-echo html_writer::end_div(); // card
+echo html_writer::end_div(); // Card
 
 // JS: auto-update orientation select to the ASQA default when cert type changes.
-echo html_writer::script('
+echo html_writer::script(
+    '
 (function () {
     var typeDefaults = {testamur:"L", statement:"P", record:"P", completion:"L"};
     var typeSelect   = document.getElementById("rtocCreateCerttype");
@@ -483,9 +520,10 @@ echo html_writer::script('
 // ── TEST CERT QUICK LINK ────────────────────────────────────────────────────
 echo html_writer::start_div('mb-3');
 $testurl = new moodle_url('/local/rtocompliance/cert_test.php');
-echo html_writer::link($testurl,
-    get_string('cert_test_link', 'local_rtocompliance'),
-    ['class' => 'btn btn-outline-secondary btn-sm', 'target' => '_blank',
+echo html_writer::link(
+    $testurl,
+        get_string('cert_test_link', 'local_rtocompliance'),
+        ['class' => 'btn btn-outline-secondary btn-sm', 'target' => '_blank',
      'title' => 'Open a sample certificate rendered with your current settings']);
 echo html_writer::end_div();
 
@@ -506,11 +544,13 @@ if (!$showarchived) {
 $orient_hidden_count = 0;
 if (count($allowed_orients) < 2) {
     $before = count($templates);
-    $templates = array_values(array_filter($templates, function ($t) use ($allowed_orients) {
-        $d = json_decode($t->designjson ?? '', true);
-        $o = (is_array($d) && !empty($d['page']['orientation'])) ? $d['page']['orientation'] : 'L';
-        return in_array($o, $allowed_orients, true);
-    }));
+    $templates = array_values(
+        array_filter(
+        $templates, function ($t) use ($allowed_orients) {
+                $d = json_decode($t->designjson ?? '', true);
+                $o = (is_array($d) && !empty($d['page']['orientation'])) ? $d['page']['orientation'] : 'L';
+                return in_array($o, $allowed_orients, true);
+            }));
     $orient_hidden_count = $before - count($templates);
 }
 if ($orient_hidden_count > 0) {
@@ -519,9 +559,11 @@ if ($orient_hidden_count > 0) {
         : get_string('cert_template_page_orientation_l', 'local_rtocompliance');
     $settingsurl = new moodle_url('/admin/settings.php', ['section' => 'local_rtocompliance_settings']);
     echo html_writer::div(
-        get_string('cert_orientation_filter_note', 'local_rtocompliance',
+        get_string(
+            'cert_orientation_filter_note', 'local_rtocompliance',
             (object) ['count' => $orient_hidden_count, 'orientation' => $only])
-        . ' ' . html_writer::link($settingsurl,
+        . ' ' . html_writer::link(
+            $settingsurl,
             get_string('cert_orientation_filter_change', 'local_rtocompliance')),
         'alert alert-info py-2 small mb-3');
 }
@@ -535,8 +577,9 @@ if ($archivedcount > 0) {
         $toggleurl  = new moodle_url($pageurl, ['showarchived' => 1]);
         $toggletext = 'Show archived (' . $archivedcount . ')';
     }
-    echo html_writer::link($toggleurl, $toggletext,
-        ['class' => 'btn btn-sm btn-outline-secondary mb-3',
+    echo html_writer::link(
+        $toggleurl, $toggletext,
+            ['class' => 'btn btn-sm btn-outline-secondary mb-3',
          'title' => 'Show or hide archived templates']);
 }
 
@@ -546,7 +589,7 @@ if (empty($templates)) {
         'alert alert-secondary');
 } else {
     $table = new html_table();
-    // v-tooltips: header cells carry plain-English title tooltips.
+    // Tooltips: header cells carry plain-English titles.
     $mkhead = function (string $text, string $title) {
         $cell = new html_table_cell($text);
         $cell->header = true;
@@ -604,15 +647,17 @@ if (empty($templates)) {
             }
         }
         $row->cells[] = $statusbadge;
-        $row->cells[] = userdate($t->timemodified,
+        $row->cells[] = userdate(
+            $t->timemodified,
             get_string('strftimedatetimeshort', 'core_langconfig'));
 
         // Actions.
         $sk2 = sesskey();
         $mkaction = function (string $act, string $label, string $btnclass,
                 ?string $confirm = null, ?string $title = null) use ($t, $sk2) {
-            $url = new moodle_url('/local/rtocompliance/cert_template_action.php', [
-                'action' => $act, 'id' => $t->id, 'sesskey' => $sk2,
+            $url = new moodle_url(
+                '/local/rtocompliance/cert_template_action.php', [
+                    'action' => $act, 'id' => $t->id, 'sesskey' => $sk2,
             ]);
             $attrs = ['class' => 'btn btn-sm ' . $btnclass . ' mr-1 mb-1'];
             if ($title !== null) {
@@ -626,54 +671,62 @@ if (empty($templates)) {
 
         $actions = [];
         $editurl = new moodle_url('/local/rtocompliance/cert_template_edit.php', ['id' => $t->id]);
-        $actions[] = html_writer::link($editurl,
-            get_string('cert_template_edit_btn', 'local_rtocompliance'),
-            ['class' => 'btn btn-sm btn-outline-primary mr-1 mb-1',
+        $actions[] = html_writer::link(
+            $editurl,
+                get_string('cert_template_edit_btn', 'local_rtocompliance'),
+                ['class' => 'btn btn-sm btn-outline-primary mr-1 mb-1',
              'title' => 'Open this template in the drag-and-drop designer']);
 
         $previewurl = new moodle_url('/local/rtocompliance/cert_template_preview.php', ['id' => $t->id]);
-        $actions[] = html_writer::link($previewurl,
-            get_string('cert_template_preview_btn', 'local_rtocompliance'),
-            ['class' => 'btn btn-sm btn-outline-secondary mr-1 mb-1',
-             'target' => '_blank', 'rel' => 'noopener',
+        $actions[] = html_writer::link(
+            $previewurl,
+                get_string('cert_template_preview_btn', 'local_rtocompliance'),
+                ['class' => 'btn btn-sm btn-outline-secondary mr-1 mb-1',
+                 'target' => '_blank', 'rel' => 'noopener',
              'title' => 'Open a sample PDF of this template in a new tab']);
 
         if ($t->status === 'draft') {
-            $actions[] = $mkaction('submit',
-                get_string('cert_template_submit_btn', 'local_rtocompliance'), 'btn-success',
+            $actions[] = $mkaction(
+                'submit',
+                    get_string('cert_template_submit_btn', 'local_rtocompliance'), 'btn-success',
                 null, 'Submit this draft for approval');
         }
         if ($t->status === 'approved' && !$t->isactive) {
-            $actions[] = $mkaction('activate',
-                get_string('cert_template_activate_btn', 'local_rtocompliance'),
-                'btn-primary',
-                get_string('cert_template_confirm_activate', 'local_rtocompliance'),
+            $actions[] = $mkaction(
+                'activate',
+                    get_string('cert_template_activate_btn', 'local_rtocompliance'),
+                    'btn-primary',
+                    get_string('cert_template_confirm_activate', 'local_rtocompliance'),
                 'Make this the template used for newly issued certificates');
         }
         // DEACTIVATE (v5.9.408): "Make non-active" button on the currently active
         // template so an admin can turn it off without archiving it.
         if (!empty($t->isactive)) {
-            $actions[] = $mkaction('deactivate',
-                get_string('cert_template_deactivate_btn', 'local_rtocompliance'),
-                'btn-outline-warning',
-                get_string('cert_template_confirm_deactivate', 'local_rtocompliance'),
+            $actions[] = $mkaction(
+                'deactivate',
+                    get_string('cert_template_deactivate_btn', 'local_rtocompliance'),
+                    'btn-outline-warning',
+                    get_string('cert_template_confirm_deactivate', 'local_rtocompliance'),
                 'Turn off this active template without archiving it');
         }
         if (in_array($t->status, ['draft', 'approved'], true)) {
-            $actions[] = $mkaction('archive',
-                get_string('cert_template_archive_btn', 'local_rtocompliance'),
-                'btn-outline-secondary',
-                get_string('cert_template_confirm_archive', 'local_rtocompliance'),
+            $actions[] = $mkaction(
+                'archive',
+                    get_string('cert_template_archive_btn', 'local_rtocompliance'),
+                    'btn-outline-secondary',
+                    get_string('cert_template_confirm_archive', 'local_rtocompliance'),
                 'Move this template to the archive');
         }
-        $actions[] = $mkaction('duplicate',
-            get_string('cert_template_duplicate_btn', 'local_rtocompliance'),
-            'btn-outline-secondary',
+        $actions[] = $mkaction(
+            'duplicate',
+                get_string('cert_template_duplicate_btn', 'local_rtocompliance'),
+                'btn-outline-secondary',
             null, 'Create an editable copy of this template');
-        $actions[] = $mkaction('reset',
-            get_string('cert_template_reset_btn', 'local_rtocompliance'),
-            'btn-outline-warning',
-            get_string('cert_template_confirm_reset', 'local_rtocompliance'),
+        $actions[] = $mkaction(
+            'reset',
+                get_string('cert_template_reset_btn', 'local_rtocompliance'),
+                'btn-outline-warning',
+                get_string('cert_template_confirm_reset', 'local_rtocompliance'),
             'Reset this template back to the ASQA starter layout');
 
         // FORCE-DELETE (v5.9.408): a Delete button on EVERY template row (any
@@ -684,10 +737,11 @@ if (empty($templates)) {
         $delconfirm = ($t->isactive)
             ? 'This is the ACTIVE template for this certificate type. Deleting it means certificates fall back to the built-in ASQA starter layout until you create and activate a new one. Permanently delete it? This cannot be undone.'
             : 'Permanently delete this template? This cannot be undone.';
-        $actions[] = $mkaction('forcedelete',
-            get_string('cert_template_delete_btn', 'local_rtocompliance'),
-            'btn-outline-danger',
-            $delconfirm,
+        $actions[] = $mkaction(
+            'forcedelete',
+                get_string('cert_template_delete_btn', 'local_rtocompliance'),
+                'btn-outline-danger',
+                $delconfirm,
             'Permanently delete this template');
 
         $row->cells[] = implode('', $actions);

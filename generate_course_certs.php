@@ -21,7 +21,7 @@
  * @copyright  2025 LMS Labs
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-// v4.8.106 ARCHIVE-COURSE-PICKER — Course picker now groups courses by Moodle category path
+// Version 4.8.106 ARCHIVE-COURSE-PICKER — Course picker now groups courses by Moodle category path
 // (shows archive courses organised under their Qualification > Archive label). A live search
 // input lets admins type to narrow down hundreds of courses instantly. The filter bar on the
 // student page gains a "Switch Course" selector showing sibling courses from the same parent
@@ -132,10 +132,11 @@ if (!$courseid) {
        . 'oninput="gcFilterCourses(this.value)">';
     echo '</div>';
 
-    echo html_writer::start_tag('form', [
-        'method' => 'get',
-        'action' => (new moodle_url('/local/rtocompliance/generate_course_certs.php'))->out(false),
-        'id'     => 'gc-picker-form',
+    echo html_writer::start_tag(
+        'form', [
+            'method' => 'get',
+            'action' => (new moodle_url('/local/rtocompliance/generate_course_certs.php'))->out(false),
+            'id'     => 'gc-picker-form',
     ]);
 
     // Build grouped <select> with <optgroup> per category path
@@ -159,7 +160,8 @@ if (!$courseid) {
     echo '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:6px;">';
     echo '<span id="gc-course-count" style="font-size:0.8rem;color:#6b7280;flex:1;">'
        . $totalcourses . ' courses across ' . count($grouped) . ' categories</span>';
-    echo html_writer::empty_tag('input', ['type' => 'submit', 'value' => 'Go', 'class' => 'btn btn-primary',
+    echo html_writer::empty_tag(
+        'input', ['type' => 'submit', 'value' => 'Go', 'class' => 'btn btn-primary',
         'onclick' => 'if(!document.getElementById(\'gc-course-picker\').value||document.getElementById(\'gc-course-picker\').value==\'0\'){alert(\'Please select a course first.\');return false;}']);
     echo '</div>';
     echo html_writer::end_tag('form');
@@ -204,7 +206,7 @@ JS;
     echo '<a href="' . s($qualurl) . '" class="btn btn-success">Select a Qualification &rarr;</a>';
     echo '</div>';
 
-    echo '</div>'; // end flex row
+    echo '</div>'; // End flex row
 
     echo html_writer::end_div();
     echo $OUTPUT->footer();
@@ -271,7 +273,7 @@ if ($action === 'generate' && confirm_sesskey()) {
 
     $issued           = 0;
     $skipped          = 0;
-    $usiskipped       = 0; // v5.9.383: skipped because no USI recorded (Clause 12).
+    $usiskipped       = 0; // Version 5.9.383: skipped because no USI recorded (Clause 12).
     $failed           = 0;
     $voided           = 0;
     $messages         = [];
@@ -293,7 +295,7 @@ if ($action === 'generate' && confirm_sesskey()) {
             continue;
         }
 
-        // v5.9.368 COMPLETION-DATE-FIX: the POST handler runs BEFORE the display-path
+        // Version 5.9.368 COMPLETION-DATE-FIX: the POST handler runs BEFORE the display-path
         // $allcompleters map is built, so the old $allcompleters[$userid]->timecompleted
         // read was always undefined (silently 0). Compute the earliest completion date
         // for this user+course inline, from the same authoritative source
@@ -360,12 +362,14 @@ if ($action === 'generate' && confirm_sesskey()) {
             if ($result['ok']) {
                 // VOID-AFTER-ISSUE (v6.3.13): safe now that the replacement exists.
                 if ($forceregen && $existingcert) {
-                    $DB->update_record('local_rtocompliance_certs', (object)[
-                        'id'           => $existingcert->id,
-                        'reissued_at'  => time(),
-                        'notes'        => trim(($existingcert->notes ?? '')
-                            . "\n[Superseded by force-regenerate — Generate Course Certs]"),
-                        'timemodified' => time(),
+                    $DB->update_record(
+                        'local_rtocompliance_certs', (object)[
+                            'id'           => $existingcert->id,
+                            'reissued_at'  => time(),
+                            'notes'        => trim(
+                            ($existingcert->notes ?? '')
+                                . "\n[Superseded by force-regenerate — Generate Course Certs]"),
+                            'timemodified' => time(),
                     ]);
                     // Update the old cert's registry entry so scanning its QR shows
                     // "Superseded" instead of "Valid".
@@ -379,20 +383,21 @@ if ($action === 'generate' && confirm_sesskey()) {
 
                 // If this was a force-regen, link the new cert back to the old one.
                 if ($forceregen && $existingcert && !empty($result['certid'])) {
-                    $DB->update_record('local_rtocompliance_certs', (object)[
-                        'id'             => $result['certid'],
-                        'replacement_of' => $existingcert->id,
-                        'notes'          => 'Force-regenerated via Generate Course Certificates',
-                        'timemodified'   => time(),
+                    $DB->update_record(
+                        'local_rtocompliance_certs', (object)[
+                            'id'             => $result['certid'],
+                            'replacement_of' => $existingcert->id,
+                            'notes'          => 'Force-regenerated via Generate Course Certificates',
+                            'timemodified'   => time(),
                     ]);
                 }
             } elseif ($result['error'] === 'INSUFFICIENT_CREDITS') {
                 $messages[] = fullname($user) . ' — SKIPPED: insufficient credits';
                 $failed++;
                 $creditsExhausted = true;
-                break; // exit inner certtype loop; outer loop will also exit via flag below
+                break; // Exit inner certtype loop; outer loop will also exit via flag below
             } elseif (!empty($result['skipped']) || ($result['error'] ?? '') === 'NO_USI') {
-                // v5.9.383: a Clause-12 USI skip is not a failure — count it separately.
+                // Version 5.9.383: a Clause-12 USI skip is not a failure — count it separately.
                 $usiskipped++;
                 $messages[] = fullname($user) . ' — SKIPPED: '
                     . ($result['reason'] ?? 'no USI recorded (Clause 12 requires a USI before issuing)');
@@ -468,9 +473,10 @@ $dummyresolution = local_rtocompliance_resolve_cert_types_for_course($courseid, 
 $nationally      = ($dummyresolution['reason'] !== 'non_accredited');
 
 $certtypelabels  = local_rtocompliance_get_certificate_types();
-$predictedtypes  = array_map(function ($t) use ($certtypelabels) {
-    return $certtypelabels[$t] ?? $t;
-}, $dummyresolution['certtypes']);
+$predictedtypes  = array_map(
+    function ($t) use ($certtypelabels) {
+        return $certtypelabels[$t] ?? $t;
+    }, $dummyresolution['certtypes']);
 
 echo html_writer::start_div('certificates-container');
 
@@ -489,9 +495,10 @@ echo html_writer::start_div('', ['style' => 'display:flex;flex-wrap:wrap;gap:12p
 // Nationally Recognised pill
 $nrColour = $nationally ? '#16a34a' : '#6b7280';
 $nrBg     = $nationally ? '#dcfce7' : '#f3f4f6';
-echo html_writer::tag('span',
-    html_writer::tag('strong', 'Nationally Recognised: ') . ($nationally ? 'Yes' : 'No'),
-    ['style' => 'background:' . $nrBg . ';color:' . $nrColour . ';padding:4px 10px;border-radius:6px;font-size:0.85rem;font-weight:600;']
+echo html_writer::tag(
+    'span',
+        html_writer::tag('strong', 'Nationally Recognised: ') . ($nationally ? 'Yes' : 'No'),
+        ['style' => 'background:' . $nrBg . ';color:' . $nrColour . ';padding:4px 10px;border-radius:6px;font-size:0.85rem;font-weight:600;']
 );
 
 // Cert types badge
@@ -503,9 +510,10 @@ echo html_writer::end_div();
 
 // Detection reason + qualification on next line
 echo html_writer::start_div('', ['style' => 'margin-top:10px;font-size:0.85rem;color:#374151;display:flex;flex-wrap:wrap;gap:16px;']);
-echo html_writer::tag('span',
-    html_writer::tag('strong', 'Reason: ', ['style' => 'color:#374151;']) .
-    html_writer::tag('span', local_rtocompliance_cert_reason_label($dummyresolution['reason'] ?? ''), ['style' => 'color:#374151;'])
+echo html_writer::tag(
+    'span',
+        html_writer::tag('strong', 'Reason: ', ['style' => 'color:#374151;']) .
+        html_writer::tag('span', local_rtocompliance_cert_reason_label($dummyresolution['reason'] ?? ''), ['style' => 'color:#374151;'])
 );
 if (!empty($dummyresolution['qualificationcode'])) {
     // FIX-QUAL-LABEL (v4.9.141): choose the right label based on what was detected.
@@ -532,9 +540,10 @@ if (!empty($dummyresolution['qualificationcode'])) {
         $qualvalue = $qcode . ' — ' . $qname;
     }
 
-    echo html_writer::tag('span',
-        html_writer::tag('strong', $quallabel, ['style' => 'color:#374151;']) .
-        html_writer::tag('span', htmlspecialchars($qualvalue), ['style' => 'color:#374151;'])
+    echo html_writer::tag(
+        'span',
+            html_writer::tag('strong', $quallabel, ['style' => 'color:#374151;']) .
+            html_writer::tag('span', htmlspecialchars($qualvalue), ['style' => 'color:#374151;'])
     );
 }
 echo html_writer::end_div();
@@ -612,8 +621,9 @@ if (empty($allcompleters) && !empty($course->idnumber)) {
 if (empty($allcompleters)) {
     echo html_writer::div(
         html_writer::tag('p', 'No students have completed this course yet.') .
-        html_writer::tag('p', 'Students appear here once Moodle marks them as course-complete, '
-            . 'or after a NAT file is imported with a competent outcome (code 20) for the '
+        html_writer::tag(
+            'p', 'Students appear here once Moodle marks them as course-complete, '
+                . 'or after a NAT file is imported with a competent outcome (code 20) for the '
             . 'matching unit of competency and the auto-enrol step is run.'),
         'no-deadlines'
     );
@@ -631,16 +641,18 @@ $filteredcompleters = $allcompleters;
 if ($groupid > 0 && !empty($coursegroups[$groupid])) {
     $groupmembers = groups_get_members($groupid, 'u.id');
     $groupmemberids = array_keys($groupmembers);
-    $filteredcompleters = array_filter($allcompleters, function ($c) use ($groupmemberids) {
-        return in_array($c->userid, $groupmemberids);
-    });
+    $filteredcompleters = array_filter(
+        $allcompleters, function ($c) use ($groupmemberids) {
+            return in_array($c->userid, $groupmemberids);
+        });
 }
 
 // ── Apply individual student filter ──────────────────────────────────────────
 if ($studentid > 0) {
-    $filteredcompleters = array_filter($allcompleters, function ($c) use ($studentid) {
-        return (int)$c->userid === $studentid;
-    });
+    $filteredcompleters = array_filter(
+        $allcompleters, function ($c) use ($studentid) {
+            return (int)$c->userid === $studentid;
+        });
 }
 
 $completers = $filteredcompleters;
@@ -683,7 +695,11 @@ foreach ($completers as $comp) {
             $missing = true;
         }
     }
-    if ($missing) { $needscert++; } else { $alreadydone++; }
+    if ($missing) {
+        $needscert++;
+    } else {
+        $alreadydone++;
+    }
 }
 
 // ── Stat summary ──────────────────────────────────────────────────────────────
@@ -720,13 +736,15 @@ echo html_writer::end_div();
 // other courses in sibling categories so the admin can switch archive periods.
 if (!empty($siblingcourses)) {
     $pickerbaseurl = (new moodle_url('/local/rtocompliance/generate_course_certs.php'))->out(false);
-    echo html_writer::start_div('', [
-        'style' => 'background:#fff8ed;border:1px solid #fcd34d;border-radius:6px;'
-                 . 'padding:12px 16px;margin-bottom:12px;display:flex;flex-wrap:wrap;'
-                 . 'gap:12px;align-items:center;',
+    echo html_writer::start_div(
+        '', [
+            'style' => 'background:#fff8ed;border:1px solid #fcd34d;border-radius:6px;'
+                     . 'padding:12px 16px;margin-bottom:12px;display:flex;flex-wrap:wrap;'
+                     . 'gap:12px;align-items:center;',
     ]);
-    echo html_writer::tag('span', 'Switch Archive Course:', [
-        'style' => 'font-size:0.85rem;font-weight:600;color:#92400e;white-space:nowrap;',
+    echo html_writer::tag(
+        'span', 'Switch Archive Course:', [
+            'style' => 'font-size:0.85rem;font-weight:600;color:#92400e;white-space:nowrap;',
     ]);
 
     // Build option list grouped by sibling category name
@@ -751,20 +769,22 @@ if (!empty($siblingcourses)) {
        . $sibopthtml
        . '</select>';
 
-    echo html_writer::tag('span',
-        count($siblingcourses) . ' other course' . (count($siblingcourses) === 1 ? '' : 's') . ' in this qualification',
-        ['style' => 'font-size:0.8rem;color:#92400e;']
+    echo html_writer::tag(
+        'span',
+            count($siblingcourses) . ' other course' . (count($siblingcourses) === 1 ? '' : 's') . ' in this qualification',
+            ['style' => 'font-size:0.8rem;color:#92400e;']
     );
     echo html_writer::end_div();
 }
 
 // ── Filter bar ────────────────────────────────────────────────────────────────
 $filterurl = new moodle_url('/local/rtocompliance/generate_course_certs.php', ['courseid' => $courseid]);
-echo html_writer::start_tag('form', [
-    'method' => 'get',
-    'action' => $filterurl->out(false),
-    'class'  => 'rtoc-filter-bar mb-4',
-    'style'  => 'background:var(--rtoc-filter-bg,#f8f9fa);border:1px solid #dee2e6;border-radius:6px;padding:16px;',
+echo html_writer::start_tag(
+    'form', [
+        'method' => 'get',
+        'action' => $filterurl->out(false),
+        'class'  => 'rtoc-filter-bar mb-4',
+        'style'  => 'background:var(--rtoc-filter-bg,#f8f9fa);border:1px solid #dee2e6;border-radius:6px;padding:16px;',
 ]);
 echo html_writer::tag('input', '', ['type' => 'hidden', 'name' => 'courseid', 'value' => $courseid]);
 
@@ -772,47 +792,52 @@ echo html_writer::start_div('d-flex flex-wrap gap-3 align-items-end');
 
 // Group selector
 echo html_writer::start_div('');
-echo html_writer::tag('label', 'Filter by Group', [
-    'for'   => 'filter-groupid',
-    'style' => 'display:block;font-size:0.85rem;font-weight:600;margin-bottom:4px;',
+echo html_writer::tag(
+    'label', 'Filter by Group', [
+        'for'   => 'filter-groupid',
+        'style' => 'display:block;font-size:0.85rem;font-weight:600;margin-bottom:4px;',
 ]);
 $groupopts  = html_writer::tag('option', '— All students —', array_filter(['value' => '0', 'selected' => $groupid === 0 ? 'selected' : null]));
 foreach ($coursegroups as $cg) {
     $sel = ($groupid === (int)$cg->id) ? ['selected' => 'selected'] : [];
     $groupopts .= html_writer::tag('option', format_string($cg->name), array_merge(['value' => $cg->id], $sel));
 }
-echo html_writer::tag('select', $groupopts, [
-    'name'  => 'groupid',
-    'id'    => 'filter-groupid',
-    'class' => 'form-control form-control-sm',
-    'style' => 'min-width:180px;',
+echo html_writer::tag(
+    'select', $groupopts, [
+        'name'  => 'groupid',
+        'id'    => 'filter-groupid',
+        'class' => 'form-control form-control-sm',
+        'style' => 'min-width:180px;',
 ]);
 echo html_writer::end_div();
 
 // Individual student selector
 echo html_writer::start_div('');
-echo html_writer::tag('label', 'Filter by Student', [
-    'for'   => 'filter-studentid',
-    'style' => 'display:block;font-size:0.85rem;font-weight:600;margin-bottom:4px;',
+echo html_writer::tag(
+    'label', 'Filter by Student', [
+        'for'   => 'filter-studentid',
+        'style' => 'display:block;font-size:0.85rem;font-weight:600;margin-bottom:4px;',
 ]);
 $studentopts  = html_writer::tag('option', '— All students —', array_filter(['value' => '0', 'selected' => $studentid === 0 ? 'selected' : null]));
 foreach ($allcompleters as $ac) {
     $sel = ($studentid === (int)$ac->userid) ? ['selected' => 'selected'] : [];
     $studentopts .= html_writer::tag('option', fullname($ac) . ' (' . $ac->email . ')', array_merge(['value' => $ac->userid], $sel));
 }
-echo html_writer::tag('select', $studentopts, [
-    'name'  => 'studentid',
-    'id'    => 'filter-studentid',
-    'class' => 'form-control form-control-sm',
-    'style' => 'min-width:220px;',
+echo html_writer::tag(
+    'select', $studentopts, [
+        'name'  => 'studentid',
+        'id'    => 'filter-studentid',
+        'class' => 'form-control form-control-sm',
+        'style' => 'min-width:220px;',
 ]);
 echo html_writer::end_div();
 
 // Apply / Clear filter buttons
 echo html_writer::start_div('d-flex gap-2');
-echo html_writer::tag('button', 'Apply Filter', [
-    'type'  => 'submit',
-    'class' => 'btn btn-sm btn-secondary',
+echo html_writer::tag(
+    'button', 'Apply Filter', [
+        'type'  => 'submit',
+        'class' => 'btn btn-sm btn-secondary',
 ]);
 if ($groupid || $studentid) {
     $clearurl = new moodle_url('/local/rtocompliance/generate_course_certs.php', ['courseid' => $courseid]);
@@ -824,10 +849,11 @@ echo html_writer::end_div(); // d-flex
 echo html_writer::end_tag('form');
 
 // ── Bulk form ─────────────────────────────────────────────────────────────────
-$formurl = new moodle_url('/local/rtocompliance/generate_course_certs.php', [
-    'courseid' => $courseid,
-    'action'   => 'generate',
-    'sesskey'  => sesskey(),
+$formurl = new moodle_url(
+    '/local/rtocompliance/generate_course_certs.php', [
+        'courseid' => $courseid,
+        'action'   => 'generate',
+        'sesskey'  => sesskey(),
 ]);
 echo html_writer::start_tag('form', ['method' => 'post', 'action' => $formurl->out(false)]);
 
@@ -848,13 +874,14 @@ echo html_writer::start_div('d-flex flex-wrap gap-4');
 // Issue Missing option
 echo html_writer::start_div('');
 echo html_writer::start_tag('label', ['style' => 'cursor:pointer;display:flex;align-items:flex-start;gap:10px;']);
-echo html_writer::tag('input', '', [
-    'type'    => 'radio',
-    'name'    => 'forceregen',
-    'value'   => '0',
-    'id'      => 'mode-issuemissing',
-    'checked' => ($forceregen == 0) ? 'checked' : null,
-    'style'   => 'margin-top:3px;',
+echo html_writer::tag(
+    'input', '', [
+        'type'    => 'radio',
+        'name'    => 'forceregen',
+        'value'   => '0',
+        'id'      => 'mode-issuemissing',
+        'checked' => ($forceregen == 0) ? 'checked' : null,
+        'style'   => 'margin-top:3px;',
 ]);
 echo html_writer::start_div('');
 echo html_writer::tag('strong', 'Issue Missing Certificates');
@@ -866,13 +893,14 @@ echo html_writer::end_div();
 // Force Regenerate option
 echo html_writer::start_div('');
 echo html_writer::start_tag('label', ['style' => 'cursor:pointer;display:flex;align-items:flex-start;gap:10px;']);
-echo html_writer::tag('input', '', [
-    'type'    => 'radio',
-    'name'    => 'forceregen',
-    'value'   => '1',
-    'id'      => 'mode-forceregen',
-    'checked' => ($forceregen == 1) ? 'checked' : null,
-    'style'   => 'margin-top:3px;',
+echo html_writer::tag(
+    'input', '', [
+        'type'    => 'radio',
+        'name'    => 'forceregen',
+        'value'   => '1',
+        'id'      => 'mode-forceregen',
+        'checked' => ($forceregen == 1) ? 'checked' : null,
+        'style'   => 'margin-top:3px;',
 ]);
 echo html_writer::start_div('');
 echo html_writer::tag('strong', 'Force Regenerate');
@@ -891,13 +919,14 @@ echo html_writer::tag('label', 'Email certificates to students:', ['for' => 'sen
 // SENDEMAIL-UNCHECKED-FIX (v6.3.16): see generate_qual_certs.php. An unchecked
 // checkbox submits nothing, so the optional_param default of 1 re-enabled email.
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sendemail', 'value' => '0']);
-echo html_writer::tag('input', '', [
-    'type'    => 'checkbox',
-    'name'    => 'sendemail',
-    'id'      => 'sendemail',
-    'value'   => '1',
-    'checked' => 'checked',
-    'class'   => 'mr-2',
+echo html_writer::tag(
+    'input', '', [
+        'type'    => 'checkbox',
+        'name'    => 'sendemail',
+        'id'      => 'sendemail',
+        'value'   => '1',
+        'checked' => 'checked',
+        'class'   => 'mr-2',
 ]);
 echo html_writer::end_div();
 
@@ -909,9 +938,11 @@ echo html_writer::end_div();
 // and the USI status for every listed student up front, so an ineligible row is visibly
 // unselectable instead of silently refused after the admin confirms a charge.
 $gccMissingSettings = local_rtocompliance_missing_cert_settings();
-$gccUsiMap    = local_rtocompliance_usi_issue_status_map(array_map(function ($c) {
-    return (int) $c->userid;
-}, array_values($completers)));
+$gccUsiMap    = local_rtocompliance_usi_issue_status_map(
+    array_map(
+    function ($c) {
+            return (int) $c->userid;
+        }, array_values($completers)));
 $gccTypes     = [];
 $gccBlockedBy = [];
 $gccReasons   = [];
@@ -961,7 +992,9 @@ if (!empty($gccMissingSettings)) {
         . '<div style="font-size:14px;color:#7f1d1d;line-height:1.55;">'
         . 'These AQF-required fields are not configured: <strong>'
         . s(implode(', ', $gccMissingSettings)) . '</strong>. '
-        . '<a href="' . s((new moodle_url('/local/rtocompliance/plugin_settings.php',
+        . '<a href="' . s(
+            (new moodle_url(
+            '/local/rtocompliance/plugin_settings.php',
             ['section' => 'local_rtocompliance_settings']))->out(false))
         . '" style="font-weight:600;">Open RTO Settings &rarr;</a></div></div>';
 }
@@ -976,31 +1009,36 @@ echo local_rtocompliance_usi_blocked_callout(
 // Select all / Generate buttons
 echo html_writer::start_div('d-flex gap-2 mb-3 flex-wrap align-items-center');
 if ($gccBlocked > 0) {
-    echo html_writer::tag('span',
-        $gccEligible . ' of ' . count($completers) . ' selectable',
+    echo html_writer::tag(
+        'span',
+            $gccEligible . ' of ' . count($completers) . ' selectable',
         ['class' => 'text-muted mr-2', 'style' => 'font-size:0.87rem;font-weight:600;']);
 }
-echo html_writer::tag('button', 'Select All Needing Certs', [
-    'type'    => 'button',
-    'class'   => 'btn btn-sm btn-outline-secondary',
-    'onclick' => 'document.querySelectorAll(".cert-checkbox.needs-cert:not(:disabled)").forEach(c => c.checked = true)',
+echo html_writer::tag(
+    'button', 'Select All Needing Certs', [
+        'type'    => 'button',
+        'class'   => 'btn btn-sm btn-outline-secondary',
+        'onclick' => 'document.querySelectorAll(".cert-checkbox.needs-cert:not(:disabled)").forEach(c => c.checked = true)',
 ]);
-echo html_writer::tag('button', 'Select All Shown', [
-    'type'    => 'button',
-    'class'   => 'btn btn-sm btn-outline-secondary',
-    'onclick' => 'document.querySelectorAll(".cert-checkbox:not(:disabled)").forEach(c => c.checked = true)',
+echo html_writer::tag(
+    'button', 'Select All Shown', [
+        'type'    => 'button',
+        'class'   => 'btn btn-sm btn-outline-secondary',
+        'onclick' => 'document.querySelectorAll(".cert-checkbox:not(:disabled)").forEach(c => c.checked = true)',
 ]);
-echo html_writer::tag('button', 'Deselect All', [
-    'type'    => 'button',
-    'class'   => 'btn btn-sm btn-outline-secondary',
-    'onclick' => 'document.querySelectorAll(".cert-checkbox:not(:disabled)").forEach(c => c.checked = false)',
+echo html_writer::tag(
+    'button', 'Deselect All', [
+        'type'    => 'button',
+        'class'   => 'btn btn-sm btn-outline-secondary',
+        'onclick' => 'document.querySelectorAll(".cert-checkbox:not(:disabled)").forEach(c => c.checked = false)',
 ]);
 echo html_writer::start_div('ml-auto');
-echo html_writer::tag('button', 'Generate / Regenerate Selected', [
-    'type'    => 'button',
-    'class'   => 'btn btn-primary',
-    'id'      => 'rtoc-gencert-btn',
-    'onclick' => 'rtocBulkCertConfirm()',
+echo html_writer::tag(
+    'button', 'Generate / Regenerate Selected', [
+        'type'    => 'button',
+        'class'   => 'btn btn-primary',
+        'id'      => 'rtoc-gencert-btn',
+        'onclick' => 'rtocBulkCertConfirm()',
 ]);
 echo html_writer::end_div();
 echo html_writer::end_div();
@@ -1188,16 +1226,19 @@ echo html_writer::start_div('rtoc-table-responsive');
 echo html_writer::start_tag('table', ['class' => 'rtoc-table table table-hover']);
 echo html_writer::start_tag('thead');
 echo html_writer::start_tag('tr');
-echo html_writer::tag('th', html_writer::tag('input', '', [
-    'type'    => 'checkbox',
-    'title'   => 'Select all',
-    'onclick' => 'document.querySelectorAll(".cert-checkbox:not(:disabled)").forEach(c => c.checked = this.checked)',
+echo html_writer::tag(
+    'th', html_writer::tag(
+    'input', '', [
+            'type'    => 'checkbox',
+            'title'   => 'Select all',
+            'onclick' => 'document.querySelectorAll(".cert-checkbox:not(:disabled)").forEach(c => c.checked = this.checked)',
 ]));
 echo html_writer::tag('th', 'Student');
 echo html_writer::tag('th', 'Completed');
 // USI-PREFLIGHT (v6.3.13)
-echo html_writer::tag('th', 'USI', [
-    'title' => 'A USI verified with the USI Registry is required before a nationally recognised certificate can be issued',
+echo html_writer::tag(
+    'th', 'USI', [
+        'title' => 'A USI verified with the USI Registry is required before a nationally recognised certificate can be issued',
 ]);
 echo html_writer::tag('th', 'Cert Type');
 echo html_writer::tag('th', 'Status');
@@ -1210,7 +1251,10 @@ foreach ($completers as $comp) {
     // USI-PREFLIGHT (v6.3.13): resolved once in the preflight pass above.
     $res    = $gccTypes[(int)$comp->userid] ?? local_rtocompliance_resolve_cert_types_for_course($courseid, $comp->userid);
     $types  = $res['certtypes'];
-    $labels = array_map(function ($t) use ($certtypelabels) { return $certtypelabels[$t] ?? $t; }, $types);
+    $labels = array_map(
+        function ($t) use ($certtypelabels) {
+            return $certtypelabels[$t] ?? $t;
+        }, $types);
 
     $allissued = true;
     $certnums  = [];
@@ -1249,21 +1293,24 @@ foreach ($completers as $comp) {
     }
 
     if (!$usiGated) {
-        $usiCell = html_writer::tag('span', 'Not required', [
-            'style' => 'background:#f1f5f9;color:#475569;padding:2px 8px;border-radius:4px;'
-                . 'font-size:0.78rem;font-weight:600;white-space:nowrap;',
-            'title' => 'This course warrants a Completion Certificate, which is not AQF certification and needs no USI',
+        $usiCell = html_writer::tag(
+            'span', 'Not required', [
+                'style' => 'background:#f1f5f9;color:#475569;padding:2px 8px;border-radius:4px;'
+                    . 'font-size:0.78rem;font-weight:600;white-space:nowrap;',
+                'title' => 'This course warrants a Completion Certificate, which is not AQF certification and needs no USI',
         ]);
     } else {
         $usiCell = local_rtocompliance_usi_status_badge($usiStatus);
         if ($usiHeld && $holdReason !== '') {
-            $usiCell .= html_writer::tag('div', s($holdReason), [
-                'style' => 'font-size:0.75rem;color:#92400e;margin-top:4px;max-width:300px;line-height:1.4;',
+            $usiCell .= html_writer::tag(
+                'div', s($holdReason), [
+                    'style' => 'font-size:0.75rem;color:#92400e;margin-top:4px;max-width:300px;line-height:1.4;',
             ]);
             // Only offer the USI fix link when the USI is actually what is wrong — telling an
             // admin to fix a USI that is already verified is worse than saying nothing.
             if (empty($usiStatus['canissue'])) {
-                $usiCell .= html_writer::tag('div', local_rtocompliance_usi_fix_link((int)$comp->userid),
+                $usiCell .= html_writer::tag(
+                    'div', local_rtocompliance_usi_fix_link((int)$comp->userid),
                     ['style' => 'margin-top:4px;']);
             }
         }
@@ -1280,7 +1327,8 @@ foreach ($completers as $comp) {
         ? ' <span style="background:#fee2e2;color:#b91c1c;padding:1px 6px;border-radius:4px;font-size:0.75rem;font-weight:600;vertical-align:middle;">SUSPENDED</span>'
         : '';
     $activateCb    = $isSuspended
-        ? html_writer::tag('span', 'Account suspended — activate in Moodle user admin if required.',
+        ? html_writer::tag(
+            'span', 'Account suspended — activate in Moodle user admin if required.',
             ['style' => 'font-size:0.75rem;color:#9ca3af;display:block;margin-top:3px;font-weight:400;'])
         : '';
 

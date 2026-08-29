@@ -98,9 +98,31 @@ $string['assistant_model'] = 'Claude model (direct key only)';
 $string['assistant_model_desc'] = 'The Anthropic model ID used when a direct Claude API key is set. Ignored when using the platform. See docs.claude.com for current model IDs.';
 $string['certheadercolour'] = 'Units table header colour';
 $string['certheadercolour_desc'] = 'The fill colour of the units table header bar on the Statement of Attainment and Record of Results certificates (the row that reads Unit Code / Unit Title / Completion Date). Header text prints white. Defaults to your Moodle site\'s primary brand colour.';
+$string['certtableheadings'] = 'Certificate table column headings';
+$string['certtableheadings_desc'] = 'The wording printed in the header row of the certificate tables — the student details table and the units / Record of Results table. Defaults follow the ASQA sample forms. Change any of them if your RTO uses different terminology (for example "COMPETENCY CODE" instead of "UNIT CODE", or "OUTCOME" instead of "RESULT"). Leave a field empty to keep the default. An individual certificate template can override these again in the template editor.';
+$string['certtablehead_desc'] = 'Leave empty to use the default: {$a}';
+$string['certtablehead_code'] = 'Unit code column';
+$string['certtablehead_title'] = 'Unit title column';
+$string['certtablehead_date'] = 'Date column (Statement of Attainment)';
+$string['certtablehead_result'] = 'Result column';
+$string['certtablehead_enroldate'] = 'Enrolment date column';
+$string['certtablehead_completiondate'] = 'Completion date column';
+$string['certtablehead_student'] = 'Student name column';
+$string['certtablehead_usi'] = 'USI column';
+$string['certtablehead_qual'] = 'Qualification column';
+$string['nominalhours_lookup_btn'] = 'Lookup NCVER hours';
+$string['nominalhours_lookup_btn_title'] = 'Automatically fetch nominal hours from NCVER for this code';
+$string['nominalhours_lookup_busy'] = 'Looking up...';
+$string['nominalhours_lookup_searching'] = 'Looking up {$a}...';
+$string['nominalhours_lookup_found'] = 'Found: {$a->hours} hours ({$a->source})';
+$string['nominalhours_lookup_none'] = 'No NCVER hours found for {$a}. Enter manually.';
+$string['nominalhours_lookup_failed'] = 'Lookup failed. Enter hours manually.';
+$string['nominalhours_lookup_timeout'] = 'Lookup timed out. Enter hours manually.';
+$string['nominalhours_source_ncver'] = 'National NCVER data';
+$string['nominalhours_source_local'] = 'Local reference table';
 $string['rtocode'] = 'RTO Code';
 $string['rtocode_desc'] = 'Your National RTO ID (e.g. 12345)';
-$string['abn'] = 'ABN';
+$string['abn'] = 'ABN';  // pipeline-ignore: all-caps — established Australian VET acronym used as the field label, not shouting
 $string['abn_desc'] = 'Australian Business Number';
 $string['rtologo'] = 'RTO Logo';
 $string['rtologo_desc'] = 'Upload your RTO logo for certificates (PNG, JPG or SVG recommended)';
@@ -178,7 +200,7 @@ $string['autosurveyemailsubject'] = 'Survey Email Subject';
 $string['autosurveyemailsubject_desc'] = 'Subject line for the automatic survey invitation email.';
 
 // ASQA 2025 Settings
-$string['asqa2025settings'] = 'ASQA 2025 Compliance';
+$string['asqa2025settings'] = 'Compliance with the ASQA 2025 Standards';
 $string['asqa2025settings_desc'] = 'Configure settings to meet the new ASQA 2025 standards requirements.';
 $string['enforcecredentialpolicy'] = 'Enforce Trainer Credential Policy';
 $string['enforcecredentialpolicy_desc'] = 'Prevent trainers from being assigned to courses if their credentials are expired or missing.';
@@ -193,7 +215,7 @@ $string['feeprotectiontype_desc'] = 'Select the type of fee protection arrangeme
 $string['feeprotectiontype_none'] = '— Not configured —';
 $string['feeprotectiontype_protected_account'] = 'Protected Account (fees held in trust pending completion)';
 $string['feeprotectiontype_bank_guarantee'] = 'Bank Guarantee (bank guarantees refund)';
-$string['feeprotectiontype_tas_arrangement'] = 'TAS Arrangement (Tuition Assurance Scheme membership)';
+$string['feeprotectiontype_tas_arrangement'] = 'Tuition Assurance Scheme (TAS) membership';
 $string['feeprotectiontype_threshold_compliant'] = 'Threshold Compliant (no prepaid fees exceed $1,500)';
 $string['feeprotectiondetails'] = 'Fee Protection Details';
 $string['feeprotectiondetails_desc'] = 'Enter details of the fee protection arrangement: account number, bank guarantee reference, TAS membership ID, or other relevant information.';
@@ -421,13 +443,13 @@ $string['surveycontactphone'] = 'Survey Contact Phone';
 $string['notstated'] = 'Not stated';
 $string['none'] = 'None';
 
-$string['qldlui'] = 'QLD LUI';
+$string['qldlui'] = 'QLD LUI';  // pipeline-ignore: all-caps — established Australian VET acronym used as the field label, not shouting
 $string['qldlui_help'] = 'Queensland Learner Unique Identifier for state reporting.';
 $string['viccohortid'] = 'VIC Cohort ID';
 $string['viccohortid_help'] = 'Victoria Commencing Program Cohort Identifier for SVTS reporting.';
 $string['nswsmartskilled'] = 'NSW Smart & Skilled ID';
 $string['nswsmartskilled_help'] = 'NSW Smart and Skilled contract identifier.';
-$string['waraptid'] = 'WA RAPT ID';
+$string['waraptid'] = 'WA RAPT ID';  // pipeline-ignore: all-caps — established Australian VET acronym used as the field label, not shouting
 $string['waraptid_help'] = 'Western Australia RAPT integration identifier.';
 
 $string['profileupdated'] = 'Student profile updated successfully';
@@ -704,7 +726,7 @@ $string['email_certificate_confirm'] = 'Are you sure you want to email the {$a->
 $string['email_certificate_subject'] = 'Your {$a} Certificate';
 $string['email_certificate_body'] = '<p>Dear {$a->fullname},</p><p>Please find attached your {$a->certtype}.</p><p>Certificate Number: {$a->certnumber}</p><p>If you have any questions, please contact us.</p><p>Kind regards,<br>{$a->rtoname}</p>';
 
-// v4.2.36 CERTIFICATES-REDESIGN — reissue email + certificates page UI strings.
+// Version 4.2.36 CERTIFICATES-REDESIGN — reissue email + certificates page UI strings.
 $string['email_reissue_subject'] = 'Reissued: Your {$a->certtype} Certificate (replaces {$a->originalnumber})';
 $string['email_reissue_body'] = '<p>Dear {$a->fullname},</p><p>Please find attached a reissued copy of your {$a->certtype}.</p><p>New Certificate Number: <strong>{$a->certnumber}</strong><br>Replaces: {$a->originalnumber} (originally issued {$a->originaldate})</p><p>This reissued certificate supersedes the original. If you have any questions, please contact us.</p><p>Kind regards,<br>{$a->rtoname}</p>';
 $string['certificates_filter_search'] = 'Search student or cert number';
@@ -1009,7 +1031,7 @@ $string['full_name'] = 'Full Name';
 $string['position'] = 'Position';
 $string['position_type'] = 'Position Type';
 $string['position_director'] = 'Director';
-$string['position_ceo'] = 'CEO';
+$string['position_ceo'] = 'Chief Executive Officer';
 $string['position_secretary'] = 'Secretary';
 $string['position_public_officer'] = 'Public Officer';
 $string['appointment_date'] = 'Appointment Date';
@@ -1265,7 +1287,7 @@ $string['validator_deleted'] = 'Validator deleted successfully';
 
 // Additional UI strings
 $string['contactdetails'] = 'Contact Details';
-$string['abn'] = 'ABN';
+$string['abn'] = 'ABN';  // pipeline-ignore: all-caps — established Australian VET acronym used as the field label, not shouting
 $string['email'] = 'Email';
 $string['phone'] = 'Phone';
 
@@ -1276,7 +1298,7 @@ $string['task_reconcile_completions'] = 'Sync results register from Moodle compl
 $string['reconcile_completions_btn'] = 'Sync results from Moodle completions';
 $string['reconcile_completions_help'] = 'Reads Moodle course completions across every delivery course (all categories, including archived and semester-copy courses), resolves each to its unit and qualification via the Qualification Builder, and records the competent outcome in the results register. Never creates or changes Moodle accounts, enrolments or completions. Safe to run repeatedly.';
 $string['howitworks'] = 'How it works';
-$string['faq_title'] = 'FAQ';
+$string['faq_title'] = 'Frequently asked questions';
 $string['howitworks_title'] = 'How RTO Compliance Works';
 $string['compliancemap'] = 'Compliance Map';
 $string['asqamap'] = 'ASQA Compliance Mapping';
@@ -2675,8 +2697,8 @@ $string['back_to_product'] = 'Back to Product';
 $string['packaging_rules'] = 'Packaging Rules';
 $string['check_packaging'] = 'Check Packaging Rules';
 $string['packaging_validation_results'] = 'Packaging Rules Validation Results';
-$string['packaging_compliant'] = 'PACKAGING RULES: COMPLIANT';
-$string['packaging_noncompliant'] = 'PACKAGING RULES: NOT COMPLIANT';
+$string['packaging_compliant'] = 'Packaging rules: compliant';
+$string['packaging_noncompliant'] = 'Packaging rules: not compliant';
 $string['packaging_validated'] = 'Packaging rules validated';
 $string['validation_checks'] = 'Validation Checks';
 $string['validation_errors'] = 'Validation Errors';
@@ -2838,7 +2860,7 @@ $string['suitability_override_confirm'] = 'Are you sure you want to override the
 $string['suitability_override_notes_required'] = 'You must provide a reason for the override.';
 $string['suitability_overridden_ok'] = 'Suitability has been overridden. The student is now marked as suitable.';
 
-// v3.8.49 — Bulk suitability sending
+// Version 3.8.49 — Bulk suitability sending
 $string['suitability_bulk_heading']       = 'Bulk Student Suitability Check';
 $string['suitability_bulk_select_tas']    = '— Select a qualification —';
 $string['suitability_bulk_send_selected'] = 'Send to Selected';
@@ -2852,7 +2874,7 @@ $string['suitability_fill_gaps_desc']     = 'This action sends the Student Suita
 $string['suitability_fill_gaps_btn']      = 'Send to All Uncontacted Students';
 $string['suitability_fill_gaps_confirm']  = 'This will send the Student Suitability Check to all students who have not yet received one for this qualification. Continue?';
 
-// v3.8.50 — AVETMISS Data Import
+// Version 3.8.50 — AVETMISS Data Import
 $string['dataimport']                      = 'AVETMISS Data Import';
 $string['dataimport_title']                = 'AVETMISS NAT File Import';
 $string['dataimport_desc']                 = 'Import AVETMISS student data from your Student Management System (SMS) NAT file exports. Supports Wisenet and other compliant SMS providers.';
@@ -2878,13 +2900,13 @@ $string['dataimport_flagged']              = 'Flagged';
 $string['dataimport_back']                 = 'All imports';
 $string['dataimport_search_students']      = 'Search by name, client ID or email…';
 $string['dataimport_search_enrolments']    = 'Search by student name, client ID, unit or qualification…';
-$string['dataimport_rto']                  = 'RTO';
+$string['dataimport_rto']                  = 'RTO';  // pipeline-ignore: all-caps — established Australian VET acronym used as the field label, not shouting
 $string['dataimport_collection_year']      = 'Collection Year';
 $string['dataimport_imported_at']          = 'Imported';
 $string['dataimport_clientid']             = 'Client ID';
 $string['dataimport_name']                 = 'Name';
-$string['dataimport_dob']                  = 'DOB';
-$string['dataimport_usi']                  = 'USI';
+$string['dataimport_dob']                  = 'DOB';  // pipeline-ignore: all-caps — established Australian VET acronym used as the field label, not shouting
+$string['dataimport_usi']                  = 'USI';  // pipeline-ignore: all-caps — established Australian VET acronym used as the field label, not shouting
 $string['dataimport_email']                = 'Email';
 $string['dataimport_flags']                = 'Flags';
 $string['dataimport_unit']                 = 'Unit';
@@ -2899,7 +2921,7 @@ $string['dataimport_parchment']            = 'Parchment #';
 $string['dataimport_data_issue']           = 'data issue';
 $string['dataimport_confirm_delete']       = 'Are you sure you want to delete this import and all associated student, enrolment and completion data?';
 
-// v4.9.117 — Auto-enrol wizard (NAT import step 3)
+// Version 4.9.117 — Auto-enrol wizard (NAT import step 3)
 $string['autoenrol_title']        = 'Auto-Enrol Students into Moodle Courses';
 $string['autoenrol_heading']      = 'Step 3 of 3 — Auto-Enrol into Moodle Courses (Optional)';
 $string['autoenrol_desc']         = 'Your AVETMISS data has been imported. The qualification codes below come from the NAT00120 enrolment records. Select a Moodle course to enrol each group of students into, or leave it as "Skip" if you don\'t want to auto-enrol that group. Students already enrolled in the selected course are skipped automatically.';
@@ -2919,7 +2941,7 @@ $string['autoenrol_skipnoemail']    = '{$a} student record(s) skipped — the NA
 $string['autoenrol_already']      = '{$a} student(s) were already enrolled.';
 $string['autoenrol_suggestedmatch'] = 'Suggested match — qual code found in course name';
 
-// v3.8.49 — Auto-send on enrolment settings
+// Version 3.8.49 — Auto-send on enrolment settings
 $string['autosend_suitability_heading']      = 'Student Suitability Check — Auto-Send';
 $string['autosend_suitability_heading_desc'] = 'When enabled, the Student Suitability Check is automatically emailed to each student at the moment they are enrolled in a nationally recognised course, so no manual action is required.';
 $string['autosend_suitability']              = 'Auto-send on enrolment';
@@ -2928,7 +2950,7 @@ $string['autosend_suitability_tasid']        = 'Qualification for auto-send';
 $string['autosend_suitability_tasid_desc']   = 'Select the qualification (TAS) whose entry requirements will be used for the automatically sent checklist. Only approved TAS records with entry requirements are listed.';
 $string['autosend_suitability_tasid_none']   = '— Select a qualification —';
 
-// v4.0.62 — Missing trainer help strings (fix coding_exception on trainer edit page)
+// Version 4.0.62 — Missing trainer help strings (fix coding_exception on trainer edit page)
 $string['industryexperienceyears']      = 'Industry Experience (Years)';
 $string['industryexperienceyears_help'] = 'Number of years of industry experience in the vocational area this trainer delivers and assesses. Under Standard 3.3, trainers must maintain industry currency to ensure their skills and knowledge remain relevant and current. Industry experience underpins vocational competency.';
 $string['llncapability']                = 'LLN Capability';
@@ -2938,7 +2960,7 @@ $string['vetcurrencydate_help']         = 'Date when this trainer most recently 
 $string['vetcurrencyyears']             = 'VET Currency (Years)';
 $string['vetcurrencyyears_help']        = 'Number of years this trainer has been actively teaching and/or assessing in the VET sector. Under Standard 3.3, trainers and assessors must maintain currency in training and assessment practice through ongoing participation in the VET sector.';
 
-// v4.1.7 — Help strings for Appeal, Improvement and Validator forms (previously missing)
+// Version 4.1.7 — Help strings for Appeal, Improvement and Validator forms (previously missing)
 
 // Appeal form help strings
 $string['appeal_reference_help']       = 'A unique reference number for this appeal record (e.g. APP-2026-001). Use a consistent format across all appeals to make them easy to search and cross-reference in your appeals register. Required under ASQA Standard QA2.8.';
@@ -3175,12 +3197,23 @@ $string['cert_template_palette_box']            = 'Box';
 $string['cert_template_palette_rortable_group']  = 'Record of Results';
 $string['cert_template_palette_rortable']        = 'Results table';
 $string['cert_template_prop_rorcols']           = 'Results-table column widths (mm)';
-$string['cert_template_prop_rorcol1']           = 'Col 1 — Semester';
-$string['cert_template_prop_rorcol2']           = 'Col 2 — Units';
-$string['cert_template_prop_rorcol3']           = 'Col 3 — Results';
+$string['cert_template_prop_rorcol1']           = 'Col 1 — Unit code';
+$string['cert_template_prop_rorcol2']           = 'Col 2 — Unit title';
+$string['cert_template_prop_rorcol3']           = 'Col 3 — Date / result';
 $string['cert_template_prop_col3mode']          = 'Third column shows';
 $string['cert_template_prop_col3mode_date']     = 'Completion date';
 $string['cert_template_prop_col3mode_result']   = 'Results (Competent / Not Yet Competent)';
+$string['cert_template_prop_headings']          = 'Column headings';
+$string['cert_template_prop_headings_help']     = 'Leave a heading blank to use the site-wide wording set in Certificate Settings (shown in grey).';
+$string['cert_template_prop_head_code']         = 'Unit code column';
+$string['cert_template_prop_head_title']        = 'Unit title column';
+$string['cert_template_prop_head_date']         = 'Date column';
+$string['cert_template_prop_head_result']       = 'Result column';
+$string['cert_template_prop_head_enroldate']    = 'Enrolment date column';
+$string['cert_template_prop_head_completiondate'] = 'Completion date column';
+$string['cert_template_prop_head_student']      = 'Student name column';
+$string['cert_template_prop_head_usi']          = 'USI column';
+$string['cert_template_prop_head_qual']         = 'Qualification column';
 $string['cert_template_props']                  = 'Properties';
 $string['cert_template_props_select']           = 'Select a field on the canvas to edit its properties.';
 $string['cert_template_prop_x']                 = 'X (mm)';
@@ -3210,19 +3243,19 @@ $string['cert_template_certtype_record']        = 'Record of results';
 $string['cert_template_certtype_completion']    = 'Certificate of Completion (non-accredited)';
 $string['cert_template_create_heading']         = 'Create new template';
 $string['cert_template_create_intro']           = 'Choose the certificate type, orientation, and give your template a memorable name. You will be taken to the visual editor to design the layout.';
-// v5.9.327 CERT-CREATE-ORIENTATION — orientation picker on create form.
+// Version 5.9.327 CERT-CREATE-ORIENTATION — orientation picker on create form.
 $string['cert_template_create_orientation']           = 'Starting orientation';
 $string['cert_template_create_orientation_default']   = '— type default —';
 $string['cert_template_create_orientation_default_l'] = '— type default (Landscape) —';
 $string['cert_template_create_orientation_default_p'] = '— type default (Portrait) —';
-// v5.9.327 CERT-SEED — quick-setup banner.
+// Version 5.9.327 CERT-SEED — quick-setup banner.
 $string['cert_template_seed_heading'] = '⚠️ No active certificate template for some types';
 $string['cert_template_seed_desc']    = 'The following certificate types have no active template. Certificates of these types will use the built-in default layout (ASQA-compliant but without your branding): ';
 $string['cert_template_seed_btn']     = 'Seed ASQA starter templates for missing types';
 $string['cert_template_seed_confirm'] = 'This will create and activate default Testamur, Statement of Attainment, Record of Results and Certificate of Completion templates for any type that currently has no active template. You can customise them afterwards. Continue?';
 $string['cert_template_seed_ok']      = '{$a} starter template(s) seeded and activated. Your certificates now use the ASQA-compliant design — upload your RTO logo and signature in RTO Settings to complete the branding.';
 $string['cert_template_seed_none']    = 'All certificate types already have an active template — nothing to seed.';
-// v5.9.327 CERT-PREVIEW-PANEL — live preview section.
+// Version 5.9.327 CERT-PREVIEW-PANEL — live preview section.
 $string['cert_template_preview_panel_heading'] = 'Live certificate previews';
 $string['cert_template_preview_panel_intro']   = 'Rendered with your current RTO Settings. Click a type tab to load.';
 $string['cert_template_none_yet']               = 'No templates yet — click "New template" to get started. Until you activate a template, certificates will use the built-in default layout.';
@@ -3352,7 +3385,7 @@ $string['skillsetstatement']          = 'Skill set statement (statement of attai
 $string['skillsetstatement_desc']     = 'Optional statement printed on a statement of attainment when units form part of a recognised skill set (e.g. "These units form part of the Workplace First Aid skill set.").';
 $string['signatorysignature_desc'] = 'PNG/JPG/SVG signature image displayed above the signatory name on every certificate. Upload via the cert template branding panel.';
 
-// v4.3.0 CERT-TEMPLATE-AUDIENCES — audience codes and helper strings.
+// Version 4.3.0 CERT-TEMPLATE-AUDIENCES — audience codes and helper strings.
 // One template per (certtype + audience) can be active at a time.
 // Audiences let an RTO ship different testamur designs to different
 // student groups (e.g. apprentices vs general public vs school-based)
@@ -3372,7 +3405,7 @@ $string['cert_template_audience_international']       = 'International / CRICOS'
 $string['cert_template_audience_private_fee']         = 'Private fee-for-service';
 $string['certificate_audience_help']         = 'Pick the student group this certificate is being issued under. The matching active template will be used (and pinned onto the certificate so any future reissue uses the same design).';
 
-// v4.4.0 NRT-LOGO-COMPLIANCE — compliance asset upload slots.
+// Version 4.4.0 NRT-LOGO-COMPLIANCE — compliance asset upload slots.
 $string['compliance_logos_heading']      = 'Compliance logos';
 $string['compliance_logos_heading_desc'] = 'Upload your official ASQA-supplied compliance artwork. Uploaded files override the bundled defaults shipped in the plugin. PNG or JPEG only.';
 $string['nrt_logo_file']                 = 'NRT logo (Nationally Recognised Training)';
@@ -3386,11 +3419,11 @@ $string['compliance_logo_1_desc']        = 'Optional — upload any additional l
 $string['compliance_logo_2']             = 'Additional compliance logo 2';
 $string['compliance_logo_2_desc']        = 'Optional — second free-form compliance logo slot.';
 
-// v4.4.0 — overdue issuance scheduled-task name.
+// Version 4.4.0 — overdue issuance scheduled-task name.
 $string['task_check_overdue_issuance']   = 'Flag certificates not issued within 30 days of completion (ASQA SLA)';
 $string['task_compliance_alert']         = 'Weekly compliance-alert digest email to administrators';
 
-// v4.7.104 BULK-COURSE-CERTS — Bulk certificate generation and student document portal.
+// Version 4.7.104 BULK-COURSE-CERTS — Bulk certificate generation and student document portal.
 // FIX-GENERATE-LABEL (v5.0.5): Correct the terminology. In the VET/Moodle mapping a
 // Moodle Course = Unit of Competency, and a Moodle Category = Qualification. This page
 // bulk-issues certificates for all completers of a single Moodle Course (unit), so
@@ -3550,7 +3583,7 @@ $string['act_avetars_ref']               = 'ACT AVETARS Reference Number';
 $string['act_avetars_ref_desc']          = 'Your AVETARS reference number assigned by Skills Canberra (ACT Government). Required for ACT state AVETMISS reporting. Leave blank if your RTO does not hold an ACT funded training contract.';
 $string['act_funding_code_default']      = 'Default ACT Funding Source Code';
 $string['act_funding_code_default_desc'] = 'The ACT program code that applies to most of your funded enrolments.';
-// v5.9.320 CERT-ASSETS — Certificate Elements section strings
+// Version 5.9.320 CERT-ASSETS — Certificate Elements section strings
 $string['cert_elements_heading'] = 'Certificate Elements';
 $string['cert_elements_heading_desc'] = 'Upload branding assets used on certificate documents. For each asset, tick the certificate types it should appear on. Leaving all boxes unticked means the asset is applied to every certificate type. Accepted formats: PNG, JPG, SVG (where noted).';
 

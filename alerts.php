@@ -260,20 +260,23 @@ if ($alerts) {
             $severityborder = '#6b7280';
         }
         
-        echo html_writer::start_div('alert-card', [
-            'style' => "background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);"
+        echo html_writer::start_div(
+            'alert-card', [
+                'style' => "background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);"
         ]);
         
         echo html_writer::start_div('', ['style' => 'display: flex; justify-content: space-between; align-items: flex-start;']);
         
         echo html_writer::start_div('');
-        echo html_writer::tag('span', ucfirst($alert->severity), [
-            'class' => 'badge',
-            'style' => "background: $severityborder; color: white; margin-right: 8px;"
+        echo html_writer::tag(
+            'span', ucfirst($alert->severity), [
+                'class' => 'badge',
+                'style' => "background: $severityborder; color: white; margin-right: 8px;"
         ]);
-        echo html_writer::tag('span', $alert->alerttype, [
-            'class' => 'badge badge-secondary',
-            'style' => 'margin-right: 8px;'
+        echo html_writer::tag(
+            'span', $alert->alerttype, [
+                'class' => 'badge badge-secondary',
+                'style' => 'margin-right: 8px;'
         ]);
         if (!empty($alert->daysuntildue)) {
             $daystext = $alert->daysuntildue <= 0 ? 'Overdue' : $alert->daysuntildue . ' days left';
@@ -282,8 +285,9 @@ if ($alerts) {
         echo html_writer::end_div();
         
         if (!empty($alert->riskscore)) {
-            echo html_writer::tag('span', 'Risk: ' . round($alert->riskscore) . '%', [
-                'style' => 'font-weight: 600; color: ' . $severityborder . ';'
+            echo html_writer::tag(
+                'span', 'Risk: ' . round($alert->riskscore) . '%', [
+                    'style' => 'font-weight: 600; color: ' . $severityborder . ';'
             ]);
         }
         
@@ -293,8 +297,9 @@ if ($alerts) {
         echo html_writer::tag('p', format_text($alert->description, FORMAT_PLAIN), ['style' => 'margin: 0 0 12px 0; color: #374151;']);
         
         if (!empty($alert->recommendation)) {
-            echo html_writer::tag('p', html_writer::tag('strong', 'Recommended Action: ') . format_text($alert->recommendation, FORMAT_PLAIN), [
-                'style' => 'margin: 0 0 12px 0; font-size: 0.9rem; color: #4b5563;'
+            echo html_writer::tag(
+                'p', html_writer::tag('strong', 'Recommended Action: ') . format_text($alert->recommendation, FORMAT_PLAIN), [
+                    'style' => 'margin: 0 0 12px 0; font-size: 0.9rem; color: #4b5563;'
             ]);
         }
         

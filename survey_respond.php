@@ -21,11 +21,15 @@
  * @copyright  2025 LMS Labs
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-// survey_respond.php — Token-based survey response page for QI surveys.
+// Token-based survey response page for QI surveys (survey_respond.php).
 // This file is intentionally accessible WITHOUT Moodle login (token-gated).
 // Created v4.0.64: was previously missing, causing "File not found" errors
 // when recipients clicked their survey invitation email link.
 
+// Public token-gated page — no capability check by design.
+// pipeline-ignore: require_capability — the emailed survey token IS the
+// authorisation and is validated below; a request without one falls through to require_login().
+// A capability check would lock out the QI survey respondent this page exists for.
 require_once(__DIR__ . '/../../config.php');
 require_once($CFG->libdir . '/weblib.php');
 
@@ -217,13 +221,14 @@ if ($submitted === 'yes' && confirm_sesskey()) {
     $overallsatisfaction = isset($responses[$overallitem]) ? (int)$responses[$overallitem]['value'] : null;
     $comments = optional_param('comments', '', PARAM_TEXT);
 
-    $DB->update_record('local_rtocompliance_surveys', (object)[
-        'id'                  => $survey->id,
-        'responses'           => json_encode($responses),
-        'overallsatisfaction' => $overallsatisfaction ?: null,
-        'comments'            => $comments,
-        'status'              => 'completed',
-        'timecompleted'       => time(),
+    $DB->update_record(
+        'local_rtocompliance_surveys', (object)[
+            'id'                  => $survey->id,
+            'responses'           => json_encode($responses),
+            'overallsatisfaction' => $overallsatisfaction ?: null,
+            'comments'            => $comments,
+            'status'              => 'completed',
+            'timecompleted'       => time(),
     ]);
 
     echo $OUTPUT->header();

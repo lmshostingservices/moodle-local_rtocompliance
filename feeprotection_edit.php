@@ -137,8 +137,9 @@ class feeprotection_form extends moodleform {
 
         $mform->addElement('header', 'protectionheader', 'Fee Protection ($1,500 Threshold)');
 
-        $mform->addElement('static', 'thresholdwarning', '', 
-            '<div class="alert alert-warning" style="margin-bottom: 16px;">
+        $mform->addElement(
+            'static', 'thresholdwarning', '', 
+                '<div class="alert alert-warning" style="margin-bottom: 16px;">
             <strong>ASQA Requirement:</strong> RTOs cannot accept more than $1,500 from a student before training commences unless fee protection arrangements are in place.<br><br>
             <strong>Fee Protection Options:</strong>
             <ul style="margin-bottom: 0;">
@@ -172,10 +173,11 @@ class feeprotection_form extends moodleform {
     }
 }
 
-$form = new feeprotection_form(null, [
-    'fee' => $fee,
-    'useroptions' => $useroptions,
-    'courseoptions' => $courseoptions,
+$form = new feeprotection_form(
+    null, [
+        'fee' => $fee,
+        'useroptions' => $useroptions,
+        'courseoptions' => $courseoptions,
 ]);
 
 if ($fee) {
@@ -283,15 +285,17 @@ if (!$id) {
     if ($totalexisting > 0) {
         echo html_writer::start_div('info-card', ['style' => 'margin-bottom: 24px;']);
         echo html_writer::tag('h4', 'Student Fee Summary');
-        echo html_writer::tag('p', 
-            'This student has $' . number_format($totalexisting, 2) . ' in other recorded fees. ' .
-            'Total fees including this record: $' . number_format($totalexisting + $fee->amount, 2) . '.',
-            ['style' => 'margin: 0;']
+        echo html_writer::tag(
+            'p', 
+                'This student has $' . number_format($totalexisting, 2) . ' in other recorded fees. ' .
+                'Total fees including this record: $' . number_format($totalexisting + $fee->amount, 2) . '.',
+                ['style' => 'margin: 0;']
         );
         if ($totalexisting + $fee->amount > 1500 && !$fee->isprotected) {
-            echo html_writer::tag('p', 
-                '<strong style="color: #dc2626;">Warning:</strong> Total exceeds $1,500 threshold - fee protection required.',
-                ['style' => 'margin-top: 8px; margin-bottom: 0;']
+            echo html_writer::tag(
+                'p', 
+                    '<strong style="color: #dc2626;">Warning:</strong> Total exceeds $1,500 threshold - fee protection required.',
+                    ['style' => 'margin-top: 8px; margin-bottom: 0;']
             );
         }
         echo html_writer::end_div();

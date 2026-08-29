@@ -480,9 +480,10 @@ if ($guideid && isset($practiceGuides[$guideid])) {
         echo html_writer::start_div('practice-guide-cards');
         
         foreach ($guides as $id => $guide) {
-            echo html_writer::start_tag('a', [
-                'href' => new moodle_url('/local/rtocompliance/practice_guides.php', ['guide' => $id]),
-                'class' => 'practice-guide-card'
+            echo html_writer::start_tag(
+                'a', [
+                    'href' => new moodle_url('/local/rtocompliance/practice_guides.php', ['guide' => $id]),
+                    'class' => 'practice-guide-card'
             ]);
             echo '<div class="pg-card-icon">' . pg_icon($guide['icon']) . '</div>';
             echo '<div class="pg-card-content">';

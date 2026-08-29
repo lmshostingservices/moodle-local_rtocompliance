@@ -112,11 +112,13 @@ if (!$student) {
 $usiexemptaction = optional_param('usiexemptaction', '', PARAM_ALPHA);
 if ($usiexemptaction !== '' && confirm_sesskey()) {
     if (!has_capability('local/rtocompliance:manage', $context)) {
-        throw new moodle_exception('nopermissions', 'error', '',
+        throw new moodle_exception(
+            'nopermissions', 'error', '',
             'Recording a USI exemption requires the manage capability.');
     }
     if (empty($student->id)) {
-        throw new moodle_exception('invalidrecord', 'error', '',
+        throw new moodle_exception(
+            'invalidrecord', 'error', '',
             'Save this student profile before recording a USI exemption.');
     }
     $upd = new stdClass();
@@ -176,7 +178,8 @@ if ($form->is_cancelled()) {
     // records. Editing your own profile stays allowed. (Moodle's form sesskey
     // already guards CSRF; this guards authorization.)
     if (!$isownprofile && !has_capability('local/rtocompliance:manage', $context)) {
-        throw new moodle_exception('nopermissions', 'error', '',
+        throw new moodle_exception(
+            'nopermissions', 'error', '',
             'Editing another student\'s profile requires the manage capability.');
     }
     $now = time();
@@ -282,13 +285,13 @@ if ($form->is_cancelled()) {
     if (($data->atschoolflag ?? 'N') !== 'Y') {
         $data->schooltype = null;
     }
-    // disabilitytypes → only valid when disabilityflag='Y'.
+    // Disabilitytypes → only valid when disabilityflag='Y'.
     // NAT00090 guards on disabilityflag='Y', so stale types don't corrupt the current
     // export — but if the flag is ever toggled back to 'Y', old types re-surface.
     if (($data->disabilityflag ?? 'N') !== 'Y') {
         $data->disabilitytypes = null;
     }
-    // surveycontactemail / surveycontactphone → only valid when status is 'A' (agrees)
+    // Surveycontactemail / surveycontactphone → only valid when status is 'A' (agrees)
     // or 'E' (valid excuse). Status 'N'/'M' means no contact requested; NAT00085
     // always exports these fields, so they should be blank for non-consenting students.
     if (in_array($data->surveycontactstatus ?? 'N', ['N', 'M'], true)) {
@@ -642,7 +645,8 @@ echo '<style>
 echo '<div class="rtoc-profile-summary">';
 
 // --- HEADER (a) ------------------------------------------------------------
-$initials = strtoupper(mb_substr(trim((string)($user->firstname ?? '')), 0, 1)
+$initials = strtoupper(
+    mb_substr(trim((string)($user->firstname ?? '')), 0, 1)
     . mb_substr(trim((string)($user->lastname ?? '')), 0, 1));
 if ($initials === '') {
     $initials = '?';
@@ -815,7 +819,7 @@ $dobval = !empty($student->dateofbirth) && (int)$student->dateofbirth !== 0
 $suburb    = trim((string)($student->suburb ?? ''));
 $statecode = trim((string)($student->statecode ?? ''));
 $statename = ($statecode !== '' && isset($map_state[$statecode])) ? $map_state[$statecode] : $statecode;
-// v5.9.396: the full street address (building / unit / street / postcode) now
+// Version 5.9.396: the full street address (building / unit / street / postcode) now
 // propagates from NAT00085, so show the whole address rather than just suburb+state.
 $street    = trim((string)($student->streetname ?? ''));
 $unit      = trim((string)($student->unitno ?? ''));
@@ -907,9 +911,10 @@ $outcomebadge = function ($code) use ($outcomeinfo): string {
 // --- Load results (read-only, guarded for new profiles) --------------------
 $results = [];
 if (!$isnewprofile) {
-    $results = $DB->get_records('local_rtocompliance_enrolments',
-        ['studentid' => $student->id], 'activityenddate DESC, unitcode ASC',
-        'id, unitcode, unitname, outcomeidentifier, activityenddate, programcode, programname, courseid',
+    $results = $DB->get_records(
+        'local_rtocompliance_enrolments',
+            ['studentid' => $student->id], 'activityenddate DESC, unitcode ASC',
+            'id, unitcode, unitname, outcomeidentifier, activityenddate, programcode, programname, courseid',
         0, 200);
 }
 
@@ -924,7 +929,8 @@ if (!empty($results)) {
         }
     }
     if (!empty($courseids)) {
-        $coursecache = $DB->get_records_list('course', 'id', array_keys($courseids),
+        $coursecache = $DB->get_records_list(
+            'course', 'id', array_keys($courseids),
             '', 'id, shortname, fullname');
     }
 }
@@ -987,19 +993,23 @@ echo '<div><h4>Training results</h4><div class="rtoc-results-sub">'
     . ($isnewprofile
         ? 'Save the profile to start recording results.'
         : ($totalunits > 0
-            ? s($totalcompetent . ' of ' . $totalunits . ' units competent across '
+            ? s(
+                $totalcompetent . ' of ' . $totalunits . ' units competent across '
                 . count($qualgroups) . ' qualification' . (count($qualgroups) === 1 ? '' : 's'))
             : 'No unit results recorded yet.'))
     . '</div></div>';
 if (!$isnewprofile) {
     echo '<div class="rtoc-actions">';
     if ($hascompetent) {
-        echo html_writer::link($soaurl, '&#128196; Issue Statement of Attainment',
+        echo html_writer::link(
+            $soaurl, '&#128196; Issue Statement of Attainment',
             ['class' => 'rtoc-btn rtoc-btn-primary', 'title' => 'Issue a Statement of Attainment for the competent units of this learner']);
     }
-    echo html_writer::link($huburl, '&#127891; Issue Qualification Certificate',
+    echo html_writer::link(
+        $huburl, '&#127891; Issue Qualification Certificate',
         ['class' => 'rtoc-btn rtoc-btn-secondary', 'title' => 'Open the Qualification Certificate Hub to issue a full qualification certificate']);
-    echo html_writer::link($enrolurl, 'Record / edit results',
+    echo html_writer::link(
+        $enrolurl, 'Record / edit results',
         ['class' => 'rtoc-btn rtoc-btn-ghost', 'title' => 'Add or edit this learner unit enrolments and outcomes']);
     echo '</div>';
 }
@@ -1010,7 +1020,8 @@ if (!$isnewprofile && $moodlederivedcount > 0) {
     echo '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;margin:0 0 14px;font-size:13px;color:#1e40af;">'
         . '<strong>' . (int)$moodlederivedcount . '</strong> unit' . ($moodlederivedcount === 1 ? ' is' : 's are')
         . ' complete in Moodle but not yet recorded in your AVETMISS register (shown below as Competent, tagged &ldquo;via Moodle&rdquo;). '
-        . html_writer::link(new moodle_url('/local/rtocompliance/qualbuilder_results.php'),
+        . html_writer::link(
+            new moodle_url('/local/rtocompliance/qualbuilder_results.php'),
             'Sync results from Moodle completions', ['style' => 'font-weight:600;color:#1d4ed8;'])
         . ' to record them permanently — required before issuing certificates or exporting NAT.'
         . '</div>';
@@ -1089,7 +1100,8 @@ if ($isnewprofile) {
 
         echo '<div class="rtoc-qual-progress">';
         echo '<div class="rtoc-progress-top">';
-        echo '<span class="rtoc-progress-count">' . s($competent . ' of ' . $total
+        echo '<span class="rtoc-progress-count">' . s(
+            $competent . ' of ' . $total
             . ' unit' . ($total === 1 ? '' : 's') . ' competent') . '</span>';
         echo '<span class="rtoc-progress-pct">' . $pct . '%</span>';
         echo '</div>';
@@ -1158,8 +1170,9 @@ $certtypelabels = [
     'completion' => 'Completion',
 ];
 
-$certs = $DB->get_records('local_rtocompliance_certs',
-    ['userid' => $userid, 'status' => 'issued'], 'issuedate DESC',
+$certs = $DB->get_records(
+    'local_rtocompliance_certs',
+        ['userid' => $userid, 'status' => 'issued'], 'issuedate DESC',
     'id, certtype, certnumber, qualificationcode, qualificationname, issuedate');
 
 echo '<div class="card"><div class="card-header">Issued certificates</div><div class="card-body">';
@@ -1184,7 +1197,8 @@ if (empty($certs)) {
             . ($c->certnumber ? 'Cert #: ' . s($c->certnumber) . ' &nbsp;&bull;&nbsp; ' : '')
             . 'Issued: ' . $issued . '</div>';
         echo '</div>';
-        echo html_writer::link($dlurl, 'Download PDF',
+        echo html_writer::link(
+            $dlurl, 'Download PDF',
             ['class' => 'btn btn-sm btn-outline-primary', 'target' => '_blank', 'title' => 'Download this issued certificate as a PDF']);
         echo '</div>';
     }

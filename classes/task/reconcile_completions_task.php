@@ -50,15 +50,17 @@ class reconcile_completions_task extends \core\task\scheduled_task {
 
     public function execute() {
         $summary = \local_rtocompliance\completion_reconciler::reconcile();
-        mtrace(sprintf(
-            'reconcile_completions: scanned=%d created=%d updated=%d already=%d manual_preserved=%d '
-            . 'no_student=%d no_map=%d',
-            $summary['scanned'], $summary['created'], $summary['updated'],
-            $summary['already_competent'], $summary['manual_preserved'],
-            $summary['skipped_nostudent'], $summary['skipped_nomap']
+        mtrace(
+            sprintf(
+                'reconcile_completions: scanned=%d created=%d updated=%d already=%d manual_preserved=%d '
+                . 'no_student=%d no_map=%d',
+                $summary['scanned'], $summary['created'], $summary['updated'],
+                $summary['already_competent'], $summary['manual_preserved'],
+                $summary['skipped_nostudent'], $summary['skipped_nomap']
         ));
         if (!empty($summary['unresolved_sample'])) {
-            mtrace('reconcile_completions: sample unresolved course IDs: '
+            mtrace(
+                'reconcile_completions: sample unresolved course IDs: '
                 . implode(', ', $summary['unresolved_sample']));
         }
     }

@@ -74,12 +74,13 @@ try {
     $validation = certificate_validator::validate_template_design($certtype, $design);
     $html = certificate_validator::render_validation_panel_html($validation);
 
-    echo json_encode([
-        'ok'          => true,
-        'html'        => $html,
-        'isCompliant' => !empty($validation['isCompliant']),
-        'errorcount'  => count($validation['errors'] ?? []),
-        'warningcount' => count($validation['warnings'] ?? []),
+    echo json_encode(
+        [
+            'ok'          => true,
+            'html'        => $html,
+            'isCompliant' => !empty($validation['isCompliant']),
+            'errorcount'  => count($validation['errors'] ?? []),
+            'warningcount' => count($validation['warnings'] ?? []),
     ]);
 } catch (\Throwable $e) {
     echo json_encode(['ok' => false, 'error' => 'Validation failed: ' . $e->getMessage()]);

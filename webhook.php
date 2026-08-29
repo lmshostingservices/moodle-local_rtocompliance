@@ -27,6 +27,10 @@
 // Authenticated by X-Webhook-Key header matching stored 'webhookapikey' config.
 // No Moodle session required -- key-based auth only.
 // ─────────────────────────────────────────────────────────────────────────────
+// Machine-to-machine endpoint with its own authentication — no capability check by design.
+// pipeline-ignore: require_capability — the inbound
+// request carries no user session at all (NO_MOODLE_COOKIES); it is authenticated by the
+// X-Webhook-Key header matching the stored 'webhookapikey' config and rejected otherwise.
 define('NO_MOODLE_COOKIES', true);
 require_once(__DIR__ . '/../../config.php');
 
@@ -131,9 +135,10 @@ if (!empty($data['usi_cert_base64']) || !empty($data['usi_cert_ready'])) {
     $applied[] = 'usi_cert_uploaded (platform holds credential; keystore NOT stored in Moodle)';
 }
 
-echo json_encode([
-    'ok'      => true,
-    'applied' => $applied,
-    'skipped' => $skipped,
-    'message' => count($applied) . ' setting(s) updated successfully.',
+echo json_encode(
+    [
+        'ok'      => true,
+        'applied' => $applied,
+        'skipped' => $skipped,
+        'message' => count($applied) . ' setting(s) updated successfully.',
 ]);

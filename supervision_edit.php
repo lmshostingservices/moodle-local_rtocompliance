@@ -119,7 +119,8 @@ class supervision_edit_form extends moodleform {
         $mform->addRule('trainerid', null, 'required', null, 'client');
         $mform->addHelpButton('trainerid', 'trainer_supervised', 'local_rtocompliance');
 
-        $mform->addElement('static', 'supervisorcredhelp', '',
+        $mform->addElement(
+            'static', 'supervisorcredhelp', '',
             '<div class="alert alert-info" style="margin-bottom: 12px;">Only fully credentialled trainers are listed as supervisors. Trainers who are Working Towards, have no TAE credential, or hold an expired TAE are excluded.</div>');
 
         $mform->addElement('select', 'supervisorid', get_string('supervisor', 'local_rtocompliance'), $supervisoroptions);
@@ -151,24 +152,28 @@ class supervision_edit_form extends moodleform {
 
         $mform->addElement('header', 'activityheader', get_string('supervision_activities', 'local_rtocompliance'));
 
-        $mform->addElement('textarea', 'activities', get_string('activities_description', 'local_rtocompliance'),
+        $mform->addElement(
+            'textarea', 'activities', get_string('activities_description', 'local_rtocompliance'),
             ['rows' => 4, 'cols' => 60]);
         $mform->setType('activities', PARAM_TEXT);
         $mform->addHelpButton('activities', 'activities_description', 'local_rtocompliance');
 
-        $mform->addElement('textarea', 'feedback', get_string('feedback_provided', 'local_rtocompliance'),
+        $mform->addElement(
+            'textarea', 'feedback', get_string('feedback_provided', 'local_rtocompliance'),
             ['rows' => 4, 'cols' => 60]);
         $mform->setType('feedback', PARAM_TEXT);
         $mform->addHelpButton('feedback', 'feedback_provided', 'local_rtocompliance');
 
-        $mform->addElement('textarea', 'developmentneeds', get_string('development_needs', 'local_rtocompliance'),
+        $mform->addElement(
+            'textarea', 'developmentneeds', get_string('development_needs', 'local_rtocompliance'),
             ['rows' => 3, 'cols' => 60]);
         $mform->setType('developmentneeds', PARAM_TEXT);
         $mform->addHelpButton('developmentneeds', 'development_needs', 'local_rtocompliance');
 
         $mform->addElement('header', 'followupheader', get_string('follow_up_actions', 'local_rtocompliance'));
 
-        $mform->addElement('textarea', 'actionitems', get_string('action_items', 'local_rtocompliance'),
+        $mform->addElement(
+            'textarea', 'actionitems', get_string('action_items', 'local_rtocompliance'),
             ['rows' => 3, 'cols' => 60]);
         $mform->setType('actionitems', PARAM_TEXT);
         $mform->addHelpButton('actionitems', 'action_items', 'local_rtocompliance');
@@ -207,7 +212,8 @@ class supervision_edit_form extends moodleform {
         // Std 3.2 / Credential Policy: reject any supervisor who is not fully credentialled, even if
         // an out-of-date value was submitted (e.g. the trainer became unqualified after page load).
         if (!empty($data['supervisorid'])) {
-            $sup = $DB->get_record('local_rtocompliance_trainers',
+            $sup = $DB->get_record(
+                'local_rtocompliance_trainers',
                 ['id' => $data['supervisorid']], 'id, taecredential, taeexpirydate');
             if (!$sup
                     || trim((string)$sup->taecredential) === ''
@@ -296,7 +302,8 @@ if ($supervision) {
         );
     } else {
         $validator = $DB->get_record('user', ['id' => $supervision->managervalidatedby], 'id,firstname,lastname,firstnamephonetic,lastnamephonetic,middlename,alternatename');
-        echo html_writer::tag('span', 'Validated by ' . fullname($validator) . ' on ' . userdate($supervision->managervalidateddate, '%d %b %Y'), 
+        echo html_writer::tag(
+            'span', 'Validated by ' . fullname($validator) . ' on ' . userdate($supervision->managervalidateddate, '%d %b %Y'), 
             ['class' => 'badge badge-success', 'style' => 'padding: 8px 16px;']);
     }
     

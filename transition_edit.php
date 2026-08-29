@@ -129,8 +129,9 @@ if ($form->is_cancelled()) {
                 // Cache definition absent on this Moodle version — not fatal.
                 // The {enrol}.status write above is the source of truth.
             }
-            $message .= ' ' . get_string($record->enrolmentsclosed
-                ? 'transition_moodle_enrol_closed'
+            $message .= ' ' . get_string(
+                $record->enrolmentsclosed
+                    ? 'transition_moodle_enrol_closed'
                 : 'transition_moodle_enrol_opened', 'local_rtocompliance');
         } else {
             if ($record->enrolmentsclosed) {
@@ -161,12 +162,13 @@ $_rtoc_apikey = function_exists('local_aiconfig_get_apikey')
     ? (local_aiconfig_get_apikey('local_rtocompliance') ?: get_config('local_rtocompliance', 'apikey') ?: '')
     : (get_config('local_rtocompliance', 'apikey') ?: '');
 $_rtoc_apibase = rtrim(get_config('local_rtocompliance', 'apiurl') ?: 'https://lms-labs.com', '/');
-echo html_writer::tag('div', '', [
-    'id'            => 'rtoc-ai-config',
-    'data-api-key'  => $_rtoc_apikey,
-    'data-api-base' => $_rtoc_apibase,
-    'style'         => 'display:none',
-    'aria-hidden'   => 'true',
+echo html_writer::tag(
+    'div', '', [
+        'id'            => 'rtoc-ai-config',
+        'data-api-key'  => $_rtoc_apikey,
+        'data-api-base' => $_rtoc_apibase,
+        'style'         => 'display:none',
+        'aria-hidden'   => 'true',
 ]);
 
 echo local_rtocompliance_render_nav_header($id ? 'Edit Transition' : 'New Transition', get_string('transitions', 'local_rtocompliance'), '/local/rtocompliance/transitions.php');

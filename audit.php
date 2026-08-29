@@ -40,13 +40,15 @@ $from = optional_param('from', 0, PARAM_INT);
 $to = optional_param('to', 0, PARAM_INT);
 $page = optional_param('page', 0, PARAM_INT);
 
-$PAGE->set_url(new moodle_url('/local/rtocompliance/audit.php', [
-    'entitytype' => $entitytype,
-    'action' => $action,
-    'userid' => $userid,
-    'from' => $from,
-    'to' => $to,
-    'page' => $page,
+$PAGE->set_url(
+    new moodle_url(
+    '/local/rtocompliance/audit.php', [
+            'entitytype' => $entitytype,
+            'action' => $action,
+            'userid' => $userid,
+            'from' => $from,
+            'to' => $to,
+            'page' => $page,
 ]));
 $PAGE->set_title('Audit Log');
 
@@ -130,13 +132,14 @@ echo html_writer::end_div();
 
 echo html_writer::start_div('rtoc-filter-field');
 echo html_writer::tag('label', 'User ID', ['for' => 'userid']);
-echo html_writer::empty_tag('input', [
-    'type' => 'number',
-    'name' => 'userid',
-    'id' => 'userid',
-    'value' => $userid ?: '',
-    'class' => 'form-control',
-    'placeholder' => 'User ID',
+echo html_writer::empty_tag(
+    'input', [
+        'type' => 'number',
+        'name' => 'userid',
+        'id' => 'userid',
+        'value' => $userid ?: '',
+        'class' => 'form-control',
+        'placeholder' => 'User ID',
 ]);
 echo html_writer::end_div();
 

@@ -70,7 +70,7 @@ class usi_platform_client {
             ? (local_aiconfig_get_apikey('local_rtocompliance') ?: '')
             : (get_config('local_rtocompliance', 'apikey') ?: '');
 
-        // apiurl has no central config equivalent — always read from plugin settings.
+        // Apiurl has no central config equivalent — always read from plugin settings.
         $this->apiurl = rtrim(get_config('local_rtocompliance', 'apiurl') ?: 'https://lms-labs.com', '/');
     }
 
@@ -111,23 +111,24 @@ class usi_platform_client {
         // platform handover documents firstName/lastName/dob, while older builds used
         // firstname/lastname/dateofbirth. Sending both is harmless (extras are ignored)
         // and removes any chance of a name/dob field mismatch silently failing the match.
-        $payload = json_encode([
-            'usi'          => strtoupper($usi),
-            'firstname'    => $firstname,
-            'firstName'    => $firstname,
-            'lastname'     => $lastname,
-            'lastName'     => $lastname,
-            'dateofbirth'  => $dateofbirth,
-            'dob'          => $dateofbirth,
-            // v6.2.71: send site credentials in BOTH camelCase and lowercase. The platform's
-            // /api/credits endpoint identifies a site by camelCase {siteId, apiKey}; this
-            // endpoint was only sent lowercase {siteid, apikey} (+ X-Site-Id/X-Api-Key
-            // headers). Mirrors the existing name/dob dual-spelling above so site identity can
-            // never silently mismatch regardless of which keys the endpoint reads.
-            'siteid'       => $this->siteid,
-            'apikey'       => $this->apikey,
-            'siteId'       => $this->siteid,
-            'apiKey'       => $this->apikey,
+        $payload = json_encode(
+            [
+                'usi'          => strtoupper($usi),
+                'firstname'    => $firstname,
+                'firstName'    => $firstname,
+                'lastname'     => $lastname,
+                'lastName'     => $lastname,
+                'dateofbirth'  => $dateofbirth,
+                'dob'          => $dateofbirth,
+                // Version 6.2.71: send site credentials in BOTH camelCase and lowercase. The platform's
+                // /api/credits endpoint identifies a site by camelCase {siteId, apiKey}; this
+                // endpoint was only sent lowercase {siteid, apikey} (+ X-Site-Id/X-Api-Key
+                // headers). Mirrors the existing name/dob dual-spelling above so site identity can
+                // never silently mismatch regardless of which keys the endpoint reads.
+                'siteid'       => $this->siteid,
+                'apikey'       => $this->apikey,
+                'siteId'       => $this->siteid,
+                'apiKey'       => $this->apikey,
         ]);
 
         $endpoint = $this->apiurl . '/api/usi/verify';
@@ -137,7 +138,8 @@ class usi_platform_client {
         $curl->setopt(['CURLOPT_TIMEOUT' => self::REQUEST_TIMEOUT_SECONDS, 'CURLOPT_SSL_VERIFYPEER' => true, 'CURLOPT_SSL_VERIFYHOST' => 2]);
         // Auth is also sent as headers to match the platform's documented "Site API key +
         // site ID header" scheme, in addition to the body (belt-and-suspenders).
-        $curl->setHeader(['Content-Type: application/json', 'Accept: application/json',
+        $curl->setHeader(
+            ['Content-Type: application/json', 'Accept: application/json',
             'X-Site-Id: ' . $this->siteid, 'X-Api-Key: ' . $this->apikey]);
         $raw      = $curl->post($endpoint, $payload);
         $httpcode = $curl->info['http_code'];
@@ -371,13 +373,14 @@ class usi_platform_client {
             return ['ok' => true, 'error' => null, 'credits' => -1, 'buyUrl' => null];
         }
 
-        $payload = json_encode([
-            'siteId'    => $this->siteid,
-            'apiKey'    => $this->apikey,
-            'amount'    => (int) $amount,
-            'pluginId'  => $pluginid,
-            'usageType' => $usagetype,
-            'metadata'  => $metadata,
+        $payload = json_encode(
+            [
+                'siteId'    => $this->siteid,
+                'apiKey'    => $this->apikey,
+                'amount'    => (int) $amount,
+                'pluginId'  => $pluginid,
+                'usageType' => $usagetype,
+                'metadata'  => $metadata,
         ]);
 
         \core\session\manager::write_close();
@@ -470,14 +473,15 @@ class usi_platform_client {
         }
 
         $url = rtrim($this->apiurl, '/') . '/api/rto/usi-cert/upload';
-        $payload = json_encode([
-            'siteid'             => $this->siteid,
-            'apikey'             => $this->apikey,
-            'cert_base64'        => $cert_base64,
-            'cert_password'      => (string) $cert_password,
-            'org_id'             => $org_id,
-            'test_mode'          => $test_mode ? true : false,
-            'notification_email' => (string) $notification_email,
+        $payload = json_encode(
+            [
+                'siteid'             => $this->siteid,
+                'apikey'             => $this->apikey,
+                'cert_base64'        => $cert_base64,
+                'cert_password'      => (string) $cert_password,
+                'org_id'             => $org_id,
+                'test_mode'          => $test_mode ? true : false,
+                'notification_email' => (string) $notification_email,
         ]);
 
         \core\session\manager::write_close();

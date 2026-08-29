@@ -271,29 +271,32 @@ if ($risks) {
         $overdueReview = $risk->reviewdate && $risk->reviewdate < time() && $risk->status === 'open';
 
         echo html_writer::start_tag('tr');
-        echo html_writer::tag('td',
-            html_writer::tag('strong', s($risk->risktitle)) .
-            ($risk->riskdescription ? html_writer::empty_tag('br') . html_writer::tag('small', s(substr($risk->riskdescription, 0, 80)), ['class' => 'text-muted']) : '')
+        echo html_writer::tag(
+            'td',
+                html_writer::tag('strong', s($risk->risktitle)) .
+                ($risk->riskdescription ? html_writer::empty_tag('br') . html_writer::tag('small', s(substr($risk->riskdescription, 0, 80)), ['class' => 'text-muted']) : '')
         );
         echo html_writer::tag('td', $categoryLabels[$risk->riskcategory] ?? ucfirst($risk->riskcategory));
         echo html_writer::tag('td', $likelihoodLabels[$risk->likelihood] ?? $risk->likelihood);
         echo html_writer::tag('td', $impactLabels[$risk->impact] ?? $risk->impact);
         echo html_writer::tag('td', html_writer::tag('span', $levelLabel, ['class' => 'badge ' . $levelClass, 'title' => $levelTitle]));
         echo html_writer::tag('td', $risk->riskowner ? s($risk->riskowner) : html_writer::tag('span', 'Unassigned', ['class' => 'text-muted']));
-        echo html_writer::tag('td',
-            $risk->reviewdate
-                ? ($overdueReview
-                    ? html_writer::tag('span', userdate($risk->reviewdate, '%d %b %Y') . ' OVERDUE', ['class' => 'badge badge-danger', 'title' => 'Overdue: this risk was due to be reviewed before today and still needs checking.'])
-                    : userdate($risk->reviewdate, '%d %b %Y'))
-                : '-'
+        echo html_writer::tag(
+            'td',
+                $risk->reviewdate
+                    ? ($overdueReview
+                        ? html_writer::tag('span', userdate($risk->reviewdate, '%d %b %Y') . ' OVERDUE', ['class' => 'badge badge-danger', 'title' => 'Overdue: this risk was due to be reviewed before today and still needs checking.'])
+                        : userdate($risk->reviewdate, '%d %b %Y'))
+                    : '-'
         );
         echo html_writer::tag('td', html_writer::tag('span', ucfirst($risk->status), ['class' => 'badge ' . $statusClass, 'title' => $statusTitle]));
-        echo html_writer::tag('td',
-            html_writer::link(
-                new moodle_url('/local/rtocompliance/risk_edit.php', ['id' => $risk->id]),
-                'Edit',
-                ['class' => 'btn btn-sm btn-secondary', 'title' => 'Edit this risk']
-            )
+        echo html_writer::tag(
+            'td',
+                html_writer::link(
+                    new moodle_url('/local/rtocompliance/risk_edit.php', ['id' => $risk->id]),
+                    'Edit',
+                    ['class' => 'btn btn-sm btn-secondary', 'title' => 'Edit this risk']
+                )
         );
         echo html_writer::end_tag('tr');
     }

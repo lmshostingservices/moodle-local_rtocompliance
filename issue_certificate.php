@@ -79,7 +79,7 @@ class issue_certificate_form extends moodleform {
         $mform->addElement('select', 'certtype', get_string('certificate_type', 'local_rtocompliance'), $certtypes);
         $mform->addRule('certtype', null, 'required', null, 'client');
 
-        // v4.3.0 CERT-TEMPLATE-AUDIENCES — audience picker so the issuer
+        // Version 4.3.0 CERT-TEMPLATE-AUDIENCES — audience picker so the issuer
         // chooses which testamur/SoA/RoR design applies to THIS student
         // (apprentice vs general public vs school-based vs VET-FEE etc.).
         // The active template for (certtype + audience) is resolved at
@@ -90,10 +90,12 @@ class issue_certificate_form extends moodleform {
         foreach (\local_rtocompliance\cert_template::AUDIENCES as $aud) {
             $audienceopts[$aud] = get_string('cert_template_audience_' . $aud, 'local_rtocompliance');
         }
-        $mform->addElement('select', 'audience',
+        $mform->addElement(
+            'select', 'audience',
             get_string('cert_template_audience', 'local_rtocompliance'), $audienceopts);
         $mform->setDefault('audience', 'default');
-        $mform->addElement('static', 'audience_help', '',
+        $mform->addElement(
+            'static', 'audience_help', '',
             get_string('certificate_audience_help', 'local_rtocompliance'));
 
         $mform->addElement('header', 'qualification', get_string('certificate_qualification', 'local_rtocompliance'));
@@ -104,7 +106,8 @@ class issue_certificate_form extends moodleform {
         $mform->addElement('text', 'qualificationname', 'Qualification Name', ['size' => 60, 'placeholder' => 'e.g. Diploma of Leadership and Management']);
         $mform->setType('qualificationname', PARAM_TEXT);
 
-        $mform->addElement('textarea', 'units', 'Units of Competency (for Statement of Attainment)',
+        $mform->addElement(
+            'textarea', 'units', 'Units of Competency (for Statement of Attainment)',
             ['rows' => 6, 'cols' => 60, 'placeholder' => "Enter one unit per line in format: CODE - Name\nBSBLDR411 - Demonstrate leadership in the workplace\nBSBLDR412 - Communicate effectively as a workplace leader"]);
         $mform->setType('units', PARAM_TEXT);
         $mform->disabledIf('units', 'certtype', 'neq', 'statement');
@@ -235,7 +238,7 @@ if ($form->is_cancelled()) {
         );
     }
 
-    // v5.9.361: type-aware number (ABC-<TYPE>-YYYY-NNNNN) via shared helper.
+    // Version 5.9.361: type-aware number (ABC-<TYPE>-YYYY-NNNNN) via shared helper.
     $certnumber = local_rtocompliance_generate_cert_number($data->certtype);
 
     $units = null;
@@ -284,7 +287,7 @@ if ($form->is_cancelled()) {
     $cert->timecreated = time();
     $cert->timemodified = time();
 
-    // v4.3.0 CERT-TEMPLATE-AUDIENCES — resolve which template applies to
+    // Version 4.3.0 CERT-TEMPLATE-AUDIENCES — resolve which template applies to
     // THIS issuance based on (certtype + audience) and pin the template
     // id onto the cert row so later reissues use the same design even
     // if the active template is later swapped. Falls back gracefully:
@@ -310,7 +313,8 @@ if ($form->is_cancelled()) {
             $cert->certtmplid = (int) $picked->id;
         }
     } catch (\Throwable $eaud) {
-        debugging('cert template pick at issuance failed (non-fatal): '
+        debugging(
+            'cert template pick at issuance failed (non-fatal): '
             . $eaud->getMessage(), DEBUG_DEVELOPER);
     }
 
@@ -352,10 +356,11 @@ if ($form->is_cancelled()) {
     } catch (\Throwable $eins) {
         // Log orphaned credit charge for manual review — admin can apply a
         // compensatory grant via the AI Grader credits dashboard.
-        error_log('[local_rtocompliance] CREDIT-ORPHAN: 5 credits consumed but '
-            . 'cert DB insert failed. certnumber=' . $certnumber
-            . ' userid=' . ($data->userid ?? '?')
-            . ' issuedby=' . $USER->id
+        error_log(
+            '[local_rtocompliance] CREDIT-ORPHAN: 5 credits consumed but '
+                . 'cert DB insert failed. certnumber=' . $certnumber
+                . ' userid=' . ($data->userid ?? '?')
+                . ' issuedby=' . $USER->id
             . ' error=' . $eins->getMessage());
         redirect(
             $PAGE->url,
@@ -430,13 +435,14 @@ if ($form->is_cancelled()) {
 
             $downloadurl = new moodle_url('/local/rtocompliance/mycerts.php');
 
-            $messagehtml = get_string('certificate_notification_message', 'local_rtocompliance', [
-                'firstname'    => $recipient->firstname,
-                'certtype'     => $certtypename,
-                'certnumber'   => $certnumber,
-                'qualification' => $qualname,
-                'downloadlink' => $downloadurl->out(false),
-                'rtoname'      => get_config('local_rtocompliance', 'rtoname') ?: 'Training Organisation',
+            $messagehtml = get_string(
+                'certificate_notification_message', 'local_rtocompliance', [
+                    'firstname'    => $recipient->firstname,
+                    'certtype'     => $certtypename,
+                    'certnumber'   => $certnumber,
+                    'qualification' => $qualname,
+                    'downloadlink' => $downloadurl->out(false),
+                    'rtoname'      => get_config('local_rtocompliance', 'rtoname') ?: 'Training Organisation',
             ]);
 
             $eventdata = new \core\message\message();
@@ -508,17 +514,20 @@ $cert_cost = 5;
 
 if (!$credpanel_balance['configured']) {
     // Platform not configured -- soft advisory only.
-    $cred_html = html_writer::tag('div',
-        html_writer::tag('h4',
-            '&#128179; Credit Cost -- Certificate Issuance',
-            ['style' => 'margin: 0 0 8px; font-size: 15px; color: #0369a1;']
-        ) .
-        html_writer::tag('p',
-            '<strong>Each certificate issued costs ' . $cert_cost . ' credits.</strong> ' .
-            'Connect your RTO Compliance Platform account in the plugin settings to manage credits.',
-            ['style' => 'margin: 0; color: #374151;']
-        ),
-        ['style' => 'background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 14px 16px; margin-bottom: 18px; display: flex; flex-direction: column; gap: 4px;']
+    $cred_html = html_writer::tag(
+        'div',
+            html_writer::tag(
+            'h4',
+                    '&#128179; Credit Cost -- Certificate Issuance',
+                    ['style' => 'margin: 0 0 8px; font-size: 15px; color: #0369a1;']
+            ) .
+            html_writer::tag(
+            'p',
+                    '<strong>Each certificate issued costs ' . $cert_cost . ' credits.</strong> ' .
+                    'Connect your RTO Compliance Platform account in the plugin settings to manage credits.',
+                    ['style' => 'margin: 0; color: #374151;']
+            ),
+            ['style' => 'background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 14px 16px; margin-bottom: 18px; display: flex; flex-direction: column; gap: 4px;']
     );
 } else {
     $balance_val = $credpanel_balance['balance'] ?? 0;
@@ -526,17 +535,21 @@ if (!$credpanel_balance['configured']) {
     $balance_ok  = $unlimited || ($balance_val >= $cert_cost);
 
     if ($unlimited) {
-        $badge_html = html_writer::tag('span', 'UNLIMITED',
+        $badge_html = html_writer::tag(
+            'span', 'UNLIMITED',
             ['style' => 'background:#d1fae5;color:#065f46;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700;']);
         $after_html = '';
     } elseif ($balance_ok) {
-        $badge_html = html_writer::tag('span', number_format($balance_val) . ' credits',
+        $badge_html = html_writer::tag(
+            'span', number_format($balance_val) . ' credits',
             ['style' => 'background:#d1fae5;color:#065f46;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700;']);
         $after      = $balance_val - $cert_cost;
-        $after_html = html_writer::tag('span', 'After issue: ' . number_format($after) . ' remaining',
+        $after_html = html_writer::tag(
+            'span', 'After issue: ' . number_format($after) . ' remaining',
             ['style' => 'color:#4b5563;font-size:12px;']);
     } else {
-        $badge_html = html_writer::tag('span', number_format($balance_val) . ' credits (insufficient)',
+        $badge_html = html_writer::tag(
+            'span', number_format($balance_val) . ' credits (insufficient)',
             ['style' => 'background:#fee2e2;color:#991b1b;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700;']);
         $after_html = '';
     }
@@ -544,62 +557,73 @@ if (!$credpanel_balance['configured']) {
     $buy_link = '';
     if (!$unlimited) {
         $buy_url  = 'https://lms-labs.com/pricing';
-        $buy_link = '&ensp;' . html_writer::link($buy_url,
-            '+ Purchase credits',
-            ['target' => '_blank',
+        $buy_link = '&ensp;' . html_writer::link(
+            $buy_url,
+                '+ Purchase credits',
+                ['target' => '_blank',
              'style'  => 'font-size:13px;color:#0369a1;text-decoration:underline;white-space:nowrap;']);
     }
 
     $warn_html = '';
     if (!$balance_ok) {
-        $warn_html = html_writer::tag('div',
-            '&#9888; You do not have enough credits to issue a certificate. Each certificate costs <strong>' .
-            $cert_cost . ' credits</strong> and your current balance is <strong>' . number_format($balance_val) .
-            '</strong>. Please purchase more credits before proceeding.',
-            ['style' => 'background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;padding:10px 12px;margin-top:8px;font-size:13px;color:#7f1d1d;']
+        $warn_html = html_writer::tag(
+            'div',
+                '&#9888; You do not have enough credits to issue a certificate. Each certificate costs <strong>' .
+                $cert_cost . ' credits</strong> and your current balance is <strong>' . number_format($balance_val) .
+                '</strong>. Please purchase more credits before proceeding.',
+                ['style' => 'background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;padding:10px 12px;margin-top:8px;font-size:13px;color:#7f1d1d;']
         );
     }
 
-    $cred_html = html_writer::tag('div',
-        html_writer::tag('div',
-            html_writer::tag('div',
-                html_writer::tag('h4',
-                    '&#128179; Certificate Cost',
-                    ['style' => 'margin:0;font-size:15px;color:#0369a1;']
-                ) .
-                html_writer::tag('p',
-                    'Issuing a certificate deducts <strong>' . $cert_cost . ' credits</strong> from your account balance.',
-                    ['style' => 'margin:4px 0 0;color:#374151;font-size:13px;']
-                ),
-                ['style' => 'flex:1;']
+    $cred_html = html_writer::tag(
+        'div',
+            html_writer::tag(
+            'div',
+                    html_writer::tag(
+                'div',
+                            html_writer::tag(
+                    'h4',
+                                    '&#128179; Certificate Cost',
+                                    ['style' => 'margin:0;font-size:15px;color:#0369a1;']
+                            ) .
+                            html_writer::tag(
+                    'p',
+                                    'Issuing a certificate deducts <strong>' . $cert_cost . ' credits</strong> from your account balance.',
+                                    ['style' => 'margin:4px 0 0;color:#374151;font-size:13px;']
+                            ),
+                            ['style' => 'flex:1;']
+                    ) .
+                    html_writer::tag(
+                'div',
+                            html_writer::tag(
+                    'div',
+                                    html_writer::tag('span', 'Current balance:&nbsp;', ['style'=>'font-size:12px;color:#6b7280;']) .
+                                    $badge_html . $buy_link,
+                                    ['style'=>'display:flex;align-items:center;gap:6px;flex-wrap:wrap;']
+                            ) .
+                            ($after_html ? html_writer::tag('div', $after_html, ['style'=>'margin-top:4px;text-align:right;']) : ''),
+                            ['style' => 'text-align:right;white-space:nowrap;']
+                    ),
+                    ['style' => 'display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;']
             ) .
-            html_writer::tag('div',
-                html_writer::tag('div',
-                    html_writer::tag('span', 'Current balance:&nbsp;', ['style'=>'font-size:12px;color:#6b7280;']) .
-                    $badge_html . $buy_link,
-                    ['style'=>'display:flex;align-items:center;gap:6px;flex-wrap:wrap;']
-                ) .
-                ($after_html ? html_writer::tag('div', $after_html, ['style'=>'margin-top:4px;text-align:right;']) : ''),
-                ['style' => 'text-align:right;white-space:nowrap;']
-            ),
-            ['style' => 'display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;']
-        ) .
-        $warn_html,
-        ['style' => 'background:#f0f9ff;border:1px solid ' . ($balance_ok ? '#bae6fd' : '#fca5a5') . ';border-radius:8px;padding:14px 16px;margin-bottom:18px;']
+            $warn_html,
+            ['style' => 'background:#f0f9ff;border:1px solid ' . ($balance_ok ? '#bae6fd' : '#fca5a5') . ';border-radius:8px;padding:14px 16px;margin-bottom:18px;']
     );
 }
 echo $cred_html;
 // ── /Credit cost information panel ───────────────────────────────────────────
 
-echo html_writer::tag('div', 
-    html_writer::tag('h4', 'Certificate Issuance Rules', ['style' => 'margin-bottom: 12px;']) .
-    html_writer::tag('ul', 
-        html_writer::tag('li', '<strong>Testamur/Qualification:</strong> Requires valid USI and complete AVETMISS profile. Student must have completed all core and required elective units.') .
-        html_writer::tag('li', '<strong>Statement of Attainment:</strong> Requires valid USI. At least one unit must have a competent outcome (20, 51, 52, 60, 81, 82).') .
-        html_writer::tag('li', '<strong>Record of Results:</strong> Issued with Testamur. Lists all units and outcomes.') .
-        html_writer::tag('li', '<strong>Certificate of Attendance:</strong> For non-accredited training only. No USI or competency requirements.')
-    ),
-    ['style' => 'background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 8px; padding: 16px; margin-bottom: 24px;']
+echo html_writer::tag(
+    'div', 
+        html_writer::tag('h4', 'Certificate Issuance Rules', ['style' => 'margin-bottom: 12px;']) .
+        html_writer::tag(
+        'ul', 
+                html_writer::tag('li', '<strong>Testamur/Qualification:</strong> Requires valid USI and complete AVETMISS profile. Student must have completed all core and required elective units.') .
+                html_writer::tag('li', '<strong>Statement of Attainment:</strong> Requires valid USI. At least one unit must have a competent outcome (20, 51, 52, 60, 81, 82).') .
+                html_writer::tag('li', '<strong>Record of Results:</strong> Issued with Testamur. Lists all units and outcomes.') .
+                html_writer::tag('li', '<strong>Certificate of Attendance:</strong> For non-accredited training only. No USI or competency requirements.')
+        ),
+        ['style' => 'background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 8px; padding: 16px; margin-bottom: 24px;']
 );
 
 $form->display();

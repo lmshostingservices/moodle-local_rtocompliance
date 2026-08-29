@@ -141,9 +141,10 @@ if ($documents) {
         $completenesstitle = 'How much of the TAS (training and assessment strategy) is filled in &ndash; the share of the 9 required sections completed. Green is nearly done, amber is part way, red means only a little is done.';
 
         echo html_writer::start_tag('tr');
-        echo html_writer::tag('td', 
-            html_writer::tag('code', $doc->qualificationcode) . '<br>' . 
-            html_writer::tag('small', format_string($doc->qualificationname))
+        echo html_writer::tag(
+            'td', 
+                html_writer::tag('code', $doc->qualificationcode) . '<br>' . 
+                html_writer::tag('small', format_string($doc->qualificationname))
         );
         echo html_writer::tag('td', 'v' . $doc->version);
         echo html_writer::tag('td', html_writer::tag('span', $completeness . '%', ['class' => 'badge ' . $completenessclass, 'title' => $completenesstitle]));
@@ -151,14 +152,16 @@ if ($documents) {
         echo html_writer::tag('td', html_writer::tag('span', ucfirst($doc->status), ['class' => 'badge ' . $statusclass, 'title' => $statustitle]));
         $canDelete = has_capability('moodle/site:config', context_system::instance());
         $deleteUrl = new moodle_url('/local/rtocompliance/tas.php', ['delete' => $doc->id, 'sesskey' => sesskey()]);
-        echo html_writer::tag('td',
-            html_writer::link(new moodle_url('/local/rtocompliance/tas_edit.php', ['id' => $doc->id]), 'Edit', ['class' => 'btn btn-sm btn-secondary', 'title' => 'Open this TAS to edit its sections']) . ' ' .
-            html_writer::link(new moodle_url('/local/rtocompliance/tas_export.php', ['id' => $doc->id]), 'Export', ['class' => 'btn btn-sm btn-outline-primary', 'title' => 'Export this TAS document to a file']) .
-            ($canDelete ? ' ' . html_writer::link($deleteUrl, 'Delete', [
-                'class'   => 'btn btn-sm btn-danger',
-                'title'   => 'Permanently delete this TAS document',
-                'onclick' => "return confirm('Delete this TAS document? This cannot be undone.')",
-            ]) : '')
+        echo html_writer::tag(
+            'td',
+                html_writer::link(new moodle_url('/local/rtocompliance/tas_edit.php', ['id' => $doc->id]), 'Edit', ['class' => 'btn btn-sm btn-secondary', 'title' => 'Open this TAS to edit its sections']) . ' ' .
+                html_writer::link(new moodle_url('/local/rtocompliance/tas_export.php', ['id' => $doc->id]), 'Export', ['class' => 'btn btn-sm btn-outline-primary', 'title' => 'Export this TAS document to a file']) .
+                ($canDelete ? ' ' . html_writer::link(
+                $deleteUrl, 'Delete', [
+                        'class'   => 'btn btn-sm btn-danger',
+                        'title'   => 'Permanently delete this TAS document',
+                        'onclick' => "return confirm('Delete this TAS document? This cannot be undone.')",
+                ]) : '')
         );
         echo html_writer::end_tag('tr');
     }

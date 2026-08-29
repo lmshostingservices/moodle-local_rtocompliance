@@ -101,13 +101,14 @@ class transition_form extends \moodleform {
         $mform->addHelpButton('transitionplan', 'transitionplan', 'local_rtocompliance');
 
         // FEAT-TRANSITION-AI (v4.4.69): AI Generate button for Transition Plan field.
-        $mform->addElement('static', 'transitionplan_ai', '',
-            '<div class="rtoc-ai-box">' .
-            '<button type="button" id="rtoc-ai-transitionplan" class="btn btn-primary" data-target="id_transitionplan" data-context="transitionplan">' .
-            '<i class="fa fa-magic" aria-hidden="true"></i> AI: Generate Transition Plan' .
-            '</button>' .
-            '<span id="rtoc-ai-transitionplan-status" class="rtoc-ai-status"></span>' .
-            '<small class="rtoc-ai-hint d-block mt-1 text-muted">Uses the superseded/replacement qualification details, teach-out deadline and number of students affected to draft a compliant transition plan (Standard 1.12 of the Standards for RTOs 2025).</small>' .
+        $mform->addElement(
+            'static', 'transitionplan_ai', '',
+                '<div class="rtoc-ai-box">' .
+                '<button type="button" id="rtoc-ai-transitionplan" class="btn btn-primary" data-target="id_transitionplan" data-context="transitionplan">' .
+                '<i class="fa fa-magic" aria-hidden="true"></i> AI: Generate Transition Plan' .
+                '</button>' .
+                '<span id="rtoc-ai-transitionplan-status" class="rtoc-ai-status"></span>' .
+                '<small class="rtoc-ai-hint d-block mt-1 text-muted">Uses the superseded/replacement qualification details, teach-out deadline and number of students affected to draft a compliant transition plan (Standard 1.12 of the Standards for RTOs 2025).</small>' .
             '</div>');
 
         $mform->addElement('text', 'mappingdocument', get_string('mapping_document', 'local_rtocompliance'), ['size' => 80, 'maxlength' => 255]);

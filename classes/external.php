@@ -38,8 +38,9 @@ use local_rtocompliance\audit_logger;
 
 class external extends external_api {
     public static function get_student_parameters() {
-        return new external_function_parameters([
-            'userid' => new external_value(PARAM_INT, 'Moodle user ID', VALUE_REQUIRED),
+        return new external_function_parameters(
+            [
+                'userid' => new external_value(PARAM_INT, 'Moodle user ID', VALUE_REQUIRED),
         ]);
     }
 
@@ -82,38 +83,41 @@ class external extends external_api {
     }
 
     public static function get_student_returns() {
-        return new external_single_structure([
-            'id' => new external_value(PARAM_INT, 'Student record ID'),
-            'userid' => new external_value(PARAM_INT, 'Moodle user ID'),
-            'firstname' => new external_value(PARAM_TEXT, 'First name'),
-            'lastname' => new external_value(PARAM_TEXT, 'Last name'),
-            'email' => new external_value(PARAM_TEXT, 'Email address'),
-            'clientid' => new external_value(PARAM_TEXT, 'Client ID'),
-            'usi' => new external_value(PARAM_TEXT, 'Unique Student Identifier'),
-            'dateofbirth' => new external_value(PARAM_INT, 'Date of birth timestamp'),
-            'countryofbirth' => new external_value(PARAM_TEXT, 'Country of birth code'),
-            'languageathome' => new external_value(PARAM_TEXT, 'Language at home code'),
-            'indigenousstatus' => new external_value(PARAM_TEXT, 'Indigenous status code'),
-            'disabilityflag' => new external_value(PARAM_TEXT, 'Disability flag'),
-            'profilecomplete' => new external_value(PARAM_INT, 'Profile complete flag'),
+        return new external_single_structure(
+            [
+                'id' => new external_value(PARAM_INT, 'Student record ID'),
+                'userid' => new external_value(PARAM_INT, 'Moodle user ID'),
+                'firstname' => new external_value(PARAM_TEXT, 'First name'),
+                'lastname' => new external_value(PARAM_TEXT, 'Last name'),
+                'email' => new external_value(PARAM_TEXT, 'Email address'),
+                'clientid' => new external_value(PARAM_TEXT, 'Client ID'),
+                'usi' => new external_value(PARAM_TEXT, 'Unique Student Identifier'),
+                'dateofbirth' => new external_value(PARAM_INT, 'Date of birth timestamp'),
+                'countryofbirth' => new external_value(PARAM_TEXT, 'Country of birth code'),
+                'languageathome' => new external_value(PARAM_TEXT, 'Language at home code'),
+                'indigenousstatus' => new external_value(PARAM_TEXT, 'Indigenous status code'),
+                'disabilityflag' => new external_value(PARAM_TEXT, 'Disability flag'),
+                'profilecomplete' => new external_value(PARAM_INT, 'Profile complete flag'),
         ]);
     }
 
     public static function get_enrolments_parameters() {
-        return new external_function_parameters([
-            'studentid' => new external_value(PARAM_INT, 'Student record ID', VALUE_DEFAULT, 0),
-            'userid' => new external_value(PARAM_INT, 'Moodle user ID', VALUE_DEFAULT, 0),
-            'status' => new external_value(PARAM_ALPHA, 'Filter by status', VALUE_DEFAULT, ''),
+        return new external_function_parameters(
+            [
+                'studentid' => new external_value(PARAM_INT, 'Student record ID', VALUE_DEFAULT, 0),
+                'userid' => new external_value(PARAM_INT, 'Moodle user ID', VALUE_DEFAULT, 0),
+                'status' => new external_value(PARAM_ALPHA, 'Filter by status', VALUE_DEFAULT, ''),
         ]);
     }
 
     public static function get_enrolments($studentid = 0, $userid = 0, $status = '') {
         global $DB;
 
-        $params = self::validate_parameters(self::get_enrolments_parameters(), [
-            'studentid' => $studentid,
-            'userid' => $userid,
-            'status' => $status,
+        $params = self::validate_parameters(
+            self::get_enrolments_parameters(), [
+                'studentid' => $studentid,
+                'userid' => $userid,
+                'status' => $status,
         ]);
 
         $context = \context_system::instance();
@@ -175,21 +179,22 @@ class external extends external_api {
 
     public static function get_enrolments_returns() {
         return new external_multiple_structure(
-            new external_single_structure([
-                'id' => new external_value(PARAM_INT, 'Enrolment record ID'),
-                'studentid' => new external_value(PARAM_INT, 'Student record ID'),
-                'courseid' => new external_value(PARAM_INT, 'Course ID'),
-                'coursename' => new external_value(PARAM_TEXT, 'Course name'),
-                'programcode' => new external_value(PARAM_TEXT, 'Program/qualification code'),
-                'programname' => new external_value(PARAM_TEXT, 'Program name'),
-                'unitcode' => new external_value(PARAM_TEXT, 'Unit code'),
-                'unitname' => new external_value(PARAM_TEXT, 'Unit name'),
-                'activitystartdate' => new external_value(PARAM_INT, 'Activity start timestamp'),
-                'activityenddate' => new external_value(PARAM_INT, 'Activity end timestamp'),
-                'outcomeidentifier' => new external_value(PARAM_TEXT, 'AVETMISS outcome code'),
-                'deliverymode' => new external_value(PARAM_TEXT, 'Delivery mode code'),
-                'fundingsourcenat' => new external_value(PARAM_TEXT, 'National funding source code'),
-                'status' => new external_value(PARAM_TEXT, 'Enrolment status'),
+            new external_single_structure(
+                [
+                    'id' => new external_value(PARAM_INT, 'Enrolment record ID'),
+                    'studentid' => new external_value(PARAM_INT, 'Student record ID'),
+                    'courseid' => new external_value(PARAM_INT, 'Course ID'),
+                    'coursename' => new external_value(PARAM_TEXT, 'Course name'),
+                    'programcode' => new external_value(PARAM_TEXT, 'Program/qualification code'),
+                    'programname' => new external_value(PARAM_TEXT, 'Program name'),
+                    'unitcode' => new external_value(PARAM_TEXT, 'Unit code'),
+                    'unitname' => new external_value(PARAM_TEXT, 'Unit name'),
+                    'activitystartdate' => new external_value(PARAM_INT, 'Activity start timestamp'),
+                    'activityenddate' => new external_value(PARAM_INT, 'Activity end timestamp'),
+                    'outcomeidentifier' => new external_value(PARAM_TEXT, 'AVETMISS outcome code'),
+                    'deliverymode' => new external_value(PARAM_TEXT, 'Delivery mode code'),
+                    'fundingsourcenat' => new external_value(PARAM_TEXT, 'National funding source code'),
+                    'status' => new external_value(PARAM_TEXT, 'Enrolment status'),
             ])
         );
     }
@@ -220,30 +225,33 @@ class external extends external_api {
     }
 
     public static function get_compliance_summary_returns() {
-        return new external_single_structure([
-            'overall_status' => new external_value(PARAM_TEXT, 'Overall compliance status'),
-            'risk_score' => new external_value(PARAM_INT, 'Risk score 0-100'),
-            'total_alerts' => new external_value(PARAM_INT, 'Total active alerts'),
-            'critical_count' => new external_value(PARAM_INT, 'Critical alerts'),
-            'high_count' => new external_value(PARAM_INT, 'High priority alerts'),
-            'medium_count' => new external_value(PARAM_INT, 'Medium priority alerts'),
-            'low_count' => new external_value(PARAM_INT, 'Low priority alerts'),
+        return new external_single_structure(
+            [
+                'overall_status' => new external_value(PARAM_TEXT, 'Overall compliance status'),
+                'risk_score' => new external_value(PARAM_INT, 'Risk score 0-100'),
+                'total_alerts' => new external_value(PARAM_INT, 'Total active alerts'),
+                'critical_count' => new external_value(PARAM_INT, 'Critical alerts'),
+                'high_count' => new external_value(PARAM_INT, 'High priority alerts'),
+                'medium_count' => new external_value(PARAM_INT, 'Medium priority alerts'),
+                'low_count' => new external_value(PARAM_INT, 'Low priority alerts'),
         ]);
     }
 
     public static function get_certificates_parameters() {
-        return new external_function_parameters([
-            'studentid' => new external_value(PARAM_INT, 'Student record ID', VALUE_DEFAULT, 0),
-            'status' => new external_value(PARAM_ALPHA, 'Filter by status', VALUE_DEFAULT, ''),
+        return new external_function_parameters(
+            [
+                'studentid' => new external_value(PARAM_INT, 'Student record ID', VALUE_DEFAULT, 0),
+                'status' => new external_value(PARAM_ALPHA, 'Filter by status', VALUE_DEFAULT, ''),
         ]);
     }
 
     public static function get_certificates($studentid = 0, $status = '') {
         global $DB;
 
-        $params = self::validate_parameters(self::get_certificates_parameters(), [
-            'studentid' => $studentid,
-            'status' => $status,
+        $params = self::validate_parameters(
+            self::get_certificates_parameters(), [
+                'studentid' => $studentid,
+                'status' => $status,
         ]);
 
         $context = \context_system::instance();
@@ -302,38 +310,41 @@ class external extends external_api {
 
     public static function get_certificates_returns() {
         return new external_multiple_structure(
-            new external_single_structure([
-                'id' => new external_value(PARAM_INT, 'Certificate record ID'),
-                'studentid' => new external_value(PARAM_INT, 'Student record ID'),
-                'studentname' => new external_value(PARAM_TEXT, 'Student full name'),
-                'usi' => new external_value(PARAM_TEXT, 'USI'),
-                'certificatetype' => new external_value(PARAM_TEXT, 'Certificate type'),
-                'certificatenumber' => new external_value(PARAM_TEXT, 'Certificate number'),
-                'qualificationcode' => new external_value(PARAM_TEXT, 'Qualification code'),
-                'qualificationname' => new external_value(PARAM_TEXT, 'Qualification name'),
-                'dateissued' => new external_value(PARAM_INT, 'Date issued timestamp'),
-                'expirydate' => new external_value(PARAM_INT, 'Expiry date timestamp'),
-                'status' => new external_value(PARAM_TEXT, 'Certificate status'),
-                'verificationurl' => new external_value(PARAM_TEXT, 'QR verification URL'),
+            new external_single_structure(
+                [
+                    'id' => new external_value(PARAM_INT, 'Certificate record ID'),
+                    'studentid' => new external_value(PARAM_INT, 'Student record ID'),
+                    'studentname' => new external_value(PARAM_TEXT, 'Student full name'),
+                    'usi' => new external_value(PARAM_TEXT, 'USI'),
+                    'certificatetype' => new external_value(PARAM_TEXT, 'Certificate type'),
+                    'certificatenumber' => new external_value(PARAM_TEXT, 'Certificate number'),
+                    'qualificationcode' => new external_value(PARAM_TEXT, 'Qualification code'),
+                    'qualificationname' => new external_value(PARAM_TEXT, 'Qualification name'),
+                    'dateissued' => new external_value(PARAM_INT, 'Date issued timestamp'),
+                    'expirydate' => new external_value(PARAM_INT, 'Expiry date timestamp'),
+                    'status' => new external_value(PARAM_TEXT, 'Certificate status'),
+                    'verificationurl' => new external_value(PARAM_TEXT, 'QR verification URL'),
             ])
         );
     }
 
     public static function update_enrolment_outcome_parameters() {
-        return new external_function_parameters([
-            'enrolmentid' => new external_value(PARAM_INT, 'Enrolment record ID', VALUE_REQUIRED),
-            'outcomeidentifier' => new external_value(PARAM_TEXT, 'AVETMISS outcome code', VALUE_REQUIRED),
-            'activityenddate' => new external_value(PARAM_INT, 'Activity end date timestamp', VALUE_DEFAULT, 0),
+        return new external_function_parameters(
+            [
+                'enrolmentid' => new external_value(PARAM_INT, 'Enrolment record ID', VALUE_REQUIRED),
+                'outcomeidentifier' => new external_value(PARAM_TEXT, 'AVETMISS outcome code', VALUE_REQUIRED),
+                'activityenddate' => new external_value(PARAM_INT, 'Activity end date timestamp', VALUE_DEFAULT, 0),
         ]);
     }
 
     public static function update_enrolment_outcome($enrolmentid, $outcomeidentifier, $activityenddate = 0) {
         global $DB, $USER;
 
-        $params = self::validate_parameters(self::update_enrolment_outcome_parameters(), [
-            'enrolmentid' => $enrolmentid,
-            'outcomeidentifier' => $outcomeidentifier,
-            'activityenddate' => $activityenddate,
+        $params = self::validate_parameters(
+            self::update_enrolment_outcome_parameters(), [
+                'enrolmentid' => $enrolmentid,
+                'outcomeidentifier' => $outcomeidentifier,
+                'activityenddate' => $activityenddate,
         ]);
 
         $context = \context_system::instance();
@@ -390,9 +401,10 @@ class external extends external_api {
     }
 
     public static function update_enrolment_outcome_returns() {
-        return new external_single_structure([
-            'success' => new external_value(PARAM_BOOL, 'Success status'),
-            'message' => new external_value(PARAM_TEXT, 'Result message'),
+        return new external_single_structure(
+            [
+                'success' => new external_value(PARAM_BOOL, 'Success status'),
+                'message' => new external_value(PARAM_TEXT, 'Result message'),
         ]);
     }
 
@@ -445,16 +457,18 @@ class external extends external_api {
     }
 
     public static function run_compliance_scan_returns() {
-        return new external_single_structure([
-            'success' => new external_value(PARAM_BOOL, 'Success status'),
-            'alerts_generated' => new external_value(PARAM_INT, 'Number of alerts generated'),
-            'message' => new external_value(PARAM_TEXT, 'Result message'),
+        return new external_single_structure(
+            [
+                'success' => new external_value(PARAM_BOOL, 'Success status'),
+                'alerts_generated' => new external_value(PARAM_INT, 'Number of alerts generated'),
+                'message' => new external_value(PARAM_TEXT, 'Result message'),
         ]);
     }
 
     public static function tga_search_qualification_parameters() {
-        return new external_function_parameters([
-            'code' => new external_value(PARAM_TEXT, 'Qualification code to search (e.g. BSB50420)', VALUE_REQUIRED),
+        return new external_function_parameters(
+            [
+                'code' => new external_value(PARAM_TEXT, 'Qualification code to search (e.g. BSB50420)', VALUE_REQUIRED),
         ]);
     }
 
@@ -568,30 +582,34 @@ class external extends external_api {
     }
 
     public static function tga_search_qualification_returns() {
-        return new external_single_structure([
-            'success' => new external_value(PARAM_BOOL, 'Success status'),
-            'error' => new external_value(PARAM_TEXT, 'Error message if failed'),
-            'qualification' => new external_single_structure([
-                'code' => new external_value(PARAM_TEXT, 'Qualification code'),
-                'title' => new external_value(PARAM_TEXT, 'Qualification title'),
-                'status' => new external_value(PARAM_TEXT, 'Currency status'),
-            ], 'Qualification details', VALUE_OPTIONAL),
-            'units' => new external_multiple_structure(
-                new external_single_structure([
-                    'unitcode' => new external_value(PARAM_TEXT, 'Unit code'),
-                    'unitname' => new external_value(PARAM_TEXT, 'Unit name'),
-                    'unittype' => new external_value(PARAM_TEXT, 'Unit type: core, elective'),
-                    'nominalhours' => new external_value(PARAM_INT, 'Nominal hours'),
-                ]),
-                'List of units',
-                VALUE_OPTIONAL
-            ),
+        return new external_single_structure(
+            [
+                'success' => new external_value(PARAM_BOOL, 'Success status'),
+                'error' => new external_value(PARAM_TEXT, 'Error message if failed'),
+                'qualification' => new external_single_structure(
+                [
+                        'code' => new external_value(PARAM_TEXT, 'Qualification code'),
+                        'title' => new external_value(PARAM_TEXT, 'Qualification title'),
+                        'status' => new external_value(PARAM_TEXT, 'Currency status'),
+                ], 'Qualification details', VALUE_OPTIONAL),
+                'units' => new external_multiple_structure(
+                    new external_single_structure(
+                    [
+                            'unitcode' => new external_value(PARAM_TEXT, 'Unit code'),
+                            'unitname' => new external_value(PARAM_TEXT, 'Unit name'),
+                            'unittype' => new external_value(PARAM_TEXT, 'Unit type: core, elective'),
+                            'nominalhours' => new external_value(PARAM_INT, 'Nominal hours'),
+                    ]),
+                    'List of units',
+                    VALUE_OPTIONAL
+                ),
         ]);
     }
 
     public static function tga_search_unit_parameters() {
-        return new external_function_parameters([
-            'query' => new external_value(PARAM_TEXT, 'Unit code or search term', VALUE_REQUIRED),
+        return new external_function_parameters(
+            [
+                'query' => new external_value(PARAM_TEXT, 'Unit code or search term', VALUE_REQUIRED),
         ]);
     }
 
@@ -676,34 +694,38 @@ class external extends external_api {
     }
 
     public static function tga_search_unit_returns() {
-        return new external_single_structure([
-            'success' => new external_value(PARAM_BOOL, 'Success status'),
-            'error' => new external_value(PARAM_TEXT, 'Error message if failed'),
-            'units' => new external_multiple_structure(
-                new external_single_structure([
-                    'unitcode' => new external_value(PARAM_TEXT, 'Unit code'),
-                    'unitname' => new external_value(PARAM_TEXT, 'Unit name'),
-                    'status' => new external_value(PARAM_TEXT, 'Currency status'),
-                ]),
-                'Search results',
-                VALUE_OPTIONAL
-            ),
+        return new external_single_structure(
+            [
+                'success' => new external_value(PARAM_BOOL, 'Success status'),
+                'error' => new external_value(PARAM_TEXT, 'Error message if failed'),
+                'units' => new external_multiple_structure(
+                    new external_single_structure(
+                    [
+                            'unitcode' => new external_value(PARAM_TEXT, 'Unit code'),
+                            'unitname' => new external_value(PARAM_TEXT, 'Unit name'),
+                            'status' => new external_value(PARAM_TEXT, 'Currency status'),
+                    ]),
+                    'Search results',
+                    VALUE_OPTIONAL
+                ),
         ]);
     }
 
     public static function qualbuilder_import_units_parameters() {
-        return new external_function_parameters([
-            'qualbuilderid' => new external_value(PARAM_INT, 'Qualification builder ID', VALUE_REQUIRED),
-            'units' => new external_value(PARAM_RAW, 'JSON array of units to import', VALUE_REQUIRED),  // pipeline-ignore: PARAM_RAW — web service parameter carrying a JSON document; decoded and validated by the handler
+        return new external_function_parameters(
+            [
+                'qualbuilderid' => new external_value(PARAM_INT, 'Qualification builder ID', VALUE_REQUIRED),
+                'units' => new external_value(PARAM_RAW, 'JSON array of units to import', VALUE_REQUIRED),  // pipeline-ignore: PARAM_RAW — web service parameter carrying a JSON document; decoded and validated by the handler
         ]);
     }
 
     public static function qualbuilder_import_units($qualbuilderid, $units) {
         global $DB, $USER;
         
-        $params = self::validate_parameters(self::qualbuilder_import_units_parameters(), [
-            'qualbuilderid' => $qualbuilderid,
-            'units' => $units,
+        $params = self::validate_parameters(
+            self::qualbuilder_import_units_parameters(), [
+                'qualbuilderid' => $qualbuilderid,
+                'units' => $units,
         ]);
         $context = \context_system::instance();
         self::validate_context($context);
@@ -720,7 +742,8 @@ class external extends external_api {
         $imported = 0;
         $skipped = 0;
         
-        $existingunits = $DB->get_records_menu('local_rtocompliance_qualunits', 
+        $existingunits = $DB->get_records_menu(
+            'local_rtocompliance_qualunits', 
             ['qualbuilderid' => $params['qualbuilderid']], '', 'unitcode, id');
         
         $maxorder = $DB->get_field_sql(
@@ -775,10 +798,11 @@ class external extends external_api {
     }
 
     public static function qualbuilder_import_units_returns() {
-        return new external_single_structure([
-            'success' => new external_value(PARAM_BOOL, 'Success status'),
-            'imported' => new external_value(PARAM_INT, 'Number of units imported'),
-            'message' => new external_value(PARAM_TEXT, 'Result message'),
+        return new external_single_structure(
+            [
+                'success' => new external_value(PARAM_BOOL, 'Success status'),
+                'imported' => new external_value(PARAM_INT, 'Number of units imported'),
+                'message' => new external_value(PARAM_TEXT, 'Result message'),
         ]);
     }
 
@@ -787,9 +811,10 @@ class external extends external_api {
     // =====================================================================
 
     public static function tga_get_builder_data_parameters() {
-        return new external_function_parameters([
-            'code'       => new external_value(PARAM_ALPHANUMEXT, 'Qualification/SkillSet/Unit code', VALUE_REQUIRED),
-            'categoryid' => new external_value(PARAM_INT, 'Already-selected qual root category ID (0 = unknown)', VALUE_DEFAULT, 0),
+        return new external_function_parameters(
+            [
+                'code'       => new external_value(PARAM_ALPHANUMEXT, 'Qualification/SkillSet/Unit code', VALUE_REQUIRED),
+                'categoryid' => new external_value(PARAM_INT, 'Already-selected qual root category ID (0 = unknown)', VALUE_DEFAULT, 0),
         ]);
     }
 
@@ -868,7 +893,7 @@ class external extends external_api {
             "SELECT id, name, parent, idnumber FROM {course_categories} ORDER BY sortorder ASC"
         );
         $moodlecats   = [];
-        $catParentMap = [];   // catid → parent catid
+        $catParentMap = [];   // Catid → parent catid
         foreach ($catRs as $cat) {
             $catParentMap[(int)$cat->id] = (int)$cat->parent;
             $moodlecats[] = [
@@ -994,7 +1019,10 @@ class external extends external_api {
         // keeps the extra payload minimal (only genuinely relevant courses added).
         // Courses added here get rootcatid=0 so the JS knows they are cross-package.
         if ($categoryid > 0 && !empty($unitdata)) {
-            $tgaUnitCodes    = array_map(function ($u) { return strtoupper($u['unitcode']); }, $unitdata);
+            $tgaUnitCodes    = array_map(
+                function ($u) {
+                    return strtoupper($u['unitcode']);
+                }, $unitdata);
             $subtreeCourseIds = array_column($moodlecourses, 'id');
             $crossRs = $DB->get_recordset_sql(
                 "SELECT id, shortname, fullname, category, idnumber, sortorder
@@ -1073,56 +1101,61 @@ class external extends external_api {
     }
 
     public static function tga_get_builder_data_returns() {
-        return new external_single_structure([
-            'success'          => new external_value(PARAM_BOOL, 'Success'),
-            'error'            => new external_value(PARAM_TEXT, 'Error message'),
-            'qualification'    => new external_value(PARAM_RAW, 'Qualification JSON {code,title,type,aqfLevel}'),  // pipeline-ignore: PARAM_RAW — web service parameter carrying a JSON document; decoded and validated by the handler
-            'packagingrules'   => new external_value(PARAM_RAW, 'Rules text JSON array'),  // pipeline-ignore: PARAM_RAW — web service parameter carrying a JSON document; decoded and validated by the handler
-            'totalunits'       => new external_value(PARAM_INT, 'Total units required'),
-            'corerequired'     => new external_value(PARAM_INT, 'Core units required'),
-            'electiverequired' => new external_value(PARAM_INT, 'Elective units required'),
-            'grouprules'       => new external_value(PARAM_RAW, 'Group requirements JSON {A:{min,max},...}'),  // pipeline-ignore: PARAM_RAW — web service parameter carrying a JSON document; decoded and validated by the handler
-            'pointsrequired'        => new external_value(PARAM_INT, 'Credit points required (0 = not a points-based qual)'),
-            'pointssystem'          => new external_value(PARAM_INT, '1 = qualification uses credit points system'),
-            'corepointsrequired'    => new external_value(PARAM_INT, 'Sum of core unit credit points (minimum core pts)'),
-            'electivepointsrequired'=> new external_value(PARAM_INT, 'Elective pts required = pointsrequired - corepointsrequired'),
-            'units'            => new external_multiple_structure(
-                new external_single_structure([
-                    'unitcode'      => new external_value(PARAM_TEXT, 'Unit code'),
-                    'unitname'      => new external_value(PARAM_TEXT, 'Unit name'),
-                    'iscore'        => new external_value(PARAM_INT, '1=core, 0=elective'),
-                    'electivegroup' => new external_value(PARAM_TEXT, 'Group code A-Y or empty'),
-                    'grouplabel'    => new external_value(PARAM_TEXT, 'Group label from TGA'),
-                    'nominalhours'  => new external_value(PARAM_INT, 'Nominal hours'),
-                    'creditpoints'  => new external_value(PARAM_INT, 'Credit point value (0 if not points-based)'),
-                ])
-            ),
-            'moodlecategories' => new external_multiple_structure(
-                new external_single_structure([
-                    'id'       => new external_value(PARAM_INT,  'Category ID'),
-                    'name'     => new external_value(PARAM_TEXT, 'Category name'),
-                    'parent'   => new external_value(PARAM_INT,  'Parent category ID (0 = root)'),
-                    'idnumber' => new external_value(PARAM_TEXT, 'Category idnumber (qual code on VET roots)'),
-                ])
-            ),
-            'moodlecourses'    => new external_multiple_structure(
-                new external_single_structure([
-                    'id'        => new external_value(PARAM_INT,  'Course ID'),
-                    'shortname' => new external_value(PARAM_TEXT, 'Shortname'),
-                    'fullname'  => new external_value(PARAM_TEXT, 'Full name'),
-                    'category'  => new external_value(PARAM_INT,  'Immediate parent category ID'),
-                    'sortorder' => new external_value(PARAM_INT,  'Moodle sortorder — used to match unit list order to the Manage Courses page'),
-                    'rootcatid' => new external_value(PARAM_INT,  'Depth-0 ancestor category ID'),
-                ])
-            ),
-            'unitcodemap'      => new external_multiple_structure(
-                new external_single_structure([
-                    'unitcode'  => new external_value(PARAM_TEXT, 'VET unit code extracted from course name/idnumber'),
-                    'courseid'  => new external_value(PARAM_INT,  'Course ID'),
-                    'category'  => new external_value(PARAM_INT,  'Category ID (semester)'),
-                    'shortname' => new external_value(PARAM_TEXT, 'Course shortname'),
-                ])
-            ),
+        return new external_single_structure(
+            [
+                'success'          => new external_value(PARAM_BOOL, 'Success'),
+                'error'            => new external_value(PARAM_TEXT, 'Error message'),
+                'qualification'    => new external_value(PARAM_RAW, 'Qualification JSON {code,title,type,aqfLevel}'),  // pipeline-ignore: PARAM_RAW — web service parameter carrying a JSON document; decoded and validated by the handler
+                'packagingrules'   => new external_value(PARAM_RAW, 'Rules text JSON array'),  // pipeline-ignore: PARAM_RAW — web service parameter carrying a JSON document; decoded and validated by the handler
+                'totalunits'       => new external_value(PARAM_INT, 'Total units required'),
+                'corerequired'     => new external_value(PARAM_INT, 'Core units required'),
+                'electiverequired' => new external_value(PARAM_INT, 'Elective units required'),
+                'grouprules'       => new external_value(PARAM_RAW, 'Group requirements JSON {A:{min,max},...}'),  // pipeline-ignore: PARAM_RAW — web service parameter carrying a JSON document; decoded and validated by the handler
+                'pointsrequired'        => new external_value(PARAM_INT, 'Credit points required (0 = not a points-based qual)'),
+                'pointssystem'          => new external_value(PARAM_INT, '1 = qualification uses credit points system'),
+                'corepointsrequired'    => new external_value(PARAM_INT, 'Sum of core unit credit points (minimum core pts)'),
+                'electivepointsrequired'=> new external_value(PARAM_INT, 'Elective pts required = pointsrequired - corepointsrequired'),
+                'units'            => new external_multiple_structure(
+                    new external_single_structure(
+                    [
+                            'unitcode'      => new external_value(PARAM_TEXT, 'Unit code'),
+                            'unitname'      => new external_value(PARAM_TEXT, 'Unit name'),
+                            'iscore'        => new external_value(PARAM_INT, '1=core, 0=elective'),
+                            'electivegroup' => new external_value(PARAM_TEXT, 'Group code A-Y or empty'),
+                            'grouplabel'    => new external_value(PARAM_TEXT, 'Group label from TGA'),
+                            'nominalhours'  => new external_value(PARAM_INT, 'Nominal hours'),
+                            'creditpoints'  => new external_value(PARAM_INT, 'Credit point value (0 if not points-based)'),
+                    ])
+                ),
+                'moodlecategories' => new external_multiple_structure(
+                    new external_single_structure(
+                    [
+                            'id'       => new external_value(PARAM_INT,  'Category ID'),
+                            'name'     => new external_value(PARAM_TEXT, 'Category name'),
+                            'parent'   => new external_value(PARAM_INT,  'Parent category ID (0 = root)'),
+                            'idnumber' => new external_value(PARAM_TEXT, 'Category idnumber (qual code on VET roots)'),
+                    ])
+                ),
+                'moodlecourses'    => new external_multiple_structure(
+                    new external_single_structure(
+                    [
+                            'id'        => new external_value(PARAM_INT,  'Course ID'),
+                            'shortname' => new external_value(PARAM_TEXT, 'Shortname'),
+                            'fullname'  => new external_value(PARAM_TEXT, 'Full name'),
+                            'category'  => new external_value(PARAM_INT,  'Immediate parent category ID'),
+                            'sortorder' => new external_value(PARAM_INT,  'Moodle sortorder — used to match unit list order to the Manage Courses page'),
+                            'rootcatid' => new external_value(PARAM_INT,  'Depth-0 ancestor category ID'),
+                    ])
+                ),
+                'unitcodemap'      => new external_multiple_structure(
+                    new external_single_structure(
+                    [
+                            'unitcode'  => new external_value(PARAM_TEXT, 'VET unit code extracted from course name/idnumber'),
+                            'courseid'  => new external_value(PARAM_INT,  'Course ID'),
+                            'category'  => new external_value(PARAM_INT,  'Category ID (semester)'),
+                            'shortname' => new external_value(PARAM_TEXT, 'Course shortname'),
+                    ])
+                ),
         ]);
     }
 
@@ -1131,21 +1164,22 @@ class external extends external_api {
     // =====================================================================
 
     public static function qualbuilder_auto_build_parameters() {
-        return new external_function_parameters([
-            'qualbuilderid'     => new external_value(PARAM_INT,          'QB record ID (0 = create)', VALUE_DEFAULT, 0),
-            'producttype'       => new external_value(PARAM_ALPHA,        'qualification|skillset|singleunit'),
-            'qualificationcode' => new external_value(PARAM_ALPHANUMEXT,  'Qualification code'),
-            'qualificationname' => new external_value(PARAM_TEXT,         'Qualification name'),
-            'aqflevel'          => new external_value(PARAM_INT,          'AQF level 1-10',  VALUE_DEFAULT, 0),
-            'categoryid'        => new external_value(PARAM_INT,          'Moodle category', VALUE_DEFAULT, 0),
-            'nominalhours'      => new external_value(PARAM_INT,          'Nominal hours',   VALUE_DEFAULT, 0),
-            'status'            => new external_value(PARAM_ALPHA,        'draft|active|superseded', VALUE_DEFAULT, 'draft'),
-            'totalunits'        => new external_value(PARAM_INT,          'Total units required',  VALUE_DEFAULT, 0),
-            'coreunitcount'     => new external_value(PARAM_INT,          'Core units required',   VALUE_DEFAULT, 0),
-            'electivecount'     => new external_value(PARAM_INT,          'Elective units required', VALUE_DEFAULT, 0),
-            'electiverules'     => new external_value(PARAM_RAW,          'Elective rules JSON', VALUE_DEFAULT, ''),  // pipeline-ignore: PARAM_RAW — web service parameter carrying a JSON document; decoded and validated by the handler
-            'units'             => new external_value(PARAM_RAW,          'Units JSON array', VALUE_DEFAULT, '[]'),  // pipeline-ignore: PARAM_RAW — web service parameter carrying a JSON document; decoded and validated by the handler
-            'streamname'        => new external_value(PARAM_TEXT,         'Stream / variant name', VALUE_DEFAULT, ''),
+        return new external_function_parameters(
+            [
+                'qualbuilderid'     => new external_value(PARAM_INT,          'QB record ID (0 = create)', VALUE_DEFAULT, 0),
+                'producttype'       => new external_value(PARAM_ALPHA,        'qualification|skillset|singleunit'),
+                'qualificationcode' => new external_value(PARAM_ALPHANUMEXT,  'Qualification code'),
+                'qualificationname' => new external_value(PARAM_TEXT,         'Qualification name'),
+                'aqflevel'          => new external_value(PARAM_INT,          'AQF level 1-10',  VALUE_DEFAULT, 0),
+                'categoryid'        => new external_value(PARAM_INT,          'Moodle category', VALUE_DEFAULT, 0),
+                'nominalhours'      => new external_value(PARAM_INT,          'Nominal hours',   VALUE_DEFAULT, 0),
+                'status'            => new external_value(PARAM_ALPHA,        'draft|active|superseded', VALUE_DEFAULT, 'draft'),
+                'totalunits'        => new external_value(PARAM_INT,          'Total units required',  VALUE_DEFAULT, 0),
+                'coreunitcount'     => new external_value(PARAM_INT,          'Core units required',   VALUE_DEFAULT, 0),
+                'electivecount'     => new external_value(PARAM_INT,          'Elective units required', VALUE_DEFAULT, 0),
+                'electiverules'     => new external_value(PARAM_RAW,          'Elective rules JSON', VALUE_DEFAULT, ''),  // pipeline-ignore: PARAM_RAW — web service parameter carrying a JSON document; decoded and validated by the handler
+                'units'             => new external_value(PARAM_RAW,          'Units JSON array', VALUE_DEFAULT, '[]'),  // pipeline-ignore: PARAM_RAW — web service parameter carrying a JSON document; decoded and validated by the handler
+                'streamname'        => new external_value(PARAM_TEXT,         'Stream / variant name', VALUE_DEFAULT, ''),
         ]);
     }
 
@@ -1155,21 +1189,22 @@ class external extends external_api {
 
         global $DB, $USER;
 
-        $params = self::validate_parameters(self::qualbuilder_auto_build_parameters(), [
-            'qualbuilderid'     => $qualbuilderid,
-            'producttype'       => $producttype,
-            'qualificationcode' => $qualificationcode,
-            'qualificationname' => $qualificationname,
-            'aqflevel'          => $aqflevel,
-            'categoryid'        => $categoryid,
-            'nominalhours'      => $nominalhours,
-            'status'            => $status,
-            'totalunits'        => $totalunits,
-            'coreunitcount'     => $coreunitcount,
-            'electivecount'     => $electivecount,
-            'electiverules'     => $electiverules,
-            'units'             => $units,
-            'streamname'        => $streamname,
+        $params = self::validate_parameters(
+            self::qualbuilder_auto_build_parameters(), [
+                'qualbuilderid'     => $qualbuilderid,
+                'producttype'       => $producttype,
+                'qualificationcode' => $qualificationcode,
+                'qualificationname' => $qualificationname,
+                'aqflevel'          => $aqflevel,
+                'categoryid'        => $categoryid,
+                'nominalhours'      => $nominalhours,
+                'status'            => $status,
+                'totalunits'        => $totalunits,
+                'coreunitcount'     => $coreunitcount,
+                'electivecount'     => $electivecount,
+                'electiverules'     => $electiverules,
+                'units'             => $units,
+                'streamname'        => $streamname,
         ]);
 
         $context = \context_system::instance();
@@ -1219,36 +1254,41 @@ class external extends external_api {
         // Rules: never overwrite a human 'manual' qualmap entry; never overwrite an
         // idnumber that the admin has already set to something else.
         if (!empty($record->categoryid) && !empty($record->qualificationcode)) {
-            $qmExist  = $DB->get_record('local_rtocompliance_qualmap',
+            $qmExist  = $DB->get_record(
+                'local_rtocompliance_qualmap',
                 ['qualcode' => $record->qualificationcode], 'id,method', IGNORE_MISSING);
-            $qmCatName = $DB->get_field('course_categories', 'name',
+            $qmCatName = $DB->get_field(
+                'course_categories', 'name',
                 ['id' => $record->categoryid]) ?: '';
 
             if (!$qmExist) {
-                $DB->insert_record('local_rtocompliance_qualmap', (object)[
-                    'qualcode'     => $record->qualificationcode,
-                    'categoryid'   => $record->categoryid,
-                    'catname'      => $qmCatName,
-                    'confidence'   => 100,
-                    'method'       => 'qualbuilder',
-                    'timecreated'  => $now,
-                    'timemodified' => $now,
+                $DB->insert_record(
+                    'local_rtocompliance_qualmap', (object)[
+                        'qualcode'     => $record->qualificationcode,
+                        'categoryid'   => $record->categoryid,
+                        'catname'      => $qmCatName,
+                        'confidence'   => 100,
+                        'method'       => 'qualbuilder',
+                        'timecreated'  => $now,
+                        'timemodified' => $now,
                 ]);
             } elseif ($qmExist->method !== 'manual') {
-                $DB->update_record('local_rtocompliance_qualmap', (object)[
-                    'id'           => $qmExist->id,
-                    'categoryid'   => $record->categoryid,
-                    'catname'      => $qmCatName,
-                    'confidence'   => 100,
-                    'method'       => 'qualbuilder',
-                    'timemodified' => $now,
+                $DB->update_record(
+                    'local_rtocompliance_qualmap', (object)[
+                        'id'           => $qmExist->id,
+                        'categoryid'   => $record->categoryid,
+                        'catname'      => $qmCatName,
+                        'confidence'   => 100,
+                        'method'       => 'qualbuilder',
+                        'timemodified' => $now,
                 ]);
             }
 
             // Set category.idnumber if currently blank — never overwrite an existing value.
             $catIdn = $DB->get_field('course_categories', 'idnumber', ['id' => $record->categoryid]);
             if ($catIdn === '' || $catIdn === null) {
-                $DB->set_field('course_categories', 'idnumber',
+                $DB->set_field(
+                    'course_categories', 'idnumber',
                     $record->qualificationcode, ['id' => $record->categoryid]);
             }
         }
@@ -1259,11 +1299,13 @@ class external extends external_api {
             // Delete variant course links before deleting units (no FK cascade in Moodle).
             $dbman = $DB->get_manager();
             if ($dbman->table_exists('local_rtocompliance_qualunit_courses')) {
-                $oldIds = $DB->get_fieldset_select('local_rtocompliance_qualunits',
+                $oldIds = $DB->get_fieldset_select(
+                    'local_rtocompliance_qualunits',
                     'id', 'qualbuilderid = :qbid', ['qbid' => $qualbuilderid]);
                 if ($oldIds) {
                     list($insql, $inparams) = $DB->get_in_or_equal($oldIds);
-                    $DB->delete_records_select('local_rtocompliance_qualunit_courses',
+                    $DB->delete_records_select(
+                        'local_rtocompliance_qualunit_courses',
                         "qualunitid $insql", $inparams);
                 }
             }
@@ -1329,22 +1371,24 @@ class external extends external_api {
     }
 
     public static function qualbuilder_auto_build_returns() {
-        return new external_single_structure([
-            'success'       => new external_value(PARAM_BOOL, 'Success'),
-            'qualbuilderid' => new external_value(PARAM_INT,  'Qualification builder ID'),
-            'message'       => new external_value(PARAM_TEXT, 'Result message'),
+        return new external_single_structure(
+            [
+                'success'       => new external_value(PARAM_BOOL, 'Success'),
+                'qualbuilderid' => new external_value(PARAM_INT,  'Qualification builder ID'),
+                'message'       => new external_value(PARAM_TEXT, 'Result message'),
         ]);
     }
 
-    // get_courses_for_category — lightweight endpoint: returns just the Moodle course list
+    // The get_courses_for_category endpoint is lightweight: returns just the Moodle course list
     // for a qualification category subtree.  Called by JS when QB.courses is empty on
     // page load (editing an existing record without reloading TGA) or when the Map All
     // button is clicked before TGA has been fetched this session.
     // Uses the same BFS + rootcatid logic as tga_get_builder_data so pool filtering is identical.
     public static function get_courses_for_category_parameters() {
-        return new external_function_parameters([
-            'categoryid' => new external_value(PARAM_INT,  'Qualification root category ID'),
-            'unitcodes'  => new external_value(PARAM_TEXT, 'Comma-separated unit codes to filter cross-package supplement scan (optional)', VALUE_DEFAULT, ''),
+        return new external_function_parameters(
+            [
+                'categoryid' => new external_value(PARAM_INT,  'Qualification root category ID'),
+                'unitcodes'  => new external_value(PARAM_TEXT, 'Comma-separated unit codes to filter cross-package supplement scan (optional)', VALUE_DEFAULT, ''),
         ]);
     }
 
@@ -1506,25 +1550,28 @@ class external extends external_api {
     }
 
     public static function get_courses_for_category_returns() {
-        return new external_single_structure([
-            'courses' => new external_multiple_structure(
-                new external_single_structure([
-                    'id'        => new external_value(PARAM_INT,  'Course ID'),
-                    'shortname' => new external_value(PARAM_TEXT, 'Course shortname'),
-                    'fullname'  => new external_value(PARAM_TEXT, 'Course fullname'),
-                    'category'  => new external_value(PARAM_INT,  'Category ID'),
-                    'sortorder' => new external_value(PARAM_INT,  'Moodle sortorder'),
-                    'rootcatid' => new external_value(PARAM_INT,  'Root qual category ID'),
-                ])
-            ),
-            'unitcodemap' => new external_multiple_structure(
-                new external_single_structure([
-                    'unitcode'  => new external_value(PARAM_TEXT, 'VET unit code'),
-                    'courseid'  => new external_value(PARAM_INT,  'Course ID'),
-                    'category'  => new external_value(PARAM_INT,  'Category ID'),
-                    'shortname' => new external_value(PARAM_TEXT, 'Course shortname'),
-                ])
-            ),
+        return new external_single_structure(
+            [
+                'courses' => new external_multiple_structure(
+                    new external_single_structure(
+                    [
+                            'id'        => new external_value(PARAM_INT,  'Course ID'),
+                            'shortname' => new external_value(PARAM_TEXT, 'Course shortname'),
+                            'fullname'  => new external_value(PARAM_TEXT, 'Course fullname'),
+                            'category'  => new external_value(PARAM_INT,  'Category ID'),
+                            'sortorder' => new external_value(PARAM_INT,  'Moodle sortorder'),
+                            'rootcatid' => new external_value(PARAM_INT,  'Root qual category ID'),
+                    ])
+                ),
+                'unitcodemap' => new external_multiple_structure(
+                    new external_single_structure(
+                    [
+                            'unitcode'  => new external_value(PARAM_TEXT, 'VET unit code'),
+                            'courseid'  => new external_value(PARAM_INT,  'Course ID'),
+                            'category'  => new external_value(PARAM_INT,  'Category ID'),
+                            'shortname' => new external_value(PARAM_TEXT, 'Course shortname'),
+                    ])
+                ),
         ]);
     }
 }

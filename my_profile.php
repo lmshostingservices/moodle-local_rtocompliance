@@ -87,11 +87,12 @@ if (!$student) {
 $gatemissing = local_rtocompliance_get_missing_avetmiss_fields($userid, $student);
 $gatelocked  = (local_rtocompliance_profile_gate_applies($userid) !== false);
 
-$form = new student_profile_form(null, [
-    'student'       => $student,
-    'selfservice'   => true,
-    'lockmode'      => $gatelocked,
-    'requiredfields' => $gatelocked ? local_rtocompliance_avetmiss_mandatory_fields() : [],
+$form = new student_profile_form(
+    null, [
+        'student'       => $student,
+        'selfservice'   => true,
+        'lockmode'      => $gatelocked,
+        'requiredfields' => $gatelocked ? local_rtocompliance_avetmiss_mandatory_fields() : [],
 ]);
 $form->set_data($student);
 
@@ -259,19 +260,22 @@ if ($gatelocked) {
     // are answered, so the banner has to do three things — say plainly that access
     // is held, list exactly what is outstanding, and explain why it is required.
     echo html_writer::start_div('alert alert-danger', ['style' => 'margin-bottom: 24px;', 'role' => 'alert']);
-    echo html_writer::tag('h4',
-        '&#128274; ' . get_string('avetmiss_profile_locked_title', 'local_rtocompliance'),
-        ['style' => 'margin: 0 0 10px 0; font-size: 1.15em;']
+    echo html_writer::tag(
+        'h4',
+            '&#128274; ' . get_string('avetmiss_profile_locked_title', 'local_rtocompliance'),
+            ['style' => 'margin: 0 0 10px 0; font-size: 1.15em;']
     );
-    echo html_writer::tag('p',
-        get_string('avetmiss_profile_locked_body', 'local_rtocompliance'),
-        ['style' => 'margin: 0 0 12px 0;']
+    echo html_writer::tag(
+        'p',
+            get_string('avetmiss_profile_locked_body', 'local_rtocompliance'),
+            ['style' => 'margin: 0 0 12px 0;']
     );
 
     if (!empty($gatemissing)) {
-        echo html_writer::tag('p',
-            html_writer::tag('strong', get_string('avetmiss_still_needed', 'local_rtocompliance')),
-            ['style' => 'margin: 0 0 6px 0;']
+        echo html_writer::tag(
+            'p',
+                html_writer::tag('strong', get_string('avetmiss_still_needed', 'local_rtocompliance')),
+                ['style' => 'margin: 0 0 6px 0;']
         );
         echo '<ul style="margin: 0 0 12px 0; padding-left: 22px;">';
         foreach ($gatemissing as $label) {
@@ -280,23 +284,26 @@ if ($gatelocked) {
         echo '</ul>';
     }
 
-    echo html_writer::tag('p',
-        get_string('avetmiss_profile_locked_footer', 'local_rtocompliance'),
-        ['style' => 'margin: 0; font-size: 0.95em; opacity: .9;']
+    echo html_writer::tag(
+        'p',
+            get_string('avetmiss_profile_locked_footer', 'local_rtocompliance'),
+            ['style' => 'margin: 0; font-size: 0.95em; opacity: .9;']
     );
     echo html_writer::end_div();
 } else if ($isprompt && !$student->profilecomplete) {
     // Arrived here via the login-time redirect — show an action-required banner
     // that explains WHY the profile is needed, not just that it's incomplete.
     echo html_writer::start_div('alert alert-danger', ['style' => 'margin-bottom: 24px;', 'role' => 'alert']);
-    echo html_writer::tag('h4',
-        html_writer::tag('span', '&#9888; ', []) .
-        get_string('avetmiss_profile_prompt_title', 'local_rtocompliance'),
-        ['style' => 'margin: 0 0 10px 0; font-size: 1.1em;']
+    echo html_writer::tag(
+        'h4',
+            html_writer::tag('span', '&#9888; ', []) .
+            get_string('avetmiss_profile_prompt_title', 'local_rtocompliance'),
+            ['style' => 'margin: 0 0 10px 0; font-size: 1.1em;']
     );
-    echo html_writer::tag('p',
-        get_string('avetmiss_profile_prompt_body', 'local_rtocompliance'),
-        ['style' => 'margin: 0;']
+    echo html_writer::tag(
+        'p',
+            get_string('avetmiss_profile_prompt_body', 'local_rtocompliance'),
+            ['style' => 'margin: 0;']
     );
     echo html_writer::end_div();
 } else if (!$student->profilecomplete) {

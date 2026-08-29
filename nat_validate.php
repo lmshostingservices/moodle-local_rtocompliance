@@ -61,9 +61,9 @@ $PAGE->set_title($strtitle);
 $PAGE->set_heading($strtitle);
 
 // ─── Sensible working-set caps (process with recordsets, not one giant load) ──
-const NATVAL_MAX_STUDENTS = 8000;    // reportable students processed
-const NATVAL_MAX_ENROL    = 30000;   // enrolments processed
-const NATVAL_ROWS_PER_CARD = 100;    // rows shown per finding card
+const NATVAL_MAX_STUDENTS = 8000;    // Reportable students processed
+const NATVAL_MAX_ENROL    = 30000;   // Enrolments processed
+const NATVAL_ROWS_PER_CARD = 100;    // Rows shown per finding card
 
 // ─── Validation code sets ────────────────────────────────────────────────────
 $sexcodes        = avetmiss_codes::get_sex_codes();               // M / F / @
@@ -120,7 +120,7 @@ if (!function_exists('natval_fullname')) {
 }
 
 // ─── Finding collector ────────────────────────────────────────────────────────
-$findings = [];   // flat list: each = severity, category, ref, field, message
+$findings = [];   // Flat list: each = severity, category, ref, field, message
 $add = function (string $severity, string $category, string $ref, string $field, string $message) use (&$findings) {
     $findings[] = [
         'severity' => $severity,
@@ -135,7 +135,7 @@ $studentschecked   = 0;
 $enrolmentschecked = 0;
 $studentstruncated = false;
 $enroltruncated    = false;
-$dataerror         = '';   // surfaced non-fatally in the UI
+$dataerror         = '';   // Surfaced non-fatally in the UI
 
 $studenttable   = 'local_rtocompliance_students';
 $enrolmenttable = 'local_rtocompliance_enrolments';
@@ -385,16 +385,17 @@ foreach ($findings as $f) {
     $bycategory[$cat]['rows'][] = $f;
 }
 // Order categories: those containing errors first, then by total count desc.
-uasort($bycategory, function ($a, $b) {
-    $ae = $a['ERROR'] > 0 ? 1 : 0;
-    $be = $b['ERROR'] > 0 ? 1 : 0;
-    if ($ae !== $be) {
-        return $be - $ae;
-    }
-    $at = $a['ERROR'] + $a['WARNING'];
-    $bt = $b['ERROR'] + $b['WARNING'];
-    return $bt - $at;
-});
+uasort(
+    $bycategory, function ($a, $b) {
+        $ae = $a['ERROR'] > 0 ? 1 : 0;
+        $be = $b['ERROR'] > 0 ? 1 : 0;
+        if ($ae !== $be) {
+            return $be - $ae;
+        }
+        $at = $a['ERROR'] + $a['WARNING'];
+        $bt = $b['ERROR'] + $b['WARNING'];
+        return $bt - $at;
+    });
 
 // ─── CSV EXPORT — must happen BEFORE any HTML output ──────────────────────────
 if ($export === 'csv') {
@@ -415,9 +416,9 @@ $ready       = ($errorcount === 0);
 $csvurl      = new moodle_url('/local/rtocompliance/nat_validate.php', ['export' => 'csv', 'sesskey' => sesskey()]);
 $refreshurl  = new moodle_url('/local/rtocompliance/nat_validate.php');
 
-$PAGE->add_body_class('path-local-rtocompliance'); // v5.9.445: scoped CSS needs this on admin_externalpage pages.
+$PAGE->add_body_class('path-local-rtocompliance'); // Version 5.9.445: scoped CSS needs this on admin_externalpage pages.
 echo $OUTPUT->header();
-// v5.9.404: render the plugin's left-hand sidebar (this page was missing it).
+// Version 5.9.404: render the plugin's left-hand sidebar (this page was missing it).
 echo local_rtocompliance_render_nav_header($strtitle);
 echo local_rtocompliance_page_banner($strtitle);
 ?>
@@ -527,10 +528,12 @@ details.natval-card > summary::-webkit-details-marker { display: none; }
         <summary class="natval-card-head">
           <h3><?php echo s($cat); ?></h3>
           <?php if ($grp['ERROR'] > 0) { ?>
-            <span class="natval-pill pill-error" title="Number of serious problems in this group that must be fixed before the report can be submitted."><?php echo $grp['ERROR']; ?> error<?php echo $grp['ERROR'] === 1 ? '' : 's'; ?></span>
+            <span class="natval-pill pill-error" title="Number of serious problems in this group that must be fixed before the report can be submitted."><?php echo $grp['ERROR'];
+            ?> error<?php echo $grp['ERROR'] === 1 ? '' : 's'; ?></span>
           <?php } ?>
           <?php if ($grp['WARNING'] > 0) { ?>
-            <span class="natval-pill pill-warn" title="Number of possible problems in this group worth checking. These will not block the report but may still need attention."><?php echo $grp['WARNING']; ?> warning<?php echo $grp['WARNING'] === 1 ? '' : 's'; ?></span>
+            <span class="natval-pill pill-warn" title="Number of possible problems in this group worth checking. These will not block the report but may still need attention."><?php echo $grp['WARNING'];
+            ?> warning<?php echo $grp['WARNING'] === 1 ? '' : 's'; ?></span>
           <?php } ?>
         </summary>
         <table class="natval-table">
@@ -540,7 +543,8 @@ details.natval-card > summary::-webkit-details-marker { display: none; }
           <tbody>
           <?php for ($i = 0; $i < $shown; $i++) { $f = $rows[$i]; ?>
             <tr>
-              <td><span class="sev-tag sev-<?php echo $f['severity']; ?>"><?php echo $f['severity']; ?></span></td>
+              <td><span class="sev-tag sev-<?php echo $f['severity'];
+              ?>"><?php echo $f['severity']; ?></span></td>
               <td><?php echo s($f['ref']); ?></td>
               <td><?php echo s($f['field']); ?></td>
               <td><?php echo s($f['message']); ?></td>

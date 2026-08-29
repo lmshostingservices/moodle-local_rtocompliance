@@ -71,7 +71,8 @@ echo html_writer::end_div();
 // Intro card.
 echo html_writer::start_div('info-card');
 echo html_writer::tag('h4', 'Standards 2.3 to 2.6 — Training Support, Reasonable Adjustments, Diversity & Wellbeing');
-echo html_writer::tag('p', '
+echo html_writer::tag(
+    'p', '
     This page is the organisation-level Student Support system. Selections made here form part of the
     RTO\'s standing evidence — the underlying lists are visible to prospective and current students and
     are the source of the support, adjustments, policy and wellbeing options offered to learners.
@@ -113,7 +114,7 @@ echo html_writer::tag('p', 'Tick the wellbeing supports the RTO provides. Per-st
 echo html_writer::div('', '', ['id' => 'rtoWellbeingSupport']);
 echo html_writer::end_div();
 
-echo html_writer::end_div(); // grid
+echo html_writer::end_div(); // Grid
 
 // Related pages.
 echo html_writer::start_div('', ['style' => 'margin-top:2rem;padding:1.5rem;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;']);

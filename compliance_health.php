@@ -91,132 +91,155 @@ $currentyear = (int) date('Y');
 // == QA1 — Training & Assessment =====================================
 
 // Validations overdue (nextduedate in the past) and due-soon (within 90 days).
-$val_overdue = $chc_count(['local_rtocompliance_validations'], function () use ($DB, $now) {
-    return $DB->count_records_select('local_rtocompliance_validations',
-        'nextduedate IS NOT NULL AND nextduedate > 0 AND nextduedate < ?', [$now]);
-});
-$val_duesoon = $chc_count(['local_rtocompliance_validations'], function () use ($DB, $now, $d90) {
-    return $DB->count_records_select('local_rtocompliance_validations',
-        'nextduedate IS NOT NULL AND nextduedate >= ? AND nextduedate < ?', [$now, $now + $d90]);
-});
+$val_overdue = $chc_count(
+    ['local_rtocompliance_validations'], function () use ($DB, $now) {
+        return $DB->count_records_select(
+        'local_rtocompliance_validations',
+            'nextduedate IS NOT NULL AND nextduedate > 0 AND nextduedate < ?', [$now]);
+    });
+$val_duesoon = $chc_count(
+    ['local_rtocompliance_validations'], function () use ($DB, $now, $d90) {
+        return $DB->count_records_select(
+        'local_rtocompliance_validations',
+            'nextduedate IS NOT NULL AND nextduedate >= ? AND nextduedate < ?', [$now, $now + $d90]);
+    });
 
 // Active training products on scope with NO completed validation ever (advisory).
-$quals_novalidation = $chc_count(['local_rtocompliance_qualbuilder', 'local_rtocompliance_validations'],
-    function () use ($DB) {
-        $sql = "SELECT COUNT(q.id)
+$quals_novalidation = $chc_count(
+    ['local_rtocompliance_qualbuilder', 'local_rtocompliance_validations'],
+        function () use ($DB) {
+            $sql = "SELECT COUNT(q.id)
                   FROM {local_rtocompliance_qualbuilder} q
                  WHERE q.status = 'active'
                    AND NOT EXISTS (
                        SELECT 1 FROM {local_rtocompliance_validations} v
                         WHERE v.productcode = q.qualificationcode
                           AND v.status = 'completed')";
-        return $DB->count_records_sql($sql);
-    });
+            return $DB->count_records_sql($sql);
+        });
 
 // == QA2 — Student Support ===========================================
 
 // Incomplete AVETMISS student profiles.
-$students_incomplete = $chc_count(['local_rtocompliance_students'], function () use ($DB) {
-    return $DB->count_records('local_rtocompliance_students', ['profilecomplete' => 0]);
-});
+$students_incomplete = $chc_count(
+    ['local_rtocompliance_students'], function () use ($DB) {
+        return $DB->count_records('local_rtocompliance_students', ['profilecomplete' => 0]);
+    });
 
 // Open complaints (not resolved/closed/withdrawn) and those past their target resolution date.
-$complaints_open = $chc_count(['local_rtocompliance_complaints'], function () use ($DB) {
-    list($insql, $params) = $DB->get_in_or_equal(['resolved', 'closed', 'withdrawn'], SQL_PARAMS_QM, 'param', false);
-    return $DB->count_records_select('local_rtocompliance_complaints', "status $insql", $params);
-});
-$complaints_overdue = $chc_count(['local_rtocompliance_complaints'], function () use ($DB, $now) {
-    list($insql, $params) = $DB->get_in_or_equal(['resolved', 'closed', 'withdrawn'], SQL_PARAMS_QM, 'param', false);
-    $params[] = $now;
-    return $DB->count_records_select('local_rtocompliance_complaints',
-        "status $insql AND targetresolutiondate IS NOT NULL AND targetresolutiondate > 0 AND targetresolutiondate < ?", $params);
-});
+$complaints_open = $chc_count(
+    ['local_rtocompliance_complaints'], function () use ($DB) {
+        list($insql, $params) = $DB->get_in_or_equal(['resolved', 'closed', 'withdrawn'], SQL_PARAMS_QM, 'param', false);
+        return $DB->count_records_select('local_rtocompliance_complaints', "status $insql", $params);
+    });
+$complaints_overdue = $chc_count(
+    ['local_rtocompliance_complaints'], function () use ($DB, $now) {
+        list($insql, $params) = $DB->get_in_or_equal(['resolved', 'closed', 'withdrawn'], SQL_PARAMS_QM, 'param', false);
+        $params[] = $now;
+        return $DB->count_records_select(
+        'local_rtocompliance_complaints',
+            "status $insql AND targetresolutiondate IS NOT NULL AND targetresolutiondate > 0 AND targetresolutiondate < ?", $params);
+    });
 
 // Open appeals (not decided/closed).
-$appeals_open = $chc_count(['local_rtocompliance_appeals'], function () use ($DB) {
-    list($insql, $params) = $DB->get_in_or_equal(['decided', 'closed'], SQL_PARAMS_QM, 'param', false);
-    return $DB->count_records_select('local_rtocompliance_appeals', "status $insql", $params);
-});
+$appeals_open = $chc_count(
+    ['local_rtocompliance_appeals'], function () use ($DB) {
+        list($insql, $params) = $DB->get_in_or_equal(['decided', 'closed'], SQL_PARAMS_QM, 'param', false);
+        return $DB->count_records_select('local_rtocompliance_appeals', "status $insql", $params);
+    });
 
 // == QA3 — Workforce =================================================
 
 // Working-towards trainers past their 2-year TAE deadline (Std 3.2).
-$trainers_wtoverdue = $chc_count(['local_rtocompliance_trainers'], function () use ($DB, $now) {
-    return $DB->count_records_select('local_rtocompliance_trainers',
-        'taecredential = ? AND wtdeadline IS NOT NULL AND wtdeadline > 0 AND wtdeadline < ?',
-        ['Working Towards', $now]);
-});
+$trainers_wtoverdue = $chc_count(
+    ['local_rtocompliance_trainers'], function () use ($DB, $now) {
+        return $DB->count_records_select(
+        'local_rtocompliance_trainers',
+                'taecredential = ? AND wtdeadline IS NOT NULL AND wtdeadline > 0 AND wtdeadline < ?',
+            ['Working Towards', $now]);
+    });
 
 // Trainers with stale (or missing) industry currency — older than ~12 months.
-$trainers_stalecurrency = $chc_count(['local_rtocompliance_trainers'], function () use ($DB, $now, $d365) {
-    return $DB->count_records_select('local_rtocompliance_trainers',
-        "status <> 'inactive' AND (industrycurrencydate IS NULL OR industrycurrencydate = 0 OR industrycurrencydate < ?)",
-        [$now - $d365]);
-});
+$trainers_stalecurrency = $chc_count(
+    ['local_rtocompliance_trainers'], function () use ($DB, $now, $d365) {
+        return $DB->count_records_select(
+        'local_rtocompliance_trainers',
+                "status <> 'inactive' AND (industrycurrencydate IS NULL OR industrycurrencydate = 0 OR industrycurrencydate < ?)",
+            [$now - $d365]);
+    });
 
 // == QA4 — Governance & Quality ======================================
 
 // Quality Indicator survey response rate for the current year.
-$survey_total = $chc_count(['local_rtocompliance_surveys'], function () use ($DB, $currentyear) {
-    return $DB->count_records('local_rtocompliance_surveys', ['year' => $currentyear]);
-});
-$survey_completed = $chc_count(['local_rtocompliance_surveys'], function () use ($DB, $currentyear) {
-    return $DB->count_records('local_rtocompliance_surveys', ['year' => $currentyear, 'status' => 'completed']);
-});
+$survey_total = $chc_count(
+    ['local_rtocompliance_surveys'], function () use ($DB, $currentyear) {
+        return $DB->count_records('local_rtocompliance_surveys', ['year' => $currentyear]);
+    });
+$survey_completed = $chc_count(
+    ['local_rtocompliance_surveys'], function () use ($DB, $currentyear) {
+        return $DB->count_records('local_rtocompliance_surveys', ['year' => $currentyear, 'status' => 'completed']);
+    });
 $survey_rate = $survey_total > 0 ? (int) round($survey_completed / $survey_total * 100) : 0;
 
 // Open risks, and open risks that are high-severity (likelihood x impact >= 15).
-$risks_open = $chc_count(['local_rtocompliance_risks'], function () use ($DB) {
-    return $DB->count_records('local_rtocompliance_risks', ['status' => 'open']);
-});
-$risks_high = $chc_count(['local_rtocompliance_risks'], function () use ($DB) {
-    return $DB->count_records_select('local_rtocompliance_risks',
-        "status = 'open' AND (likelihood * impact) >= 15");
-});
+$risks_open = $chc_count(
+    ['local_rtocompliance_risks'], function () use ($DB) {
+        return $DB->count_records('local_rtocompliance_risks', ['status' => 'open']);
+    });
+$risks_high = $chc_count(
+    ['local_rtocompliance_risks'], function () use ($DB) {
+        return $DB->count_records_select(
+        'local_rtocompliance_risks',
+            "status = 'open' AND (likelihood * impact) >= 15");
+    });
 
 // == Certification & Data ============================================
 
 // Students with recorded results (an enrolment) but an UNVERIFIED USI — blocked from cert issuance.
-$usi_blocked = $chc_count(['local_rtocompliance_students', 'local_rtocompliance_enrolments'],
-    function () use ($DB) {
-        $sql = "SELECT COUNT(DISTINCT s.id)
+$usi_blocked = $chc_count(
+    ['local_rtocompliance_students', 'local_rtocompliance_enrolments'],
+        function () use ($DB) {
+            $sql = "SELECT COUNT(DISTINCT s.id)
                   FROM {local_rtocompliance_students} s
                   JOIN {local_rtocompliance_enrolments} e ON e.studentid = s.id
                  WHERE s.usi IS NOT NULL AND s.usi <> '' AND s.usiverified = 0";
-        return $DB->count_records_sql($sql);
-    });
+            return $DB->count_records_sql($sql);
+        });
 
 // Certificates issued (informational, always green).
-$certs_issued = $chc_count(['local_rtocompliance_certs'], function () use ($DB) {
-    return $DB->count_records('local_rtocompliance_certs', ['status' => 'issued']);
-});
+$certs_issued = $chc_count(
+    ['local_rtocompliance_certs'], function () use ($DB) {
+        return $DB->count_records('local_rtocompliance_certs', ['status' => 'issued']);
+    });
 
 // Students with recorded results but no issued certificate (informational).
-$students_nocert = $chc_count(['local_rtocompliance_students', 'local_rtocompliance_enrolments', 'local_rtocompliance_certs'],
-    function () use ($DB) {
-        $sql = "SELECT COUNT(DISTINCT s.id)
+$students_nocert = $chc_count(
+    ['local_rtocompliance_students', 'local_rtocompliance_enrolments', 'local_rtocompliance_certs'],
+        function () use ($DB) {
+            $sql = "SELECT COUNT(DISTINCT s.id)
                   FROM {local_rtocompliance_students} s
                   JOIN {local_rtocompliance_enrolments} e ON e.studentid = s.id
                  WHERE NOT EXISTS (
                        SELECT 1 FROM {local_rtocompliance_certs} c
                         WHERE c.userid = s.userid AND c.status = 'issued')";
-        return $DB->count_records_sql($sql);
-    });
+            return $DB->count_records_sql($sql);
+        });
 
 // PRE-ENROLMENT READINESS (v5.9.423): students with recorded results (training under
 // way) for whom no completed suitability review exists — i.e. the Standard 2 pre-enrolment
 // suitability assessment was not evidenced before training began.
-$preenrol_gap = $chc_count(['local_rtocompliance_students', 'local_rtocompliance_enrolments', 'local_rtocompliance_suitability'],
-    function () use ($DB) {
-        $sql = "SELECT COUNT(DISTINCT s.id)
+$preenrol_gap = $chc_count(
+    ['local_rtocompliance_students', 'local_rtocompliance_enrolments', 'local_rtocompliance_suitability'],
+        function () use ($DB) {
+            $sql = "SELECT COUNT(DISTINCT s.id)
                   FROM {local_rtocompliance_students} s
                   JOIN {local_rtocompliance_enrolments} e ON e.studentid = s.id
                  WHERE NOT EXISTS (
                        SELECT 1 FROM {local_rtocompliance_suitability} su
                         WHERE su.userid = s.userid
                           AND su.timecompleted IS NOT NULL AND su.timecompleted > 0)";
-        return $DB->count_records_sql($sql);
-    });
+            return $DB->count_records_sql($sql);
+        });
 
 // ---------------------------------------------------------------------------
 //  Assemble metric rows. status: good | warn | alert | info. key: counts toward score.
@@ -545,20 +568,29 @@ echo local_rtocompliance_page_banner($healthtitle);
     </div>
     <div class="chc-hero-body">
       <h2>Audit readiness</h2>
-      <div class="chc-verdict <?php echo $verdictclass; ?>" title="Overall read on how audit-ready you are right now, based on the passing checks below. Green means on track, amber needs attention, red means act now."><span class="chc-dot"></span><?php echo s($verdict); ?></div>
-      <p class="chc-blurb"><?php echo s($verdictblurb); ?> <strong><?php echo $keyclear; ?> of <?php echo $keytotal; ?></strong> audit-critical checks are currently clear.</p>
+      <div class="chc-verdict <?php echo $verdictclass;
+      ?>" title="Overall read on how audit-ready you are right now, based on the passing checks below. Green means on track, amber needs attention, red means act now."><span class="chc-dot"></span><?php echo s($verdict); ?></div>
+      <p class="chc-blurb"><?php echo s($verdictblurb);
+      ?> <strong><?php echo $keyclear;
+      ?> of <?php echo $keytotal; ?></strong> audit-critical checks are currently clear.</p>
       <div class="chc-chips">
 <?php
 // Roll-up chips across all key checks.
-$sumgood = 0; $sumwarn = 0; $sumalert = 0;
+$sumgood = 0;
+$sumwarn = 0;
+$sumalert = 0;
 foreach ($areas as $area) {
     foreach ($area['rows'] as $row) {
         if (empty($row['key'])) {
             continue;
         }
-        if ($row['status'] === 'good') { $sumgood++; }
-        else if ($row['status'] === 'warn') { $sumwarn++; }
-        else if ($row['status'] === 'alert') { $sumalert++; }
+        if ($row['status'] === 'good') {
+            $sumgood++;
+        } else if ($row['status'] === 'warn') {
+            $sumwarn++;
+        } else if ($row['status'] === 'alert') {
+            $sumalert++;
+        }
     }
 }
 ?>

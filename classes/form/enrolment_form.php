@@ -257,7 +257,8 @@ class enrolment_form extends \moodleform {
                 $contractslots['contract3'] = get_string('purchasingcontract_slot_3', 'local_rtocompliance', $qld_c3);
             }
 
-            $mform->addElement('select', 'purchasingcontract_slot',
+            $mform->addElement(
+                'select', 'purchasingcontract_slot',
                 get_string('purchasingcontract_slot', 'local_rtocompliance'), $contractslots);
             $mform->setType('purchasingcontract_slot', PARAM_ALPHANUMEXT);
             $mform->setDefault('purchasingcontract_slot', 'auto');
@@ -306,11 +307,13 @@ class enrolment_form extends \moodleform {
         $mform->addElement('select', 'deliverylocationid', get_string('deliverylocation', 'local_rtocompliance'), $locations);
         if (count($locations) <= 1) {
             $locationsurl = new \moodle_url('/local/rtocompliance/locations.php');
-            $mform->addElement('static', 'location_hint', '',
-                '<div class="alert alert-info" style="margin-top:4px;padding:6px 10px;font-size:0.85em;">' .
-                get_string('location_list_empty_hint', 'local_rtocompliance',
-                    \html_writer::link($locationsurl, get_string('delivery_locations', 'local_rtocompliance'))) .
-                '</div>'
+            $mform->addElement(
+                'static', 'location_hint', '',
+                    '<div class="alert alert-info" style="margin-top:4px;padding:6px 10px;font-size:0.85em;">' .
+                    get_string(
+                    'location_list_empty_hint', 'local_rtocompliance',
+                        \html_writer::link($locationsurl, get_string('delivery_locations', 'local_rtocompliance'))) .
+                    '</div>'
             );
         }
         $mform->addHelpButton('deliverylocationid', 'deliverylocationid', 'local_rtocompliance');
@@ -343,11 +346,13 @@ class enrolment_form extends \moodleform {
         $mform->setType('assessoruserid', PARAM_INT);
         if (count($assessors) <= 1) {
             $trainersurl = new \moodle_url('/local/rtocompliance/trainers.php');
-            $mform->addElement('static', 'assessor_hint', '',
-                '<div class="alert alert-info" style="margin-top:4px;padding:6px 10px;font-size:0.85em;">' .
-                get_string('assessor_list_empty_hint', 'local_rtocompliance',
-                    \html_writer::link($trainersurl, get_string('trainer_register', 'local_rtocompliance'))) .
-                '</div>'
+            $mform->addElement(
+                'static', 'assessor_hint', '',
+                    '<div class="alert alert-info" style="margin-top:4px;padding:6px 10px;font-size:0.85em;">' .
+                    get_string(
+                    'assessor_list_empty_hint', 'local_rtocompliance',
+                        \html_writer::link($trainersurl, get_string('trainer_register', 'local_rtocompliance'))) .
+                    '</div>'
             );
         }
         $mform->addHelpButton('assessoruserid', 'assessoruserid', 'local_rtocompliance');

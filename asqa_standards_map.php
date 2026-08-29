@@ -55,7 +55,9 @@ $PAGE->add_body_class('path-local-rtocompliance');
 
 // ── The map ──────────────────────────────────────────────────────────────────
 // status: 'covered' | 'partial' | 'gap'
-$u = function ($p) { return (new moodle_url('/local/rtocompliance/' . $p))->out(); };
+$u = function ($p) {
+    return (new moodle_url('/local/rtocompliance/' . $p))->out();
+};
 
 $areas = [
     [

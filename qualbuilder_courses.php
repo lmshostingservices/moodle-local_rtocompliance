@@ -65,10 +65,11 @@ if ($action === 'autodetect') {
                 WHERE (c.shortname LIKE :code1 OR c.shortname LIKE :code2 OR lrc.qualificationcode LIKE :code3)
                 LIMIT 1";
         
-        $course = $DB->get_record_sql($sql, [
-            'code1' => $unit->unitcode . '%',
-            'code2' => '%' . $unit->unitcode . '%',
-            'code3' => '%' . $unit->unitcode . '%',
+        $course = $DB->get_record_sql(
+            $sql, [
+                'code1' => $unit->unitcode . '%',
+                'code2' => '%' . $unit->unitcode . '%',
+                'code3' => '%' . $unit->unitcode . '%',
         ]);
         
         if (!$course && $product->categoryid) {
@@ -155,12 +156,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'add_archive') {
     $added = false;
     if ($archivecourseid > 0 && $DB->get_manager()->table_exists('local_rtocompliance_qualunit_courses')) {
         if (!$DB->record_exists('local_rtocompliance_qualunit_courses', ['qualunitid' => $unitid, 'courseid' => $archivecourseid])) {
-            $DB->insert_record('local_rtocompliance_qualunit_courses', (object)[
-                'qualunitid'     => $unitid,
-                'courseid'       => $archivecourseid,
-                'semester_label' => substr(trim($semesterlabel), 0, 100),
-                'is_archive'     => 1,
-                'timecreated'    => time(),
+            $DB->insert_record(
+                'local_rtocompliance_qualunit_courses', (object)[
+                    'qualunitid'     => $unitid,
+                    'courseid'       => $archivecourseid,
+                    'semester_label' => substr(trim($semesterlabel), 0, 100),
+                    'is_archive'     => 1,
+                    'timecreated'    => time(),
             ]);
             audit_logger::log_update('qualbuilder', $id, "Archive course linked: unit={$unitid} course={$archivecourseid} label={$semesterlabel}", null, ['unitid' => $unitid, 'courseid' => $archivecourseid]);
             $added = true;
@@ -207,10 +209,11 @@ echo html_writer::tag('h2', get_string('link_courses', 'local_rtocompliance'));
 // FIX: sesskey must be embedded in the autodetect URL so require_sesskey()
 // above can validate the request and prevent CSRF.
 echo html_writer::link(
-    new moodle_url('/local/rtocompliance/qualbuilder_courses.php', [
-        'id'      => $id,
-        'action'  => 'autodetect',
-        'sesskey' => sesskey(),
+    new moodle_url(
+        '/local/rtocompliance/qualbuilder_courses.php', [
+            'id'      => $id,
+            'action'  => 'autodetect',
+            'sesskey' => sesskey(),
     ]),
     get_string('autodetect_courses', 'local_rtocompliance'),
     ['class' => 'btn btn-secondary', 'title' => get_string('autodetect_courses_tip', 'local_rtocompliance')]
@@ -253,10 +256,11 @@ foreach ($units as $unit) {
 
 $totalcount = count($units);
 $progressclass = $linkedcount === $totalcount ? 'text-success' : ($linkedcount > 0 ? 'text-warning' : 'text-danger');
-echo html_writer::tag('p', 
-    html_writer::tag('strong', get_string('linked_status', 'local_rtocompliance') . ': ') .
-    html_writer::tag('span', "$linkedcount / $totalcount " . get_string('units_linked', 'local_rtocompliance'), ['class' => $progressclass]),
-    ['style' => 'margin-bottom: 20px;']
+echo html_writer::tag(
+    'p', 
+        html_writer::tag('strong', get_string('linked_status', 'local_rtocompliance') . ': ') .
+        html_writer::tag('span', "$linkedcount / $totalcount " . get_string('units_linked', 'local_rtocompliance'), ['class' => $progressclass]),
+        ['style' => 'margin-bottom: 20px;']
 );
 
 if ($product->categoryid) {
@@ -401,11 +405,12 @@ if ($DB->get_manager()->table_exists('local_rtocompliance_qualunit_courses')) {
         } else {
             $linkedcell = '<ul class="list-unstyled mb-0">';
             foreach ($links as $link) {
-                $removeurl = new moodle_url('/local/rtocompliance/qualbuilder_courses.php', [
-                    'id'        => $id,
-                    'action'    => 'remove_archive',
-                    'archiveid' => $link->id,
-                    'sesskey'   => sesskey(),
+                $removeurl = new moodle_url(
+                    '/local/rtocompliance/qualbuilder_courses.php', [
+                        'id'        => $id,
+                        'action'    => 'remove_archive',
+                        'archiveid' => $link->id,
+                        'sesskey'   => sesskey(),
                 ]);
                 $label = htmlspecialchars($link->courseshortname, ENT_QUOTES);
                 if (!empty($link->semester_label)) {

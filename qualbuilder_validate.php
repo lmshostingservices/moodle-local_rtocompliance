@@ -143,10 +143,12 @@ if (!empty($result['errors'])) {
 }
 
 // Filter out source-annotation notes — they are already shown in the banner badge.
-$displayWarnings = array_values(array_filter($result['warnings'], function ($w) {
-    return strpos($w, 'training.gov.au') === false
-        && strpos($w, 'Could not connect to TGA API') === false;
-}));
+$displayWarnings = array_values(
+    array_filter(
+    $result['warnings'], function ($w) {
+            return strpos($w, 'training.gov.au') === false
+                && strpos($w, 'Could not connect to TGA API') === false;
+        }));
 if (!empty($displayWarnings)) {
     echo html_writer::tag('h4', get_string('warnings', 'local_rtocompliance'), ['style' => 'margin-top: 20px;']);
     echo html_writer::start_div('alert alert-info');

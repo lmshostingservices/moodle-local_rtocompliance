@@ -32,7 +32,7 @@ defined('MOODLE_INTERNAL') || die();
  * USI Registry using the MAS-ST authentication service.
  */
 class verify_usi_batch_task extends \core\task\scheduled_task {
-    const BATCH_SIZE = 25; // kept in sync with usi_verification_service::BATCH_SIZE
+    const BATCH_SIZE = 25; // Kept in sync with usi_verification_service::BATCH_SIZE
     
     public function get_name() {
         return get_string('task_verify_usi_batch', 'local_rtocompliance');
@@ -63,7 +63,8 @@ class verify_usi_batch_task extends \core\task\scheduled_task {
             // /api/usi/status, or certReady momentarily false) must NOT zero out the whole run.
             // Log it and still attempt the batch — each verify call has its own auth/error
             // handling and the batch now aborts cleanly on a genuine site-level auth fault.
-            mtrace('USI status check reported not-available (' . ($status['message'] ?? 'no detail')
+            mtrace(
+                'USI status check reported not-available (' . ($status['message'] ?? 'no detail')
                 . ') — attempting the batch anyway; per-call handling gates individual requests.');
         }
 

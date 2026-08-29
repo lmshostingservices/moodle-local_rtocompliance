@@ -355,12 +355,13 @@ if ($tab == 'schedule') {
             echo html_writer::tag('td', $val->isinternal ? 'Internal' : format_string($val->organisation));
             echo html_writer::tag('td', $val->taecredential ?: '-');
             echo html_writer::tag('td', html_writer::tag('span', ucfirst($val->status), ['class' => 'badge ' . $statusclass]));
-            echo html_writer::tag('td',
-                html_writer::link(
-                    new moodle_url('/local/rtocompliance/validator_edit.php', ['id' => $val->id]),
-                    'Edit',
-                    ['class' => 'btn btn-sm btn-secondary', 'title' => 'Edit this validator']
-                )
+            echo html_writer::tag(
+                'td',
+                    html_writer::link(
+                        new moodle_url('/local/rtocompliance/validator_edit.php', ['id' => $val->id]),
+                        'Edit',
+                        ['class' => 'btn btn-sm btn-secondary', 'title' => 'Edit this validator']
+                    )
             );
             echo html_writer::end_tag('tr');
         }

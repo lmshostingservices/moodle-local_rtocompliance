@@ -97,8 +97,9 @@ class governance_form extends \moodleform {
         $mform->addElement('header', 'suitability', 'Suitability Assessment');
         $mform->addHelpButton('suitability', 'suitability_header', 'local_rtocompliance');
 
-        $mform->addElement('static', 'suitabilityhelp', '', 
-            '<div class="alert alert-info" style="margin-bottom: 12px;">
+        $mform->addElement(
+            'static', 'suitabilityhelp', '', 
+                '<div class="alert alert-info" style="margin-bottom: 12px;">
             <strong>ASQA Requirement:</strong> RTOs must assess the suitability of all high managerial agents before they take up their role. 
             This includes examining character, experience, qualifications, and any convictions/prohibitions that may affect their fitness.</div>');
 

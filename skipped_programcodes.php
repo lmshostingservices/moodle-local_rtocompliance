@@ -39,8 +39,8 @@ admin_externalpage_setup('local_rtocompliance_students');
 
 $action        = optional_param('action',        '', PARAM_ALPHANUMEXT);
 $courseid      = optional_param('courseid',      0,  PARAM_INT);
-$updated       = optional_param('updated',       0,  PARAM_INT); // count from the just-run sync
-$showexcluded  = optional_param('showexcluded',  0,  PARAM_INT); // toggle: 1 = show non-VET section
+$updated       = optional_param('updated',       0,  PARAM_INT); // Count from the just-run sync
+$showexcluded  = optional_param('showexcluded',  0,  PARAM_INT); // Toggle: 1 = show non-VET section
 
 // ── POST ACTION: link_to_qb ─────────────────────────────────────────────────
 // Find the best-matching QB record for a given course and set programcode on
@@ -316,7 +316,7 @@ foreach (array_keys($groups) as $cid) {
 
 // ── HTML OUTPUT ───────────────────────────────────────────────────────────────
 echo $OUTPUT->header();
-echo local_rtocompliance_render_nav_header('Skipped Program Codes'); // v5.9.404: add sidebar.
+echo local_rtocompliance_render_nav_header('Skipped Program Codes'); // Version 5.9.404: add sidebar.
 
 echo '<div style="max-width:1200px;margin:0 auto 2rem auto;">';
 
@@ -380,15 +380,17 @@ foreach ($groups as $cid => $enrolments) {
     $qb        = $info['qbmatch'];
     $borderCol = $hasQb ? '#22c55e' : '#6b7280';
 
-    $linkQbUrl = (new moodle_url('/local/rtocompliance/skipped_programcodes.php', [
-        'action'   => 'link_to_qb',
-        'courseid' => $cid,
-        'sesskey'  => sesskey(),
+    $linkQbUrl = (new moodle_url(
+        '/local/rtocompliance/skipped_programcodes.php', [
+            'action'   => 'link_to_qb',
+            'courseid' => $cid,
+            'sesskey'  => sesskey(),
     ]))->out(false);
-    $excludeUrl = (new moodle_url('/local/rtocompliance/skipped_programcodes.php', [
-        'action'   => 'exclude_course',
-        'courseid' => $cid,
-        'sesskey'  => sesskey(),
+    $excludeUrl = (new moodle_url(
+        '/local/rtocompliance/skipped_programcodes.php', [
+            'action'   => 'exclude_course',
+            'courseid' => $cid,
+            'sesskey'  => sesskey(),
     ]))->out(false);
     $moodleCourseUrl = (new moodle_url('/course/view.php', ['id' => $cid]))->out(false);
 
@@ -427,7 +429,7 @@ foreach ($groups as $cid => $enrolments) {
             . ' If it is not AVETMISS-reportable (orientation, LLN, professional development), click <em>Mark as non-VET</em>.'
             . '</div>';
     }
-    echo '</div>'; // end left col
+    echo '</div>'; // End left col
 
     // Action buttons.
     echo '<div style="display:flex;gap:.5rem;align-items:flex-start;flex-shrink:0;">';
@@ -449,8 +451,8 @@ foreach ($groups as $cid => $enrolments) {
         . '<svg style="width:12px;height:12px;vertical-align:middle;margin-right:4px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
         . 'Mark as non-VET'
         . '</a>';
-    echo '</div>'; // end buttons
-    echo '</div>'; // end header
+    echo '</div>'; // End buttons
+    echo '</div>'; // End header
 
     // Enrolment rows table.
     echo '<div style="overflow-x:auto;">';
@@ -475,7 +477,7 @@ foreach ($groups as $cid => $enrolments) {
     }
     echo '</tbody></table>';
     echo '</div>'; // overflow-x
-    echo '</div>'; // card
+    echo '</div>'; // Card
 }
 
 // ── EXCLUDED COURSES SECTION ─────────────────────────────────────────────────
@@ -483,8 +485,9 @@ $excludedCount = count($excludedInfo);
 if ($excludedCount > 0) {
     $toggleLabel  = $showexcluded ? 'Hide excluded courses' : 'Show excluded courses (' . $excludedCount . ')';
     $toggleTarget = $showexcluded ? 0 : 1;
-    $toggleUrl    = (new moodle_url('/local/rtocompliance/skipped_programcodes.php', [
-        'showexcluded' => $toggleTarget,
+    $toggleUrl    = (new moodle_url(
+        '/local/rtocompliance/skipped_programcodes.php', [
+            'showexcluded' => $toggleTarget,
     ]))->out(false);
 
     echo '<div style="margin-top:2rem;border-top:1px solid #e5e7eb;padding-top:1.25rem;">';
@@ -508,10 +511,11 @@ if ($excludedCount > 0) {
     if ($showexcluded) {
         foreach ($excludedInfo as $cid2 => $exInfo) {
             $moodleCourseUrl2 = (new moodle_url('/course/view.php', ['id' => $cid2]))->out(false);
-            $undoUrl = (new moodle_url('/local/rtocompliance/skipped_programcodes.php', [
-                'action'       => 'undo_exclude',
-                'courseid'     => $cid2,
-                'sesskey'      => sesskey(),
+            $undoUrl = (new moodle_url(
+                '/local/rtocompliance/skipped_programcodes.php', [
+                    'action'       => 'undo_exclude',
+                    'courseid'     => $cid2,
+                    'sesskey'      => sesskey(),
             ]))->out(false);
 
             echo '<div style="border:1px solid #e5e7eb;border-left:4px solid #9ca3af;border-radius:6px;margin-bottom:.75rem;overflow:hidden;">';
@@ -544,11 +548,11 @@ if ($excludedCount > 0) {
                 . 'Undo exclusion'
                 . '</a>';
 
-            echo '</div>'; // header row
-            echo '</div>'; // card
+            echo '</div>'; // Header row
+            echo '</div>'; // Card
         }
     }
-    echo '</div>'; // section wrapper
+    echo '</div>'; // Section wrapper
 }
 
 echo '</div>'; // max-width container

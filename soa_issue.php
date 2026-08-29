@@ -21,7 +21,7 @@
  * @copyright  2025 LMS Labs
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-// v4.6.101 MULTI-UNIT-SOA — Issue a Statement of Attainment for multiple units.
+// Version 4.6.101 MULTI-UNIT-SOA — Issue a Statement of Attainment for multiple units.
 //
 // World-class multi-unit SOA wizard for Australian RTOs. Features:
 //   - Searchable student picker with live student info card (USI status, completion count)
@@ -88,7 +88,8 @@ raise_memory_limit(MEMORY_HUGE);
 
 // Qualification Builder metadata: code → [category id, name].
 $soaQualMeta = [];
-foreach ($DB->get_records('local_rtocompliance_qualbuilder', null, '',
+foreach ($DB->get_records(
+    'local_rtocompliance_qualbuilder', null, '',
         'id, qualificationcode, qualificationname, categoryid') as $qb) {
     $code = strtoupper(trim((string)$qb->qualificationcode));
     if ($code !== '') {
@@ -107,7 +108,7 @@ $soaStudents = $DB->get_records_sql(
     [], 0, 10000
 );
 
-// userid → distinct qualification codes they hold results in.
+// Userid → distinct qualification codes they hold results in.
 $soaUserQuals = [];
 foreach ($DB->get_records_sql(
     "SELECT " . $DB->sql_concat('u.id', "'|'", 'UPPER(e.programcode)') . " AS k,
@@ -122,9 +123,13 @@ foreach ($DB->get_records_sql(
 
 // Category names for the filter dropdown (only categories used by a built qual).
 $soaCatNames = [];
-$soaUsedCats = array_values(array_unique(array_filter(array_map(function ($m) {
-    return $m['cat'];
-}, $soaQualMeta))));
+$soaUsedCats = array_values(
+    array_unique(
+    array_filter(
+    array_map(
+    function ($m) {
+                    return $m['cat'];
+                }, $soaQualMeta))));
 if (!empty($soaUsedCats) && $DB->get_manager()->table_exists('course_categories')) {
     list($cin, $cinp) = $DB->get_in_or_equal($soaUsedCats, SQL_PARAMS_NAMED, 'sc');
     foreach ($DB->get_records_select('course_categories', "id $cin", $cinp, '', 'id, name') as $cc) {
@@ -132,7 +137,7 @@ if (!empty($soaUsedCats) && $DB->get_manager()->table_exists('course_categories'
     }
 }
 
-// v6.2.80 CASCADE FILTER DATA — sourced from the students' ACTUAL result courses
+// Version 6.2.80 CASCADE FILTER DATA — sourced from the students' ACTUAL result courses
 // (enrolments.courseid), because most qualbuilder products have no Moodle categoryid.
 $soaParents  = [];   // parentid => name
 $soaSubs     = [];   // subid => ['name'=>.., 'parent'=>..]
@@ -158,7 +163,7 @@ if ($DB->get_manager()->table_exists('course_categories')) {
         }
     }
 }
-// userid => distinct course ids they hold results in (Course-level filter + catpaths).
+// Maps userid => distinct course ids they hold results in (Course-level filter + catpaths).
 $soaUserCourses = [];
 foreach ($DB->get_records_sql(
     "SELECT " . $DB->sql_concat('u.id', "'|'", 'e.courseid') . " AS k, u.id AS userid, e.courseid
@@ -169,7 +174,7 @@ foreach ($DB->get_records_sql(
    GROUP BY u.id, e.courseid") as $r) {
     $soaUserCourses[(int)$r->userid][] = (int)$r->courseid;
 }
-// userid => distinct category paths of their result courses (for parent/sub matching).
+// Maps userid => distinct category paths of their result courses (for parent/sub matching).
 $soaUserCatpaths = [];
 foreach ($soaUserCourses as $uid => $cids) {
     $paths = [];
@@ -267,7 +272,7 @@ echo '</div></div>';
 // v6.2.83: single full-width column, steps in order — Student (1) -> Units (2) -> Options (3).
 echo '<div id="rtoc-soa-wrap" style="display:flex;flex-direction:column;gap:16px;max-width:1400px;">';
 
-// v6.2.81 SELECT STUDENT ACROSS THE TOP: the picker card now spans the full grid width
+// Version 6.2.81 SELECT STUDENT ACROSS THE TOP: the picker card now spans the full grid width
 // (grid-column:1/-1) with horizontal filters; Step 3 (options) + Step 2 (units) sit below.
 echo '<div class="rtoc-soa-card" style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:18px;grid-column:1 / -1;">';
 echo '<h3 style="margin:0 0 14px;font-size:1rem;color:#1e3a5f;display:flex;align-items:center;gap:8px;">';
@@ -275,7 +280,7 @@ echo '<span style="background:#1e3a5f;color:#fff;border-radius:50%;width:22px;he
 
 echo '<label style="display:block;font-size:0.85rem;font-weight:600;color:#374151;margin-bottom:6px;">Find a student</label>';
 
-// v5.9.382: qualification + category filters — narrow the student list by the
+// Version 5.9.382: qualification + category filters — narrow the student list by the
 // qualification or category they belong to (via the course→qualification map).
 // v6.2.81 CLEAN FILTER STACK: in the narrow picker panel, four dropdowns crammed 2-across
 // truncated their labels. They are now a full-width labelled vertical stack.
@@ -299,7 +304,7 @@ if (!empty($soaParents)) {
     echo '<select id="rtoc-soa-filter-parent" title="Filter by parent category" style="' . $soa_sel . '">';
     echo '<option value="">All parent categories</option>';
     foreach ($soaParents as $pid => $pname) {
-        // v6.2.84 AUTO-FILL STEP 3: parent categories are named after the qualification they
+        // Version 6.2.84 AUTO-FILL STEP 3: parent categories are named after the qualification they
         // deliver (e.g. "Diploma of Customs Broking (TLI50822)"). Parse the national code out of
         // the name so choosing a parent category can pre-fill Step 3's Qualification Code + Name.
         // If no code is present we still pass the cleaned name so the field isn't left blank.
@@ -347,7 +352,7 @@ echo '<div id="rtoc-picker-wrap" style="position:relative;"></div>';
 echo '<div id="rtoc-soa-picker-hint" style="font-size:0.72rem;color:#9ca3af;margin-top:5px;">Only students with recorded results are listed. Use the filters above to narrow by qualification or category.</div>';
 
 echo '<div id="rtoc-student-card" style="display:none;margin-top:14px;padding:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;font-size:0.85rem;"></div>';
-echo '</div>'; // step 1 card
+echo '</div>'; // Step 1 card
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -383,7 +388,7 @@ echo '<label style="display:flex;align-items:center;gap:8px;font-size:0.8rem;col
 echo '<input type="checkbox" id="rtoc-soa-bypass"> Override compliance warnings (not recommended)';
 echo '</label></div>';
 
-echo '</div>'; // options card
+echo '</div>'; // Options card
 
 // Generate button card (hidden until units loaded)
 echo '<div id="rtoc-soa-generate-card" style="display:none;background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:18px;">';
@@ -393,9 +398,9 @@ echo '<button id="rtoc-soa-generate-btn" class="btn btn-primary" style="width:10
 echo 'Generate SOA';
 echo '</button>';
 echo '<div id="rtoc-soa-result" style="margin-top:12px;display:none;"></div>';
-echo '</div>'; // generate card
+echo '</div>'; // Generate card
 
-echo '</div>'; // left panel
+echo '</div>'; // Left panel
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // RIGHT PANEL — Step 2: Eligible Units Table + Suggested Groups
@@ -412,7 +417,7 @@ echo '</div>';
 // Step 2 panel (hidden until loaded)
 echo '<div id="rtoc-soa-units-panel" style="display:none;">';
 
-// v5.9.369: auto-detection banner — filled by JS once units load. Tells the user which
+// Version 5.9.369: auto-detection banner — filled by JS once units load. Tells the user which
 // qualification(s) were recognised and, for the single-qual case, that Step 3 was pre-filled.
 echo '<div id="rtoc-soa-autodetect" style="display:none;margin-bottom:14px;"></div>';
 
@@ -449,7 +454,7 @@ echo '<label style="font-size:0.82rem;color:#6b7280;white-space:nowrap;">to:</la
 echo '<input type="date" id="rtoc-unit-date-to" style="padding:4px 7px;border:1px solid #d1d5db;border-radius:6px;font-size:0.81rem;">';
 echo '<button id="rtoc-unit-clear-filters" class="btn btn-sm btn-secondary" title="Clear all filters" style="white-space:nowrap;">&#10005; Clear filters</button>';
 echo '</div>';
-echo '</div></div>'; // filter rows + header row
+echo '</div></div>'; // Filter rows + header row
 
 // Plain-English explainer card for the eligible units table.
 echo '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px 18px;margin-bottom:16px;">'
@@ -489,7 +494,7 @@ echo '<button id="rtoc-select-compliant" class="btn btn-sm btn-secondary" title=
 echo '<button id="rtoc-deselect-all" class="btn btn-sm btn-secondary" title="Clear the selection of all units">Deselect all</button>';
 echo '</div></div>';
 
-echo '</div>'; // card
+echo '</div>'; // Card
 
 // ── Suggested SOA Groups ────────────────────────────────────────────────────
 echo '<div id="rtoc-soa-groups-panel" class="rtoc-soa-card" style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:18px;">';
@@ -498,9 +503,9 @@ echo '<p style="margin:0 0 12px;font-size:0.82rem;color:#6b7280;">Units are grou
 echo '<div id="rtoc-groups-list"></div>';
 echo '</div>';
 
-echo '</div>'; // units panel
+echo '</div>'; // Units panel
 
-echo '</div>'; // right panel
+echo '</div>'; // Right panel
 echo '</div>'; // soa-wrap
 
 // ── Loading spinner ───────────────────────────────────────────────────────────

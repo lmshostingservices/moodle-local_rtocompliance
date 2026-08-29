@@ -168,9 +168,10 @@ if ($form->is_cancelled()) {
             $selectedfactors[] = $key;
         }
     }
-    $record->riskfactors = json_encode([
-        'keys'  => $selectedfactors,
-        'notes' => trim((string) ($data->riskfactors ?? '')),
+    $record->riskfactors = json_encode(
+        [
+            'keys'  => $selectedfactors,
+            'notes' => trim((string) ($data->riskfactors ?? '')),
     ]);
     $record->scheduleddate = $data->scheduleddate;
     $record->actualdate = $data->actualdate ?? null;
@@ -226,9 +227,10 @@ if ($form->is_cancelled()) {
             $selectedmethods[] = $key;
         }
     }
-    $record->methodologies = json_encode([
-        'keys'  => $selectedmethods,
-        'notes' => trim((string) ($data->methodologies ?? '')),
+    $record->methodologies = json_encode(
+        [
+            'keys'  => $selectedmethods,
+            'notes' => trim((string) ($data->methodologies ?? '')),
     ]);
     $record->samplesize = $data->samplesize ?? 0;
     $record->samplingmethod = $data->samplingmethod ?? '';
@@ -296,18 +298,19 @@ echo $OUTPUT->heading($id ? 'Edit Validation Event' : 'New Validation Event');
 // (no schema change, no hard block) — rendered server-side for existing TAE
 // records and toggled client-side as the product code is typed for new records.
 $_rtoc_istae = $validation && strpos(strtoupper((string) ($validation->productcode ?? '')), 'TAE') === 0;
-echo html_writer::tag('div',
-    html_writer::tag('strong', 'TAE independent validation reminder: ') .
-    'Assessments for TAE Training Package products must undergo independent validation of '
-    . 'assessment <strong>before the first assessment cohort</strong> (and thereafter on the '
-    . 'usual validation cycle). The validator must be <strong>independent</strong> — not the '
-    . 'person who designed or delivered the assessment being validated (Standard 1.5). '
-    . 'Record the independence declaration in the Independence section below.',
-    [
-        'id' => 'rtoc-tae-validation-advisory',
-        'class' => 'alert alert-info',
-        'style' => 'margin-bottom:12px;' . ($_rtoc_istae ? '' : 'display:none;'),
-    ]
+echo html_writer::tag(
+    'div',
+        html_writer::tag('strong', 'TAE independent validation reminder: ') .
+        'Assessments for TAE Training Package products must undergo independent validation of '
+        . 'assessment <strong>before the first assessment cohort</strong> (and thereafter on the '
+        . 'usual validation cycle). The validator must be <strong>independent</strong> — not the '
+        . 'person who designed or delivered the assessment being validated (Standard 1.5). '
+        . 'Record the independence declaration in the Independence section below.',
+        [
+            'id' => 'rtoc-tae-validation-advisory',
+            'class' => 'alert alert-info',
+            'style' => 'margin-bottom:12px;' . ($_rtoc_istae ? '' : 'display:none;'),
+        ]
 );
 
 $form->display();

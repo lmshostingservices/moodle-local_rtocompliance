@@ -21,7 +21,7 @@
  * @copyright  2025 LMS Labs
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-// qi_export.php — Export the AQTF Quality Indicator Annual Summary as CSV.
+// Export the AQTF Quality Indicator Annual Summary as CSV (qi_export.php).
 //
 // PRIVACY FIX (audit S-P1-2): this export previously dumped identifiable
 // per-respondent rows (names + emails + individual answers). It now exports
@@ -244,8 +244,9 @@ if (!function_exists('local_rtocompliance_qi_compute')) {
 $data = [];
 foreach (['learner' => 'Learner Questionnaire (LQ)', 'employer' => 'Employer Questionnaire (EQ)'] as $type => $label) {
     $bank = local_rtocompliance_qi_item_bank($type);
-    $completedrecs = $DB->get_records('local_rtocompliance_surveys', [
-        'surveytype' => $type, 'year' => $year, 'status' => 'completed',
+    $completedrecs = $DB->get_records(
+        'local_rtocompliance_surveys', [
+            'surveytype' => $type, 'year' => $year, 'status' => 'completed',
     ]);
     $stats = local_rtocompliance_qi_compute($completedrecs, $bank);
     $completed = count($completedrecs);
@@ -301,28 +302,30 @@ foreach ($data as $d) {
     foreach ($bank['indicators'] as $ik => $ilabel) {
         $ind = $stats['indicators'][$ik];
         // Indicator overall row.
-        fputcsv($out, [
-            $d['label'],
-            $ilabel,
-            'INDICATOR OVERALL',
-            $fmt($ind['avg']),
-            '',
-            '',
-            $d['completed'],
+        fputcsv(
+            $out, [
+                $d['label'],
+                $ilabel,
+                'INDICATOR OVERALL',
+                $fmt($ind['avg']),
+                '',
+                '',
+                $d['completed'],
         ]);
         // Constituent scale rows.
         foreach ($stats['scales'] as $sc) {
             if ($sc['indicator'] !== $ik) {
                 continue;
             }
-            fputcsv($out, [
-                $d['label'],
-                $ilabel,
-                $sc['label'],
-                $fmt($sc['avg']),
-                $sc['items'],
-                $sc['responses'],
-                $d['completed'],
+            fputcsv(
+                $out, [
+                    $d['label'],
+                    $ilabel,
+                    $sc['label'],
+                    $fmt($sc['avg']),
+                    $sc['items'],
+                    $sc['responses'],
+                    $d['completed'],
             ]);
         }
     }

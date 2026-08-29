@@ -48,7 +48,8 @@ $units   = [];
 
 if ($id) {
     $product    = $DB->get_record('local_rtocompliance_qualbuilder', ['id' => $id], '*', MUST_EXIST);
-    $qualunits  = $DB->get_records('local_rtocompliance_qualunits',
+    $qualunits  = $DB->get_records(
+        'local_rtocompliance_qualunits',
         ['qualbuilderid' => $id, 'selected' => 1], 'unittype ASC, sequenceorder ASC');
 
     // Build variants map: qualunitid → [courseid, ...] from qualunit_courses.
@@ -63,26 +64,30 @@ if ($id) {
         $unitIds = array_keys($qualunits);
         list($insql, $inparams) = $DB->get_in_or_equal($unitIds, SQL_PARAMS_NAMED, 'quid');
         $inparams['is_archive_val'] = 0;
-        $qucRows = $DB->get_records_select('local_rtocompliance_qualunit_courses',
+        $qucRows = $DB->get_records_select(
+            'local_rtocompliance_qualunit_courses',
             "qualunitid $insql AND is_archive = :is_archive_val", $inparams, '', 'qualunitid, courseid');
         foreach ($qucRows as $qr) {
             $variantsMap[(int)$qr->qualunitid][] = (int)$qr->courseid;
         }
     }
 
-    $units = array_values(array_map('array_values', array_map(function ($u) use ($variantsMap) {
-        return [
-            'id'            => (int)$u->id,
-            'unitcode'      => $u->unitcode,
-            'unitname'      => $u->unitname,
-            'unittype'      => $u->unittype,
-            'electivegroup' => (string)($u->electivegroup ?? ''),
-            'nominalhours'  => (int)($u->nominalhours ?? 0),
-            'courseid'      => (int)($u->courseid ?? 0),
-            'creditpoints'  => (int)($u->creditpoints ?? 0),
-            'variants'      => $variantsMap[(int)$u->id] ?? [],   // [8] extra course IDs
-        ];
-    }, $qualunits)));
+    $units = array_values(
+        array_map(
+        'array_values', array_map(
+        function ($u) use ($variantsMap) {
+                    return [
+                        'id'            => (int)$u->id,
+                        'unitcode'      => $u->unitcode,
+                        'unitname'      => $u->unitname,
+                        'unittype'      => $u->unittype,
+                        'electivegroup' => (string)($u->electivegroup ?? ''),
+                        'nominalhours'  => (int)($u->nominalhours ?? 0),
+                        'courseid'      => (int)($u->courseid ?? 0),
+                        'creditpoints'  => (int)($u->creditpoints ?? 0),
+                        'variants'      => $variantsMap[(int)$u->id] ?? [],   // [8] extra course IDs
+                    ];
+                }, $qualunits)));
     $PAGE->set_title(get_string('edit_product', 'local_rtocompliance'));
     $PAGE->set_heading(get_string('edit_product', 'local_rtocompliance') . ': ' . $product->qualificationcode);
     $PAGE->navbar->add(get_string('edit_product', 'local_rtocompliance'));
@@ -181,20 +186,21 @@ if ($product && !empty($product->electiverules)) {
 // JSON_HEX_TAG escapes < and > to \u003C/\u003E so "</script>" can never appear
 // literally inside the payload when it is embedded in a <script type="application/json">
 // DOM element.  JSON.parse() in the browser decodes the unicode escapes transparently.
-$jsPayload = json_encode([
-    'qualbuilderid'    => $id,
-    'product'          => $productData,
-    'existingUnits'    => $units,
-    'existingGroupRules' => $existingGroupRules,
-    'wwwroot'          => $CFG->wwwroot,
-    'sesskey'          => sesskey(),
-    // NOMINAL HOURS PHASE 2 (v5.9.421): batch endpoint used to populate authoritative
-    // nominal hours for every unit at once (TGA does not publish them), so the
-    // qualification total rolls up from the plugin's own reference table.
-    'nominalHoursEndpoint' => (new moodle_url('/local/rtocompliance/nominalhours_lookup.php'))->out(false),
-    // Full category tree for the two-level picker (qual root → semester child).
-    // Available immediately on page load — no TGA call required.
-    'categoryTree'     => $catTree,
+$jsPayload = json_encode(
+    [
+        'qualbuilderid'    => $id,
+        'product'          => $productData,
+        'existingUnits'    => $units,
+        'existingGroupRules' => $existingGroupRules,
+        'wwwroot'          => $CFG->wwwroot,
+        'sesskey'          => sesskey(),
+        // NOMINAL HOURS PHASE 2 (v5.9.421): batch endpoint used to populate authoritative
+        // nominal hours for every unit at once (TGA does not publish them), so the
+        // qualification total rolls up from the plugin's own reference table.
+        'nominalHoursEndpoint' => (new moodle_url('/local/rtocompliance/nominalhours_lookup.php'))->out(false),
+        // Full category tree for the two-level picker (qual root → semester child).
+        // Available immediately on page load — no TGA call required.
+        'categoryTree'     => $catTree,
 ], JSON_HEX_TAG | JSON_UNESCAPED_UNICODE);
 
 $PAGE->add_body_class('path-local-rtocompliance');

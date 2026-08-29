@@ -57,11 +57,12 @@ $fetch_error = '';
 if ($apikey) {
     $url  = $apibase . '/api/rto/credit-usage-history?apiKey=' . rawurlencode($apikey) . '&days=' . $days;
     $curl = curl_init($url);
-    curl_setopt_array($curl, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT        => 10,
-        CURLOPT_HTTPHEADER     => ['Accept: application/json'],
-        CURLOPT_SSL_VERIFYPEER => true,
+    curl_setopt_array(
+        $curl, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 10,
+            CURLOPT_HTTPHEADER     => ['Accept: application/json'],
+            CURLOPT_SSL_VERIFYPEER => true,
     ]);
     $raw = curl_exec($curl);
     $err = curl_error($curl);
@@ -109,9 +110,10 @@ echo local_rtocompliance_render_nav_header(get_string('ai_usage_report', 'local_
 echo html_writer::start_div('compliance-container');
 echo html_writer::start_div('compliance-header');
 echo html_writer::tag('h2', get_string('ai_usage_report', 'local_rtocompliance'));
-echo html_writer::tag('p',
-    get_string('ai_usage_report_desc', 'local_rtocompliance'),
-    ['style' => 'color:#fff;opacity:0.85;margin:4px 0 0;']
+echo html_writer::tag(
+    'p',
+        get_string('ai_usage_report_desc', 'local_rtocompliance'),
+        ['style' => 'color:#fff;opacity:0.85;margin:4px 0 0;']
 );
 echo html_writer::end_div();
 
@@ -143,12 +145,13 @@ if ($fetch_error) {
 
     echo html_writer::start_div('ai-usage-section');
     echo html_writer::tag('h3', 'Credit Usage Summary — ' . s($range_label), ['class' => 'ai-usage-section-title']);
-    echo html_writer::tag('p',
-        'This report shows credits consumed by RTO Compliance plugin features only (TAS AI Suggest, ' .
-        'Complaints/Appeals AI Draft, Compliance Auditor, Unit Mapping, etc.). ' .
-        'Credits used by other AI Grader plugins (AI Grader, AI Knowledge Check, AI Content Creator, etc.) ' .
-        'are not included — check the LMS-Labs.com admin portal for a full account-wide credit history.',
-        ['class' => 'ai-usage-scope-note']
+    echo html_writer::tag(
+        'p',
+            'This report shows credits consumed by RTO Compliance plugin features only (TAS AI Suggest, ' .
+            'Complaints/Appeals AI Draft, Compliance Auditor, Unit Mapping, etc.). ' .
+            'Credits used by other AI Grader plugins (AI Grader, AI Knowledge Check, AI Content Creator, etc.) ' .
+            'are not included — check the LMS-Labs.com admin portal for a full account-wide credit history.',
+            ['class' => 'ai-usage-scope-note']
     );
 
     echo html_writer::start_div('ai-usage-stat-grid');
@@ -188,7 +191,7 @@ if ($fetch_error) {
                 'ai-usage-bar'
             );
             echo html_writer::start_tag('tr');
-            echo html_writer::tag('td', html_writer::tag('strong', s($row['label'] ?? ($row['usageType'] ?? '')))); // v5.9.368: guard both keys
+            echo html_writer::tag('td', html_writer::tag('strong', s($row['label'] ?? ($row['usageType'] ?? '')))); // Version 5.9.368: guard both keys
             echo html_writer::tag('td', number_format($calls));
             echo html_writer::tag('td', number_format($credits));
             echo html_writer::tag('td', '$' . number_format($credits * 0.10, 2));
@@ -203,7 +206,7 @@ if ($fetch_error) {
             'ai-usage-empty'
         );
     }
-    echo html_writer::end_div(); // section
+    echo html_writer::end_div(); // Section
 
     // ── Daily activity chart ──────────────────────────────────────────────────
     $daily = $report['daily'] ?? [];
@@ -215,7 +218,8 @@ if ($fetch_error) {
         echo html_writer::start_div('ai-usage-section');
         echo html_writer::tag('h3', 'Daily Activity', ['class' => 'ai-usage-section-title']);
         echo html_writer::tag('canvas', '', ['id' => 'ai-usage-daily-chart', 'height' => '70']);
-        $PAGE->requires->js_amd_inline("
+        $PAGE->requires->js_amd_inline(
+            "
 require(['core/chartjs'], function (Chart) {
     var ctx = document.getElementById('ai-usage-daily-chart');
     if (!ctx) return;
@@ -281,7 +285,7 @@ require(['core/chartjs'], function (Chart) {
         foreach ($recent as $row) {
             echo html_writer::start_tag('tr');
             echo html_writer::tag('td', s($row['ts'] ?? ''), ['style' => 'font-family:monospace;font-size:0.85rem;color:#6b7280;']);
-            echo html_writer::tag('td', s($row['label'] ?? ($row['usageType'] ?? ''))); // v5.9.368: guard both keys
+            echo html_writer::tag('td', s($row['label'] ?? ($row['usageType'] ?? ''))); // Version 5.9.368: guard both keys
             echo html_writer::tag('td', number_format((int)($row['credits'] ?? 0)));
             echo html_writer::end_tag('tr');
         }
@@ -299,9 +303,10 @@ if (!$has_log_table) {
 } elseif (empty($db_breakdown)) {
     echo html_writer::div(html_writer::tag('p', 'No entries found in the local audit log.'), 'ai-usage-empty');
 } else {
-    echo html_writer::tag('p',
-        'The local audit log records admin actions performed on this Moodle site, independent of API credit consumption.',
-        ['style' => 'color:#6b7280;font-size:0.875rem;margin:0 0 12px;']
+    echo html_writer::tag(
+        'p',
+            'The local audit log records admin actions performed on this Moodle site, independent of API credit consumption.',
+            ['style' => 'color:#6b7280;font-size:0.875rem;margin:0 0 12px;']
     );
     echo html_writer::start_tag('table', ['class' => 'table ai-usage-table']);
     echo html_writer::start_tag('thead');
@@ -330,7 +335,8 @@ if (!$has_log_table) {
 echo html_writer::end_div();
 
 // ── Inline styles ─────────────────────────────────────────────────────────────
-echo html_writer::tag('style', '
+echo html_writer::tag(
+    'style', '
 .ai-usage-datefilter {
     display: flex;
     gap: 6px;

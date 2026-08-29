@@ -344,7 +344,7 @@ class certificate_validator {
             ];
         }
 
-        // v4.4.0 NRT-LOGO-COMPLIANCE — every dynamic field with a
+        // Version 4.4.0 NRT-LOGO-COMPLIANCE — every dynamic field with a
         // 'forbidden_for' entry in the catalogue is HARD-BLOCKED on the
         // listed certtypes. Currently this enforces the NRT Logo
         // Conditions of Use Policy: "must not be depicted on other
@@ -457,36 +457,40 @@ class certificate_validator {
             $isNotUsiError = !(strpos((string)($item['rule'] ?? ''), 'USI must NOT appear') !== false);
             $btn = '';
             if ($hasField && $isNotUsiError) {
-                $btn = ' ' . \html_writer::tag('button', $fixlabel, [
-                    'type'        => 'button',
-                    'class'       => 'btn btn-sm btn-outline-primary py-0 px-2 ml-1',
-                    'data-fix-key' => $key,
-                    'style'       => 'font-size:0.75rem;line-height:1.2;',
+                $btn = ' ' . \html_writer::tag(
+                    'button', $fixlabel, [
+                        'type'        => 'button',
+                        'class'       => 'btn btn-sm btn-outline-primary py-0 px-2 ml-1',
+                        'data-fix-key' => $key,
+                        'style'       => 'font-size:0.75rem;line-height:1.2;',
                 ]);
             }
             return \html_writer::tag('li', $msg . $btn);
         };
 
         if (empty($validation['errors']) && empty($validation['warnings'])) {
-            return \html_writer::div(get_string('cert_template_validation_passed', 'local_rtocompliance'),
+            return \html_writer::div(
+                get_string('cert_template_validation_passed', 'local_rtocompliance'),
                 'alert alert-success small mb-0 p-2');
         }
 
         $out = '';
         if (!empty($validation['errors'])) {
-            $out .= \html_writer::tag('div',
-                \html_writer::tag('strong', get_string('cert_template_validation_errors', 'local_rtocompliance')) .
-                \html_writer::start_tag('ul', ['class' => 'mb-0 pl-3']) .
-                implode('', array_map($rendervalitem, $validation['errors'])) .
-                \html_writer::end_tag('ul'),
+            $out .= \html_writer::tag(
+                'div',
+                    \html_writer::tag('strong', get_string('cert_template_validation_errors', 'local_rtocompliance')) .
+                    \html_writer::start_tag('ul', ['class' => 'mb-0 pl-3']) .
+                    implode('', array_map($rendervalitem, $validation['errors'])) .
+                    \html_writer::end_tag('ul'),
                 ['class' => 'alert alert-danger small mb-2 p-2']);
         }
         if (!empty($validation['warnings'])) {
-            $out .= \html_writer::tag('div',
-                \html_writer::tag('strong', get_string('cert_template_validation_warnings', 'local_rtocompliance')) .
-                \html_writer::start_tag('ul', ['class' => 'mb-0 pl-3']) .
-                implode('', array_map($rendervalitem, $validation['warnings'])) .
-                \html_writer::end_tag('ul'),
+            $out .= \html_writer::tag(
+                'div',
+                    \html_writer::tag('strong', get_string('cert_template_validation_warnings', 'local_rtocompliance')) .
+                    \html_writer::start_tag('ul', ['class' => 'mb-0 pl-3']) .
+                    implode('', array_map($rendervalitem, $validation['warnings'])) .
+                    \html_writer::end_tag('ul'),
                 ['class' => 'alert alert-warning small mb-0 p-2']);
         }
         return $out;
@@ -706,7 +710,7 @@ class certificate_validator {
         if (!empty($qualificationcode)) {
             $completion = self::check_qualification_completion($student->id, $qualificationcode);
 
-            // v4.6.103 FIX-TESTAMUR-COMPLETION-GATE — when no enrolment records exist
+            // Version 4.6.103 FIX-TESTAMUR-COMPLETION-GATE — when no enrolment records exist
             // in local_rtocompliance_enrolments for this student+qualification, the
             // check returned complete=false and all_finalized=false, adding two HARD
             // errors that blocked all testamur issuance for RTOs whose completions are
@@ -750,9 +754,10 @@ class certificate_validator {
         }
 
         if (empty($units)) {
-            $units = $DB->get_records('local_rtocompliance_enrolments', [
-                'studentid' => $student->id,
-                'status' => 'completed',
+            $units = $DB->get_records(
+                'local_rtocompliance_enrolments', [
+                    'studentid' => $student->id,
+                    'status' => 'completed',
             ]);
         }
 
@@ -1071,7 +1076,10 @@ class certificate_validator {
         }
 
         $completionOutcomes = avetmiss_codes::get_completion_outcomes();
-        $outcomes = array_map(function ($o) { return "'$o'"; }, $completionOutcomes);
+        $outcomes = array_map(
+            function ($o) {
+                return "'$o'";
+            }, $completionOutcomes);
         
         // FIX-ISSUABLE-STATUS (v5.2.35): The previous filter used e.status = 'completed'
         // but enrolments default to status='active' and many never get promoted to 'completed'
@@ -1090,10 +1098,11 @@ class certificate_validator {
             [$student->id]
         );
 
-        $issuedCerts = $DB->get_records('local_rtocompliance_certs', [
-            'userid' => $userid,
-            'certtype' => 'statement',
-            'status' => 'issued',
+        $issuedCerts = $DB->get_records(
+            'local_rtocompliance_certs', [
+                'userid' => $userid,
+                'certtype' => 'statement',
+                'status' => 'issued',
         ]);
 
         $issuedUnits = [];
@@ -1144,11 +1153,12 @@ class certificate_validator {
         foreach ($programs as $program) {
             $completion = self::check_qualification_completion($student->id, $program->programcode);
             
-            $issuedCert = $DB->get_record('local_rtocompliance_certs', [
-                'userid' => $userid,
-                'qualificationcode' => $program->programcode,
-                'certtype' => 'testamur',
-                'status' => 'issued',
+            $issuedCert = $DB->get_record(
+                'local_rtocompliance_certs', [
+                    'userid' => $userid,
+                    'qualificationcode' => $program->programcode,
+                    'certtype' => 'testamur',
+                    'status' => 'issued',
             ]);
 
             $result[] = [

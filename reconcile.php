@@ -81,8 +81,8 @@ $action        = optional_param('action',        '',        PARAM_ALPHA);
 $importid      = optional_param('importid',      0,         PARAM_INT);
 $token         = optional_param('token',         '',        PARAM_ALPHANUM);
 $download      = optional_param('download',      '',        PARAM_ALPHANUMEXT);
-$traceclientid  = optional_param('traceclientid',  '',        PARAM_TEXT); // legacy single-ID compat
-$traceclientids = optional_param('traceclientids', '',        PARAM_TEXT); // multi-ID textarea (newline/comma)
+$traceclientid  = optional_param('traceclientid',  '',        PARAM_TEXT); // Legacy single-ID compat
+$traceclientids = optional_param('traceclientids', '',        PARAM_TEXT); // Multi-ID textarea (newline/comma)
 
 $PAGE->set_url(new moodle_url('/local/rtocompliance/reconcile.php'));
 $PAGE->set_title('NAT Reconciliation Tool');
@@ -120,7 +120,7 @@ if (!function_exists('_reconcile_extract_unitcode')) {
         $idn = strtoupper(trim($idnumber));
         // Step 1: exact match (idnumber is nothing but the unit code)
         if (preg_match('/^[A-Z]{2,7}[0-9]{3,5}[A-Z]?$/', $idn)) return $idn;
-        // v5.9.214: Skip slash-separated idnumbers such as "BSB226/BSB226".
+        // Version 5.9.214: Skip slash-separated idnumbers such as "BSB226/BSB226".
         // The Step 2 boundary pattern accepts "/" as a valid terminator (it satisfies
         // [^A-Z0-9]), so "BSB226/BSB226" would incorrectly extract "BSB226" — a
         // garbage code that is not a valid AVETMISS unit code.  Real unit codes
@@ -327,11 +327,20 @@ function _reconcile_score_candidate(
     $isArch   = stripos($catText, 'archive') !== false;
     $isHidden = ((int)($cDet->visible ?? 1) === 0);
 
-    $score = 0; $flags = [];
+    $score = 0;
+    $flags = [];
 
-    if ($isArch) { $score -= 100; $flags[] = 'archive'; }
-    else         { $score += 100; $flags[] = 'current'; }
-    if ($isHidden) { $score -= 20; $flags[] = 'hidden'; }
+    if ($isArch) {
+        $score -= 100;
+        $flags[] = 'archive';
+    } else {
+        $score += 100;
+        $flags[] = 'current';
+    }
+    if ($isHidden) {
+        $score -= 20;
+        $flags[] = 'hidden';
+    }
 
     // Semester / year match — try ancestor names first (most authoritative), then shortname
     $courseDk = '';
@@ -344,9 +353,12 @@ function _reconcile_score_candidate(
             $courseDk = _reconcile_delivery_key_from_text((string)($cDet->shortname ?? ''));
         }
         if ($courseDk !== '' && $courseDk === $natDk) {
-            $score += 250; $flags[] = 'sem_match'; // dominant signal — must beat current+qual_branch (130)
+            $score += 250;
+            $flags[] = 'sem_match';
+            // Dominant signal — must beat current+qual_branch (130)
         } elseif ($courseDk !== '' && substr($courseDk, 0, 4) === substr($natDk, 0, 4)) {
-            $score += 25; $flags[] = 'year_match';
+            $score += 25;
+            $flags[] = 'year_match';
         }
     }
 
@@ -373,8 +385,13 @@ function _reconcile_score_candidate(
         in_array($natQc, $catQualBranch[$_scCatId] ?? [], true) ||
         $_qualIsAnc
     );
-    if ($inQB)             { $score += 30; $flags[] = 'qual_branch'; }
-    elseif ($natQc !== '') { $score -= 20; $flags[] = 'out_of_qual'; }
+    if ($inQB)             {
+        $score += 30;
+        $flags[] = 'qual_branch';
+    } elseif ($natQc !== '') {
+        $score -= 20;
+        $flags[] = 'out_of_qual';
+    }
 
     // Qual-type protection: block cross-qualification enrolments (e.g. PQR → XYZ).
     //
@@ -407,7 +424,8 @@ function _reconcile_score_candidate(
             if (!$sameQualCat) {
                 $courseQt = _reconcile_extract_qual_type((string)($cDet->catname ?? ''));
                 if ($courseQt !== '' && $courseQt !== $studentQualType) {
-                    $score -= 200; $flags[] = 'qual_type_mismatch';
+                    $score -= 200;
+                    $flags[] = 'qual_type_mismatch';
                 }
             }
         }
@@ -470,7 +488,8 @@ if ($action === 'natdownload' && $importid) {
     if (!in_array($natfile, $validFiles, true)) {
         redirect(new moodle_url('/local/rtocompliance/reconcile.php'));
     }
-    $ndImport = $DB->get_record('local_rtocompliance_avetmiss',
+    $ndImport = $DB->get_record(
+        'local_rtocompliance_avetmiss',
         ['id' => $importid], 'id,collectionyear,timecreated,rtoname', IGNORE_MISSING);
     if (!$ndImport) {
         redirect(new moodle_url('/local/rtocompliance/reconcile.php'));
@@ -493,11 +512,12 @@ if ($action === 'natdownload' && $importid) {
         return $buf;
     };
 
-    $ndFiles = []; // filename → content
+    $ndFiles = []; // Filename → content
 
     if ($natfile === 'nat00120' || $natfile === 'nat_all_zip') {
-        $rs120 = $DB->get_recordset('local_rtocompliance_avetmiss_enrolment',
-            ['importid' => $importid], 'clientid,unitcode',
+        $rs120 = $DB->get_recordset(
+            'local_rtocompliance_avetmiss_enrolment',
+                ['importid' => $importid], 'clientid,unitcode',
             'clientid,unitcode,qualcode,startdate,enddate,outcome,fundingsource,studyreason,supervisedhours');
         $ndFiles["NAT00120_{$ndYear}_{$ndDate}.csv"] = $ndMakeCsv(
             ['Client ID','Unit Code','Qual Code','Start Date','End Date','Outcome',
@@ -507,8 +527,9 @@ if ($action === 'natdownload' && $importid) {
     }
 
     if ($natfile === 'nat00080' || $natfile === 'nat_all_zip') {
-        $rs080 = $DB->get_recordset('local_rtocompliance_avetmiss_student',
-            ['importid' => $importid], 'clientid',
+        $rs080 = $DB->get_recordset(
+            'local_rtocompliance_avetmiss_student',
+                ['importid' => $importid], 'clientid',
             'clientid,name,firstname,familyname,email,phone,dob,sex,usi,suburb,state');
         $ndFiles["NAT00080_{$ndYear}_{$ndDate}.csv"] = $ndMakeCsv(
             ['Client ID','Name','First Name','Family Name','Email','Phone',
@@ -518,7 +539,8 @@ if ($action === 'natdownload' && $importid) {
     }
 
     if ($natfile === 'nat00030' || $natfile === 'nat_all_zip') {
-        $rs030 = $DB->get_recordset('local_rtocompliance_avetmiss_programme',
+        $rs030 = $DB->get_recordset(
+            'local_rtocompliance_avetmiss_programme',
             ['importid' => $importid], 'qualcode', 'qualcode,qualname,isvetprog');
         $ndFiles["NAT00030_{$ndYear}_{$ndDate}.csv"] = $ndMakeCsv(
             ['Qual Code','Qual Name','VET Programme'],
@@ -527,8 +549,9 @@ if ($action === 'natdownload' && $importid) {
     }
 
     if ($natfile === 'nat00130' || $natfile === 'nat_all_zip') {
-        $rs130 = $DB->get_recordset('local_rtocompliance_avetmiss_completion',
-            ['importid' => $importid], 'clientid,qualcode',
+        $rs130 = $DB->get_recordset(
+            'local_rtocompliance_avetmiss_completion',
+                ['importid' => $importid], 'clientid,qualcode',
             'clientid,qualcode,completiondate,successfulcompletion,certificatedate,parchmentnumber');
         $cnt130 = 0;
         $csv130 = $ndMakeCsv(
@@ -559,7 +582,8 @@ if ($action === 'natdownload' && $importid) {
                 exit;
             }
         }
-        redirect(new moodle_url('/local/rtocompliance/reconcile.php', ['importid' => $importid]),
+        redirect(
+            new moodle_url('/local/rtocompliance/reconcile.php', ['importid' => $importid]),
             'ZIP generation failed — try downloading files individually.', null, \core\output\notification::NOTIFY_WARNING);
     }
 
@@ -592,7 +616,8 @@ if ($action === 'natclassdownload' && $importid) {
     if (!in_array($ncd_category, $ncd_validCats, true)) {
         redirect(new moodle_url('/local/rtocompliance/reconcile.php'));
     }
-    $ncd_import = $DB->get_record('local_rtocompliance_avetmiss',
+    $ncd_import = $DB->get_record(
+        'local_rtocompliance_avetmiss',
         ['id' => $importid], 'id,collectionyear,timecreated,rtoname', IGNORE_MISSING);
     if (!$ncd_import) {
         redirect(new moodle_url('/local/rtocompliance/reconcile.php'));
@@ -632,22 +657,24 @@ if ($action === 'natclassdownload' && $importid) {
     );
 
     $ncd_fh = fopen('php://memory', 'w+');
-    fputcsv($ncd_fh, [
-        'Client ID', 'Student Name', 'Unit Code', 'Qual Code', 'Start Date',
-        'Study Year', 'Match Path', 'Category', 'Course Exists in Moodle', 'Student Enrolled',
+    fputcsv(
+        $ncd_fh, [
+            'Client ID', 'Student Name', 'Unit Code', 'Qual Code', 'Start Date',
+            'Study Year', 'Match Path', 'Category', 'Course Exists in Moodle', 'Student Enrolled',
     ]);
     foreach ($ncd_rs as $ncd_row) {
-        fputcsv($ncd_fh, [
-            $ncd_row->clientid,
-            $ncd_row->student_name,
-            $ncd_row->unitcode,
-            $ncd_row->qualcode,
-            $ncd_row->startdate,
-            (string)($ncd_row->study_year ?: ''),
-            $ncd_row->match_path,
-            $ncd_row->category,
-            $ncd_row->course_exists ? 'Yes' : 'No',
-            $ncd_row->enrolled_match ? 'Yes' : 'No',
+        fputcsv(
+            $ncd_fh, [
+                $ncd_row->clientid,
+                $ncd_row->student_name,
+                $ncd_row->unitcode,
+                $ncd_row->qualcode,
+                $ncd_row->startdate,
+                (string)($ncd_row->study_year ?: ''),
+                $ncd_row->match_path,
+                $ncd_row->category,
+                $ncd_row->course_exists ? 'Yes' : 'No',
+                $ncd_row->enrolled_match ? 'Yes' : 'No',
         ]);
     }
     $ncd_rs->close();
@@ -689,7 +716,7 @@ if ($action === 'download' && $download && $token) {
         'ambiguous'        => 'ambiguous_unit_mappings.csv',
         'courseaudit'      => 'course_unit_validation.csv',
         'debug'            => 'missing_enrolments_debug.csv',
-        // v5.9.167 three-file ADD routing
+        // Version 5.9.167 three-file ADD routing
         'moodle_upload'    => 'moodle_upload.csv',
         'review_required'  => 'review_required.csv',
         'unmatched_add'    => 'unmatched_add.csv',
@@ -720,34 +747,37 @@ if ($action === 'savequalmapping') {
             $_sqCatName = (string)($DB->get_field('course_categories', 'name', ['id' => $_sqCatId]) ?: '');
             $_sqExist   = $DB->get_record('local_rtocompliance_qualmap', ['qualcode' => $_sqQc], 'id', IGNORE_MISSING);
             if ($_sqExist) {
-                $DB->update_record('local_rtocompliance_qualmap', (object)[
-                    'id'           => $_sqExist->id,
-                    'categoryid'   => $_sqCatId,
-                    'catname'      => $_sqCatName,
-                    'confidence'   => 100,
-                    'method'       => 'manual',
-                    'timemodified' => time(),
+                $DB->update_record(
+                    'local_rtocompliance_qualmap', (object)[
+                        'id'           => $_sqExist->id,
+                        'categoryid'   => $_sqCatId,
+                        'catname'      => $_sqCatName,
+                        'confidence'   => 100,
+                        'method'       => 'manual',
+                        'timemodified' => time(),
                 ]);
             } else {
-                $DB->insert_record('local_rtocompliance_qualmap', (object)[
-                    'qualcode'     => $_sqQc,
-                    'categoryid'   => $_sqCatId,
-                    'catname'      => $_sqCatName,
-                    'confidence'   => 100,
-                    'method'       => 'manual',
-                    'timecreated'  => time(),
-                    'timemodified' => time(),
+                $DB->insert_record(
+                    'local_rtocompliance_qualmap', (object)[
+                        'qualcode'     => $_sqQc,
+                        'categoryid'   => $_sqCatId,
+                        'catname'      => $_sqCatName,
+                        'confidence'   => 100,
+                        'method'       => 'manual',
+                        'timecreated'  => time(),
+                        'timemodified' => time(),
                 ]);
             }
         } else {
-            // catid=0 → clear existing mapping for this qualcode
+            // A catid of 0 clears the existing mapping for this qualcode
             $DB->delete_records('local_rtocompliance_qualmap', ['qualcode' => $_sqQc]);
         }
     }
     redirect(
-        new moodle_url('/local/rtocompliance/reconcile.php', [
-            'action'   => 'analyse',
-            'importid' => $_sqImportId > 0 ? $_sqImportId : $importid,
+        new moodle_url(
+            '/local/rtocompliance/reconcile.php', [
+                'action'   => 'analyse',
+                'importid' => $_sqImportId > 0 ? $_sqImportId : $importid,
         ]),
         'Qualification mappings saved — re-running reconciliation with updated mappings.',
         null,
@@ -815,7 +845,7 @@ if ($action === 'importmapping') {
                 // both ABC12345 and ABC12345 categories, producing a silent mis-mapping.
                 $_imCats = $DB->get_records_sql(
                     "SELECT id, name FROM {course_categories} WHERE LOWER(name) = LOWER(:name)",
-                    ['name' => $_imCatV], 0, 2); // fetch up to 2 to detect ambiguity
+                    ['name' => $_imCatV], 0, 2); // Fetch up to 2 to detect ambiguity
                 if (count($_imCats) === 0) {
                     $_imMissed[] = $_imQc . ' — no category with exact name "' . $_imCatV . '" (use numeric ID, or fix the name)';
                     continue;
@@ -832,23 +862,25 @@ if ($action === 'importmapping') {
                 $_imCatName = (string)$_imCr->name;
                 $_imExist   = $DB->get_record('local_rtocompliance_qualmap', ['qualcode' => $_imQc], 'id', IGNORE_MISSING);
                 if ($_imExist) {
-                    $DB->update_record('local_rtocompliance_qualmap', (object)[
-                        'id'           => $_imExist->id,
-                        'categoryid'   => $_imCatId,
-                        'catname'      => $_imCatName,
-                        'confidence'   => 100,
-                        'method'       => 'manual',
-                        'timemodified' => time(),
+                    $DB->update_record(
+                        'local_rtocompliance_qualmap', (object)[
+                            'id'           => $_imExist->id,
+                            'categoryid'   => $_imCatId,
+                            'catname'      => $_imCatName,
+                            'confidence'   => 100,
+                            'method'       => 'manual',
+                            'timemodified' => time(),
                     ]);
                 } else {
-                    $DB->insert_record('local_rtocompliance_qualmap', (object)[
-                        'qualcode'     => $_imQc,
-                        'categoryid'   => $_imCatId,
-                        'catname'      => $_imCatName,
-                        'confidence'   => 100,
-                        'method'       => 'manual',
-                        'timecreated'  => time(),
-                        'timemodified' => time(),
+                    $DB->insert_record(
+                        'local_rtocompliance_qualmap', (object)[
+                            'qualcode'     => $_imQc,
+                            'categoryid'   => $_imCatId,
+                            'catname'      => $_imCatName,
+                            'confidence'   => 100,
+                            'method'       => 'manual',
+                            'timecreated'  => time(),
+                            'timemodified' => time(),
                     ]);
                 }
                 $_imMatched[] = $_imQc . ' → ' . $_imCatName . ' (id=' . $_imCatId . ')';
@@ -868,9 +900,10 @@ if ($action === 'importmapping') {
         $_imLevel = \core\output\notification::NOTIFY_WARNING;
     }
     redirect(
-        new moodle_url('/local/rtocompliance/reconcile.php', [
-            'action'   => 'analyse',
-            'importid' => $_imImportId > 0 ? $_imImportId : $importid,
+        new moodle_url(
+            '/local/rtocompliance/reconcile.php', [
+                'action'   => 'analyse',
+                'importid' => $_imImportId > 0 ? $_imImportId : $importid,
         ]),
         $_imMsg,
         null,
@@ -884,18 +917,19 @@ if ($action === 'importmapping') {
 // Admins can use this CSV to re-import on another Moodle installation.
 // ─────────────────────────────────────────────────────────────────────────────
 if ($action === 'exportmapping') {
-    // v5.9.368 CAP-FIX: 'admin' is not a declared capability — every other handler
+    // Version 5.9.368 CAP-FIX: 'admin' is not a declared capability — every other handler
     // in this file correctly uses ':manage'. This one threw a coding_exception.
     require_capability('local/rtocompliance:manage', context_system::instance());
     $allMaps = $DB->get_records('local_rtocompliance_qualmap', null, 'qualcode ASC');
     $csvRows = ["qualcode,categoryid,categoryname,method,confidence"];
     foreach ($allMaps as $_em) {
-        $csvRows[] = implode(',', [
-            '"' . str_replace('"', '""', (string)$_em->qualcode)  . '"',
-            (int)$_em->categoryid,
-            '"' . str_replace('"', '""', (string)($_em->catname ?? ''))  . '"',
-            '"' . str_replace('"', '""', (string)($_em->method ?? ''))   . '"',
-            (int)($_em->confidence ?? 0),
+        $csvRows[] = implode(
+            ',', [
+                '"' . str_replace('"', '""', (string)$_em->qualcode)  . '"',
+                (int)$_em->categoryid,
+                '"' . str_replace('"', '""', (string)($_em->catname ?? ''))  . '"',
+                '"' . str_replace('"', '""', (string)($_em->method ?? ''))   . '"',
+                (int)($_em->confidence ?? 0),
         ]);
     }
     $csvContent = implode("\n", $csvRows);
@@ -917,8 +951,9 @@ if ($action === 'analyse' && $importid) {
     // executes.  If the log shows NO new entry after a Re-run click, the request
     // never reached this branch.  If it DOES appear, the engine ran.
     // Check with: grep "RECONCILER_ENGINE" /path/to/php_error.log | tail -5
-    error_log('RECONCILER_ENGINE_START importid=' . intval($importid)
-        . ' release=' . RTOCOMPLIANCE_RECONCILER_RELEASE
+    error_log(
+        'RECONCILER_ENGINE_START importid=' . intval($importid)
+            . ' release=' . RTOCOMPLIANCE_RECONCILER_RELEASE
         . ' ts=' . date('c'));
 
     // ── Pre-step: process qualification mapping CSV if submitted with the landing form ──
@@ -934,8 +969,14 @@ if ($action === 'analyse' && $importid) {
             $firstRow = fgetcsv($_amFh);
             $h0 = strtolower(trim((string)($firstRow[0] ?? '')));
             $isHdr = ($h0 === 'qualcode' || $h0 === 'qual code' || $h0 === 'qual_code' || $h0 === 'code');
-            if (!$isHdr) { rewind($_amFh); if ($bom === "\xEF\xBB\xBF") { fseek($_amFh, 3); } }
-            $_amMapped = 0; $_amMissed = [];
+            if (!$isHdr) {
+                rewind($_amFh);
+                if ($bom === "\xEF\xBB\xBF") {
+                    fseek($_amFh, 3);
+                }
+            }
+            $_amMapped = 0;
+            $_amMissed = [];
             while (($row = fgetcsv($_amFh)) !== false) {
                 if (count($row) < 2) continue;
                 $_amQc   = strtoupper(trim((string)($row[0] ?? '')));
@@ -946,12 +987,21 @@ if ($action === 'analyse' && $importid) {
                     // Numeric → direct ID lookup (preferred)
                     $_amCats = $DB->get_records('course_categories', ['id' => (int)$_amCatV], '', 'id,name', 0, 1);
                     $_amCr = $_amCats ? reset($_amCats) : null;
-                    if (!$_amCr) { $_amMissed[] = $_amQc . ' — category ID ' . (int)$_amCatV . ' not found'; continue; }
+                    if (!$_amCr) {
+                        $_amMissed[] = $_amQc . ' — category ID ' . (int)$_amCatV . ' not found';
+                        continue;
+                    }
                 } else {
                     // Exact case-insensitive name match only — no partial/contains matching.
                     $_amCats = $DB->get_records_sql("SELECT id, name FROM {course_categories} WHERE LOWER(name) = LOWER(:name)", ['name' => $_amCatV], 0, 2);
-                    if (count($_amCats) === 0) { $_amMissed[] = $_amQc . ' — no category named "' . $_amCatV . '" (use numeric ID, or fix the name)'; continue; }
-                    if (count($_amCats) > 1)   { $_amMissed[] = $_amQc . ' — "' . $_amCatV . '" matches multiple categories (use numeric category ID)'; continue; }
+                    if (count($_amCats) === 0) {
+                        $_amMissed[] = $_amQc . ' — no category named "' . $_amCatV . '" (use numeric ID, or fix the name)';
+                        continue;
+                    }
+                    if (count($_amCats) > 1)   {
+                        $_amMissed[] = $_amQc . ' — "' . $_amCatV . '" matches multiple categories (use numeric category ID)';
+                        continue;
+                    }
                     $_amCr = reset($_amCats);
                 }
                 if (!empty($_amCr)) {
@@ -1090,7 +1140,7 @@ if ($action === 'analyse' && $importid) {
 
     // ── Step 2: Match clientids → Moodle userids (5 paths, same as FOE) ─────
     $clientToUid  = []; // lc_clientid → userid
-    $uidToDetails = []; // userid → stdClass {username, idnumber, firstname, lastname}
+    $uidToDetails = []; // Userid → stdClass {username, idnumber, firstname, lastname}
     $clientMatchPath = []; // lc_clientid → 'A'|'B'|'C'|'D'|'E'
     // Path trust levels:
     //   A = user.idnumber = clientid   (direct, strongest)
@@ -1237,7 +1287,7 @@ if ($action === 'analyse' && $importid) {
     $catById          = [];
     $catDescendantIds = [];
     $catQualBranch    = [];
-    $courseAncestorNames = []; // courseid → [name_root, ..., name_direct_parent] built per-course in Step 3
+    $courseAncestorNames = []; // Courseid → [name_root, ..., name_direct_parent] built per-course in Step 3
 
     $_chRs = $DB->get_recordset_sql("SELECT id, name, parent, path FROM {course_categories}");
     foreach ($_chRs as $_ch) {
@@ -1253,7 +1303,7 @@ if ($action === 'analyse' && $importid) {
         foreach ($_chPids as $_chPid) {
             $catDescendantIds[$_chPid][] = $_chId;
         }
-        $catDescendantIds[$_chId][] = $_chId; // self
+        $catDescendantIds[$_chId][] = $_chId; // Self
     }
     $_chRs->close();
     // De-duplicate (self was added both via path and the explicit append above)
@@ -1278,7 +1328,7 @@ if ($action === 'analyse' && $importid) {
     //
     // Method tag:  'category_hierarchy'   Confidence: 100
     // Fallback to: $_adPendingFingerprint → resolved in Step 3.5
-    $_adPendingFingerprint = []; // qualcodes queued for unit-fingerprint fallback
+    $_adPendingFingerprint = []; // Qualcodes queued for unit-fingerprint fallback
 
     // Collect all unique qualcodes from this import's NAT data.
     $_adAllQcodes = [];
@@ -1336,23 +1386,25 @@ if ($action === 'analyse' && $importid) {
             // Found via idnumber or name — upsert into DB.
             $_adExist = $DB->get_record('local_rtocompliance_qualmap', ['qualcode' => $_adQ], 'id', IGNORE_MISSING);
             if ($_adExist) {
-                $DB->update_record('local_rtocompliance_qualmap', (object)[
-                    'id'           => $_adExist->id,
-                    'categoryid'   => $_adBestCatId,
-                    'catname'      => $_adBestCatName,
-                    'confidence'   => 100,
-                    'method'       => $_adMethod,
-                    'timemodified' => time(),
+                $DB->update_record(
+                    'local_rtocompliance_qualmap', (object)[
+                        'id'           => $_adExist->id,
+                        'categoryid'   => $_adBestCatId,
+                        'catname'      => $_adBestCatName,
+                        'confidence'   => 100,
+                        'method'       => $_adMethod,
+                        'timemodified' => time(),
                 ]);
             } else {
-                $DB->insert_record('local_rtocompliance_qualmap', (object)[
-                    'qualcode'     => $_adQ,
-                    'categoryid'   => $_adBestCatId,
-                    'catname'      => $_adBestCatName,
-                    'confidence'   => 100,
-                    'method'       => $_adMethod,
-                    'timecreated'  => time(),
-                    'timemodified' => time(),
+                $DB->insert_record(
+                    'local_rtocompliance_qualmap', (object)[
+                        'qualcode'     => $_adQ,
+                        'categoryid'   => $_adBestCatId,
+                        'catname'      => $_adBestCatName,
+                        'confidence'   => 100,
+                        'method'       => $_adMethod,
+                        'timecreated'  => time(),
+                        'timemodified' => time(),
                 ]);
             }
             // Update in-memory maps so catQualBranch (built below) includes this discovery.
@@ -1400,23 +1452,23 @@ if ($action === 'analyse' && $importid) {
     //                                 (used ONLY to populate ADD recommendations)
     // $courseDetail, $unitAllCids, $unitToChosenCid are preserved for the
     // Course Selection Diagnostic panel.
-    $courseToUnit       = []; // courseid → unitcode
-    $unitToPreferredCid = []; // unitcode → preferred courseid (newest visible — fallback / 'newest' mode)
-    $unitToChosenCid    = []; // alias — same map, used by Course Selection diag
-    $unitAllCids        = []; // unitcode → [courseid,...] all courses (diag panel)
-    $courseDetail       = []; // courseid → stdClass {shortname,fullname,catid,catname,visible}
-    $unitDeliveryCourseMap = []; // unitcode → [deliveryKey → courseid] for date-aware ADD selection
+    $courseToUnit       = []; // Courseid → unitcode
+    $unitToPreferredCid = []; // Unitcode → preferred courseid (newest visible — fallback / 'newest' mode)
+    $unitToChosenCid    = []; // Alias — same map, used by Course Selection diag
+    $unitAllCids        = []; // Unitcode → [courseid,...] all courses (diag panel)
+    $courseDetail       = []; // Courseid → stdClass {shortname,fullname,catid,catname,visible}
+    $unitDeliveryCourseMap = []; // Unitcode → [deliveryKey → courseid] for date-aware ADD selection
                                 // deliveryKey format: "YYYY-S1" or "YYYY-S2"
                                 // Tiebreaker: ORDER BY visible DESC, id DESC — highest-ID wins per delivery
-    $courseExtractionMeta = []; // courseid → ['source'=>str,'fullname_count'=>int,'fullname_list'=>str,'flags'=>str]
+    $courseExtractionMeta = []; // Courseid → ['source'=>str,'fullname_count'=>int,'fullname_list'=>str,'flags'=>str]
     // Qualification-first maps (built in Step 3, used in Step 6 ADD and the trace).
     // Only populated for courses whose direct-parent category falls within a mapped qual branch.
-    $qualUnitPreferredCid = []; // qualcode → [unitcode → preferred courseid within qual branch]
-    $qualUnitDeliveryMap  = []; // qualcode → [unitcode → [deliveryKey → courseid]] within qual branch
-    $courseDkMatchedFrom  = []; // courseid → which text string produced the delivery key (trace diagnostics)
+    $qualUnitPreferredCid = []; // Qualcode → [unitcode → preferred courseid within qual branch]
+    $qualUnitDeliveryMap  = []; // Qualcode → [unitcode → [deliveryKey → courseid]] within qual branch
+    $courseDkMatchedFrom  = []; // Courseid → which text string produced the delivery key (trace diagnostics)
     $normUnitAllCids      = []; // normalised-unitcode → [courseid,...] (strips version suffix: ABC12345 → ABC12345)
-    $courseAllUnits       = []; // courseid → [unitcode,...] ALL unit codes the course teaches
-    $nonAwardCpdCourses   = []; // courseid → true — NON_AWARD_CPD courses excluded from unit reconciliation
+    $courseAllUnits       = []; // Courseid → [unitcode,...] ALL unit codes the course teaches
+    $nonAwardCpdCourses   = []; // Courseid → true — NON_AWARD_CPD courses excluded from unit reconciliation
     // $courseAllUnits is populated in the Step 3 loop using all codes found in the
     // course fullname/idnumber/shortname.  A combined course like "BSBCUS501C & BSBMGT502B"
     // maps to both codes.  Step 5 coverage and Step 6 ADD both use this to handle students
@@ -1431,13 +1483,15 @@ if ($action === 'analyse' && $importid) {
     // Guards throughout the engine use isset($_diagNatUcSet[$code]) — "BSBLDR522" vs
     // "BSBLDR522A" is a different key. This confirms what the NAT file actually contains.
     {
-        $_t216NatBsb = array_filter(array_keys($_diagNatUcSet),
+        $_t216NatBsb = array_filter(
+            array_keys($_diagNatUcSet),
             fn($_k216) => str_starts_with($_k216, 'BSBLDR5') || str_starts_with($_k216, 'BSBMGT5') || str_starts_with($_k216, 'BSBOPS5'));
-        error_log('TRACE_NAT_BSB_CODES v5.9.216 all_matching=[' . implode(', ', $_t216NatBsb) . ']'
-            . ' BSBLDR522=' . (isset($_diagNatUcSet['BSBLDR522']) ? 'YES' : 'NO')
-            . ' BSBLDR522A=' . (isset($_diagNatUcSet['BSBLDR522A']) ? 'YES' : 'NO')
-            . ' BSBLDR522B=' . (isset($_diagNatUcSet['BSBLDR522B']) ? 'YES' : 'NO')
-            . ' BSBMGT502=' . (isset($_diagNatUcSet['BSBMGT502']) ? 'YES' : 'NO')
+        error_log(
+            'TRACE_NAT_BSB_CODES v5.9.216 all_matching=[' . implode(', ', $_t216NatBsb) . ']'
+                . ' BSBLDR522=' . (isset($_diagNatUcSet['BSBLDR522']) ? 'YES' : 'NO')
+                . ' BSBLDR522A=' . (isset($_diagNatUcSet['BSBLDR522A']) ? 'YES' : 'NO')
+                . ' BSBLDR522B=' . (isset($_diagNatUcSet['BSBLDR522B']) ? 'YES' : 'NO')
+                . ' BSBMGT502=' . (isset($_diagNatUcSet['BSBMGT502']) ? 'YES' : 'NO')
             . ' BSBOPS505=' . (isset($_diagNatUcSet['BSBOPS505']) ? 'YES' : 'NO'));
     }
 
@@ -1489,8 +1543,11 @@ if ($action === 'analyse' && $importid) {
             $_idnCode = '';
             $_snCode  = '';
             $_fnCode  = '';
-            if (preg_match('/^[A-Z]{2,7}[0-9]{3,5}[A-Z]?$/', $_idn_up)) { $_idnCode = $_idn_up; }
-            elseif (preg_match($_src_pat, $_idn_up, $_mm)) { $_idnCode = $_mm[1]; }
+            if (preg_match('/^[A-Z]{2,7}[0-9]{3,5}[A-Z]?$/', $_idn_up)) {
+                $_idnCode = $_idn_up;
+            } elseif (preg_match($_src_pat, $_idn_up, $_mm)) {
+                $_idnCode = $_mm[1];
+            }
             if (preg_match($_src_pat, $_sn_up, $_mm)) { $_snCode = $_mm[1]; }
             if (preg_match($_fn_any, $_fn_up, $_mm)) { $_fnCode = $_mm[1]; }
             $_metaFlags = [];
@@ -1524,21 +1581,23 @@ if ($action === 'analyse' && $importid) {
             preg_match_all($_muPat, $_idn_up, $_muIdnM);
             preg_match_all($_muPat, $_sn_up,  $_muSnM);
             preg_match_all($_muPat, $_fn_up,  $_muFnM); // FIX v5.9.209: fullname scanned with same multi-code pattern
-            $_allUcsMerged = array_unique(array_filter(
-                array_merge([$_uc], $_muIdnM[1] ?? [], $_muSnM[1] ?? [], $_muFnM[1] ?? []),
-                fn($_c3) => $_c3 !== ''
+            $_allUcsMerged = array_unique(
+                array_filter(
+                    array_merge([$_uc], $_muIdnM[1] ?? [], $_muSnM[1] ?? [], $_muFnM[1] ?? []),
+                    fn($_c3) => $_c3 !== ''
             ));
             $courseAllUnits[$_cid] = array_values($_allUcsMerged);
             // TRACE v5.9.216: Full field detail for course 727 at the point courseAllUnits is set.
             if ($_cid === 727) {
-                error_log('TRACE_CID727_STEP3 v5.9.216'
-                    . ' idn=[' . substr($_idn_up, 0, 80) . ']'
-                    . ' shn=[' . substr($_sn_up, 0, 80) . ']'
-                    . ' fn=[' . substr($_fn_up, 0, 120) . ']'
-                    . ' primary_uc=[' . $_uc . ']'
-                    . ' fnList=[' . implode(', ', $_fnList) . ']'
-                    . ' courseAllUnits=[' . implode(', ', $courseAllUnits[727]) . ']'
-                    . ' primary_in_NAT=' . (isset($_diagNatUcSet[$_uc]) ? 'YES' : 'NO')
+                error_log(
+                    'TRACE_CID727_STEP3 v5.9.216'
+                        . ' idn=[' . substr($_idn_up, 0, 80) . ']'
+                        . ' shn=[' . substr($_sn_up, 0, 80) . ']'
+                        . ' fn=[' . substr($_fn_up, 0, 120) . ']'
+                        . ' primary_uc=[' . $_uc . ']'
+                        . ' fnList=[' . implode(', ', $_fnList) . ']'
+                        . ' courseAllUnits=[' . implode(', ', $courseAllUnits[727]) . ']'
+                        . ' primary_in_NAT=' . (isset($_diagNatUcSet[$_uc]) ? 'YES' : 'NO')
                     . ' BSBLDR522_in_NAT=' . (isset($_diagNatUcSet['BSBLDR522']) ? 'YES' : 'NO'));
             }
         }
@@ -1609,7 +1668,7 @@ if ($action === 'analyse' && $importid) {
         //
         // array_unique in Step 6 pool build makes duplicate course IDs safe.
         foreach ($_fnList as $_fnUc214) {
-            if ($_fnUc214 === '' || $_fnUc214 === $_uc) continue; // primary already registered above
+            if ($_fnUc214 === '' || $_fnUc214 === $_uc) continue; // Primary already registered above
             $_fnNorm214 = _reconcile_normalize_unitcode($_fnUc214);
             // Register under raw key only when code is directly in the NAT set
             if (isset($_diagNatUcSet[$_fnUc214])) {
@@ -1666,16 +1725,17 @@ if ($action === 'analyse' && $importid) {
         if (in_array('BSBLDR522', $courseAllUnits[$_cid] ?? [], true) ||
             in_array('BSBLDR522A', $courseAllUnits[$_cid] ?? [], true) ||
             in_array('BSBLDR522B', $courseAllUnits[$_cid] ?? [], true)) {
-            error_log('TRACE_BSBLDR522_IN_COURSE v5.9.216 cid=' . $_cid
-                . ' idn=[' . substr($_idn_up, 0, 60) . ']'
-                . ' shn=[' . substr($_sn_up, 0, 60) . ']'
-                . ' fn=[' . substr($_fn_up, 0, 100) . ']'
-                . ' primary_uc=[' . $_uc . ']'
-                . ' fnList=[' . implode(',', $_fnList) . ']'
-                . ' allUnits=[' . implode(',', $courseAllUnits[$_cid]) . ']'
-                . ' primary_in_NAT=' . (isset($_diagNatUcSet[$_uc]) ? 'YES' : 'NO')
-                . ' BSBLDR522_in_NAT=' . (isset($_diagNatUcSet['BSBLDR522']) ? 'YES' : 'NO')
-                . ' after_direct_reg_unitAllCids=' . count($unitAllCids['BSBLDR522'] ?? [])
+            error_log(
+                'TRACE_BSBLDR522_IN_COURSE v5.9.216 cid=' . $_cid
+                    . ' idn=[' . substr($_idn_up, 0, 60) . ']'
+                    . ' shn=[' . substr($_sn_up, 0, 60) . ']'
+                    . ' fn=[' . substr($_fn_up, 0, 100) . ']'
+                    . ' primary_uc=[' . $_uc . ']'
+                    . ' fnList=[' . implode(',', $_fnList) . ']'
+                    . ' allUnits=[' . implode(',', $courseAllUnits[$_cid]) . ']'
+                    . ' primary_in_NAT=' . (isset($_diagNatUcSet[$_uc]) ? 'YES' : 'NO')
+                    . ' BSBLDR522_in_NAT=' . (isset($_diagNatUcSet['BSBLDR522']) ? 'YES' : 'NO')
+                    . ' after_direct_reg_unitAllCids=' . count($unitAllCids['BSBLDR522'] ?? [])
                 . ' after_direct_reg_normAllCids=' . count($normUnitAllCids['BSBLDR522'] ?? []));
         }
 
@@ -1739,12 +1799,12 @@ if ($action === 'analyse' && $importid) {
             // whether normalisation changed it. Guard is now ($_secNorm3 !== $_uc)
             // — excludes only the primary (already handled above).
             foreach ($courseAllUnits[$_cid] as $_secUc3) {
-                if ($_secUc3 === '' || $_secUc3 === $_uc) continue; // skip empty + primary (already done)
+                if ($_secUc3 === '' || $_secUc3 === $_uc) continue; // Skip empty + primary (already done)
                 if (isset($_diagNatUcSet[$_secUc3])) {
                     $unitAllCids[$_secUc3][] = $_cid;
                 }
                 $_secNorm3 = _reconcile_normalize_unitcode($_secUc3);
-                if ($_secNorm3 !== '' && $_secNorm3 !== $_uc) { // v5.9.210: was !== $_secUc3 (skipped unsuffixed codes)
+                if ($_secNorm3 !== '' && $_secNorm3 !== $_uc) { // Version 5.9.210: was !== $_secUc3 (skipped unsuffixed codes)
                     if (!isset($normUnitAllCids[$_secNorm3])) $normUnitAllCids[$_secNorm3] = [];
                     $normUnitAllCids[$_secNorm3][] = $_cid;
                 }
@@ -1799,9 +1859,9 @@ if ($action === 'analyse' && $importid) {
             );
             $_sfQcBranches = $catQualBranch[(int)$_c->category] ?? [];
             foreach ($courseAllUnits[$_cid] as $_sfUc) {
-                if ($_sfUc === '' || $_sfUc === $_uc) continue; // skip empty + primary (not in NAT anyway)
+                if ($_sfUc === '' || $_sfUc === $_uc) continue; // Skip empty + primary (not in NAT anyway)
                 $_sfNorm = _reconcile_normalize_unitcode($_sfUc);
-                // v5.9.202: accept raw code OR normalised form in NAT set — version-suffixed
+                // Version 5.9.202: accept raw code OR normalised form in NAT set — version-suffixed
                 // secondary codes (e.g. BSBMGT502B in archive fullnames) must match the
                 // unsuffixed NAT unit (BSBMGT502), or they are silently dropped → poolsize=0.
                 $_sfInNat = isset($_diagNatUcSet[$_sfUc]) ||
@@ -1845,14 +1905,15 @@ if ($action === 'analyse' && $importid) {
     // TRACE v5.9.216: Post-Step-3 pool state — did Step 3 register BSBLDR522?
     // If unitAllCids and normUnitAllCids are both empty here, no Step 3 course
     // had BSBLDR522 in a form that any registration path recognised.
-    error_log('TRACE_POST_STEP3 v5.9.216'
-        . ' unitAllCids_LDR522=' . count($unitAllCids['BSBLDR522'] ?? [])
-        . ' normUnitAllCids_LDR522=' . count($normUnitAllCids['BSBLDR522'] ?? [])
-        . ' unitAllCids_MGT502=' . count($unitAllCids['BSBMGT502'] ?? [])
-        . ' normUnitAllCids_MGT502=' . count($normUnitAllCids['BSBMGT502'] ?? [])
-        . ' cid727_in_courseDetail=' . (array_key_exists(727, $courseDetail) ? 'YES' : 'NO')
-        . ' cid727_uc=' . ($courseToUnit[727] ?? 'MISSING')
-        . ' cid727_allUnits=[' . implode(',', $courseAllUnits[727] ?? []) . ']'
+    error_log(
+        'TRACE_POST_STEP3 v5.9.216'
+            . ' unitAllCids_LDR522=' . count($unitAllCids['BSBLDR522'] ?? [])
+            . ' normUnitAllCids_LDR522=' . count($normUnitAllCids['BSBLDR522'] ?? [])
+            . ' unitAllCids_MGT502=' . count($unitAllCids['BSBMGT502'] ?? [])
+            . ' normUnitAllCids_MGT502=' . count($normUnitAllCids['BSBMGT502'] ?? [])
+            . ' cid727_in_courseDetail=' . (array_key_exists(727, $courseDetail) ? 'YES' : 'NO')
+            . ' cid727_uc=' . ($courseToUnit[727] ?? 'MISSING')
+            . ' cid727_allUnits=[' . implode(',', $courseAllUnits[727] ?? []) . ']'
         . ' LDR522_courses_in_unitAllCids=[' . implode(',', $unitAllCids['BSBLDR522'] ?? []) . ']');
 
     // ── Pre-Step 3.5a: Qualification Root Discovery ──────────────────────────
@@ -1882,13 +1943,13 @@ if ($action === 'analyse' && $importid) {
 
     // Build $_qrCatUnitSet[catid] = set of distinct AVETMISS unit codes across
     // all descendant courses. Propagated up the full ancestor chain.
-    $_qrCatUnitSet = []; // catid → [unitcode => true]
+    $_qrCatUnitSet = []; // Catid → [unitcode => true]
     foreach ($courseToUnit as $_qrCid => $_qrUc) {
         if ($_qrUc === '') continue;
         $_qrCatId = $courseDetail[$_qrCid]->catid ?? 0;
         if (!$_qrCatId || !isset($catById[$_qrCatId])) continue;
         $_qrAncs = array_filter(array_map('intval', explode('/', trim($catById[$_qrCatId]->path, '/'))));
-        $_qrAncs[] = $_qrCatId; // include self
+        $_qrAncs[] = $_qrCatId; // Include self
         foreach ($_qrAncs as $_qrAncId) {
             $_qrCatUnitSet[$_qrAncId][$_qrUc] = true;
         }
@@ -1931,7 +1992,7 @@ if ($action === 'analyse' && $importid) {
         // This is distinct from unit codes (4+ letters, e.g. ABC12345, BSBWHS211).
         $_ufQualCodeRx = '/\b[A-Z]{3}\d{5}\b/';
 
-        $_ufUnitQrCats = []; // unitcode → [qual_root_catid => depth]
+        $_ufUnitQrCats = []; // Unitcode → [qual_root_catid => depth]
         // Per-unit resolution path tracking.
         // 'qual_code'  = resolved to a qual-named ancestor (deterministic).
         // 'fallback'   = no qual-code ancestor found; purity scoring decides (heuristic).
@@ -1943,7 +2004,7 @@ if ($action === 'analyse' && $importid) {
             $_ufCatId = $courseDetail[$_ufCid]->catid ?? 0;
             if (!$_ufCatId || !isset($catById[$_ufCatId])) continue;
             $_ufAncs = array_filter(array_map('intval', explode('/', trim($catById[$_ufCatId]->path, '/'))));
-            $_ufAncs[] = $_ufCatId; // include direct parent category as well
+            $_ufAncs[] = $_ufCatId; // Include direct parent category as well
 
             // ── Qualification Root Resolution ──────────────────────────────────────
             // Walk UP the ancestor chain (deepest first) and find the FIRST ancestor
@@ -1984,7 +2045,7 @@ if ($action === 'analyse' && $importid) {
                 if (!isset($_ufUnitResVia[$_ufUc])) {
                     $_ufUnitResVia[$_ufUc] = 'qual_code';
                 } elseif ($_ufUnitResVia[$_ufUc] === 'fallback') {
-                    $_ufUnitResVia[$_ufUc] = 'mixed'; // same unit seen via both paths
+                    $_ufUnitResVia[$_ufUc] = 'mixed'; // Same unit seen via both paths
                 }
             } else {
                 // No qual-code ancestor — fall back to all candidate ancestors.
@@ -2000,14 +2061,14 @@ if ($action === 'analyse' && $importid) {
                 if (!isset($_ufUnitResVia[$_ufUc])) {
                     $_ufUnitResVia[$_ufUc] = 'fallback';
                 } elseif ($_ufUnitResVia[$_ufUc] === 'qual_code') {
-                    $_ufUnitResVia[$_ufUc] = 'mixed'; // same unit seen via both paths
+                    $_ufUnitResVia[$_ufUc] = 'mixed'; // Same unit seen via both paths
                 }
             }
         }
         unset($_ufCid, $_ufUc, $_ufCatId, $_ufAncs, $_ufQualRootId, $_ufQualCodeRx);
         // $_ufUnitResVia and $_qrCandidates kept alive — consumed in scoring loop below.
 
-        $_newlyMappedByUf = []; // qualcode → catid — quals newly mapped in this step
+        $_newlyMappedByUf = []; // Qualcode → catid — quals newly mapped in this step
 
         foreach (array_keys($_adPendingFingerprint) as $_ufQ) {
             if (isset($qualMapMethod[$_ufQ]) && $qualMapMethod[$_ufQ] === 'manual') continue;
@@ -2026,12 +2087,18 @@ if ($action === 'analyse' && $importid) {
             // Tally per-unit resolution paths for this qual's unit set.
             // Tells the admin how many units went through deterministic qual-code
             // resolution vs the heuristic fallback — visible in the diagnostics panel.
-            $_ufResCode = 0; $_ufResFallback = 0; $_ufResMixed = 0;
+            $_ufResCode = 0;
+            $_ufResFallback = 0;
+            $_ufResMixed = 0;
             foreach (array_keys($_ufUnits) as $_ufResUc) {
                 $_ufResPath = $_ufUnitResVia[$_ufResUc] ?? 'fallback';
-                if ($_ufResPath === 'qual_code')  { $_ufResCode++; }
-                elseif ($_ufResPath === 'mixed')   { $_ufResMixed++; }
-                else                               { $_ufResFallback++; }
+                if ($_ufResPath === 'qual_code')  {
+                    $_ufResCode++;
+                } elseif ($_ufResPath === 'mixed')   {
+                    $_ufResMixed++;
+                } else {
+                    $_ufResFallback++;
+                }
             }
             unset($_ufResUc, $_ufResPath);
 
@@ -2039,13 +2106,13 @@ if ($action === 'analyse' && $importid) {
             // Units that resolve to many different branches get weight 1/N, so a
             // shared unit like ABC12345 (XYZ + NCCC) contributes 0.5 to each rather
             // than 1.0 — preventing widely-reused units from inflating any one branch.
-            $_ufScores  = []; // catid → float weighted score
-            $_ufDepths  = []; // catid → path depth (tiebreaker)
-            $_ufRawHits = []; // catid → int raw matched unit count (for display)
+            $_ufScores  = []; // Catid → float weighted score
+            $_ufDepths  = []; // Catid → path depth (tiebreaker)
+            $_ufRawHits = []; // Catid → int raw matched unit count (for display)
             foreach (array_keys($_ufUnits) as $_ufUc4) {
                 $_ufBranchSet = $_ufUnitQrCats[$_ufUc4] ?? [];
                 $_ufBranchN   = max(1, count($_ufBranchSet));
-                $_ufUnitW     = 1.0 / $_ufBranchN; // lower weight for widely-shared units
+                $_ufUnitW     = 1.0 / $_ufBranchN; // Lower weight for widely-shared units
                 foreach ($_ufBranchSet as $_ufQrId4 => $_ufQrD4) {
                     $_ufScores[$_ufQrId4]  = ($_ufScores[$_ufQrId4] ?? 0.0) + $_ufUnitW;
                     $_ufDepths[$_ufQrId4]  = $_ufQrD4;
@@ -2068,9 +2135,9 @@ if ($action === 'analyse' && $importid) {
             $_ufMaxWScore = max(0.0001, $_ufMaxWScore);
             unset($_ufWUc);
 
-            $_ufCombined = []; // catid → float combined [0,1]
-            $_ufCovPct   = []; // catid → int coverage% (raw matched / total NAT units)
-            $_ufPurPct   = []; // catid → int purity% (raw matched / branch total)
+            $_ufCombined = []; // Catid → float combined [0,1]
+            $_ufCovPct   = []; // Catid → int coverage% (raw matched / total NAT units)
+            $_ufPurPct   = []; // Catid → int purity% (raw matched / branch total)
             foreach ($_ufScores as $_ufCCatId => $_ufCScore) {
                 $_ufBranchTotal = max(1, $_qrCandidates[$_ufCCatId] ?? 1);
                 $_ufRaw         = $_ufRawHits[$_ufCCatId] ?? 0;
@@ -2167,23 +2234,25 @@ if ($action === 'analyse' && $importid) {
 
             $_ufExist = $DB->get_record('local_rtocompliance_qualmap', ['qualcode' => $_ufQ], 'id', IGNORE_MISSING);
             if ($_ufExist) {
-                $DB->update_record('local_rtocompliance_qualmap', (object)[
-                    'id'           => $_ufExist->id,
-                    'categoryid'   => $_ufBestTopId,
-                    'catname'      => $_ufBestCatName,
-                    'confidence'   => $_ufConfidence,
-                    'method'       => 'unit_root_discovery',
-                    'timemodified' => time(),
+                $DB->update_record(
+                    'local_rtocompliance_qualmap', (object)[
+                        'id'           => $_ufExist->id,
+                        'categoryid'   => $_ufBestTopId,
+                        'catname'      => $_ufBestCatName,
+                        'confidence'   => $_ufConfidence,
+                        'method'       => 'unit_root_discovery',
+                        'timemodified' => time(),
                 ]);
             } else {
-                $DB->insert_record('local_rtocompliance_qualmap', (object)[
-                    'qualcode'     => $_ufQ,
-                    'categoryid'   => $_ufBestTopId,
-                    'catname'      => $_ufBestCatName,
-                    'confidence'   => $_ufConfidence,
-                    'method'       => 'unit_root_discovery',
-                    'timecreated'  => time(),
-                    'timemodified' => time(),
+                $DB->insert_record(
+                    'local_rtocompliance_qualmap', (object)[
+                        'qualcode'     => $_ufQ,
+                        'categoryid'   => $_ufBestTopId,
+                        'catname'      => $_ufBestCatName,
+                        'confidence'   => $_ufConfidence,
+                        'method'       => 'unit_root_discovery',
+                        'timecreated'  => time(),
+                        'timemodified' => time(),
                 ]);
             }
             $qualMap[$_ufQ]           = $_ufBestTopId;
@@ -2255,7 +2324,7 @@ if ($action === 'analyse' && $importid) {
 
     // ── Diagnostic: query manual enrolment counts for all candidate courses ────
     // One SQL call covers every course in $unitAllCids — avoids N+1 queries.
-    $_diagManualCounts = []; // courseid → manual enrolment count
+    $_diagManualCounts = []; // Courseid → manual enrolment count
     $_diagAllCandidateCids = [];
     foreach ($unitAllCids as $_cids) {
         foreach ($_cids as $_cid) { $_diagAllCandidateCids[$_cid] = true; }
@@ -2284,8 +2353,8 @@ if ($action === 'analyse' && $importid) {
     // Any delivery of a NAT unit is considered a legitimate enrolment.
     // ue.timecreated is fetched to distinguish POST-IMPORT enrolments (created
     // after the NAT import timestamp).
-    $currentEnrolments = []; // userid → [courseid => unitcode]
-    $enrolTimecreated  = []; // userid → [courseid => unix timestamp]
+    $currentEnrolments = []; // Userid → [courseid => unitcode]
+    $enrolTimecreated  = []; // Userid → [courseid => unix timestamp]
     if (!empty($matchedUserids)) {
         list($_uidsql, $_uidp) = $DB->get_in_or_equal($matchedUserids, SQL_PARAMS_NAMED, 'rcur');
         $_curRs = $DB->get_recordset_sql(
@@ -2319,7 +2388,7 @@ if ($action === 'analyse' && $importid) {
     // These records are loaded SOLELY for Step 5 coverage credit via $actualUnitCoverage.
     // They are NOT candidates for REMOVE, KEEP, or POST-IMPORT classification —
     // suspended enrolments are not actionable and should not appear in output CSVs.
-    $suspendedEnrolments = []; // userid → [courseid => unitcode]  (coverage-only)
+    $suspendedEnrolments = []; // Userid → [courseid => unitcode]  (coverage-only)
     if (!empty($matchedUserids)) {
         list($_suidsql4b, $_suidp4b) = $DB->get_in_or_equal($matchedUserids, SQL_PARAMS_NAMED, 'rsusp');
         $_suspRs = $DB->get_recordset_sql(
@@ -2443,9 +2512,11 @@ if ($action === 'analyse' && $importid) {
             {
                 preg_match_all('/(?<![A-Z0-9])([A-Z]{2,7}[0-9]{3,5}[A-Z]?)(?:[^A-Z0-9]|$)/', $_bf45Idn, $_bf45MuIdnM215);
                 preg_match_all('/(?<![A-Z0-9])([A-Z]{2,7}[0-9]{3,5}[A-Z]?)(?:[^A-Z0-9]|$)/', $_bf45Shn, $_bf45MuSnM215);
-                $courseAllUnits[$_bf45Id] = array_values(array_unique(array_filter(
-                    array_merge([$_bf45Uc], $_bf45MuIdnM215[1] ?? [], $_bf45MuSnM215[1] ?? [], $_bf45FnM[1] ?? []),
-                    fn($_c215) => $_c215 !== ''
+                $courseAllUnits[$_bf45Id] = array_values(
+                    array_unique(
+                    array_filter(
+                            array_merge([$_bf45Uc], $_bf45MuIdnM215[1] ?? [], $_bf45MuSnM215[1] ?? [], $_bf45FnM[1] ?? []),
+                            fn($_c215) => $_c215 !== ''
                 )));
             }
             // FIX v5.9.215: Register secondary codes of back-filled combined courses
@@ -2505,14 +2576,15 @@ if ($action === 'analyse' && $importid) {
     }
 
     // TRACE v5.9.216: Post-Step-4.5 state — did back-fill change anything for BSBLDR522?
-    error_log('TRACE_POST_STEP45 v5.9.216'
-        . ' unitAllCids_LDR522=' . count($unitAllCids['BSBLDR522'] ?? [])
-        . ' normUnitAllCids_LDR522=' . count($normUnitAllCids['BSBLDR522'] ?? [])
-        . ' cid727_in_courseDetail=' . (array_key_exists(727, $courseDetail) ? 'YES' : 'NO')
-        . ' cid727_in_courseAllUnits=' . (array_key_exists(727, $courseAllUnits) ? 'YES' : 'NO')
-        . ' cid727_allUnits=[' . implode(',', $courseAllUnits[727] ?? []) . ']'
-        . ' cid808_in_courseAllUnits=' . (array_key_exists(808, $courseAllUnits) ? 'YES' : 'NO')
-        . ' cid808_allUnits=[' . implode(',', $courseAllUnits[808] ?? []) . ']'
+    error_log(
+        'TRACE_POST_STEP45 v5.9.216'
+            . ' unitAllCids_LDR522=' . count($unitAllCids['BSBLDR522'] ?? [])
+            . ' normUnitAllCids_LDR522=' . count($normUnitAllCids['BSBLDR522'] ?? [])
+            . ' cid727_in_courseDetail=' . (array_key_exists(727, $courseDetail) ? 'YES' : 'NO')
+            . ' cid727_in_courseAllUnits=' . (array_key_exists(727, $courseAllUnits) ? 'YES' : 'NO')
+            . ' cid727_allUnits=[' . implode(',', $courseAllUnits[727] ?? []) . ']'
+            . ' cid808_in_courseAllUnits=' . (array_key_exists(808, $courseAllUnits) ? 'YES' : 'NO')
+            . ' cid808_allUnits=[' . implode(',', $courseAllUnits[808] ?? []) . ']'
         . ' LDR522_courses=[' . implode(',', $unitAllCids['BSBLDR522'] ?? []) . ']');
 
     // ── Step 5: KEEP / POST-IMPORT / REMOVE / REVIEW ──────────────────────────
@@ -2523,11 +2595,11 @@ if ($action === 'analyse' && $importid) {
     //               likely a genuine mismatch from before the FoE incident
     // REVIEW      = course has no extractable unit code — cannot determine automatically
     //               (orientation, LLN, community, test courses, etc.)
-    $keepEnrolments       = []; // userid → [courseid => true]
-    $postImportEnrolments = []; // userid → [courseid => true]
-    $removeEnrolments     = []; // userid → [courseid => true]
-    $reviewEnrolments     = []; // userid → [courseid => true]  (no unit code)
-    $actualUnitCoverage   = []; // userid → [unitcode => courseid] first course covering that unit
+    $keepEnrolments       = []; // Userid → [courseid => true]
+    $postImportEnrolments = []; // Userid → [courseid => true]
+    $removeEnrolments     = []; // Userid → [courseid => true]
+    $reviewEnrolments     = []; // Userid → [courseid => true]  (no unit code)
+    $actualUnitCoverage   = []; // Userid → [unitcode => courseid] first course covering that unit
     $_importTs = (int)$importRec->timecreated;
 
     // DIAG v5.9.215: One-time sanity check — log courseAllUnits size for known combined
@@ -2539,9 +2611,10 @@ if ($action === 'analyse' && $importid) {
     // Remove after confirmed on target Moodle instance.
     foreach ([727, 808] as $_diag215Cid) {
         if (array_key_exists($_diag215Cid, $courseDetail)) {
-            error_log('RECONCILER_STEP5_COURSEALLUNITS_DIAG cid=' . $_diag215Cid .
-                      ' count=' . count($courseAllUnits[$_diag215Cid] ?? []) .
-                      ' codes=' . implode(',', $courseAllUnits[$_diag215Cid] ?? []) .
+            error_log(
+                'RECONCILER_STEP5_COURSEALLUNITS_DIAG cid=' . $_diag215Cid .
+                          ' count=' . count($courseAllUnits[$_diag215Cid] ?? []) .
+                          ' codes=' . implode(',', $courseAllUnits[$_diag215Cid] ?? []) .
                       ' bf45=' . (array_key_exists($_diag215Cid, $courseAllUnits) ? 'SET' : 'UNSET'));
         }
     }
@@ -2549,7 +2622,7 @@ if ($action === 'analyse' && $importid) {
     foreach ($clientToUid as $_lc5 => $_uid5) {
         $_natUnitSet5 = $natUnits[$_lc5] ?? [];
 
-        // v5.9.173: Build normalised NAT lookup for version-suffix-tolerant coverage matching.
+        // Version 5.9.173: Build normalised NAT lookup for version-suffix-tolerant coverage matching.
         // Maps normalised-root → original NAT code so coverage can be recorded under the exact
         // NAT key that Step 6 iterates over — ensuring isset($covered[$_uc6]) hits correctly.
         //
@@ -2631,11 +2704,13 @@ if ($action === 'analyse' && $importid) {
                         $_fnBase5 = preg_quote($_fnUc5, '/');
                         // A. Exact: fullname contains NAT code (word-boundary)
                         if (preg_match('/(?<![A-Z0-9])' . $_fnBase5 . '(?:[^A-Z0-9]|$)/', $_fn5)) {
-                            $_natCovKey5 = $_fnUc5; break;
+                            $_natCovKey5 = $_fnUc5;
+                            break;
                         }
                         // B. NAT code + trailing letter: fullname has ABC12345, NAT has ABC12345
                         if (preg_match('/(?<![A-Z0-9])' . $_fnBase5 . '[A-Z](?:[^A-Z0-9]|$)/', $_fn5)) {
-                            $_natCovKey5 = $_fnUc5; break;
+                            $_natCovKey5 = $_fnUc5;
+                            break;
                         }
                         // C. NAT code is suffixed; fullname has the unsuffixed root
                         //    e.g. NAT=ABC12345, fullname has ABC12345
@@ -2643,7 +2718,8 @@ if ($action === 'analyse' && $importid) {
                         if ($_fnUcNorm5 !== $_fnUc5) {
                             $_fnNBase5 = preg_quote($_fnUcNorm5, '/');
                             if (preg_match('/(?<![A-Z0-9])' . $_fnNBase5 . '(?:[^A-Z0-9]|$)/', $_fn5)) {
-                                $_natCovKey5 = $_fnUc5; break;
+                                $_natCovKey5 = $_fnUc5;
+                                break;
                             }
                         }
                     }
@@ -2687,7 +2763,7 @@ if ($action === 'analyse' && $importid) {
             // enrolled in combined courses were being flagged as "missing BSBMGT502"
             // because only the primary code (BSBCUS501) was credited.
             foreach ($courseAllUnits[$_cid5] ?? [] as $_secUc5) {
-                if ($_secUc5 === '' || $_secUc5 === $_uc5) continue; // primary already handled
+                if ($_secUc5 === '' || $_secUc5 === $_uc5) continue; // Primary already handled
                 $_secCovKey5 = null;
                 if (isset($_natUnitSet5[$_secUc5])) {
                     $_secCovKey5 = $_secUc5;                                   // 1. exact
@@ -2746,16 +2822,19 @@ if ($action === 'analyse' && $importid) {
                     foreach (array_keys($_natUnitSet5) as $_sfnUc5) {
                         $_sfnBase5 = preg_quote($_sfnUc5, '/');
                         if (preg_match('/(?<![A-Z0-9])' . $_sfnBase5 . '(?:[^A-Z0-9]|$)/', $_sfn5)) {
-                            $_sNatCovKey5 = $_sfnUc5; break;
+                            $_sNatCovKey5 = $_sfnUc5;
+                            break;
                         }
                         if (preg_match('/(?<![A-Z0-9])' . $_sfnBase5 . '[A-Z](?:[^A-Z0-9]|$)/', $_sfn5)) {
-                            $_sNatCovKey5 = $_sfnUc5; break;
+                            $_sNatCovKey5 = $_sfnUc5;
+                            break;
                         }
                         $_sfnUcNorm5 = _reconcile_normalize_unitcode($_sfnUc5);
                         if ($_sfnUcNorm5 !== $_sfnUc5) {
                             $_sfnNBase5 = preg_quote($_sfnUcNorm5, '/');
                             if (preg_match('/(?<![A-Z0-9])' . $_sfnNBase5 . '(?:[^A-Z0-9]|$)/', $_sfn5)) {
-                                $_sNatCovKey5 = $_sfnUc5; break;
+                                $_sNatCovKey5 = $_sfnUc5;
+                                break;
                             }
                         }
                     }
@@ -2821,14 +2900,15 @@ if ($action === 'analyse' && $importid) {
     try {
         $DB->execute('DELETE FROM {local_rtocompliance_qualdebug}');
     } catch (Throwable $_qdDelEx) {
-        error_log('RECONCILER_QUALDEBUG_DELETE_FAILED v5.9.216: ' . $_qdDelEx->getMessage()
+        error_log(
+            'RECONCILER_QUALDEBUG_DELETE_FAILED v5.9.216: ' . $_qdDelEx->getMessage()
             . ' — table may not exist; scoring continues normally.');
     }
-    $_qdRows = []; // accumulate rows for bulk-insert after the scoring loop
+    $_qdRows = []; // Accumulate rows for bulk-insert after the scoring loop
 
-    $addEnrolments = []; // userid → [courseid → unitcode]
-    $addMeta       = []; // userid → [courseid → metadata array]
-    $addUnresolved = []; // userid → [uc → metadata] — units with current delivery but no semester match
+    $addEnrolments = []; // Userid → [courseid → unitcode]
+    $addMeta       = []; // Userid → [courseid → metadata array]
+    $addUnresolved = []; // Userid → [uc → metadata] — units with current delivery but no semester match
     //
     // Confidence classification for ADD rows:
     //   HIGH     — exact semester match, current (non-archive) Moodle course
@@ -2883,17 +2963,19 @@ if ($action === 'analyse' && $importid) {
             $_normUc6   = _reconcile_normalize_unitcode($_uc6);
             $_candPool6 = $unitAllCids[$_uc6] ?? [];
             if (isset($normUnitAllCids[$_normUc6])) {
-                $_candPool6 = array_values(array_unique(
-                    array_merge($_candPool6, $normUnitAllCids[$_normUc6])
+                $_candPool6 = array_values(
+                    array_unique(
+                        array_merge($_candPool6, $normUnitAllCids[$_normUc6])
                 ));
             }
-            // v5.9.210 DIAGNOSTIC: log pool state for BSBMGT502 on first encounter per run
+            // Version 5.9.210 DIAGNOSTIC: log pool state for BSBMGT502 on first encounter per run
             if ($_uc6 === 'BSBMGT502' && !isset($_qdBsbmgt502Logged)) {
                 $_qdBsbmgt502Logged = true;
-                error_log('POOL_DIAG_BSBMGT502'
-                    . ' unitAllCids=' . count($unitAllCids['BSBMGT502'] ?? [])
-                    . ' normUnitAllCids=' . count($normUnitAllCids['BSBMGT502'] ?? [])
-                    . ' candPool=' . count($_candPool6)
+                error_log(
+                    'POOL_DIAG_BSBMGT502'
+                        . ' unitAllCids=' . count($unitAllCids['BSBMGT502'] ?? [])
+                        . ' normUnitAllCids=' . count($normUnitAllCids['BSBMGT502'] ?? [])
+                        . ' candPool=' . count($_candPool6)
                     . ' ts=' . date('c'));
             }
             // TRACE v5.9.216: BSBLDR522 pool — first encounter per run.
@@ -2901,15 +2983,16 @@ if ($action === 'analyse' && $importid) {
                 && !isset($_t216Ldr522Logged)) {
                 $_t216Ldr522Logged = true;
                 $_t216NormUc6 = _reconcile_normalize_unitcode($_uc6);
-                error_log('POOL_DIAG_BSBLDR522 v5.9.216'
-                    . ' uc=[' . $_uc6 . ']'
-                    . ' normUc=[' . $_t216NormUc6 . ']'
-                    . ' unitAllCids_exact=' . count($unitAllCids[$_uc6] ?? [])
-                    . ' unitAllCids_LDR522=' . count($unitAllCids['BSBLDR522'] ?? [])
-                    . ' normUnitAllCids_normed=' . count($normUnitAllCids[$_t216NormUc6] ?? [])
-                    . ' candPool=' . count($_candPool6)
-                    . ' pool_cids=[' . implode(',', $_candPool6) . ']'
-                    . ' covered=' . (isset($_covered6[$_uc6]) ? 'YES' : 'NO')
+                error_log(
+                    'POOL_DIAG_BSBLDR522 v5.9.216'
+                        . ' uc=[' . $_uc6 . ']'
+                        . ' normUc=[' . $_t216NormUc6 . ']'
+                        . ' unitAllCids_exact=' . count($unitAllCids[$_uc6] ?? [])
+                        . ' unitAllCids_LDR522=' . count($unitAllCids['BSBLDR522'] ?? [])
+                        . ' normUnitAllCids_normed=' . count($normUnitAllCids[$_t216NormUc6] ?? [])
+                        . ' candPool=' . count($_candPool6)
+                        . ' pool_cids=[' . implode(',', $_candPool6) . ']'
+                        . ' covered=' . (isset($_covered6[$_uc6]) ? 'YES' : 'NO')
                     . ' ts=' . date('c'));
             }
 
@@ -2918,9 +3001,11 @@ if ($action === 'analyse' && $importid) {
             $_bestCid6      = null;
             $_bestFlags6    = [];
             $_bestCourseDk6 = '';
-            $_topCount6     = 0;   // how many candidates share the top score
-            $_currentCands6 = 0; $_archiveCands6  = 0;
-            $_hasCurrentCid6 = null; $_hasArchiveCid6 = null;
+            $_topCount6     = 0;   // How many candidates share the top score
+            $_currentCands6 = 0;
+            $_archiveCands6  = 0;
+            $_hasCurrentCid6 = null;
+            $_hasArchiveCid6 = null;
 
             foreach ($_candPool6 as $_cand6) {
                 $_cDet6 = $courseDetail[$_cand6] ?? null;
@@ -3003,7 +3088,7 @@ if ($action === 'analyse' && $importid) {
                         'archiveCands' => $_archiveCands6,
                         'totalCands'   => count($_candPool6),
                     ];
-                    continue; // no ADD emitted
+                    continue; // No ADD emitted
                 }
 
                 // Use best scorer
@@ -3019,8 +3104,10 @@ if ($action === 'analyse' && $importid) {
                 elseif (!$_hasArc6 && $_currentCands6 === 1)     $_lookupMode6 = 'global_unique_match';
                 elseif (!$_hasArc6 && $_hasYear6 && $_hasQB6)   $_lookupMode6 = 'qual_sem_scored';
                 elseif (!$_hasArc6 && $_hasYear6)                $_lookupMode6 = 'global_sem_scored';
-                elseif ($_hasArc6) { $_lookupMode6 = 'historical_archive'; $_isFallback6 = true; }
-                else               $_lookupMode6 = 'global_unique_match';
+                elseif ($_hasArc6) {
+                    $_lookupMode6 = 'historical_archive';
+                    $_isFallback6 = true;
+                } else $_lookupMode6 = 'global_unique_match';
             }
 
             // No candidates at all → skip
@@ -3031,7 +3118,10 @@ if ($action === 'analyse' && $importid) {
             if ($_dk6 !== '') {
                 $_yr6 = substr($_dk6, 0, 4);
                 foreach (array_keys($unitDeliveryCourseMap[$_uc6] ?? []) as $_dkk6) {
-                    if (substr($_dkk6, 0, 4) === $_yr6) { $_yearMatch6 = true; break; }
+                    if (substr($_dkk6, 0, 4) === $_yr6) {
+                        $_yearMatch6 = true;
+                        break;
+                    }
                 }
             }
 
@@ -3068,15 +3158,15 @@ if ($action === 'analyse' && $importid) {
             $_hasYearFlag6 = in_array('year_match',  $_bestFlags6, true);
             $_hasQBFlag6   = in_array('qual_branch', $_bestFlags6, true);
             if ($_hasSemFlag6 && $_hasQBFlag6) {
-                $_confidencePct6 = 100;   // exact semester + qual branch (archive OR current)
+                $_confidencePct6 = 100;   // Exact semester + qual branch (archive OR current)
             } elseif ($_hasSemFlag6) {
-                $_confidencePct6 = 95;    // exact semester (archive OR current)
+                $_confidencePct6 = 95;    // Exact semester (archive OR current)
             } elseif ($_isArchive6) {
-                $_confidencePct6 = 50;    // archive, no exact semester → human review
+                $_confidencePct6 = 50;    // Archive, no exact semester → human review
             } elseif ($_hasYearFlag6) {
-                $_confidencePct6 = 80;    // current + year match only
+                $_confidencePct6 = 80;    // Current + year match only
             } else {
-                $_confidencePct6 = 80;    // current, unique match, no time signal
+                $_confidencePct6 = 80;    // Current, unique match, no time signal
             }
 
             // Legacy label — sem_match on archive is HIGH (not MEDIUM), so drive by pct only
@@ -3106,9 +3196,9 @@ if ($action === 'analyse' && $importid) {
             // so downstream trace logic sees the student as covered for this unit.
             $_alreadyIn6 = null;
             if (isset($currentEnrolments[$_uid6][$_prefCid6])) {
-                $_alreadyIn6 = $_prefCid6;   // exact recommended course — active
+                $_alreadyIn6 = $_prefCid6;   // Exact recommended course — active
             } elseif (isset($suspendedEnrolments[$_uid6][$_prefCid6])) {
-                $_alreadyIn6 = $_prefCid6;   // exact recommended course — suspended
+                $_alreadyIn6 = $_prefCid6;   // Exact recommended course — suspended
             } else {
                 // Scan the full candidate pool: student may be in a different delivery
                 // of the same unit that Step 5 failed to credit as coverage.
@@ -3127,7 +3217,7 @@ if ($action === 'analyse' && $importid) {
                     $actualUnitCoverage[$_uid6][$_uc6] = $_alreadyIn6;
                     $_covered6[$_uc6]                  = $_alreadyIn6;
                 }
-                continue; // already enrolled → suppress ADD row
+                continue; // Already enrolled → suppress ADD row
             }
 
             // ── NAT-BASIS GUARD v3 (v5.9.200) ────────────────────────────────────────
@@ -3214,7 +3304,7 @@ if ($action === 'analyse' && $importid) {
     // unit even though the student couldn't be linked.
     $_qdUnlinkedSeen = [];
     foreach ($natUnits as $_lcU => $_unitSetU) {
-        if (isset($clientToUid[$_lcU])) continue; // already handled in main loop
+        if (isset($clientToUid[$_lcU])) continue; // Already handled in main loop
         foreach (array_keys($_unitSetU) as $_ucU) {
             $_qcU     = $natUnitQual[$_lcU][$_ucU] ?? '';
             $_dKey    = $_qcU . '|' . $_ucU;
@@ -3254,7 +3344,7 @@ if ($action === 'analyse' && $importid) {
                 $DB->insert_records('local_rtocompliance_qualdebug', $_qdChunk);
             }
         } catch (Throwable $_qdInsEx) {
-            // importid column not yet present — retry stripping it
+            // Importid column not yet present — retry stripping it
             $_qdRowsNoImp = array_map(
                 fn($_r) => array_diff_key($_r, ['importid' => true]),
                 $_qdRows
@@ -3264,8 +3354,9 @@ if ($action === 'analyse' && $importid) {
             }
         }
     }
-    error_log('RECONCILER_ENGINE_QUALDEBUG_WRITTEN importid=' . intval($importid)
-        . ' rows=' . count($_qdRows)
+    error_log(
+        'RECONCILER_ENGINE_QUALDEBUG_WRITTEN importid=' . intval($importid)
+            . ' rows=' . count($_qdRows)
         . ' ts=' . date('c'));
 
     // ── Step 6b: Enhanced Friday Backup analysis — 4-source RESTORE classification ──
@@ -3285,7 +3376,7 @@ if ($action === 'analyse' && $importid) {
 
     // Build post-import unit coverage: uid → [unitcode => replacement courseid]
     // Used to detect when a missing enrolment has already been replaced by admin/IMIS.
-    $postImportUnitCoverage = []; // uid → [unitcode => courseid]
+    $postImportUnitCoverage = []; // Uid → [unitcode => courseid]
     foreach ($postImportEnrolments as $_piUid => $_piCids) {
         foreach (array_keys($_piCids) as $_piCid) {
             $_piUc = $courseToUnit[$_piCid] ?? '';
@@ -3295,8 +3386,8 @@ if ($action === 'analyse' && $importid) {
         }
     }
 
-    $fridayBackupMissing = []; // uid → [courseid => ['class','confidence','reason','unit_code']]
-    $restoreCandidates   = []; // uid → [courseid => true] — backward compat: RESTORE class only
+    $fridayBackupMissing = []; // Uid → [courseid => ['class','confidence','reason','unit_code']]
+    $restoreCandidates   = []; // Uid → [courseid => true] — backward compat: RESTORE class only
 
     // Per-class counters
     $_rt_countRestore     = 0;
@@ -3366,8 +3457,11 @@ if ($action === 'analyse' && $importid) {
     $_diagUnitsMapped = 0;
     $_diagUnitsUnmapped = [];
     foreach ($_diagUnitsSeen as $_dUc => $_) {
-        if (isset($unitToPreferredCid[$_dUc])) { $_diagUnitsMapped++; }
-        else { $_diagUnitsUnmapped[] = $_dUc; }
+        if (isset($unitToPreferredCid[$_dUc])) {
+            $_diagUnitsMapped++;
+        } else {
+            $_diagUnitsUnmapped[] = $_dUc;
+        }
     }
     $_diagTotalActual = 0;
     foreach ($currentEnrolments as $_cSet) { $_diagTotalActual += count($_cSet); }
@@ -3414,7 +3508,7 @@ if ($action === 'analyse' && $importid) {
 
     // Pre-fetch MAX/MIN startdate for all unmapped unit codes across ALL imports.
     // startdate is stored as DDMMYYYY; year = substr(startdate, 4, 4).
-    $_ucDateInfo = []; // unitcode → ['first_seen'=>str, 'last_seen'=>str, 'enrolments'=>n, 'students'=>n]
+    $_ucDateInfo = []; // Unitcode → ['first_seen'=>str, 'last_seen'=>str, 'enrolments'=>n, 'students'=>n]
     if (!empty($_diagUnitsUnmapped)) {
         list($_ucDateSql, $_ucDateParams) = $DB->get_in_or_equal(
             $_diagUnitsUnmapped, SQL_PARAMS_NAMED, 'ud'
@@ -3442,7 +3536,7 @@ if ($action === 'analyse' && $importid) {
     // Historical threshold: unit last seen more than 5 years ago → no active Moodle course expected.
     $_historicalThresholdYear = (int)date('Y') - 5; // 2026 → threshold = 2021
 
-    $_ucClassifier = []; // unitcode → [class, reason, action, example_sn, example_fn, first_code, ...]
+    $_ucClassifier = []; // Unitcode → [class, reason, action, example_sn, example_fn, first_code, ...]
     if (!empty($_diagUnitsUnmapped)) {
         foreach ($_diagUnitsUnmapped as $_unmUc) {
             $_likeEsc = '%' . $DB->sql_like_escape($_unmUc) . '%';
@@ -3571,12 +3665,14 @@ if ($action === 'analyse' && $importid) {
     // Merge legacy single-ID param + new multi-ID textarea into one list.
     $_rawIds = $traceclientids !== '' ? $traceclientids : $traceclientid;
     // Split on newlines, commas, or semicolons; strip blanks and duplicates.
-    $_traceIds = array_values(array_unique(array_filter(
-        array_map('trim', preg_split('/[\n\r,;]+/', $_rawIds)),
-        fn($v) => $v !== ''
+    $_traceIds = array_values(
+        array_unique(
+        array_filter(
+                array_map('trim', preg_split('/[\n\r,;]+/', $_rawIds)),
+                fn($v) => $v !== ''
     )));
 
-    $_traceDataList = []; // ordered list of per-student trace results
+    $_traceDataList = []; // Ordered list of per-student trace results
 
     foreach ($_traceIds as $_traceRawId) {
         $_lct = strtolower($_traceRawId);
@@ -3613,8 +3709,10 @@ if ($action === 'analyse' && $importid) {
                     }
                 }
                 // Count current vs archive candidates (mirrors Step 6 exactly)
-                $_trCurrentCnt = 0; $_trArchiveCnt = 0;
-                $_trCurrentCid = null; $_trArchiveCid = null;
+                $_trCurrentCnt = 0;
+                $_trArchiveCnt = 0;
+                $_trCurrentCid = null;
+                $_trArchiveCid = null;
                 foreach ($unitAllCids[$_tUc] ?? [] as $_candCidT) {
                     $_candDetT = $courseDetail[$_candCidT] ?? null;
                     if ($_candDetT === null) continue;
@@ -3723,7 +3821,7 @@ if ($action === 'analyse' && $importid) {
             // These are completely invisible to the main coverage check (Step 4 only
             // loads ue.status=0) — this is the most common reason isset($_covered6)
             // evaluates false for a student who appears enrolled in Moodle.
-            $_suspendedByUnit = []; // unitcode → [{cid, shortname}]
+            $_suspendedByUnit = []; // Unitcode → [{cid, shortname}]
             $_suspRs = $DB->get_recordset_sql(
                 "SELECT e.courseid
                    FROM {user_enrolments} ue
@@ -3754,7 +3852,7 @@ if ($action === 'analyse' && $importid) {
             // non-manual method would show NO active and NO suspended manual enrolments,
             // causing the reconciler to emit false ADD recommendations with reason code
             // NO_ENROLMENT — which would be misleading without this third check.
-            $_otherMethodByUnit = []; // unitcode → [{cid, shortname, enrol_method}]
+            $_otherMethodByUnit = []; // Unitcode → [{cid, shortname, enrol_method}]
             $_otherRs = $DB->get_recordset_sql(
                 "SELECT e.courseid, e.enrol AS enrol_method
                    FROM {user_enrolments} ue
@@ -3942,12 +4040,13 @@ if ($action === 'analyse' && $importid) {
         fwrite($_fh, "\xEF\xBB\xBF");
     }
 
-    // moodle_upload.csv header is written AFTER the loop once we know the max course count
+    // The moodle_upload.csv header is written AFTER the loop once we know the max course count
     // (Moodle Upload Users: one row per student, course1/role1, course2/role2, etc.)
-    $moodleUploadBuffer = []; // uid → ['username','idnumber','firstname','lastname','email','courses'=>[sn,...]]
-    // review_required.csv — full diagnostic report for human review
-    fputcsv($fReviewRequired, ['username','idnumber','firstname','lastname','email','course_shortname','course_fullname',
-                               'category','unit_code','qualcode','qual_type','lookup_mode','delivery_type',
+    $moodleUploadBuffer = []; // Uid → ['username','idnumber','firstname','lastname','email','courses'=>[sn,...]]
+    // The review_required.csv file — full diagnostic report for human review
+    fputcsv(
+        $fReviewRequired, ['username','idnumber','firstname','lastname','email','course_shortname','course_fullname',
+                                   'category','unit_code','qualcode','qual_type','lookup_mode','delivery_type',
                                'confidence','confidence_pct','score','score_flags','reason']);
     fputcsv($fUnmatchedAdd,   ['username','idnumber','firstname','lastname','unit_code','qualcode','startdate','delivery_key','reason']);
     $totalMoodleUpload   = 0;
@@ -3980,12 +4079,13 @@ if ($action === 'analyse' && $importid) {
     // foe_deleted / unknown.
     $_removeClass   = []; // [uid][cid] → classification array
     $_foeDeletedMap = []; // [uid][cid] → true
-    $_removeSummary = []; // classification → count
+    $_removeSummary = []; // Classification → count
     $_confStats     = ['High' => 0, 'Medium' => 0, 'Low' => 0, 'Review' => 0];
 
     if (!empty($removeEnrolments)) {
         // Collect unique userids and courseids
-        $_remUids = []; $_remCids = [];
+        $_remUids = [];
+        $_remCids = [];
         foreach ($removeEnrolments as $_xUid => $_xCids) {
             $_remUids[] = (int)$_xUid;
             foreach (array_keys($_xCids) as $_xCid) { $_remCids[(int)$_xCid] = true; }
@@ -4017,7 +4117,7 @@ if ($action === 'analyse' && $importid) {
                 }
                 $_logRs->close();
             } catch (\Throwable $_logEx) {
-                // logstore_standard_log may not exist on all installations — silently skip
+                // The logstore_standard_log table may not exist on all installations — silently skip
             }
         }
 
@@ -4048,25 +4148,39 @@ if ($action === 'analyse' && $importid) {
                 $_rcFoeDeleted = isset($_foeDeletedMap[$_rcUid][$_rcCid]);
 
                 if ($_rcIsQualCode) {
-                    $_rcCls = 'resource_qual_course'; $_rcConf = 'Medium'; $_rcRec = 'REVIEW';
+                    $_rcCls = 'resource_qual_course';
+                    $_rcConf = 'Medium';
+                    $_rcRec = 'REVIEW';
                     $_rcRsn = 'The extracted code (' . $_rcUc . ') matches a qualification code pattern, not a unit code. This appears to be a resource, induction, or qualification-level course rather than a standard AVETMISS unit course.';
                 } elseif ($_rcHasReplacement) {
-                    $_rcCls = 'duplicate_delivery'; $_rcConf = 'High'; $_rcRec = 'REMOVE';
+                    $_rcCls = 'duplicate_delivery';
+                    $_rcConf = 'High';
+                    $_rcRec = 'REMOVE';
                     $_rcRsn = 'Student is already KEEP-enrolled in another delivery of unit ' . $_rcUc . '. This is a duplicate — the active delivery covers the NAT requirement.';
                 } elseif ($_rcIsArchive && $_rcIsHistorical) {
-                    $_rcCls = 'historical_archive'; $_rcConf = 'High'; $_rcRec = 'KEEP';
+                    $_rcCls = 'historical_archive';
+                    $_rcConf = 'High';
+                    $_rcRec = 'KEEP';
                     $_rcRsn = 'Archive course from ' . $_rcDelivYear . ' (' . $_rcCatname . '). Historical delivery — not expected in current NAT. Retain unless deliberately removing all archive enrolments.';
                 } elseif ($_rcIsArchive) {
-                    $_rcCls = 'historical_archive'; $_rcConf = 'Medium'; $_rcRec = 'KEEP';
+                    $_rcCls = 'historical_archive';
+                    $_rcConf = 'Medium';
+                    $_rcRec = 'KEEP';
                     $_rcRsn = 'Course is in an archive category or is hidden (' . $_rcCatname . '). Likely a historical delivery not represented in the current NAT. Verify before removing.';
                 } elseif ($_rcIsHistorical) {
-                    $_rcCls = 'historical_archive'; $_rcConf = 'Medium'; $_rcRec = 'KEEP';
+                    $_rcCls = 'historical_archive';
+                    $_rcConf = 'Medium';
+                    $_rcRec = 'KEEP';
                     $_rcRsn = 'Delivery year ' . $_rcDelivYear . ' is more than 2 years ago — historical delivery not in current NAT.';
                 } elseif ($_rcFoeDeleted) {
-                    $_rcCls = 'foe_deleted'; $_rcConf = 'Medium'; $_rcRec = 'REVIEW';
+                    $_rcCls = 'foe_deleted';
+                    $_rcConf = 'Medium';
+                    $_rcRec = 'REVIEW';
                     $_rcRsn = 'An admin/FOE enrolment deletion event was found for this student+course in the logstore around the NAT import date. Unit is absent from current NAT — investigate whether this should be restored.';
                 } else {
-                    $_rcCls = 'unknown'; $_rcConf = 'Low'; $_rcRec = 'REVIEW';
+                    $_rcCls = 'unknown';
+                    $_rcConf = 'Low';
+                    $_rcRec = 'REVIEW';
                     $_rcRsn = 'Unit code (' . $_rcUc . ') is not in student\'s current NAT data and the enrolment predates the NAT import. No archive/historical indicators found — manual investigation recommended.';
                 }
 
@@ -4131,11 +4245,17 @@ if ($action === 'analyse' && $importid) {
         }
 
         // 3. Delivery quality (up to -25): prefer HIGH over MEDIUM/FALLBACK ADD recommendations
-        $_sqHigh = 0; $_sqMed = 0; $_sqFallback = 0;
+        $_sqHigh = 0;
+        $_sqMed = 0;
+        $_sqFallback = 0;
         foreach ($addMeta[$_uid] ?? [] as $_sqM) {
-            if     (($_sqM['confidence'] ?? '') === 'HIGH')     { $_sqHigh++; }
-            elseif (($_sqM['confidence'] ?? '') === 'MEDIUM')   { $_sqMed++; }
-            elseif (($_sqM['confidence'] ?? '') === 'FALLBACK') { $_sqFallback++; }
+            if     (($_sqM['confidence'] ?? '') === 'HIGH')     {
+                $_sqHigh++;
+            } elseif (($_sqM['confidence'] ?? '') === 'MEDIUM')   {
+                $_sqMed++;
+            } elseif (($_sqM['confidence'] ?? '') === 'FALLBACK') {
+                $_sqFallback++;
+            }
         }
         if ($_sqFallback === 0 && $_sqMed === 0) {
             $_confChecks[] = 'delivery_matched';
@@ -4180,20 +4300,23 @@ if ($action === 'analyse' && $importid) {
         foreach ($addEnrolments[$_uid] ?? [] as $_cid => $_uc) {
             $_cd   = $courseDetail[$_cid] ?? null;
             $_meta = $addMeta[$_uid][$_cid] ?? ['delivery_type' => '', 'confidence' => '', 'lookup_mode' => '', 'qualcode' => ''];
-            fputcsv($fMissing, [
-                $_un, $_idn, $_fn, $_ln, $_cid,
-                $_cd ? (string)$_cd->shortname : '', $_cd ? (string)$_cd->fullname : '',
-                $_cd ? (string)$_cd->catname   : '', $_uc,
-                $_meta['qualcode']      ?? '',
-                $_meta['lookup_mode']   ?? '',
-                $_meta['delivery_type'], $_meta['confidence'],
-                'NAT unit has no enrolment in any delivery — recommended preferred course shown',
+            fputcsv(
+                $fMissing, [
+                    $_un, $_idn, $_fn, $_ln, $_cid,
+                    $_cd ? (string)$_cd->shortname : '', $_cd ? (string)$_cd->fullname : '',
+                    $_cd ? (string)$_cd->catname   : '', $_uc,
+                    $_meta['qualcode']      ?? '',
+                    $_meta['lookup_mode']   ?? '',
+                    $_meta['delivery_type'], $_meta['confidence'],
+                    'NAT unit has no enrolment in any delivery — recommended preferred course shown',
             ]);
             $totalMissing++;
 
             // ── v5.9.170 Three-file routing by numeric confidence ─────────────
             // Helper: strip newlines/CR that confuse Moodle's csv_import_reader
-            $_sc = function ($v) { return str_replace(["\r\n", "\r", "\n"], ' ', (string)$v); };
+            $_sc = function ($v) {
+                return str_replace(["\r\n", "\r", "\n"], ' ', (string)$v);
+            };
             $_splitPct  = (int)($_meta['confidence_pct'] ?? 80);
             $_sn        = $_cd ? $_sc($_cd->shortname) : '';
             if ($_splitPct >= 95) {
@@ -4213,23 +4336,24 @@ if ($action === 'analyse' && $importid) {
                 }
                 $totalMoodleUpload++;
             } else {
-                // review_required.csv — full diagnostic report
-                fputcsv($fReviewRequired, [
-                    $_sc($_un), $_sc($_idn), $_sc($_fn), $_sc($_ln),
-                    $_sc($_em),
-                    $_sn,
-                    $_cd ? $_sc($_cd->fullname) : '',
-                    $_cd ? $_sc($_cd->catname)  : '',
-                    $_sc($_uc),
-                    $_sc($_meta['qualcode']      ?? ''),
-                    $_sc($_meta['qual_type']     ?? ''),
-                    $_sc($_meta['lookup_mode']   ?? ''),
-                    $_sc($_meta['delivery_type'] ?? ''),
-                    $_sc($_meta['confidence']    ?? ''),
-                    $_splitPct,
-                    (int)($_meta['score']        ?? 0),
-                    $_sc($_meta['score_flags']   ?? ''),
-                    'NAT unit has no enrolment in any delivery - course found but not confirmed',
+                // The review_required.csv file — full diagnostic report
+                fputcsv(
+                    $fReviewRequired, [
+                        $_sc($_un), $_sc($_idn), $_sc($_fn), $_sc($_ln),
+                        $_sc($_em),
+                        $_sn,
+                        $_cd ? $_sc($_cd->fullname) : '',
+                        $_cd ? $_sc($_cd->catname)  : '',
+                        $_sc($_uc),
+                        $_sc($_meta['qualcode']      ?? ''),
+                        $_sc($_meta['qual_type']     ?? ''),
+                        $_sc($_meta['lookup_mode']   ?? ''),
+                        $_sc($_meta['delivery_type'] ?? ''),
+                        $_sc($_meta['confidence']    ?? ''),
+                        $_splitPct,
+                        (int)($_meta['score']        ?? 0),
+                        $_sc($_meta['score_flags']   ?? ''),
+                        'NAT unit has no enrolment in any delivery - course found but not confirmed',
                 ]);
                 $totalReviewRequired++;
             }
@@ -4245,32 +4369,34 @@ if ($action === 'analyse' && $importid) {
                 'global_delivery'    => 'Exact semester match — global (score: ' . ($_meta['score'] ?? '?') . ')',
                 'historical_archive' => 'Archive-only delivery — no current delivery, no semester match',
             ];
-            fputcsv($fDebug, [
-                $_idn, $_fn, $_ln,
-                $_dbgQc, $_uc,
-                $_dbgQcCat,
-                $_meta['totalCands']    ?? 0,
-                $_meta['currentCands']  ?? 0,
-                $_meta['archiveCands']  ?? 0,
-                $_cd ? (string)$_cd->shortname : '',
-                $_dbgLmLabels[$_dbgLm] ?? ($_dbgLm . ' (score:' . ($_meta['score'] ?? '?') . ' flags:' . ($_meta['score_flags'] ?? '') . ')'),
-                ($_meta['semesterMatch'] ?? false) ? 'Yes' : 'No',
-                ($_meta['yearMatch']     ?? false) ? 'Yes' : 'No',
-                ($_dbgLm === 'historical_archive') ? 'Yes' : 'No',
-                ($_dbgLm === 'historical_archive') ? 'No semester match; only archive deliveries found for this unit' : '',
-                'No', // by construction: unit had zero active manual enrolment coverage
+            fputcsv(
+                $fDebug, [
+                    $_idn, $_fn, $_ln,
+                    $_dbgQc, $_uc,
+                    $_dbgQcCat,
+                    $_meta['totalCands']    ?? 0,
+                    $_meta['currentCands']  ?? 0,
+                    $_meta['archiveCands']  ?? 0,
+                    $_cd ? (string)$_cd->shortname : '',
+                    $_dbgLmLabels[$_dbgLm] ?? ($_dbgLm . ' (score:' . ($_meta['score'] ?? '?') . ' flags:' . ($_meta['score_flags'] ?? '') . ')'),
+                    ($_meta['semesterMatch'] ?? false) ? 'Yes' : 'No',
+                    ($_meta['yearMatch']     ?? false) ? 'Yes' : 'No',
+                    ($_dbgLm === 'historical_archive') ? 'Yes' : 'No',
+                    ($_dbgLm === 'historical_archive') ? 'No semester match; only archive deliveries found for this unit' : '',
+                    'No', // By construction: unit had zero active manual enrolment coverage
             ]);
         }
 
         // ── v5.9.167 Unmatched ADD (unresolved): write to unmatched_add.csv ──
         foreach ($addUnresolved[$_uid] ?? [] as $_urUc7 => $_urD7) {
-            fputcsv($fUnmatchedAdd, [
-                $_un, $_idn, $_fn, $_ln,
-                $_urUc7,
-                $_urD7['qualcode'] ?? '',
-                $_urD7['sd']       ?? '',
-                $_urD7['dk']       ?? '',
-                $_urD7['reason']   ?? '',
+            fputcsv(
+                $fUnmatchedAdd, [
+                    $_un, $_idn, $_fn, $_ln,
+                    $_urUc7,
+                    $_urD7['qualcode'] ?? '',
+                    $_urD7['sd']       ?? '',
+                    $_urD7['dk']       ?? '',
+                    $_urD7['reason']   ?? '',
             ]);
             $totalUnmatchedAdd++;
         }
@@ -4283,20 +4409,21 @@ if ($action === 'analyse' && $importid) {
                 : ($_urQc !== '' ? 'UNMAPPED' : '');
             $_urCurrCid = $_urData['current_cid'] ?? null;
             $_urCurrDet = $_urCurrCid ? ($courseDetail[$_urCurrCid] ?? null) : null;
-            fputcsv($fDebug, [
-                $_idn, $_fn, $_ln,
-                $_urQc, $_urUc,
-                $_urQcCat,
-                $_urData['totalCands']   ?? 0,
-                $_urData['currentCands'] ?? 0,
-                $_urData['archiveCands'] ?? 0,
-                'UNRESOLVED' . ($_urCurrDet ? ' (current: ' . (string)$_urCurrDet->shortname . ')' : ''),
-                'UNRESOLVED — current delivery exists but no exact semester match',
-                'No',
-                'No',
-                'No',
-                $_urData['reason'] ?? '',
-                'No',
+            fputcsv(
+                $fDebug, [
+                    $_idn, $_fn, $_ln,
+                    $_urQc, $_urUc,
+                    $_urQcCat,
+                    $_urData['totalCands']   ?? 0,
+                    $_urData['currentCands'] ?? 0,
+                    $_urData['archiveCands'] ?? 0,
+                    'UNRESOLVED' . ($_urCurrDet ? ' (current: ' . (string)$_urCurrDet->shortname . ')' : ''),
+                    'UNRESOLVED — current delivery exists but no exact semester match',
+                    'No',
+                    'No',
+                    'No',
+                    $_urData['reason'] ?? '',
+                    'No',
             ]);
         }
 
@@ -4305,18 +4432,19 @@ if ($action === 'analyse' && $importid) {
             $_cd  = $courseDetail[$_cid] ?? null;
             $_uc  = $currentEnrolments[$_uid][$_cid] ?? '';
             $_rcl = $_removeClass[$_uid][$_cid] ?? [];
-            fputcsv($fExtra, [
-                $_un, $_idn, $_fn, $_ln, $_cid,
-                $_cd ? (string)$_cd->shortname : '', $_cd ? (string)$_cd->fullname : '',
-                $_cd ? (string)$_cd->catname   : '', $_uc,
-                $_rcl['category_type']   ?? '',
-                $_rcl['classification']  ?? 'unknown',
-                $_rcl['archive']         ?? 'NO',
-                $_rcl['has_replacement'] ?? 'NO',
-                $_rcl['foe_deleted']     ?? 'NO',
-                $_rcl['confidence']      ?? 'Low',
-                $_rcl['recommendation']  ?? 'REVIEW',
-                $_rcl['reason']          ?? 'Unit code not in NAT data (enrolment predates NAT import — may be genuine mismatch)',
+            fputcsv(
+                $fExtra, [
+                    $_un, $_idn, $_fn, $_ln, $_cid,
+                    $_cd ? (string)$_cd->shortname : '', $_cd ? (string)$_cd->fullname : '',
+                    $_cd ? (string)$_cd->catname   : '', $_uc,
+                    $_rcl['category_type']   ?? '',
+                    $_rcl['classification']  ?? 'unknown',
+                    $_rcl['archive']         ?? 'NO',
+                    $_rcl['has_replacement'] ?? 'NO',
+                    $_rcl['foe_deleted']     ?? 'NO',
+                    $_rcl['confidence']      ?? 'Low',
+                    $_rcl['recommendation']  ?? 'REVIEW',
+                    $_rcl['reason']          ?? 'Unit code not in NAT data (enrolment predates NAT import — may be genuine mismatch)',
             ]);
             $totalExtra++;
         }
@@ -4326,12 +4454,13 @@ if ($action === 'analyse' && $importid) {
             $_cd    = $courseDetail[$_cid] ?? null;
             $_uc    = $currentEnrolments[$_uid][$_cid] ?? '';
             $_enrTs = $enrolTimecreated[$_uid][$_cid] ?? 0;
-            fputcsv($fPostImport, [
-                $_un, $_idn, $_fn, $_ln, $_cid,
-                $_cd ? (string)$_cd->shortname : '', $_cd ? (string)$_cd->fullname : '',
-                $_cd ? (string)$_cd->catname   : '', $_uc,
-                $_enrTs ? date('Y-m-d H:i:s', $_enrTs) : '',
-                'Created after NAT import — legitimate admin/IMIS enrolment; do not remove',
+            fputcsv(
+                $fPostImport, [
+                    $_un, $_idn, $_fn, $_ln, $_cid,
+                    $_cd ? (string)$_cd->shortname : '', $_cd ? (string)$_cd->fullname : '',
+                    $_cd ? (string)$_cd->catname   : '', $_uc,
+                    $_enrTs ? date('Y-m-d H:i:s', $_enrTs) : '',
+                    'Created after NAT import — legitimate admin/IMIS enrolment; do not remove',
             ]);
             $totalPostImport++;
         }
@@ -4339,11 +4468,12 @@ if ($action === 'analyse' && $importid) {
         // REVIEW rows — course has no unit code; cannot verify automatically
         foreach ($reviewEnrolments[$_uid] ?? [] as $_cid => $_) {
             $_cd = $courseDetail[$_cid] ?? null;
-            fputcsv($fReview, [
-                $_un, $_idn, $_fn, $_ln, $_cid,
-                $_cd ? (string)$_cd->shortname : '', $_cd ? (string)$_cd->fullname : '',
-                $_cd ? (string)$_cd->catname   : '',
-                'Course has no unit code — verify manually (may be orientation, LLN, or other non-unit course)',
+            fputcsv(
+                $fReview, [
+                    $_un, $_idn, $_fn, $_ln, $_cid,
+                    $_cd ? (string)$_cd->shortname : '', $_cd ? (string)$_cd->fullname : '',
+                    $_cd ? (string)$_cd->catname   : '',
+                    'Course has no unit code — verify manually (may be orientation, LLN, or other non-unit course)',
             ]);
             $totalReview++;
         }
@@ -4351,11 +4481,12 @@ if ($action === 'analyse' && $importid) {
         // RESTORE report rows — all Friday backup entries missing from current Moodle, with classification
         foreach ($fridayBackupMissing[$_uid] ?? [] as $_cid => $_clData) {
             $_cd = $courseDetail[$_cid] ?? null;
-            fputcsv($fRestore, [
-                $_un, $_idn, $_fn, $_ln, $_cid,
-                $_cd ? (string)$_cd->shortname : '', $_cd ? (string)$_cd->fullname : '',
-                $_cd ? (string)$_cd->catname   : '', $_clData['unit_code'],
-                $_clData['class'], $_clData['confidence'], $_clData['reason'],
+            fputcsv(
+                $fRestore, [
+                    $_un, $_idn, $_fn, $_ln, $_cid,
+                    $_cd ? (string)$_cd->shortname : '', $_cd ? (string)$_cd->fullname : '',
+                    $_cd ? (string)$_cd->catname   : '', $_clData['unit_code'],
+                    $_clData['class'], $_clData['confidence'], $_clData['reason'],
             ]);
             if ($_clData['class'] === 'RESTORE') { $totalRestore++; }
         }
@@ -4364,10 +4495,11 @@ if ($action === 'analyse' && $importid) {
         foreach ($keepEnrolments[$_uid] ?? [] as $_cid => $_) {
             $_cd = $courseDetail[$_cid] ?? null;
             $_uc = $currentEnrolments[$_uid][$_cid] ?? '';
-            fputcsv($fAudit, [
-                $_un, $_name, $_cid,
-                $_cd ? (string)$_cd->fullname : '', $_cd ? (string)$_cd->catname : '',
-                $_uc, 'YES', 'YES', 'KEEP',
+            fputcsv(
+                $fAudit, [
+                    $_un, $_name, $_cid,
+                    $_cd ? (string)$_cd->fullname : '', $_cd ? (string)$_cd->catname : '',
+                    $_uc, 'YES', 'YES', 'KEEP',
             ]);
             $totalKeep++;
         }
@@ -4375,58 +4507,71 @@ if ($action === 'analyse' && $importid) {
         foreach ($removeEnrolments[$_uid] ?? [] as $_cid => $_) {
             $_cd = $courseDetail[$_cid] ?? null;
             $_uc = $currentEnrolments[$_uid][$_cid] ?? '';
-            fputcsv($fAudit, [
-                $_un, $_name, $_cid,
-                $_cd ? (string)$_cd->fullname : '', $_cd ? (string)$_cd->catname : '',
-                $_uc, 'NO', 'YES', 'REMOVE',
+            fputcsv(
+                $fAudit, [
+                    $_un, $_name, $_cid,
+                    $_cd ? (string)$_cd->fullname : '', $_cd ? (string)$_cd->catname : '',
+                    $_uc, 'NO', 'YES', 'REMOVE',
             ]);
         }
         // Audit — POST-IMPORT
         foreach ($postImportEnrolments[$_uid] ?? [] as $_cid => $_) {
             $_cd = $courseDetail[$_cid] ?? null;
             $_uc = $currentEnrolments[$_uid][$_cid] ?? '';
-            fputcsv($fAudit, [
-                $_un, $_name, $_cid,
-                $_cd ? (string)$_cd->fullname : '', $_cd ? (string)$_cd->catname : '',
-                $_uc, 'NO', 'YES', 'POST-IMPORT',
+            fputcsv(
+                $fAudit, [
+                    $_un, $_name, $_cid,
+                    $_cd ? (string)$_cd->fullname : '', $_cd ? (string)$_cd->catname : '',
+                    $_uc, 'NO', 'YES', 'POST-IMPORT',
             ]);
         }
         // Audit — REVIEW
         foreach ($reviewEnrolments[$_uid] ?? [] as $_cid => $_) {
             $_cd = $courseDetail[$_cid] ?? null;
-            fputcsv($fAudit, [
-                $_un, $_name, $_cid,
-                $_cd ? (string)$_cd->fullname : '', $_cd ? (string)$_cd->catname : '',
-                '', '?', 'YES', 'REVIEW',
+            fputcsv(
+                $fAudit, [
+                    $_un, $_name, $_cid,
+                    $_cd ? (string)$_cd->fullname : '', $_cd ? (string)$_cd->catname : '',
+                    '', '?', 'YES', 'REVIEW',
             ]);
         }
         // Audit — ADD
         foreach ($addEnrolments[$_uid] ?? [] as $_cid => $_uc) {
             $_cd = $courseDetail[$_cid] ?? null;
-            fputcsv($fAudit, [
-                $_un, $_name, $_cid,
-                $_cd ? (string)$_cd->fullname : '', $_cd ? (string)$_cd->catname : '',
-                $_uc, 'YES', 'NO', 'ADD',
+            fputcsv(
+                $fAudit, [
+                    $_un, $_name, $_cid,
+                    $_cd ? (string)$_cd->fullname : '', $_cd ? (string)$_cd->catname : '',
+                    $_uc, 'YES', 'NO', 'ADD',
             ]);
         }
         // Audit — Friday backup missing (with specific classification)
         foreach ($fridayBackupMissing[$_uid] ?? [] as $_cid => $_clData) {
             $_cd = $courseDetail[$_cid] ?? null;
-            fputcsv($fAudit, [
-                $_un, $_name, $_cid,
-                $_cd ? (string)$_cd->fullname : '', $_cd ? (string)$_cd->catname : '',
-                $_clData['unit_code'], '?', 'NO', $_clData['class'],
+            fputcsv(
+                $fAudit, [
+                    $_un, $_name, $_cid,
+                    $_cd ? (string)$_cd->fullname : '', $_cd ? (string)$_cd->catname : '',
+                    $_clData['unit_code'], '?', 'NO', $_clData['class'],
             ]);
         }
 
         $_piCount       = count($postImportEnrolments[$_uid]  ?? []);
         $_fbMissing     = $fridayBackupMissing[$_uid] ?? [];
-        $_rstRestore    = 0; $_rstPiReplaced = 0; $_rstLegit = 0; $_rstRv = 0;
+        $_rstRestore    = 0;
+        $_rstPiReplaced = 0;
+        $_rstLegit = 0;
+        $_rstRv = 0;
         foreach ($_fbMissing as $_fbE) {
-            if     ($_fbE['class'] === 'RESTORE')            { $_rstRestore++; }
-            elseif ($_fbE['class'] === 'POST_IMPORT_REPLACED') { $_rstPiReplaced++; }
-            elseif ($_fbE['class'] === 'LEGITIMATE_REMOVE')  { $_rstLegit++; }
-            else                                             { $_rstRv++; }
+            if     ($_fbE['class'] === 'RESTORE')            {
+                $_rstRestore++;
+            } elseif ($_fbE['class'] === 'POST_IMPORT_REPLACED') {
+                $_rstPiReplaced++;
+            } elseif ($_fbE['class'] === 'LEGITIMATE_REMOVE')  {
+                $_rstLegit++;
+            } else {
+                $_rstRv++;
+            }
         }
         fputcsv($fSummary, [$_un, $_name, $_natUnitCount, $_coveredCount, $_misCount, $_extCount, $_piCount, $_rstRestore, $_rstPiReplaced, $_rstLegit, $_rstRv, $_rvCount, $_confScore, $_confLabel, implode(' | ', $_confChecks)]);
     }
@@ -4457,9 +4602,9 @@ if ($action === 'analyse' && $importid) {
     foreach ($moodleUploadBuffer as $_buf) {
         $_muRow = [$_buf['username'], $_buf['idnumber'], $_buf['firstname'], $_buf['lastname']];
         foreach ($_buf['courses'] as $_bsn) {
-            $_muRow[] = $_bsn;      // courseN
-            $_muRow[] = 'student';  // roleN
-            $_muRow[] = 0;          // enrolstatusN = 0 (active)
+            $_muRow[] = $_bsn;      // CourseN
+            $_muRow[] = 'student';  // RoleN
+            $_muRow[] = 0;          // EnrolstatusN = 0 (active)
         }
         // Pad remaining course/role/enrolstatus triples with empty strings
         $_pad = ($_maxCourses - count($_buf['courses'])) * 3;
@@ -4495,12 +4640,13 @@ if ($action === 'analyse' && $importid) {
             $_ambDkDummy = '';
             $_ambDk  = $_ambDet ? _reconcile_course_delivery_key_path($_ambSn, $courseAncestorNames[$_ambCid] ?? [], $_ambDkDummy) : '';
             $_ambCnt = $_diagManualCounts[$_ambCid] ?? 0;
-            fputcsv($fAmbiguous, [
-                $_ambUc, $_ambCid, $_ambSn, $_ambFn, $_ambCat,
-                $_ambVis ? 'Yes' : 'No',
-                $_ambDk,
-                $_ambCnt,
-                ($_ambCid === $_chosenAmbCid) ? 'YES' : 'NO',
+            fputcsv(
+                $fAmbiguous, [
+                    $_ambUc, $_ambCid, $_ambSn, $_ambFn, $_ambCat,
+                    $_ambVis ? 'Yes' : 'No',
+                    $_ambDk,
+                    $_ambCnt,
+                    ($_ambCid === $_chosenAmbCid) ? 'YES' : 'NO',
             ]);
         }
     }
@@ -4511,15 +4657,16 @@ if ($action === 'analyse' && $importid) {
     foreach ($courseExtractionMeta as $_caId => $_caMeta) {
         $_caDet = $courseDetail[$_caId] ?? null;
         if ($_caDet === null) continue;
-        fputcsv($fCourseAudit, [
-            $_caId,
-            (string)$_caDet->shortname,
-            (string)$_caDet->fullname,
-            $courseToUnit[$_caId] ?? '',
-            $_caMeta['source'],
-            $_caMeta['fullname_count'],
-            $_caMeta['fullname_list'],
-            $_caMeta['flags'],
+        fputcsv(
+            $fCourseAudit, [
+                $_caId,
+                (string)$_caDet->shortname,
+                (string)$_caDet->fullname,
+                $courseToUnit[$_caId] ?? '',
+                $_caMeta['source'],
+                $_caMeta['fullname_count'],
+                $_caMeta['fullname_list'],
+                $_caMeta['flags'],
         ]);
     }
     fputcsv($fCourseAudit, $_stampEof);
@@ -4649,26 +4796,36 @@ if ($action === 'analyse' && $importid) {
         ['iid' => $importid]);
 
     // Extract all category counts in one pass — used for C2, summary box, stats block, banner.
-    $_ncMatchedRecs = 0; $_ncMatchedStudents = 0;
+    $_ncMatchedRecs = 0;
+    $_ncMatchedStudents = 0;
     $_ncHistoricalRecs = 0;
-    $_ncEnrolGapRecs = 0; $_ncRecentNoCourRecs = 0;
-    $_ncUnlinkedRecs = 0; $_ncUnlinkedStudents = 0;
+    $_ncEnrolGapRecs = 0;
+    $_ncRecentNoCourRecs = 0;
+    $_ncUnlinkedRecs = 0;
+    $_ncUnlinkedStudents = 0;
     foreach ($_rcCatBreak as $_rcCb) {
         switch ($_rcCb->category) {
             case 'MATCHED':
-                $_ncMatchedRecs = (int)$_rcCb->records; $_ncMatchedStudents = (int)$_rcCb->students; break;
+                $_ncMatchedRecs = (int)$_rcCb->records;
+                $_ncMatchedStudents = (int)$_rcCb->students;
+                break;
             case 'HISTORICAL_NO_COURSE':
-                $_ncHistoricalRecs = (int)$_rcCb->records; break;
+                $_ncHistoricalRecs = (int)$_rcCb->records;
+                break;
             case 'ENROLMENT_GAP_REVIEW':
-                $_ncEnrolGapRecs = (int)$_rcCb->records; break;
+                $_ncEnrolGapRecs = (int)$_rcCb->records;
+                break;
             case 'RECENT_NO_COURSE_REVIEW':
-                $_ncRecentNoCourRecs = (int)$_rcCb->records; break;
+                $_ncRecentNoCourRecs = (int)$_rcCb->records;
+                break;
             case 'UNLINKED_STUDENT_REVIEW':
-                $_ncUnlinkedRecs = (int)$_rcCb->records; $_ncUnlinkedStudents = (int)$_rcCb->students; break;
+                $_ncUnlinkedRecs = (int)$_rcCb->records;
+                $_ncUnlinkedStudents = (int)$_rcCb->students;
+                break;
         }
     }
     $_ncNeedsReviewRecs = $_ncEnrolGapRecs + $_ncRecentNoCourRecs + $_ncUnlinkedRecs;
-    $_rcMatchedRecs = $_ncMatchedRecs; // alias used elsewhere
+    $_rcMatchedRecs = $_ncMatchedRecs; // Alias used elsewhere
 
     // Check 2: MATCHED count ≥ KEEP count — smoke detector for Fix B (combined-course matching).
     // If MATCHED < KEEP, Fix B is not recovering combined-course records and C2 will fail loudly.
@@ -4703,19 +4860,21 @@ if ($action === 'analyse' && $importid) {
     }
 
     // Persist regression summary for audit trail
-    set_config('reconciler_regression_' . $importid, json_encode([
-        'check1_pass' => $_rcCheck1Pass,
-        'check2_pass' => $_rcCheck2Pass,
-        'check3_pass' => $_rcCheck3Pass,
-        'check4_pass' => $_rcCheck4Pass,
-        'check5_pass' => $_rcCheck5Pass,
-        'total_nat'   => $_rcTotalNat,
-        'total_class' => $_rcTotalClass,
-        'unclassified'=> $_rcUnclass,
-        'unlinked'    => $_rcUnlinked,
-        'matched'     => $_rcMatchedRecs,
-        'keep_total'  => $totalKeep,
-        'ts'          => $_ncNow,
+    set_config(
+        'reconciler_regression_' . $importid, json_encode(
+        [
+                'check1_pass' => $_rcCheck1Pass,
+                'check2_pass' => $_rcCheck2Pass,
+                'check3_pass' => $_rcCheck3Pass,
+                'check4_pass' => $_rcCheck4Pass,
+                'check5_pass' => $_rcCheck5Pass,
+                'total_nat'   => $_rcTotalNat,
+                'total_class' => $_rcTotalClass,
+                'unclassified'=> $_rcUnclass,
+                'unlinked'    => $_rcUnlinked,
+                'matched'     => $_rcMatchedRecs,
+                'keep_total'  => $totalKeep,
+                'ts'          => $_ncNow,
     ]), 'local_rtocompliance');
 
     // ── Run fingerprint: short MD5 of key output files (for staleness detection) ──
@@ -4737,14 +4896,16 @@ if ($action === 'analyse' && $importid) {
     foreach ($addUnresolved as $_arU) { $_totalUnresolved += count($_arU); }
 
     // ── Render results page ───────────────────────────────────────────────────
-    $_dlBase = new moodle_url('/local/rtocompliance/reconcile.php', [
-        'action'   => 'download',
-        'importid' => $importid,
-        'token'    => $newToken,
+    $_dlBase = new moodle_url(
+        '/local/rtocompliance/reconcile.php', [
+            'action'   => 'download',
+            'importid' => $importid,
+            'token'    => $newToken,
     ]);
-    $_rerunUrl = (new moodle_url('/local/rtocompliance/reconcile.php', [
-        'action'   => 'analyse',
-        'importid' => $importid,
+    $_rerunUrl = (new moodle_url(
+        '/local/rtocompliance/reconcile.php', [
+            'action'   => 'analyse',
+            'importid' => $importid,
     ]))->out(false);
     $_backUrl = (new moodle_url('/local/rtocompliance/reconcile.php'))->out(false);
 
@@ -4754,25 +4915,38 @@ if ($action === 'analyse' && $importid) {
             : '')
         . ' — ' . date('d M Y', (int)$importRec->timecreated);
 
-    $PAGE->add_body_class('path-local-rtocompliance'); // v5.9.445: scoped CSS needs this on admin_externalpage pages.
+    $PAGE->add_body_class('path-local-rtocompliance'); // Version 5.9.445: scoped CSS needs this on admin_externalpage pages.
     echo $OUTPUT->header();
     ?>
     <?php
     // ── Pre-build all download URLs ───────────────────────────────────────────
-    $urlMoodleUpload   = clone $_dlBase; $urlMoodleUpload->param('download', 'moodle_upload');
-    $urlReviewRequired = clone $_dlBase; $urlReviewRequired->param('download', 'review_required');
-    $urlUnmatchedAdd   = clone $_dlBase; $urlUnmatchedAdd->param('download', 'unmatched_add');
-    $urlMissing        = clone $_dlBase; $urlMissing->param('download', 'missing');
-    $urlExtra          = clone $_dlBase; $urlExtra->param('download', 'extra');
-    $urlPostImport     = clone $_dlBase; $urlPostImport->param('download', 'postimport');
-    $urlReview         = clone $_dlBase; $urlReview->param('download', 'review');
-    $urlSummary        = clone $_dlBase; $urlSummary->param('download', 'summary');
-    $urlAudit          = clone $_dlBase; $urlAudit->param('download', 'audit');
-    $urlAmbiguous      = clone $_dlBase; $urlAmbiguous->param('download', 'ambiguous');
-    $urlCourseAudit    = clone $_dlBase; $urlCourseAudit->param('download', 'courseaudit');
-    $urlDebug          = clone $_dlBase; $urlDebug->param('download', 'debug');
+    $urlMoodleUpload   = clone $_dlBase;
+    $urlMoodleUpload->param('download', 'moodle_upload');
+    $urlReviewRequired = clone $_dlBase;
+    $urlReviewRequired->param('download', 'review_required');
+    $urlUnmatchedAdd   = clone $_dlBase;
+    $urlUnmatchedAdd->param('download', 'unmatched_add');
+    $urlMissing        = clone $_dlBase;
+    $urlMissing->param('download', 'missing');
+    $urlExtra          = clone $_dlBase;
+    $urlExtra->param('download', 'extra');
+    $urlPostImport     = clone $_dlBase;
+    $urlPostImport->param('download', 'postimport');
+    $urlReview         = clone $_dlBase;
+    $urlReview->param('download', 'review');
+    $urlSummary        = clone $_dlBase;
+    $urlSummary->param('download', 'summary');
+    $urlAudit          = clone $_dlBase;
+    $urlAudit->param('download', 'audit');
+    $urlAmbiguous      = clone $_dlBase;
+    $urlAmbiguous->param('download', 'ambiguous');
+    $urlCourseAudit    = clone $_dlBase;
+    $urlCourseAudit->param('download', 'courseaudit');
+    $urlDebug          = clone $_dlBase;
+    $urlDebug->param('download', 'debug');
     if ($fridayBackupLoaded) {
-        $urlRestore = clone $_dlBase; $urlRestore->param('download', 'restore');
+        $urlRestore = clone $_dlBase;
+        $urlRestore->param('download', 'restore');
         $_restoreAllCount = $_diagTotalRestore + $_diagTotalPiReplaced + $_diagTotalLegitRemove + $_diagTotalRtReview;
     }
     // ── Qual discovery panel state (for advanced section) ────────────────────
@@ -4806,15 +4980,25 @@ if ($action === 'analyse' && $importid) {
         ];
     }
     $_iqRs2->close();
-    $_qmCntCatHier  = 0; $_qmCntFingerp = 0; $_qmCntManual = 0;
-    $_qmCntLowConf  = 0; $_qmCntUnmapped = 0;
+    $_qmCntCatHier  = 0;
+    $_qmCntFingerp = 0;
+    $_qmCntManual = 0;
+    $_qmCntLowConf  = 0;
+    $_qmCntUnmapped = 0;
     foreach ($_importQualRows as $_qmSr) {
-        if ($_qmSr['mapped_catid'] === null)              { $_qmCntUnmapped++; }
-        elseif ($_qmSr['method'] === 'manual')            { $_qmCntManual++; }
-        elseif ($_qmSr['method'] === 'unit_root_discovery' && ($_qmSr['confidence'] ?? 0) < 90) { $_qmCntLowConf++; }
-        elseif ($_qmSr['method'] !== 'unit_root_discovery' && ($_qmSr['confidence'] ?? 0) < 80) { $_qmCntLowConf++; }
-        elseif ($_qmSr['method'] === 'category_hierarchy') { $_qmCntCatHier++; }
-        else                                               { $_qmCntFingerp++; }
+        if ($_qmSr['mapped_catid'] === null)              {
+            $_qmCntUnmapped++;
+        } elseif ($_qmSr['method'] === 'manual')            {
+            $_qmCntManual++;
+        } elseif ($_qmSr['method'] === 'unit_root_discovery' && ($_qmSr['confidence'] ?? 0) < 90) {
+            $_qmCntLowConf++;
+        } elseif ($_qmSr['method'] !== 'unit_root_discovery' && ($_qmSr['confidence'] ?? 0) < 80) {
+            $_qmCntLowConf++;
+        } elseif ($_qmSr['method'] === 'category_hierarchy') {
+            $_qmCntCatHier++;
+        } else {
+            $_qmCntFingerp++;
+        }
     }
     // Build set of quals whose EVERY record in this import is HISTORICAL_NO_COURSE.
     // These pre-LMS quals (e.g. SC001, ABC12345) have no Moodle category and never will —
@@ -4850,7 +5034,7 @@ if ($action === 'analyse' && $importid) {
     $_qmPanelIcon  = $_qmPanelOk ? '&#9989;' : '&#9888;';
     $_qmSaveUrl    = (new moodle_url('/local/rtocompliance/reconcile.php', ['action' => 'savequalmapping']))->out(false);
     // Pipeline state (for advanced section)
-    $_allMapped   = ($_qmCntUnmapped === 0); // corrected: excludes all-historical quals (pre-LMS quals with no course are not mapping failures)
+    $_allMapped   = ($_qmCntUnmapped === 0); // Corrected: excludes all-historical quals (pre-LMS quals with no course are not mapping failures)
     $_pipelineOk  = ($_diagUnitsMapped > 0 && $_diagTotalActual > 0);
     $_panelColor  = $_pipelineOk ? '#198754' : '#dc3545';
     $_scStudentOk = $_diagMatchedUsers > 0;
@@ -4872,7 +5056,7 @@ if ($action === 'analyse' && $importid) {
     $_csAutoReady = ($_confStats['High'] / max(1, $_csTotalStudents)) >= 0.90;
     ?>
 
-    <?php // v5.9.404: open the layout wrap + left sidebar + content (this analyse
+    <?php // Version 5.9.404: open the layout wrap + left sidebar + content (this analyse
           // view previously rendered a bare rtoc-main-content with no sidebar).
           echo '<div class="rtoc-layout-wrap">' . local_rtocompliance_render_sidebar()
              . '<div class="rtoc-main-content">'; ?>
@@ -4920,9 +5104,10 @@ if ($action === 'analyse' && $importid) {
     );
     $_ncRegressionOk = $_rcCheck1Pass && $_rcCheck2Pass && $_rcCheck3Pass && $_rcCheck4Pass && $_rcCheck5Pass;
     // Base URL for NAT file downloads (used in the download section below).
-    $_natDlBase = new moodle_url('/local/rtocompliance/reconcile.php', [
-        'action'   => 'natdownload',
-        'importid' => $importid,
+    $_natDlBase = new moodle_url(
+        '/local/rtocompliance/reconcile.php', [
+            'action'   => 'natdownload',
+            'importid' => $importid,
     ]);
     ?>
 
@@ -5140,10 +5325,14 @@ if ($action === 'analyse' && $importid) {
             Qualification Discovery &mdash; Auto-Discovery Engine
             &nbsp;<span style="font-weight:400;font-size:0.9em;">
               <?php $_qmParts = []; ?>
-              <?php if ($_qmCntCatHier): ?><?php $_qmParts[] = $_qmCntCatHier . ' by category name'; ?><?php endif; ?>
-              <?php if ($_qmCntFingerp): ?><?php $_qmParts[] = $_qmCntFingerp . ' by unit root discovery'; ?><?php endif; ?>
-              <?php if ($_qmCntManual):  ?><?php $_qmParts[] = $_qmCntManual  . ' manual'; ?><?php endif; ?>
-              <?php if ($_qmNeedsAttn):  ?><?php $_qmParts[] = '<strong>' . $_qmNeedsAttn . ' need attention</strong>'; ?><?php endif; ?>
+              <?php if ($_qmCntCatHier): ?><?php $_qmParts[] = $_qmCntCatHier . ' by category name';
+              ?><?php endif; ?>
+              <?php if ($_qmCntFingerp): ?><?php $_qmParts[] = $_qmCntFingerp . ' by unit root discovery';
+              ?><?php endif; ?>
+              <?php if ($_qmCntManual):  ?><?php $_qmParts[] = $_qmCntManual  . ' manual';
+              ?><?php endif; ?>
+              <?php if ($_qmNeedsAttn):  ?><?php $_qmParts[] = '<strong>' . $_qmNeedsAttn . ' need attention</strong>';
+              ?><?php endif; ?>
               <?= implode(' &middot; ', $_qmParts) ?>
             </span>
             &nbsp;&mdash; click to expand / collapse
@@ -5210,14 +5399,22 @@ if ($action === 'analyse' && $importid) {
                     $_iqWinner = null;
                     if ($_iqUfDiag && !empty($_iqUfDiag['candidates'])) {
                         foreach ($_iqUfDiag['candidates'] as $_iqWC) {
-                            if (!empty($_iqWC['winner'])) { $_iqWinner = $_iqWC; break; }
+                            if (!empty($_iqWC['winner'])) {
+                                $_iqWinner = $_iqWC;
+                                break;
+                            }
                         }
                     }
                     $_iqIsAllHist = !empty($_qmAllHistQuals[$_iqQcKey]);
-                    if ($_iqIsAllHist)        { $_iqRowBg = 'background:#f4f4f4;'; }
-                    elseif (!$_iqMapped)     { $_iqRowBg = 'background:#fff3f3;'; }
-                    elseif (!$_iqHighConf)   { $_iqRowBg = 'background:#fffbf0;'; }
-                    else                     { $_iqRowBg = ''; }
+                    if ($_iqIsAllHist)        {
+                        $_iqRowBg = 'background:#f4f4f4;';
+                    } elseif (!$_iqMapped)     {
+                        $_iqRowBg = 'background:#fff3f3;';
+                    } elseif (!$_iqHighConf)   {
+                        $_iqRowBg = 'background:#fffbf0;';
+                    } else {
+                        $_iqRowBg = '';
+                    }
                     if ($_iqMethod === 'category_hierarchy') {
                         $_iqMethBadge = '<span title="This qualification was matched to a course category because the code was found in the category name." style="display:inline-block;padding:1px 7px;border-radius:4px;background:#198754;color:#fff;font-size:0.76em;white-space:nowrap;">&#128269; Category Name</span>';
                     } elseif ($_iqMethod === 'unit_root_discovery') {
@@ -5329,9 +5526,12 @@ if ($action === 'analyse' && $importid) {
                             <?php endif; ?>
                           </div>
                           <?php foreach ($_iqUfDiag['candidates'] as $_dCand):
-                            $_dCov = (int)$_dCand['coverage_pct']; $_dPur = (int)$_dCand['purity_pct'];
-                            $_dCmb = (int)$_dCand['combined_pct']; $_dBr  = (int)$_dCand['branch_units'];
-                            $_dRaw = (int)$_dCand['raw_matched'];  $_dDep = (int)$_dCand['depth'];
+                            $_dCov = (int)$_dCand['coverage_pct'];
+                            $_dPur = (int)$_dCand['purity_pct'];
+                            $_dCmb = (int)$_dCand['combined_pct'];
+                            $_dBr  = (int)$_dCand['branch_units'];
+                            $_dRaw = (int)$_dCand['raw_matched'];
+                            $_dDep = (int)$_dCand['depth'];
                             $_dCmbCol = $_dCmb >= 90 ? '#198754' : ($_dCmb >= 60 ? '#fd7e14' : '#dc3545');
                           ?>
                           <div style="margin-bottom:5px;padding:4px 6px;border-radius:3px;<?= $_dCand['winner'] ? 'background:#e8f5e9;border:1px solid #a5d6a7;' : 'background:#f8f9fa;border:1px solid #dee2e6;color:#666;' ?>">
@@ -5346,7 +5546,8 @@ if ($action === 'analyse' && $importid) {
                               <span>Combined: <strong style="color:<?= $_dCmbCol ?>;"><?= $_dCmb ?>%</strong></span>
                             </div>
                           </div>
-                          <?php endforeach; unset($_dCand,$_dCov,$_dPur,$_dCmb,$_dBr,$_dRaw,$_dDep,$_dCmbCol); ?>
+                          <?php endforeach;
+                          unset($_dCand,$_dCov,$_dPur,$_dCmb,$_dBr,$_dRaw,$_dDep,$_dCmbCol); ?>
                           <?php if (!empty($_dMissing)): ?>
                           <div style="margin-top:5px;padding:4px 6px;background:#fff3cd;border:1px solid #ffc107;border-radius:3px;font-size:0.88em;">
                             <strong style="color:#856404;">&#9888; <?= count($_dMissing) ?> NAT unit<?= count($_dMissing) !== 1 ? 's' : '' ?> not found under winner branch:</strong>
@@ -5356,8 +5557,9 @@ if ($action === 'analyse' && $importid) {
                           <?php unset($_dTotal,$_dMargin,$_dRunnerUp,$_dMissing,$_dSrc,$_dSrcLabel,$_dUnitCode,$_dUnitFall,$_dUnitMix); ?>
                         </div>
                       </div>
-                      <?php unset($_dTogId); endif; ?>
-                      <?php endif; // end: !$_iqIsAllHist ?>
+                      <?php unset($_dTogId);
+                      endif; ?>
+                      <?php endif; // End: !$_iqIsAllHist ?>
                     </td>
                     <td style="text-align:center;"><?= (int)$_iqRow['student_count'] ?></td>
                     <td style="text-align:center;"><?= (int)$_iqRow['unit_count'] ?></td>
@@ -5557,15 +5759,21 @@ if ($action === 'analyse' && $importid) {
         // chaining ->param('category', ...)->out(false) threw "Call to a member
         // function out() on string/null". Fix: pre-build each URL object separately
         // (same pattern as $urlMoodleUpload etc. pre-built above).
-        $_ncdBase = new moodle_url('/local/rtocompliance/reconcile.php', [
-            'action'   => 'natclassdownload',
-            'importid' => $importid,
+        $_ncdBase = new moodle_url(
+            '/local/rtocompliance/reconcile.php', [
+                'action'   => 'natclassdownload',
+                'importid' => $importid,
         ]);
-        $_ncdUrlNeedsReview  = clone $_ncdBase; $_ncdUrlNeedsReview->param('category',  'needs_review');
-        $_ncdUrlEnrolGap     = clone $_ncdBase; $_ncdUrlEnrolGap->param('category',     'ENROLMENT_GAP_REVIEW');
-        $_ncdUrlUnlinked     = clone $_ncdBase; $_ncdUrlUnlinked->param('category',     'UNLINKED_STUDENT_REVIEW');
-        $_ncdUrlRecentNC     = clone $_ncdBase; $_ncdUrlRecentNC->param('category',     'RECENT_NO_COURSE_REVIEW');
-        $_ncdUrlHistNC       = clone $_ncdBase; $_ncdUrlHistNC->param('category',       'HISTORICAL_NO_COURSE');
+        $_ncdUrlNeedsReview  = clone $_ncdBase;
+        $_ncdUrlNeedsReview->param('category',  'needs_review');
+        $_ncdUrlEnrolGap     = clone $_ncdBase;
+        $_ncdUrlEnrolGap->param('category',     'ENROLMENT_GAP_REVIEW');
+        $_ncdUrlUnlinked     = clone $_ncdBase;
+        $_ncdUrlUnlinked->param('category',     'UNLINKED_STUDENT_REVIEW');
+        $_ncdUrlRecentNC     = clone $_ncdBase;
+        $_ncdUrlRecentNC->param('category',     'RECENT_NO_COURSE_REVIEW');
+        $_ncdUrlHistNC       = clone $_ncdBase;
+        $_ncdUrlHistNC->param('category',       'HISTORICAL_NO_COURSE');
         // Map category key → [label, btn-class, pre-built url object]
         $_ncdCategoryMap = [
             'ENROLMENT_GAP_REVIEW'    => ['&#128274; Enrolment Gap',        'btn-outline-warning',   $_ncdUrlEnrolGap],
@@ -5695,7 +5903,7 @@ $imports = $DB->get_records_sql(
 );
 
 echo $OUTPUT->header();
-// v5.9.404: render the plugin's left-hand sidebar (this page was missing it). This
+// Version 5.9.404: render the plugin's left-hand sidebar (this page was missing it). This
 // opens rtoc-layout-wrap + sidebar + rtoc-main-content, replacing the bare
 // rtoc-main-content div that previously left the page with no sidebar.
 echo local_rtocompliance_render_nav_header('NAT Reconciliation');

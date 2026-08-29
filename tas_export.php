@@ -493,7 +493,8 @@ ob_start();
         <h2>Table of Contents</h2>
         <ul class="toc-list">
             <?php foreach ($sectionDefinitions as $num => $def): ?>
-                <li><span class="num"><?php echo $num; ?>.</span> <?php echo $def['title']; ?></li>
+                <li><span class="num"><?php echo $num;
+                ?>.</span> <?php echo $def['title']; ?></li>
             <?php endforeach; ?>
         </ul>
     </div>

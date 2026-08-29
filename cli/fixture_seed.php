@@ -315,19 +315,21 @@ for ($i = 0; $i < min($options['trainers'], count($trainernames)); $i++) {
     $trainerrecord->userid = $userid;
     $trainerrecord->taecredential = 'TAE40122';
     $trainerrecord->taedateachieved = strtotime('-2 years');
-    $trainerrecord->vocationalqualifications = json_encode([
-        ['code' => 'BSB50420', 'name' => 'Diploma of Leadership and Management', 'year' => 2018],
-        ['code' => 'BSB40520', 'name' => 'Certificate IV in Leadership and Management', 'year' => 2015],
+    $trainerrecord->vocationalqualifications = json_encode(
+        [
+            ['code' => 'BSB50420', 'name' => 'Diploma of Leadership and Management', 'year' => 2018],
+            ['code' => 'BSB40520', 'name' => 'Certificate IV in Leadership and Management', 'year' => 2015],
     ]);
     $trainerrecord->industrycurrency = 'Current industry engagement through consulting work and professional memberships';
     $trainerrecord->industrycurrencydate = strtotime('-6 months');
     $trainerrecord->vocationalcompetency = 'Demonstrated through 10+ years experience in management roles';
     $trainerrecord->vocationalcompetencydate = strtotime('-1 year');
     $trainerrecord->cpdhours = rand(20, 50);
-    $trainerrecord->cpdlog = json_encode([
-        ['activity' => 'Industry Conference', 'hours' => 8, 'date' => date('Y-m-d', strtotime('-3 months'))],
-        ['activity' => 'Online Training Course', 'hours' => 4, 'date' => date('Y-m-d', strtotime('-6 months'))],
-        ['activity' => 'Workshop Facilitation', 'hours' => 6, 'date' => date('Y-m-d', strtotime('-9 months'))],
+    $trainerrecord->cpdlog = json_encode(
+        [
+            ['activity' => 'Industry Conference', 'hours' => 8, 'date' => date('Y-m-d', strtotime('-3 months'))],
+            ['activity' => 'Online Training Course', 'hours' => 4, 'date' => date('Y-m-d', strtotime('-6 months'))],
+            ['activity' => 'Workshop Facilitation', 'hours' => 6, 'date' => date('Y-m-d', strtotime('-9 months'))],
     ]);
     $trainerrecord->wwccnumber = 'WWC' . str_pad(rand(1000000, 9999999), 7, '0', STR_PAD_LEFT);
     $trainerrecord->wwccstate = ['NSW', 'VIC', 'QLD', 'SA', 'WA'][rand(0, 4)];
@@ -590,9 +592,12 @@ foreach ($studentsWithCompletions as $student) {
              WHERE studentid = ? AND outcomeidentifier IN ('20', '51', '52', '60', '81', '82')",
             [$student->studentid]
         );
-        $certrecord->units = json_encode(array_values(array_map(function ($u) {
-            return ['code' => $u->unitcode, 'name' => $u->unitname, 'outcome' => $u->outcomeidentifier];
-        }, $units)));
+        $certrecord->units = json_encode(
+            array_values(
+            array_map(
+            function ($u) {
+                        return ['code' => $u->unitcode, 'name' => $u->unitname, 'outcome' => $u->outcomeidentifier];
+                    }, $units)));
     }
     
     $certrecord->issuedate = strtotime('-' . rand(1, 180) . ' days');
@@ -628,13 +633,14 @@ for ($i = 0; $i < 15; $i++) {
     $surveyrecord->respondentid = $student['userid'];
     $surveyrecord->respondentname = $student['name'];
     $surveyrecord->respondentemail = "student{$i}@testtraining.edu.au";
-    $surveyrecord->responses = json_encode([
-        'q1_training_relevant' => rand(1, 5),
-        'q2_trainers_knowledge' => rand(1, 5),
-        'q3_assessment_fair' => rand(1, 5),
-        'q4_facilities_adequate' => rand(1, 5),
-        'q5_support_available' => rand(1, 5),
-        'q6_recommend_rto' => rand(1, 5),
+    $surveyrecord->responses = json_encode(
+        [
+            'q1_training_relevant' => rand(1, 5),
+            'q2_trainers_knowledge' => rand(1, 5),
+            'q3_assessment_fair' => rand(1, 5),
+            'q4_facilities_adequate' => rand(1, 5),
+            'q5_support_available' => rand(1, 5),
+            'q6_recommend_rto' => rand(1, 5),
     ]);
     $surveyrecord->overallsatisfaction = rand(3, 5);
     $surveyrecord->comments = rand(0, 1) ? 'Great training experience, learned a lot!' : null;
@@ -654,11 +660,12 @@ for ($i = 0; $i < 5; $i++) {
     $surveyrecord->surveytype = 'employer';
     $surveyrecord->respondentname = ['Acme Corp', 'Tech Solutions', 'Healthcare Plus', 'Finance Group', 'Retail Co'][$i];
     $surveyrecord->respondentemail = "employer{$i}@company.com.au";
-    $surveyrecord->responses = json_encode([
-        'q1_employees_skills' => rand(1, 5),
-        'q2_training_relevant' => rand(1, 5),
-        'q3_recommend_rto' => rand(1, 5),
-        'q4_communication' => rand(1, 5),
+    $surveyrecord->responses = json_encode(
+        [
+            'q1_employees_skills' => rand(1, 5),
+            'q2_training_relevant' => rand(1, 5),
+            'q3_recommend_rto' => rand(1, 5),
+            'q4_communication' => rand(1, 5),
     ]);
     $surveyrecord->overallsatisfaction = rand(3, 5);
     $surveyrecord->year = $year;

@@ -67,7 +67,7 @@ $PAGE->requires->css('/local/rtocompliance/styles.css');
 if (data_submitted() && confirm_sesskey()) {
     $designjson = required_param('designjson', PARAM_RAW);  // pipeline-ignore: PARAM_RAW — JSON document, json_decode()'d immediately and rejected if it does not decode
     $name       = trim(optional_param('name', '', PARAM_TEXT));
-    // v4.3.0 CERT-TEMPLATE-AUDIENCES — admins can re-target an existing
+    // Version 4.3.0 CERT-TEMPLATE-AUDIENCES — admins can re-target an existing
     // template's audience from the editor at any time. Empty string means
     // "leave audience unchanged" (the field was not rendered, e.g. on an
     // older browser cached page).
@@ -83,8 +83,9 @@ if (data_submitted() && confirm_sesskey()) {
         $reason = (trim((string)$designjson) === '')
             ? 'the layout data did not reach the server'
             : 'the layout data was not valid (' . json_last_error_msg() . ')';
-        redirect($PAGE->url,
-            'Could not save the template — ' . $reason . '. Your previously saved version is unchanged.',
+        redirect(
+            $PAGE->url,
+                'Could not save the template — ' . $reason . '. Your previously saved version is unchanged.',
             null, \core\output\notification::NOTIFY_ERROR);
     }
 
@@ -177,13 +178,14 @@ if (data_submitted() && confirm_sesskey()) {
                     $ext = ($m[1] === 'jpeg' || $m[1] === 'jpg') ? 'jpg' : $m[1];
                     try {
                         $fs->delete_area_files($context->id, 'local_rtocompliance', cert_template::FA_IMAGE, $itemid);
-                        $fs->create_file_from_string((object) [
-                            'contextid' => $context->id,
-                            'component' => 'local_rtocompliance',
-                            'filearea'  => cert_template::FA_IMAGE,
-                            'itemid'    => $itemid,
-                            'filepath'  => '/',
-                            'filename'  => 'field' . $i . '.' . $ext,
+                        $fs->create_file_from_string(
+                            (object) [
+                                'contextid' => $context->id,
+                                'component' => 'local_rtocompliance',
+                                'filearea'  => cert_template::FA_IMAGE,
+                                'itemid'    => $itemid,
+                                'filepath'  => '/',
+                                'filename'  => 'field' . $i . '.' . $ext,
                         ], $bytes);
                         $fld['imageitemid'] = $itemid;
                         $fld['imageurl']    = '';
@@ -205,18 +207,20 @@ if (data_submitted() && confirm_sesskey()) {
     // Persist the resolved bgitemid to the template row too.
     if (!empty($design['page']['bg_itemid'])) {
         global $DB;
-        $DB->update_record('local_rtocompliance_certtmpl', (object) [
-            'id' => $id,
-            'bgitemid' => (int) $design['page']['bg_itemid'],
+        $DB->update_record(
+            'local_rtocompliance_certtmpl', (object) [
+                'id' => $id,
+                'bgitemid' => (int) $design['page']['bg_itemid'],
         ]);
     }
 
-    // v4.3.0 CERT-TEMPLATE-AUDIENCES — re-target audience if posted.
+    // Version 4.3.0 CERT-TEMPLATE-AUDIENCES — re-target audience if posted.
     // set_audience() coerces unknown codes to 'default' and is a no-op
     // on isactive (admins must re-activate via the list page so the
     // swap is visible and audited).
     if ($audience_in !== '') {
-        cert_template::set_audience($id, $audience_in,
+        cert_template::set_audience(
+            $id, $audience_in,
             $audiencelabel_in !== '' ? $audiencelabel_in : null);
     }
 
@@ -224,10 +228,12 @@ if (data_submitted() && confirm_sesskey()) {
     if (!empty($validation['errors'])) {
         $msg .= ' (' . count($validation['errors']) . ' ASQA error(s) — see panel)';
     }
-    // v6.2.78 SAVE & APPROVE (one click): after saving the draft, hand off to the submit-for-
+    // Version 6.2.78 SAVE & APPROVE (one click): after saving the draft, hand off to the submit-for-
     // approval action, which validates and either submits it or reports the ASQA errors.
     if (optional_param('saveandapprove', 0, PARAM_INT)) {
-        redirect(new moodle_url('/local/rtocompliance/cert_template_action.php',
+        redirect(
+            new moodle_url(
+            '/local/rtocompliance/cert_template_action.php',
             ['action' => 'submit', 'id' => $id, 'sesskey' => sesskey()]));
     }
     redirect($PAGE->url, $msg, null, \core\output\notification::NOTIFY_SUCCESS);
@@ -243,7 +249,8 @@ $design = cert_template::normalise_design($design);
 $bgurl = '';
 if (!empty($template->bgitemid)) {
     $fs = get_file_storage();
-    $files = $fs->get_area_files($context->id, 'local_rtocompliance', cert_template::FA_BG,
+    $files = $fs->get_area_files(
+        $context->id, 'local_rtocompliance', cert_template::FA_BG,
         $template->bgitemid, 'sortorder, filename', false);
     foreach ($files as $f) {
         if ($f->is_directory()) {
@@ -280,21 +287,24 @@ $brandingsealsaveurl = cert_template::get_branding_org_seal_url();
 // CERT-EDITOR-BRANDING-GAPS (v5.9.339) — use the shared helper for type-specific gap check.
 $_branding_status   = local_rtocompliance_get_branding_status();
 
-$PAGE->add_body_class('path-local-rtocompliance'); // v5.9.445: scoped CSS needs this on admin_externalpage pages.
+$PAGE->add_body_class('path-local-rtocompliance'); // Version 5.9.445: scoped CSS needs this on admin_externalpage pages.
 echo $OUTPUT->header();
 echo local_rtocompliance_render_nav_header(get_string('cert_templates', 'local_rtocompliance'), null, null, 'certificates');
 echo local_rtocompliance_page_banner(get_string('cert_templates', 'local_rtocompliance'));
 
 // Top-of-page title bar with back link + status.
 echo html_writer::start_div('rtoc-tmpl-titlebar mb-3');
-echo html_writer::link(new moodle_url('/local/rtocompliance/cert_templates.php'),
-    '« ' . get_string('cert_templates', 'local_rtocompliance'),
+echo html_writer::link(
+    new moodle_url('/local/rtocompliance/cert_templates.php'),
+        '« ' . get_string('cert_templates', 'local_rtocompliance'),
     ['class' => 'btn btn-sm btn-outline-secondary mr-2']);
-echo html_writer::tag('span',
-    get_string('cert_template_certtype_' . $template->certtype, 'local_rtocompliance'),
+echo html_writer::tag(
+    'span',
+        get_string('cert_template_certtype_' . $template->certtype, 'local_rtocompliance'),
     ['class' => 'badge bg-info text-white mr-1']);
-echo html_writer::tag('span',
-    get_string('cert_template_status_' . $template->status, 'local_rtocompliance'),
+echo html_writer::tag(
+    'span',
+        get_string('cert_template_status_' . $template->status, 'local_rtocompliance'),
     ['class' => 'badge bg-secondary text-white mr-1']);
 echo html_writer::end_div();
 
@@ -309,35 +319,44 @@ $_rtoc_settings_base = (new moodle_url('/admin/settings.php', ['section' => 'loc
 $_is_aqf_type = in_array($template->certtype, ['testamur', 'statement'], true);
 $_rtoc_missing_items = [];
 if (!$_branding_status['logo']) {
-    $_rtoc_missing_items[] = html_writer::tag('li',
-        html_writer::tag('strong', 'RTO logo') . ' — ' .
-        html_writer::link($_rtoc_settings_base . '#adminsetting-local_rtocompliance_logo',
+    $_rtoc_missing_items[] = html_writer::tag(
+        'li',
+            html_writer::tag('strong', 'RTO logo') . ' — ' .
+            html_writer::link(
+            $_rtoc_settings_base . '#adminsetting-local_rtocompliance_logo',
             'Upload in RTO Settings →', ['class' => 'alert-link']));
 }
 if (!$_branding_status['signature']) {
-    $_rtoc_missing_items[] = html_writer::tag('li',
-        html_writer::tag('strong', 'CEO / authorised signatory signature') . ' — ' .
-        html_writer::link($_rtoc_settings_base . '#adminsetting-local_rtocompliance_ceo_signature_file',
+    $_rtoc_missing_items[] = html_writer::tag(
+        'li',
+            html_writer::tag('strong', 'CEO / authorised signatory signature') . ' — ' .
+            html_writer::link(
+            $_rtoc_settings_base . '#adminsetting-local_rtocompliance_ceo_signature_file',
             'Upload in RTO Settings →', ['class' => 'alert-link']));
 }
 if ($_is_aqf_type && !$_branding_status['nrt_override']) {
-    $_rtoc_missing_items[] = html_writer::tag('li',
-        html_writer::tag('strong', 'NRT logo (required for AQF certificates)') . ' — ' .
-        html_writer::link($_rtoc_settings_base . '#adminsetting-local_rtocompliance_nrt_logo_file',
+    $_rtoc_missing_items[] = html_writer::tag(
+        'li',
+            html_writer::tag('strong', 'NRT logo (required for AQF certificates)') . ' — ' .
+            html_writer::link(
+            $_rtoc_settings_base . '#adminsetting-local_rtocompliance_nrt_logo_file',
             'Upload in RTO Settings →', ['class' => 'alert-link']));
 }
 if ($_is_aqf_type && !$_branding_status['seal']) {
-    $_rtoc_missing_items[] = html_writer::tag('li',
-        html_writer::tag('strong', 'Organisation seal') . ' — ' .
-        html_writer::link($_rtoc_settings_base . '#adminsetting-local_rtocompliance_organisation_seal_file',
+    $_rtoc_missing_items[] = html_writer::tag(
+        'li',
+            html_writer::tag('strong', 'Organisation seal') . ' — ' .
+            html_writer::link(
+            $_rtoc_settings_base . '#adminsetting-local_rtocompliance_organisation_seal_file',
             'Upload in RTO Settings →', ['class' => 'alert-link']));
 }
 if (!empty($_rtoc_missing_items)) {
     echo html_writer::start_div('alert alert-warning rtoc-branding-gap-notice mb-3 py-2 px-3');
     echo html_writer::tag('strong', '⚠ Missing branding assets for this certificate type');
-    echo html_writer::tag('p',
-        'The canvas preview will show blank boxes until these assets are uploaded.',
-        ['class' => 'mb-1 mt-1 small']
+    echo html_writer::tag(
+        'p',
+            'The canvas preview will show blank boxes until these assets are uploaded.',
+            ['class' => 'mb-1 mt-1 small']
     );
     echo html_writer::tag('ul', implode('', $_rtoc_missing_items), ['class' => 'mb-0 pl-4 small']);
     echo html_writer::end_div();
@@ -345,11 +364,12 @@ if (!empty($_rtoc_missing_items)) {
 unset($_rtoc_settings_base, $_is_aqf_type, $_rtoc_missing_items);
 
 // Main 3-column grid.
-echo html_writer::start_tag('form', [
-    'method' => 'post',
-    'action' => $PAGE->url,
-    'id'     => 'rtoc-tmpl-form',
-    'enctype' => 'multipart/form-data',
+echo html_writer::start_tag(
+    'form', [
+        'method' => 'post',
+        'action' => $PAGE->url,
+        'id'     => 'rtoc-tmpl-form',
+        'enctype' => 'multipart/form-data',
 ]);
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
 // MALFORMED-PAYLOAD-FIX (v5.9.454): seed the hidden field with the CURRENT saved design
@@ -357,7 +377,8 @@ echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', '
 // on every change; but if the JS ever fails to run (stale cache, a JS error, JS disabled),
 // the form now posts a valid existing design instead of an empty payload — so a save can
 // never fail with "malformed / did not reach the server", and nothing is lost.
-echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'designjson', 'id' => 'rtoc-tmpl-designjson',
+echo html_writer::empty_tag(
+    'input', ['type' => 'hidden', 'name' => 'designjson', 'id' => 'rtoc-tmpl-designjson',
     'value' => json_encode($design, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP)]);
 
 // Background image draft area (filemanager).
@@ -368,19 +389,21 @@ file_prepare_draft_area(
 );
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'bgdraftitemid', 'id' => 'rtoc-tmpl-bgdraftitemid', 'value' => $draftitemid]);
 
-// v6.2.78 TOP ACTION BAR: Save draft + one-click Save & Approve + Preview at the top of the
+// Version 6.2.78 TOP ACTION BAR: Save draft + one-click Save & Approve + Preview at the top of the
 // editor (in addition to the existing buttons in the right panel). Sticky so it stays reachable
 // as the page scrolls. Submit buttons post the main editor form (the JS submit handler serialises
 // the design for any submit button).
 echo html_writer::start_div('rtoc-tmpl-topbar', ['id' => 'rtoc-tmpl-topbar']);
 echo html_writer::tag('div', format_string($template->name), ['class' => 'rtoc-tmpl-topbar-title']);
 echo html_writer::start_div('rtoc-tmpl-topbar-actions');
-echo html_writer::tag('button', get_string('cert_template_save_btn', 'local_rtocompliance'),
+echo html_writer::tag(
+    'button', get_string('cert_template_save_btn', 'local_rtocompliance'),
     ['type' => 'submit', 'class' => 'btn btn-primary btn-sm', 'id' => 'rtoc-tmpl-save-top']);
 if ($template->status === 'draft') {
-    echo html_writer::tag('button', 'Save &amp; Approve',
-        ['type' => 'submit', 'name' => 'saveandapprove', 'value' => '1',
-         'class' => 'btn btn-success btn-sm', 'id' => 'rtoc-tmpl-saveapprove-top',
+    echo html_writer::tag(
+        'button', 'Save &amp; Approve',
+            ['type' => 'submit', 'name' => 'saveandapprove', 'value' => '1',
+             'class' => 'btn btn-success btn-sm', 'id' => 'rtoc-tmpl-saveapprove-top',
          'title' => 'Save the draft and submit it for approval in one click']);
 }
 echo html_writer::link(
@@ -388,7 +411,7 @@ echo html_writer::link(
     get_string('cert_template_preview_btn', 'local_rtocompliance'),
     ['class' => 'btn btn-outline-secondary btn-sm', 'target' => '_blank', 'rel' => 'noopener']);
 echo html_writer::end_div(); // topbar-actions
-echo html_writer::end_div(); // topbar
+echo html_writer::end_div(); // Topbar
 
 
 
@@ -407,12 +430,13 @@ echo '<div class="rtoc-palette-search-wrap">'
    . '<svg class="rtoc-palette-search-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">'
    . '<circle cx="6.5" cy="6.5" r="4"/><line x1="10" y1="10" x2="14" y2="14"/>'
    . '</svg>'
-   . html_writer::empty_tag('input', [
-       'type'         => 'text',
-       'id'           => 'rtoc-palette-search',
-       'class'        => 'rtoc-palette-search',
-       'placeholder'  => 'Search fields…',
-       'autocomplete' => 'off',
+   . html_writer::empty_tag(
+       'input', [
+           'type'         => 'text',
+           'id'           => 'rtoc-palette-search',
+           'class'        => 'rtoc-palette-search',
+           'placeholder'  => 'Search fields…',
+           'autocomplete' => 'off',
    ])
    . '</div>';
 
@@ -471,10 +495,11 @@ foreach ($grouped as $group => $items) {
     $gm = $groupmeta[$group] ?? ['color' => '#9ca3af', 'mono' => strtoupper(substr($group, 0, 2))];
 
     // Section header.
-    echo html_writer::tag('div',
-        html_writer::tag('span', '', ['class' => 'rtoc-fgh-dot', 'style' => 'background:' . $gm['color']]) .
-        html_writer::tag('span', s($group), ['class' => 'rtoc-fgh-text']),
-        ['class' => 'rtoc-field-group-header', 'data-group' => s($group)]
+    echo html_writer::tag(
+        'div',
+            html_writer::tag('span', '', ['class' => 'rtoc-fgh-dot', 'style' => 'background:' . $gm['color']]) .
+            html_writer::tag('span', s($group), ['class' => 'rtoc-fgh-text']),
+            ['class' => 'rtoc-field-group-header', 'data-group' => s($group)]
     );
 
     foreach ($items as $key => $meta) {
@@ -482,9 +507,10 @@ foreach ($grouped as $group => $items) {
         $forbidden = !empty($meta['forbidden_for']) && in_array($template->certtype, $meta['forbidden_for']);
 
         // Icon badge.
-        $badge = html_writer::tag('span', $groupicons[$group] ?? '', [
-            'class' => 'rtoc-field-icon',
-            'style' => 'background:' . $gm['color'],
+        $badge = html_writer::tag(
+            'span', $groupicons[$group] ?? '', [
+                'class' => 'rtoc-field-icon',
+                'style' => 'background:' . $gm['color'],
         ]);
 
         // Body: label + key.
@@ -494,38 +520,41 @@ foreach ($grouped as $group => $items) {
         // Right-side indicators.
         $indicators = '';
         if ($required) {
-            $indicators .= html_writer::tag('span', 'Required', [
-                'class' => 'rtoc-chip-req',
-                'title' => 'This field is required for this certificate type (it is not an error).',
+            $indicators .= html_writer::tag(
+                'span', 'Required', [
+                    'class' => 'rtoc-chip-req',
+                    'title' => 'This field is required for this certificate type (it is not an error).',
             ]);
         }
         if ($forbidden) {
-            $indicators .= html_writer::tag('span', '✕', [
-                'class' => 'rtoc-field-forbidden-badge',
-                'title' => 'Not allowed on this certificate type',
+            $indicators .= html_writer::tag(
+                'span', '✕', [
+                    'class' => 'rtoc-field-forbidden-badge',
+                    'title' => 'Not allowed on this certificate type',
             ]);
         }
 
         $rowclass = 'rtoc-field-row';
         if ($forbidden) { $rowclass .= ' rtoc-field-row--forbidden'; }
 
-        echo html_writer::tag('button',
-            $badge .
-            html_writer::tag('span', $body, ['class' => 'rtoc-field-body']) .
-            ($indicators ? html_writer::tag('span', $indicators, ['class' => 'rtoc-field-indicators']) : ''),
-            [
-                'type'            => 'button',
-                'class'           => $rowclass,
-                'draggable'       => 'true',
-                'data-add'        => 'dynamic',
-                'data-dynamickey' => $key,
-                'data-label'      => $meta['label'],
-                'data-searchtext' => strtolower($meta['label'] . ' ' . $key . ' ' . $group),
-                'title'           => s($meta['label']) . ' (' . s($key) . ')'
-                    . ($required ? ' — required for this cert type' : '')
-                    . ($forbidden ? ' — NOT ALLOWED on this cert type' : '')
-                    . ' — drag onto canvas or click to add',
-            ]
+        echo html_writer::tag(
+            'button',
+                $badge .
+                html_writer::tag('span', $body, ['class' => 'rtoc-field-body']) .
+                ($indicators ? html_writer::tag('span', $indicators, ['class' => 'rtoc-field-indicators']) : ''),
+                [
+                    'type'            => 'button',
+                    'class'           => $rowclass,
+                    'draggable'       => 'true',
+                    'data-add'        => 'dynamic',
+                    'data-dynamickey' => $key,
+                    'data-label'      => $meta['label'],
+                    'data-searchtext' => strtolower($meta['label'] . ' ' . $key . ' ' . $group),
+                    'title'           => s($meta['label']) . ' (' . s($key) . ')'
+                        . ($required ? ' — required for this cert type' : '')
+                        . ($forbidden ? ' — NOT ALLOWED on this cert type' : '')
+                        . ' — drag onto canvas or click to add',
+                ]
         );
     }
 }
@@ -539,29 +568,32 @@ $custommeta = [
     'box'   => ['string' => 'cert_template_palette_box',   'color' => '#94a3b8'],
 ];
 
-echo html_writer::tag('div',
-    html_writer::tag('span', '', ['class' => 'rtoc-fgh-dot', 'style' => 'background:#9ca3af']) .
-    html_writer::tag('span', get_string('cert_template_palette_custom', 'local_rtocompliance'), ['class' => 'rtoc-fgh-text']),
-    ['class' => 'rtoc-field-group-header', 'data-group' => 'custom']
+echo html_writer::tag(
+    'div',
+        html_writer::tag('span', '', ['class' => 'rtoc-fgh-dot', 'style' => 'background:#9ca3af']) .
+        html_writer::tag('span', get_string('cert_template_palette_custom', 'local_rtocompliance'), ['class' => 'rtoc-fgh-text']),
+        ['class' => 'rtoc-field-group-header', 'data-group' => 'custom']
 );
 foreach ($custommeta as $kind => $cm) {
     $clabel = get_string($cm['string'], 'local_rtocompliance');
-    echo html_writer::tag('button',
-        html_writer::tag('span', $customicons[$kind] ?? '', ['class' => 'rtoc-field-icon', 'style' => 'background:' . $cm['color']]) .
-        html_writer::tag('span',
-            html_writer::tag('span', $clabel,         ['class' => 'rtoc-field-label']) .
-            html_writer::tag('span', 'custom element', ['class' => 'rtoc-field-key']),
-            ['class' => 'rtoc-field-body']
-        ),
-        [
-            'type'           => 'button',
-            'class'          => 'rtoc-field-row rtoc-field-row--custom',
-            'draggable'      => 'true',
-            'data-add'       => $kind,
-            'data-label'     => $clabel,
-            'data-searchtext' => strtolower($clabel . ' custom ' . $kind),
-            'title'          => $clabel . ' — drag onto canvas or click to add',
-        ]
+    echo html_writer::tag(
+        'button',
+            html_writer::tag('span', $customicons[$kind] ?? '', ['class' => 'rtoc-field-icon', 'style' => 'background:' . $cm['color']]) .
+            html_writer::tag(
+            'span',
+                    html_writer::tag('span', $clabel,         ['class' => 'rtoc-field-label']) .
+                    html_writer::tag('span', 'custom element', ['class' => 'rtoc-field-key']),
+                    ['class' => 'rtoc-field-body']
+            ),
+            [
+                'type'           => 'button',
+                'class'          => 'rtoc-field-row rtoc-field-row--custom',
+                'draggable'      => 'true',
+                'data-add'       => $kind,
+                'data-label'     => $clabel,
+                'data-searchtext' => strtolower($clabel . ' custom ' . $kind),
+                'title'          => $clabel . ' — drag onto canvas or click to add',
+            ]
     );
 }
 
@@ -571,27 +603,30 @@ foreach ($custommeta as $kind => $cm) {
 $rortableicon = '<svg ' . $svgattr . '><rect x="3" y="3" width="18" height="18" rx="2"/>'
     . '<line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="9" x2="9" y2="21"/>'
     . '<line x1="15" y1="9" x2="15" y2="21"/></svg>';
-echo html_writer::tag('div',
-    html_writer::tag('span', '', ['class' => 'rtoc-fgh-dot', 'style' => 'background:#8b5cf6']) .
-    html_writer::tag('span', get_string('cert_template_palette_rortable_group', 'local_rtocompliance'), ['class' => 'rtoc-fgh-text']),
-    ['class' => 'rtoc-field-group-header', 'data-group' => 'rortable']
+echo html_writer::tag(
+    'div',
+        html_writer::tag('span', '', ['class' => 'rtoc-fgh-dot', 'style' => 'background:#8b5cf6']) .
+        html_writer::tag('span', get_string('cert_template_palette_rortable_group', 'local_rtocompliance'), ['class' => 'rtoc-fgh-text']),
+        ['class' => 'rtoc-field-group-header', 'data-group' => 'rortable']
 );
-echo html_writer::tag('button',
-    html_writer::tag('span', $rortableicon, ['class' => 'rtoc-field-icon', 'style' => 'background:#8b5cf6']) .
-    html_writer::tag('span',
-        html_writer::tag('span', get_string('cert_template_palette_rortable', 'local_rtocompliance'), ['class' => 'rtoc-field-label']) .
-        html_writer::tag('span', 'Record of Results table', ['class' => 'rtoc-field-key']),
-        ['class' => 'rtoc-field-body']
-    ),
-    [
-        'type'            => 'button',
-        'class'           => 'rtoc-field-row rtoc-field-row--custom',
-        'draggable'       => 'true',
-        'data-add'        => 'ror_table',
-        'data-label'      => get_string('cert_template_palette_rortable', 'local_rtocompliance'),
-        'data-searchtext' => 'record of results units table ror semester result',
-        'title'           => get_string('cert_template_palette_rortable', 'local_rtocompliance') . ' — drag onto canvas or click to add',
-    ]
+echo html_writer::tag(
+    'button',
+        html_writer::tag('span', $rortableicon, ['class' => 'rtoc-field-icon', 'style' => 'background:#8b5cf6']) .
+        html_writer::tag(
+        'span',
+                html_writer::tag('span', get_string('cert_template_palette_rortable', 'local_rtocompliance'), ['class' => 'rtoc-field-label']) .
+                html_writer::tag('span', 'Record of Results table', ['class' => 'rtoc-field-key']),
+                ['class' => 'rtoc-field-body']
+        ),
+        [
+            'type'            => 'button',
+            'class'           => 'rtoc-field-row rtoc-field-row--custom',
+            'draggable'       => 'true',
+            'data-add'        => 'ror_table',
+            'data-label'      => get_string('cert_template_palette_rortable', 'local_rtocompliance'),
+            'data-searchtext' => 'record of results units table ror semester result',
+            'title'           => get_string('cert_template_palette_rortable', 'local_rtocompliance') . ' — drag onto canvas or click to add',
+        ]
 );
 
 echo html_writer::end_div(); // rtoc-field-list
@@ -604,42 +639,53 @@ echo html_writer::tag('div', 'Page Design', ['class' => 'rtoc-panel-heading']);
 echo html_writer::start_div('rtoc-panel-body');
 
 echo html_writer::start_div('form-group mb-2');
-echo html_writer::tag('label', get_string('cert_template_page_orientation', 'local_rtocompliance'),
+echo html_writer::tag(
+    'label', get_string('cert_template_page_orientation', 'local_rtocompliance'),
     ['for' => 'rtoc-tmpl-orient', 'class' => 'rtoc-form-label']);
 echo html_writer::start_tag('select', ['id' => 'rtoc-tmpl-orient', 'class' => 'form-control form-control-sm']);
-echo html_writer::tag('option', get_string('cert_template_page_orientation_l', 'local_rtocompliance'),
+echo html_writer::tag(
+    'option', get_string('cert_template_page_orientation_l', 'local_rtocompliance'),
     ['value' => 'L'] + (($design['page']['orientation'] ?? 'L') === 'L' ? ['selected' => 'selected'] : []));
-echo html_writer::tag('option', get_string('cert_template_page_orientation_p', 'local_rtocompliance'),
+echo html_writer::tag(
+    'option', get_string('cert_template_page_orientation_p', 'local_rtocompliance'),
     ['value' => 'P'] + (($design['page']['orientation'] ?? 'L') === 'P' ? ['selected' => 'selected'] : []));
 echo html_writer::end_tag('select');
 echo html_writer::end_div();
 
 echo html_writer::start_div('form-group mb-2');
-echo html_writer::tag('label', get_string('cert_template_page_bgcolor', 'local_rtocompliance'),
+echo html_writer::tag(
+    'label', get_string('cert_template_page_bgcolor', 'local_rtocompliance'),
     ['for' => 'rtoc-tmpl-bgcolor', 'class' => 'rtoc-form-label']);
-echo html_writer::empty_tag('input', [
-    'type' => 'color', 'id' => 'rtoc-tmpl-bgcolor', 'class' => 'form-control form-control-sm',
-    'value' => $design['page']['bg_color'] ?? '#ffffff',
-    'style' => 'height:32px;padding:2px 4px;',
+echo html_writer::empty_tag(
+    'input', [
+        'type' => 'color', 'id' => 'rtoc-tmpl-bgcolor', 'class' => 'form-control form-control-sm',
+        'value' => $design['page']['bg_color'] ?? '#ffffff',
+        'style' => 'height:32px;padding:2px 4px;',
 ]);
 echo html_writer::end_div();
 
 echo html_writer::start_div('form-group mb-0');
-echo html_writer::tag('label', get_string('cert_template_page_bgimage', 'local_rtocompliance'),
+echo html_writer::tag(
+    'label', get_string('cert_template_page_bgimage', 'local_rtocompliance'),
     ['for' => 'rtoc-tmpl-bgupload', 'class' => 'rtoc-form-label']);
-echo html_writer::empty_tag('input', [
-    'type' => 'file', 'id' => 'rtoc-tmpl-bgupload', 'class' => 'form-control-file form-control-sm',
-    'accept' => 'image/png,image/jpeg,image/webp',
+echo html_writer::empty_tag(
+    'input', [
+        'type' => 'file', 'id' => 'rtoc-tmpl-bgupload', 'class' => 'form-control-file form-control-sm',
+        'accept' => 'image/png,image/jpeg,image/webp',
 ]);
-echo html_writer::tag('small',
-    'PNG / JPEG / WebP — 2480 × 1754 px at 300 DPI recommended.',
+echo html_writer::tag(
+    'small',
+        'PNG / JPEG / WebP — 2480 × 1754 px at 300 DPI recommended.',
     ['class' => 'form-text text-muted']);
 if (!empty($bgurl)) {
-    echo html_writer::div(html_writer::img($bgurl, 'background', [
-        'style' => 'max-width:100%; max-height:56px; margin-top:4px; border:1px solid #ccc; border-radius:3px;'
+    echo html_writer::div(
+        html_writer::img(
+        $bgurl, 'background', [
+                'style' => 'max-width:100%; max-height:56px; margin-top:4px; border:1px solid #ccc; border-radius:3px;'
     ]), 'rtoc-tmpl-bgpreview');
-    echo html_writer::tag('button',
-        get_string('cert_template_page_bgimage_clear', 'local_rtocompliance'),
+    echo html_writer::tag(
+        'button',
+            get_string('cert_template_page_bgimage_clear', 'local_rtocompliance'),
         ['type' => 'button', 'id' => 'rtoc-tmpl-bgclear', 'class' => 'btn btn-sm btn-outline-danger mt-1']);
 }
 echo html_writer::end_div();
@@ -653,7 +699,8 @@ $missingBranding = !$_branding_status['logo'] || !$_branding_status['signature']
 echo html_writer::start_div('rtoc-panel-section', ['id' => 'rtoc-acc-branding']);
 echo html_writer::tag('div', 'Branding', ['class' => 'rtoc-panel-heading']);
 echo html_writer::start_div('rtoc-panel-body');
-echo html_writer::tag('p', get_string('cert_template_branding_help', 'local_rtocompliance'),
+echo html_writer::tag(
+    'p', get_string('cert_template_branding_help', 'local_rtocompliance'),
     ['class' => 'small text-muted mb-2']);
 
 // Each branding upload as a compact side-by-side row: thumbnail left, controls right.
@@ -699,8 +746,9 @@ foreach ([
     // Thumbnail column.
     echo html_writer::start_div('rtoc-brand-thumb');
     if (!empty($brow['url'])) {
-        echo html_writer::img($brow['url'], $brow['alt'], [
-            'style' => 'max-width:72px; max-height:40px; object-fit:contain; background:#f5f5f5; padding:3px; border:1px solid #ddd; border-radius:3px;',
+        echo html_writer::img(
+            $brow['url'], $brow['alt'], [
+                'style' => 'max-width:72px; max-height:40px; object-fit:contain; background:#f5f5f5; padding:3px; border:1px solid #ddd; border-radius:3px;',
         ]);
     } else {
         echo html_writer::tag('div', 'None', ['class' => 'rtoc-brand-none']);
@@ -708,25 +756,29 @@ foreach ([
     echo html_writer::end_div();
     // Controls column.
     echo html_writer::start_div('rtoc-brand-controls');
-    echo html_writer::tag('label', $brow['label'],
+    echo html_writer::tag(
+        'label', $brow['label'],
         ['for' => $brow['id'], 'class' => 'rtoc-form-label mb-1']);
-    echo html_writer::empty_tag('input', [
-        'type'   => 'file',
-        'id'     => $brow['id'],
-        'name'   => $brow['name'],
-        'class'  => 'form-control-file form-control-sm',
-        'accept' => 'image/png,image/jpeg,image/webp,image/svg+xml',
+    echo html_writer::empty_tag(
+        'input', [
+            'type'   => 'file',
+            'id'     => $brow['id'],
+            'name'   => $brow['name'],
+            'class'  => 'form-control-file form-control-sm',
+            'accept' => 'image/png,image/jpeg,image/webp,image/svg+xml',
     ]);
     if (!empty($brow['url'])) {
         echo html_writer::start_div('form-check mt-1');
-        echo html_writer::empty_tag('input', [
-            'type'  => 'checkbox',
-            'id'    => $brow['clearid'],
-            'name'  => $brow['clearname'],
-            'value' => '1',
-            'class' => 'form-check-input',
+        echo html_writer::empty_tag(
+            'input', [
+                'type'  => 'checkbox',
+                'id'    => $brow['clearid'],
+                'name'  => $brow['clearname'],
+                'value' => '1',
+                'class' => 'form-check-input',
         ]);
-        echo html_writer::tag('label', get_string('cert_template_branding_clear', 'local_rtocompliance'),
+        echo html_writer::tag(
+            'label', get_string('cert_template_branding_clear', 'local_rtocompliance'),
             ['for' => $brow['clearid'], 'class' => 'form-check-label small']);
         echo html_writer::end_div();
     }
@@ -748,49 +800,57 @@ echo html_writer::tag('div', 'Template Info', ['class' => 'rtoc-panel-heading'])
 echo html_writer::start_div('rtoc-panel-body');
 
 echo html_writer::start_div('form-group mb-2');
-echo html_writer::tag('label', get_string('cert_template_name', 'local_rtocompliance'),
+echo html_writer::tag(
+    'label', get_string('cert_template_name', 'local_rtocompliance'),
     ['for' => 'rtoc-tmpl-name', 'class' => 'rtoc-form-label']);
-echo html_writer::empty_tag('input', [
-    'type'      => 'text',
-    'name'      => 'name',
-    'id'        => 'rtoc-tmpl-name',
-    'class'     => 'form-control form-control-sm',
-    'value'     => $template->name,
-    'required'  => 'required',
-    'maxlength' => 255,
+echo html_writer::empty_tag(
+    'input', [
+        'type'      => 'text',
+        'name'      => 'name',
+        'id'        => 'rtoc-tmpl-name',
+        'class'     => 'form-control form-control-sm',
+        'value'     => $template->name,
+        'required'  => 'required',
+        'maxlength' => 255,
 ]);
 echo html_writer::end_div();
 
-// v4.3.0 CERT-TEMPLATE-AUDIENCES — audience picker + free-text label override.
+// Version 4.3.0 CERT-TEMPLATE-AUDIENCES — audience picker + free-text label override.
 $currentaudience = !empty($template->audience) ? $template->audience : 'default';
 echo html_writer::start_div('form-group mb-2');
-echo html_writer::tag('label', get_string('cert_template_audience', 'local_rtocompliance'),
+echo html_writer::tag(
+    'label', get_string('cert_template_audience', 'local_rtocompliance'),
     ['for' => 'rtoc-tmpl-audience', 'class' => 'rtoc-form-label']);
-echo html_writer::tag('p',
-    get_string('cert_template_audience_help', 'local_rtocompliance'),
+echo html_writer::tag(
+    'p',
+        get_string('cert_template_audience_help', 'local_rtocompliance'),
     ['class' => 'text-muted small mb-1']);
-echo html_writer::start_tag('select', [
-    'id' => 'rtoc-tmpl-audience', 'name' => 'audience', 'class' => 'form-control form-control-sm',
+echo html_writer::start_tag(
+    'select', [
+        'id' => 'rtoc-tmpl-audience', 'name' => 'audience', 'class' => 'form-control form-control-sm',
 ]);
 foreach (cert_template::AUDIENCES as $aud) {
-    echo html_writer::tag('option',
-        get_string('cert_template_audience_' . $aud, 'local_rtocompliance'),
+    echo html_writer::tag(
+        'option',
+            get_string('cert_template_audience_' . $aud, 'local_rtocompliance'),
         ['value' => $aud] + ($aud === $currentaudience ? ['selected' => 'selected'] : []));
 }
 echo html_writer::end_tag('select');
 echo html_writer::end_div();
 
 echo html_writer::start_div('form-group mb-0');
-echo html_writer::tag('label', get_string('cert_template_audiencelabel', 'local_rtocompliance'),
+echo html_writer::tag(
+    'label', get_string('cert_template_audiencelabel', 'local_rtocompliance'),
     ['for' => 'rtoc-tmpl-audiencelabel', 'class' => 'rtoc-form-label']);
-echo html_writer::empty_tag('input', [
-    'type'        => 'text',
-    'id'          => 'rtoc-tmpl-audiencelabel',
-    'name'        => 'audiencelabel',
-    'class'       => 'form-control form-control-sm',
-    'value'       => !empty($template->audiencelabel) ? $template->audiencelabel : '',
-    'maxlength'   => 255,
-    'placeholder' => get_string('cert_template_audiencelabel_placeholder', 'local_rtocompliance'),
+echo html_writer::empty_tag(
+    'input', [
+        'type'        => 'text',
+        'id'          => 'rtoc-tmpl-audiencelabel',
+        'name'        => 'audiencelabel',
+        'class'       => 'form-control form-control-sm',
+        'value'       => !empty($template->audiencelabel) ? $template->audiencelabel : '',
+        'maxlength'   => 255,
+        'placeholder' => get_string('cert_template_audiencelabel_placeholder', 'local_rtocompliance'),
 ]);
 echo html_writer::end_div();
 
@@ -801,8 +861,9 @@ echo html_writer::end_div(); // panel-section info
 echo html_writer::start_div('rtoc-panel-section', ['id' => 'rtoc-acc-guide']);
 echo html_writer::tag('div', 'Quick Guide', ['class' => 'rtoc-panel-heading']);
 echo html_writer::start_div('rtoc-panel-body small');
-echo html_writer::tag('p',
-    get_string('cert_template_quickstart_intro', 'local_rtocompliance'),
+echo html_writer::tag(
+    'p',
+        get_string('cert_template_quickstart_intro', 'local_rtocompliance'),
     ['class' => 'mb-2']);
 echo html_writer::start_tag('ol', ['class' => 'mb-2', 'style' => 'padding-left:16px;']);
 foreach ([
@@ -815,55 +876,65 @@ foreach ([
     echo html_writer::tag('li', get_string($stepkey, 'local_rtocompliance'), ['class' => 'mb-1']);
 }
 echo html_writer::end_tag('ol');
-echo html_writer::tag('p',
-    get_string('cert_template_quickstart_safety', 'local_rtocompliance'),
+echo html_writer::tag(
+    'p',
+        get_string('cert_template_quickstart_safety', 'local_rtocompliance'),
     ['class' => 'mb-0 text-muted']);
 echo html_writer::end_div(); // panel-body guide
 echo html_writer::end_div(); // panel-section guide
 
-echo html_writer::end_div(); // left
+echo html_writer::end_div(); // Left
 
 // ── CENTRE PANEL ─────────────────────────────────────────────────────────────
 echo html_writer::start_div('rtoc-tmpl-centre');
 
 // CERT-TEMPLATE-BUILDER-PRO (v4.2.43) — editor toolbar.
-echo html_writer::start_div('rtoc-tmpl-toolbar mb-2 d-flex flex-wrap align-items-center gap-2',
+echo html_writer::start_div(
+    'rtoc-tmpl-toolbar mb-2 d-flex flex-wrap align-items-center gap-2',
     ['style' => 'gap:6px;']);
 // Undo / redo.
-echo html_writer::tag('button',
-    '&#8630; ' . get_string('cert_template_toolbar_undo', 'local_rtocompliance'),
-    ['type' => 'button', 'id' => 'rtoc-tmpl-undo', 'class' => 'btn btn-sm btn-outline-secondary',
+echo html_writer::tag(
+    'button',
+        '&#8630; ' . get_string('cert_template_toolbar_undo', 'local_rtocompliance'),
+        ['type' => 'button', 'id' => 'rtoc-tmpl-undo', 'class' => 'btn btn-sm btn-outline-secondary',
      'disabled' => 'disabled', 'title' => 'Ctrl+Z']);
-echo html_writer::tag('button',
-    '&#8631; ' . get_string('cert_template_toolbar_redo', 'local_rtocompliance'),
-    ['type' => 'button', 'id' => 'rtoc-tmpl-redo', 'class' => 'btn btn-sm btn-outline-secondary',
+echo html_writer::tag(
+    'button',
+        '&#8631; ' . get_string('cert_template_toolbar_redo', 'local_rtocompliance'),
+        ['type' => 'button', 'id' => 'rtoc-tmpl-redo', 'class' => 'btn btn-sm btn-outline-secondary',
      'disabled' => 'disabled', 'title' => 'Ctrl+Shift+Z']);
 // Zoom.
-echo html_writer::tag('span', get_string('cert_template_toolbar_zoom', 'local_rtocompliance'),
+echo html_writer::tag(
+    'span', get_string('cert_template_toolbar_zoom', 'local_rtocompliance'),
     ['class' => 'small text-muted ml-2']);
-echo html_writer::start_tag('select', ['id' => 'rtoc-tmpl-zoom', 'class' => 'form-control form-control-sm',
+echo html_writer::start_tag(
+    'select', ['id' => 'rtoc-tmpl-zoom', 'class' => 'form-control form-control-sm',
     'style' => 'width:auto;display:inline-block;']);
 foreach ([50, 75, 100, 125, 150, 200] as $z) {
-    echo html_writer::tag('option', $z . '%',
+    echo html_writer::tag(
+        'option', $z . '%',
         ['value' => $z] + ($z === 100 ? ['selected' => 'selected'] : []));
 }
 echo html_writer::end_tag('select');
 // Grid + sample-data toggles.
 echo html_writer::start_div('form-check form-check-inline ml-2');
-echo html_writer::empty_tag('input', [
-    'type' => 'checkbox', 'id' => 'rtoc-tmpl-grid', 'class' => 'form-check-input',
-    'checked' => 'checked',
+echo html_writer::empty_tag(
+    'input', [
+        'type' => 'checkbox', 'id' => 'rtoc-tmpl-grid', 'class' => 'form-check-input',
+        'checked' => 'checked',
 ]);
-echo html_writer::tag('label', get_string('cert_template_toolbar_grid', 'local_rtocompliance'),
+echo html_writer::tag(
+    'label', get_string('cert_template_toolbar_grid', 'local_rtocompliance'),
     ['for' => 'rtoc-tmpl-grid', 'class' => 'form-check-label small']);
 echo html_writer::end_div();
 // WIDE-CANVAS (v6.2.31): collapse the right properties inspector to give the canvas the
 // full width; click again to bring it back. Purely a layout convenience.
-echo html_writer::tag('button',
-    '&#8596; Wide canvas',
-    ['type' => 'button', 'id' => 'rtoc-tmpl-wide', 'class' => 'btn btn-sm btn-outline-secondary ml-2',
+echo html_writer::tag(
+    'button',
+        '&#8596; Wide canvas',
+        ['type' => 'button', 'id' => 'rtoc-tmpl-wide', 'class' => 'btn btn-sm btn-outline-secondary ml-2',
      'title' => 'Hide the properties panel to widen the design canvas']);
-// v6.2.88: the "Float properties" button now lives on the properties BAR itself (the full-width
+// Version 6.2.88: the "Float properties" button now lives on the properties BAR itself (the full-width
 // horizontal bar above the two pages), not in the canvas toolbar — see .rtoc-props-bar below.
 // v6.2.88 TWO-EQUAL-PDFS: the sample-data note and keyboard help were long spans that made the
 // toolbar wrap onto extra rows, pushing the canvas down out of line with the preview. They now
@@ -874,14 +945,16 @@ echo html_writer::end_div();
 echo html_writer::start_div('rtoc-tmpl-canvas-wrap');
 $bgcolor = $design['page']['bg_color'] ?? '#ffffff';
 $bgimage = !empty($design['page']['bg_image_url']) ? 'background-image:url(' . s($design['page']['bg_image_url']) . ');background-size:100% 100%;' : '';
-echo html_writer::div('', 'rtoc-tmpl-canvas', [
-    'id' => 'rtoc-tmpl-canvas',
-    'data-orientation' => $design['page']['orientation'] ?? 'L',
-    'style' => 'background-color:' . $bgcolor . ';' . $bgimage,
+echo html_writer::div(
+    '', 'rtoc-tmpl-canvas', [
+        'id' => 'rtoc-tmpl-canvas',
+        'data-orientation' => $design['page']['orientation'] ?? 'L',
+        'style' => 'background-color:' . $bgcolor . ';' . $bgimage,
 ]);
-echo html_writer::tag('div',
-    'A4 ' . (($design['page']['orientation'] ?? 'L') === 'L' ? '297 × 210 mm landscape' : '210 × 297 mm portrait')
-    . ' — drag fields to reposition; click to select; corner handle to resize',
+echo html_writer::tag(
+    'div',
+        'A4 ' . (($design['page']['orientation'] ?? 'L') === 'L' ? '297 × 210 mm landscape' : '210 × 297 mm portrait')
+        . ' — drag fields to reposition; click to select; corner handle to resize',
     ['class' => 'rtoc-tmpl-canvas-caption text-muted small mt-2', 'id' => 'rtoc-tmpl-canvas-caption']);
 echo html_writer::end_div(); // canvas-wrap
 
@@ -892,19 +965,21 @@ echo html_writer::end_div(); // canvas-wrap
 // without saving first. Kept in a separate <form> from the main editor form so a
 // preview refresh never submits/saves the template.
 
-echo html_writer::end_div(); // centre
+echo html_writer::end_div(); // Centre
 
 // ── RIGHT PANEL ───────────────────────────────────────────────────────────────
 echo html_writer::start_div('rtoc-tmpl-right');
 
-// v6.2.91 PROPERTIES ON THE RIGHT: single page in the centre, field properties docked as the
+// Version 6.2.91 PROPERTIES ON THE RIGHT: single page in the centre, field properties docked as the
 // right-hand column (no floating). Shown when a field is selected; the canvas takes the full
 // width when nothing is selected (the existing slide-over).
 // ── FIELD PROPERTIES ──────────────────────────────────────────────────────────
 echo html_writer::start_div('rtoc-tmpl-section rtoc-props-section');
-echo html_writer::tag('h4', get_string('cert_template_props', 'local_rtocompliance'),
+echo html_writer::tag(
+    'h4', get_string('cert_template_props', 'local_rtocompliance'),
     ['class' => 'h6 rtoc-section-h']);
-echo html_writer::div(get_string('cert_template_props_select', 'local_rtocompliance'),
+echo html_writer::div(
+    get_string('cert_template_props_select', 'local_rtocompliance'),
     'rtoc-tmpl-props-empty text-muted small', ['id' => 'rtoc-tmpl-props-empty']);
 
 echo html_writer::start_div('rtoc-tmpl-props', ['id' => 'rtoc-tmpl-props', 'style' => 'display:none;']);
@@ -920,12 +995,14 @@ foreach ([
     ['h', 'cert_template_prop_h', '1',   '500', '0.5'],
 ] as [$name, $strkey, $min, $max, $step]) {
     echo html_writer::start_div('form-group form-row mb-1');
-    echo html_writer::tag('label', get_string($strkey, 'local_rtocompliance'),
+    echo html_writer::tag(
+        'label', get_string($strkey, 'local_rtocompliance'),
         ['for' => 'p-' . $name, 'class' => 'col-5 col-form-label col-form-label-sm']);
     echo html_writer::start_div('col-7');
-    echo html_writer::empty_tag('input', [
-        'type' => 'number', 'id' => 'p-' . $name, 'class' => 'form-control form-control-sm',
-        'min' => $min, 'max' => $max, 'step' => $step,
+    echo html_writer::empty_tag(
+        'input', [
+            'type' => 'number', 'id' => 'p-' . $name, 'class' => 'form-control form-control-sm',
+            'min' => $min, 'max' => $max, 'step' => $step,
     ]);
     echo html_writer::end_div();
     echo html_writer::end_div();
@@ -939,14 +1016,15 @@ foreach ([
     ['left', 'Align to left margin', '⇤'], ['centerh', 'Centre horizontally (equal side margins)', '↔'], ['right', 'Align to right margin', '⇥'],
     ['top', 'Align to top margin', '⤒'], ['centerv', 'Centre vertically (equal top/bottom)', '↕'], ['bottom', 'Align to bottom margin', '⤓'],
 ] as [$a, $title, $icon]) {
-    echo html_writer::tag('button', $icon, [
-        'type' => 'button', 'class' => 'btn btn-sm btn-outline-secondary rtoc-align-btn',
-        'data-align' => $a, 'title' => $title, 'style' => 'flex:1 1 0;min-width:0;font-size:1rem;line-height:1;padding:5px 0;',
+    echo html_writer::tag(
+        'button', $icon, [
+            'type' => 'button', 'class' => 'btn btn-sm btn-outline-secondary rtoc-align-btn',
+            'data-align' => $a, 'title' => $title, 'style' => 'flex:1 1 0;min-width:0;font-size:1rem;line-height:1;padding:5px 0;',
     ]);
 }
 echo html_writer::end_div();
 echo html_writer::end_div(); // rtoc-align-toolbar
-echo html_writer::end_div(); // pos group body
+echo html_writer::end_div(); // Pos group body
 echo html_writer::end_tag('details');
 
 // ROR-CAPACITY-HINT (v5.9.340) — overflow estimate hint shown only when a
@@ -961,15 +1039,18 @@ echo html_writer::start_div('rtoc-props-group-body');
 
 // Text content (text/dynamic kinds).
 echo html_writer::start_div('form-group mb-2', ['id' => 'p-text-wrap']);
-echo html_writer::tag('label', get_string('cert_template_prop_text', 'local_rtocompliance'),
+echo html_writer::tag(
+    'label', get_string('cert_template_prop_text', 'local_rtocompliance'),
     ['for' => 'p-text', 'class' => 'rtoc-form-label']);
-echo html_writer::tag('textarea', '',
+echo html_writer::tag(
+    'textarea', '',
     ['id' => 'p-text', 'class' => 'form-control form-control-sm', 'rows' => 2]);
 echo html_writer::end_div();
 
 // Date format (date kind).
 echo html_writer::start_div('form-group mb-2', ['id' => 'p-dateformat-wrap']);
-echo html_writer::tag('label', get_string('cert_template_prop_dateformat', 'local_rtocompliance'),
+echo html_writer::tag(
+    'label', get_string('cert_template_prop_dateformat', 'local_rtocompliance'),
     ['for' => 'p-dateformat', 'class' => 'rtoc-form-label']);
 echo html_writer::start_tag('select', ['id' => 'p-dateformat', 'class' => 'form-control form-control-sm']);
 foreach (['d M Y' => '01 Jan 2026', 'd/m/Y' => '01/01/2026', 'D, j F Y' => 'Mon, 1 January 2026', 'F j, Y' => 'January 1, 2026'] as $f => $label) {
@@ -980,7 +1061,8 @@ echo html_writer::end_div();
 
 // Font family.
 echo html_writer::start_div('form-group form-row mb-1');
-echo html_writer::tag('label', get_string('cert_template_prop_font', 'local_rtocompliance'),
+echo html_writer::tag(
+    'label', get_string('cert_template_prop_font', 'local_rtocompliance'),
     ['for' => 'p-font', 'class' => 'col-5 col-form-label col-form-label-sm']);
 echo html_writer::start_div('col-7');
 echo html_writer::start_tag('select', ['id' => 'p-font', 'class' => 'form-control form-control-sm']);
@@ -1002,21 +1084,24 @@ echo html_writer::end_div();
 
 // Font size.
 echo html_writer::start_div('form-group form-row mb-1');
-echo html_writer::tag('label', get_string('cert_template_prop_fontsize', 'local_rtocompliance'),
+echo html_writer::tag(
+    'label', get_string('cert_template_prop_fontsize', 'local_rtocompliance'),
     ['for' => 'p-fontsize', 'class' => 'col-5 col-form-label col-form-label-sm']);
 echo html_writer::start_div('col-7');
-echo html_writer::empty_tag('input', [
-    // NO-MIN-FONT (v6.2.52): the forced 12pt minimum was removed — authors may choose any
-    // legible size. The input allows down to 4pt (tables auto-shrink to fit regardless).
-    'type' => 'number', 'id' => 'p-fontsize', 'class' => 'form-control form-control-sm',
-    'min' => 4, 'max' => 96, 'step' => 1,
+echo html_writer::empty_tag(
+    'input', [
+        // NO-MIN-FONT (v6.2.52): the forced 12pt minimum was removed — authors may choose any
+        // legible size. The input allows down to 4pt (tables auto-shrink to fit regardless).
+        'type' => 'number', 'id' => 'p-fontsize', 'class' => 'form-control form-control-sm',
+        'min' => 4, 'max' => 96, 'step' => 1,
 ]);
 echo html_writer::end_div();
 echo html_writer::end_div();
 
 // Font style.
 echo html_writer::start_div('form-group form-row mb-1');
-echo html_writer::tag('label', get_string('cert_template_prop_fontstyle', 'local_rtocompliance'),
+echo html_writer::tag(
+    'label', get_string('cert_template_prop_fontstyle', 'local_rtocompliance'),
     ['for' => 'p-fontstyle', 'class' => 'col-5 col-form-label col-form-label-sm']);
 echo html_writer::start_div('col-7');
 echo html_writer::start_tag('select', ['id' => 'p-fontstyle', 'class' => 'form-control form-control-sm']);
@@ -1029,19 +1114,22 @@ echo html_writer::end_div();
 
 // Colour.
 echo html_writer::start_div('form-group form-row mb-1');
-echo html_writer::tag('label', get_string('cert_template_prop_color', 'local_rtocompliance'),
+echo html_writer::tag(
+    'label', get_string('cert_template_prop_color', 'local_rtocompliance'),
     ['for' => 'p-color', 'class' => 'col-5 col-form-label col-form-label-sm']);
 echo html_writer::start_div('col-7');
-echo html_writer::empty_tag('input', [
-    'type' => 'color', 'id' => 'p-color', 'class' => 'form-control form-control-sm',
-    'style' => 'height:28px;padding:1px 3px;',
+echo html_writer::empty_tag(
+    'input', [
+        'type' => 'color', 'id' => 'p-color', 'class' => 'form-control form-control-sm',
+        'style' => 'height:28px;padding:1px 3px;',
 ]);
 echo html_writer::end_div();
 echo html_writer::end_div();
 
 // Alignment.
 echo html_writer::start_div('form-group form-row mb-1');
-echo html_writer::tag('label', get_string('cert_template_prop_align', 'local_rtocompliance'),
+echo html_writer::tag(
+    'label', get_string('cert_template_prop_align', 'local_rtocompliance'),
     ['for' => 'p-align', 'class' => 'col-5 col-form-label col-form-label-sm']);
 echo html_writer::start_div('col-7');
 echo html_writer::start_tag('select', ['id' => 'p-align', 'class' => 'form-control form-control-sm']);
@@ -1055,20 +1143,23 @@ echo html_writer::end_div();
 // SNAP-TO-CENTRE (v6.2.25): one-click centring of the selected element on the page —
 // easier than reading the X/Y boxes. Horizontal and vertical are independent.
 echo html_writer::start_div('form-group form-row mb-1');
-echo html_writer::tag('label', 'Centre on page',
+echo html_writer::tag(
+    'label', 'Centre on page',
     ['class' => 'col-5 col-form-label col-form-label-sm']);
 echo html_writer::start_div('col-7 d-flex', ['style' => 'gap:6px;']);
-echo html_writer::tag('button', 'Centre across',
-    ['type' => 'button', 'id' => 'p-centre-h', 'class' => 'btn btn-sm btn-outline-primary py-0 px-2',
+echo html_writer::tag(
+    'button', 'Centre across',
+        ['type' => 'button', 'id' => 'p-centre-h', 'class' => 'btn btn-sm btn-outline-primary py-0 px-2',
      'title' => 'Centre this element horizontally on the page']);
-echo html_writer::tag('button', 'Centre down',
-    ['type' => 'button', 'id' => 'p-centre-v', 'class' => 'btn btn-sm btn-outline-primary py-0 px-2',
+echo html_writer::tag(
+    'button', 'Centre down',
+        ['type' => 'button', 'id' => 'p-centre-v', 'class' => 'btn btn-sm btn-outline-primary py-0 px-2',
      'title' => 'Centre this element vertically on the page']);
 echo html_writer::end_div();
 echo html_writer::end_div();
 
-echo html_writer::end_div(); // typo group body
-echo html_writer::end_tag('details'); // typo group
+echo html_writer::end_div(); // Typo group body
+echo html_writer::end_tag('details'); // Typo group
 
 // ── Sub-group: Appearance ─────────────────────────────────────────────────────
 echo html_writer::start_tag('details', ['class' => 'rtoc-props-group', 'open' => 'open']);
@@ -1077,23 +1168,27 @@ echo html_writer::start_div('rtoc-props-group-body');
 
 // Image upload (image kind).
 echo html_writer::start_div('form-group mb-2', ['id' => 'p-image-wrap']);
-echo html_writer::tag('label', get_string('cert_template_prop_image', 'local_rtocompliance'),
+echo html_writer::tag(
+    'label', get_string('cert_template_prop_image', 'local_rtocompliance'),
     ['for' => 'p-image', 'class' => 'rtoc-form-label']);
-echo html_writer::empty_tag('input', [
-    'type' => 'file', 'id' => 'p-image', 'class' => 'form-control-file form-control-sm',
-    'accept' => 'image/png,image/jpeg,image/webp',
+echo html_writer::empty_tag(
+    'input', [
+        'type' => 'file', 'id' => 'p-image', 'class' => 'form-control-file form-control-sm',
+        'accept' => 'image/png,image/jpeg,image/webp',
 ]);
 echo html_writer::tag('small', 'Uploaded when you save.', ['class' => 'form-text text-muted']);
 echo html_writer::end_div();
 
 // Line width (line/box kinds).
 echo html_writer::start_div('form-group form-row mb-1', ['id' => 'p-linewidth-wrap']);
-echo html_writer::tag('label', get_string('cert_template_prop_linewidth', 'local_rtocompliance'),
+echo html_writer::tag(
+    'label', get_string('cert_template_prop_linewidth', 'local_rtocompliance'),
     ['for' => 'p-linewidth', 'class' => 'col-5 col-form-label col-form-label-sm']);
 echo html_writer::start_div('col-7');
-echo html_writer::empty_tag('input', [
-    'type' => 'number', 'id' => 'p-linewidth', 'class' => 'form-control form-control-sm',
-    'min' => 0.1, 'max' => 5, 'step' => 0.1,
+echo html_writer::empty_tag(
+    'input', [
+        'type' => 'number', 'id' => 'p-linewidth', 'class' => 'form-control form-control-sm',
+        'min' => 0.1, 'max' => 5, 'step' => 0.1,
 ]);
 echo html_writer::end_div();
 echo html_writer::end_div();
@@ -1102,7 +1197,8 @@ echo html_writer::end_div();
 // units table field. Shown only when a ror_table field is selected (toggled by
 // cert_template_editor.js). Defaults 30 / 110 / 36 mm match the renderer.
 echo html_writer::start_div('form-group mb-1', ['id' => 'p-rorcols-wrap', 'style' => 'display:none;']);
-echo html_writer::tag('label', get_string('cert_template_prop_rorcols', 'local_rtocompliance'),
+echo html_writer::tag(
+    'label', get_string('cert_template_prop_rorcols', 'local_rtocompliance'),
     ['class' => 'rtoc-form-label']);
 foreach ([
     ['p-col1w', 'cert_template_prop_rorcol1', '30'],
@@ -1110,12 +1206,14 @@ foreach ([
     ['p-col3w', 'cert_template_prop_rorcol3', '36'],
 ] as [$cid, $cstr, $cdef]) {
     echo html_writer::start_div('form-group form-row mb-1');
-    echo html_writer::tag('label', get_string($cstr, 'local_rtocompliance'),
+    echo html_writer::tag(
+        'label', get_string($cstr, 'local_rtocompliance'),
         ['for' => $cid, 'class' => 'col-5 col-form-label col-form-label-sm']);
     echo html_writer::start_div('col-7');
-    echo html_writer::empty_tag('input', [
-        'type' => 'number', 'id' => $cid, 'class' => 'form-control form-control-sm',
-        'min' => 5, 'max' => 260, 'step' => 1, 'value' => $cdef,
+    echo html_writer::empty_tag(
+        'input', [
+            'type' => 'number', 'id' => $cid, 'class' => 'form-control form-control-sm',
+            'min' => 5, 'max' => 260, 'step' => 1, 'value' => $cdef,
     ]);
     echo html_writer::end_div();
     echo html_writer::end_div();
@@ -1123,7 +1221,8 @@ foreach ([
 // ROR-RESULTS-COLUMN (v6.2.9): choose what the third column of the units table shows —
 // a completion date (Statements of Attainment) or the assessment Results (Records of Results).
 echo html_writer::start_div('form-group form-row mb-1');
-echo html_writer::tag('label', get_string('cert_template_prop_col3mode', 'local_rtocompliance'),
+echo html_writer::tag(
+    'label', get_string('cert_template_prop_col3mode', 'local_rtocompliance'),
     ['for' => 'p-col3mode', 'class' => 'col-5 col-form-label col-form-label-sm']);
 echo html_writer::start_div('col-7');
 echo html_writer::start_tag('select', ['id' => 'p-col3mode', 'class' => 'form-control form-control-sm']);
@@ -1134,17 +1233,67 @@ echo html_writer::end_div();
 echo html_writer::end_div();
 echo html_writer::end_div();
 
-echo html_writer::end_div(); // appearance group body
-echo html_writer::end_tag('details'); // appearance group
+// CERT-TABLE-HEADINGS (v6.3.20) — per-template column heading overrides. Left blank, a
+// column uses the site-wide wording from Certificate Settings (shown as the placeholder),
+// which in turn falls back to the built-in ASQA default. This is for an RTO whose
+// terminology differs — "COMPETENCY CODE" for UNIT CODE, "OUTCOME" for RESULT, and so on.
+// The two blocks are toggled by cert_template_editor.js: the units-table headings show for
+// a ror_table / qualification.units field, the identity headings for student.detailstable.
+$rtoc_headdefaults = local_rtocompliance_cert_table_headings();
+$rtoc_headinput = function (string $slot, string $stringkey) use ($rtoc_headdefaults) {
+    echo html_writer::start_div('form-group form-row mb-1', ['id' => 'p-head-' . $slot . '-row']);
+    echo html_writer::tag(
+        'label', get_string($stringkey, 'local_rtocompliance'),
+        ['for' => 'p-head-' . $slot, 'class' => 'col-5 col-form-label col-form-label-sm']);
+    echo html_writer::start_div('col-7');
+    echo html_writer::empty_tag(
+        'input', [
+            'type' => 'text', 'id' => 'p-head-' . $slot, 'class' => 'form-control form-control-sm',
+            'maxlength' => 60, 'placeholder' => $rtoc_headdefaults[$slot] ?? '',
+    ]);
+    echo html_writer::end_div();
+    echo html_writer::end_div();
+};
 
-echo html_writer::tag('button', get_string('cert_template_prop_delete', 'local_rtocompliance'),
+echo html_writer::start_div('form-group mb-1', ['id' => 'p-unitheads-wrap', 'style' => 'display:none;']);
+echo html_writer::tag(
+    'label', get_string('cert_template_prop_headings', 'local_rtocompliance'),
+    ['class' => 'rtoc-form-label']);
+echo html_writer::div(
+    get_string('cert_template_prop_headings_help', 'local_rtocompliance'),
+    'text-muted small mb-1');
+$rtoc_headinput('code', 'cert_template_prop_head_code');
+$rtoc_headinput('title', 'cert_template_prop_head_title');
+$rtoc_headinput('date', 'cert_template_prop_head_date');
+$rtoc_headinput('result', 'cert_template_prop_head_result');
+$rtoc_headinput('enroldate', 'cert_template_prop_head_enroldate');
+$rtoc_headinput('completiondate', 'cert_template_prop_head_completiondate');
+echo html_writer::end_div();
+
+echo html_writer::start_div('form-group mb-1', ['id' => 'p-idheads-wrap', 'style' => 'display:none;']);
+echo html_writer::tag(
+    'label', get_string('cert_template_prop_headings', 'local_rtocompliance'),
+    ['class' => 'rtoc-form-label']);
+echo html_writer::div(
+    get_string('cert_template_prop_headings_help', 'local_rtocompliance'),
+    'text-muted small mb-1');
+$rtoc_headinput('student', 'cert_template_prop_head_student');
+$rtoc_headinput('usi', 'cert_template_prop_head_usi');
+$rtoc_headinput('qual', 'cert_template_prop_head_qual');
+echo html_writer::end_div();
+
+echo html_writer::end_div(); // Appearance group body
+echo html_writer::end_tag('details'); // Appearance group
+
+echo html_writer::tag(
+    'button', get_string('cert_template_prop_delete', 'local_rtocompliance'),
     ['type' => 'button', 'id' => 'p-delete', 'class' => 'btn btn-sm btn-outline-danger mt-2 w-100']);
 
-echo html_writer::end_div(); // props
-echo html_writer::end_div(); // props section
+echo html_writer::end_div(); // Props
+echo html_writer::end_div(); // Props section
 
 
-// v6.2.90 SINGLE PAGE: the separate live-preview PDF was removed. The editing canvas already shows
+// Version 6.2.90 SINGLE PAGE: the separate live-preview PDF was removed. The editing canvas already shows
 // the coherent sample record (Jane Citizen / BSB30120) exactly as issued, so it IS the preview —
 // one page, centred and full width. The true TCPDF render is still one click away via the "Preview"
 // button in the top action bar (opens the issued PDF in a new tab). The hidden preview form below
@@ -1153,7 +1302,8 @@ echo html_writer::end_div(); // props section
 
 // ── ASQA VALIDATOR — moved to top of right panel ─────────────────────────────
 echo html_writer::start_div('rtoc-tmpl-section rtoc-validator-top');
-echo html_writer::tag('h4', get_string('cert_template_validation', 'local_rtocompliance'),
+echo html_writer::tag(
+    'h4', get_string('cert_template_validation', 'local_rtocompliance'),
     ['class' => 'h6 rtoc-section-h']);
 echo html_writer::div('', 'rtoc-tmpl-validation', ['id' => 'rtoc-tmpl-validation']);
 
@@ -1168,7 +1318,7 @@ $initialValidationHtml = \local_rtocompliance\certificate_validator::render_vali
 // CERT-EDITOR-XSS (v5.9.406): JSON_HEX_* flags neutralise </script>, quotes and
 // ampersands so template text fields can never break out of this inline <script>.
 echo html_writer::tag('script', 'document.getElementById("rtoc-tmpl-validation").innerHTML = ' . json_encode($initialValidationHtml, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) . ';');
-echo html_writer::end_div(); // validator section
+echo html_writer::end_div(); // Validator section
 
 
 // ── ACTION BUTTONS (sticky at bottom of right panel) ──────────────────────────
@@ -1178,7 +1328,8 @@ echo html_writer::start_div('rtoc-tmpl-actions');
 // unreliable at placing fields, so it has been withdrawn. Authors build from the ASQA-
 // compliant starter template and the drag-and-drop palette instead.
 
-echo html_writer::tag('button', get_string('cert_template_save_btn', 'local_rtocompliance'),
+echo html_writer::tag(
+    'button', get_string('cert_template_save_btn', 'local_rtocompliance'),
     ['type' => 'submit', 'class' => 'btn btn-primary w-100 mb-2', 'id' => 'rtoc-tmpl-save']);
 echo html_writer::link(
     new moodle_url('/local/rtocompliance/cert_template_preview.php', ['id' => $id]),
@@ -1186,34 +1337,39 @@ echo html_writer::link(
     ['class' => 'btn btn-outline-secondary w-100 mb-2', 'target' => '_blank', 'rel' => 'noopener']
 );
 if ($template->status === 'draft') {
-    $submiturl = new moodle_url('/local/rtocompliance/cert_template_action.php', [
-        'action' => 'submit', 'id' => $id, 'sesskey' => sesskey(),
+    $submiturl = new moodle_url(
+        '/local/rtocompliance/cert_template_action.php', [
+            'action' => 'submit', 'id' => $id, 'sesskey' => sesskey(),
     ]);
-    echo html_writer::link($submiturl, get_string('cert_template_submit_btn', 'local_rtocompliance'),
+    echo html_writer::link(
+        $submiturl, get_string('cert_template_submit_btn', 'local_rtocompliance'),
         ['class' => 'btn btn-success w-100 mb-2', 'id' => 'rtoc-tmpl-submit']);
 }
 if ($template->status === 'approved' && !$template->isactive) {
-    $activateurl = new moodle_url('/local/rtocompliance/cert_template_action.php', [
-        'action' => 'activate', 'id' => $id, 'sesskey' => sesskey(),
+    $activateurl = new moodle_url(
+        '/local/rtocompliance/cert_template_action.php', [
+            'action' => 'activate', 'id' => $id, 'sesskey' => sesskey(),
     ]);
-    echo html_writer::link($activateurl, get_string('cert_template_activate_btn', 'local_rtocompliance'),
-        ['class' => 'btn btn-primary w-100 mb-2',
+    echo html_writer::link(
+        $activateurl, get_string('cert_template_activate_btn', 'local_rtocompliance'),
+            ['class' => 'btn btn-primary w-100 mb-2',
          'onclick' => "return confirm(" . json_encode(get_string('cert_template_confirm_activate', 'local_rtocompliance')) . ");"]);
 }
-echo html_writer::end_div(); // actions
+echo html_writer::end_div(); // Actions
 
-echo html_writer::end_div(); // right
-echo html_writer::end_div(); // grid
+echo html_writer::end_div(); // Right
+echo html_writer::end_div(); // Grid
 echo html_writer::end_tag('form');
 
-// v6.2.85 STAGE 3 (beta, opt-in): "Floating properties" toggle. Lifts the field-properties
+// Version 6.2.85 STAGE 3 (beta, opt-in): "Floating properties" toggle. Lifts the field-properties
 // panel into a draggable, TinyMCE-style docked toolbar so the canvas + live preview take the
 // full width. Pure additive inline JS + a CSS class — it does NOT touch any property control's
 // id, so the editor AMD module is unaffected; turning it off restores the docked column exactly.
 // While floating, we set data-manual-wide=1 on the grid so the existing auto slide-over stops
 // collapsing the right column (the live preview must stay visible). State + last drag position
 // are remembered per browser so the author's choice sticks between visits.
-echo html_writer::tag('script', <<<'FLOATPROPS'
+echo html_writer::tag(
+    'script', <<<'FLOATPROPS'
 (function () {
   var grid = document.querySelector('.rtoc-tmpl-grid');
   var bar  = document.getElementById('rtoc-props-bar');
@@ -1298,7 +1454,7 @@ echo html_writer::tag('script', <<<'FLOATPROPS'
 FLOATPROPS
 );
 
-// v6.2.90 SINGLE PAGE: the hidden live-preview form was removed along with the inline preview
+// Version 6.2.90 SINGLE PAGE: the hidden live-preview form was removed along with the inline preview
 // iframe — the editing canvas is the single WYSIWYG page now. The live-preview JS guards on this
 // form's absence (scheduleLivePreview/refreshLivePreview return early when the form is missing),
 // so nothing renders in the background and no stray window opens. The "Preview" button in the top
@@ -1365,7 +1521,7 @@ $brandingorgsealurl = cert_template::get_branding_org_seal_url() ?: '';
 $brandingnrturl     = cert_template::get_branding_nrt_logo_url() ?: '';
 $brandingaqfurl     = cert_template::get_branding_aqf_logo_url() ?: '';
 
-// v4.2.48 BUG-MAY2-AUDIT — the canvas was hardcoded to 297x210 (landscape),
+// Version 4.2.48 BUG-MAY2-AUDIT — the canvas was hardcoded to 297x210 (landscape),
 // which broke portrait templates (statement of attainment, record of
 // results) by stretching their fields into the wrong aspect ratio in the
 // editor. Use the saved design's actual page dimensions, falling back to
@@ -1383,7 +1539,8 @@ if (!empty($design['fields']) && is_array($design['fields'])) {
         if (($_imgfld['kind'] ?? '') !== 'image' || empty($_imgfld['imageitemid'])) {
             continue;
         }
-        $_imgfiles = $imgfs->get_area_files($context->id, 'local_rtocompliance',
+        $_imgfiles = $imgfs->get_area_files(
+            $context->id, 'local_rtocompliance',
             cert_template::FA_IMAGE, (int) $_imgfld['imageitemid'], 'sortorder, filename', false);
         foreach ($_imgfiles as $_imgf) {
             if ($_imgf->is_directory()) {
@@ -1430,7 +1587,7 @@ $jsdata = [
             $v = get_config('local_rtocompliance', $k);
             return ($v !== false && $v !== null && $v !== '') ? (string) $v : $default;
         };
-        // v5.9.442: fall back to the real Moodle site name (the RTO's own name) when the
+        // Version 5.9.442: fall back to the real Moodle site name (the RTO's own name) when the
         // RTO legal name hasn't been entered in RTO Settings yet, so the canvas never
         // shows the generic "National Compliance Training" catalogue placeholder.
         global $SITE;
@@ -1452,7 +1609,8 @@ $jsdata = [
             'cert.number'     => $certnumberpreview,
             'cert.footer'     => $cfg('certfooter'),
             // Mandatory phrases (RTO-configurable; fall back to the ASQA default wording).
-            'aqf_statement'                   => $cfg('aqfstatement',
+            'aqf_statement'                   => $cfg(
+                'aqfstatement',
                 'This qualification is recognised within the Australian Qualifications Framework.'),
             'certify_statement'               => $cfg('certify_statement', 'This is to certify that'),
             'attained_statement'              => $cfg('attained_statement', 'has fulfilled the requirements for'),
@@ -1460,7 +1618,8 @@ $jsdata = [
             'soa_attained_statement'          => $cfg('soa_attained_statement', 'has attained'),
             'statement_of_attainment_heading' => $cfg('statement_of_attainment_heading', 'Statement of Attainment'),
             'record_of_results_heading'       => $cfg('record_of_results_heading', 'Record of Results'),
-            'not_a_testamur_statement'        => $cfg('not_a_testamur_statement',
+            'not_a_testamur_statement'        => $cfg(
+                'not_a_testamur_statement',
                 'A STATEMENT OF ATTAINMENT IS ISSUED BY A REGISTERED TRAINING ORGANISATION WHEN AN INDIVIDUAL HAS COMPLETED ONE OR MORE ACCREDITED UNITS. THIS IS NOT A TESTAMUR.'),
             // Optional descriptors (blank unless configured — JS shows placeholder when blank).
             'industry_descriptor'             => $cfg('industrydescriptor'),
@@ -1477,6 +1636,11 @@ $jsdata = [
     // resolved via the shared helper so the editor canvas, the live preview and the
     // issued PDF all use the SAME colour — by default the site theme's primary colour.
     'headercolour'   => local_rtocompliance_cert_header_colour(),
+    // CERT-TABLE-HEADINGS (v6.3.20) — the site-wide column heading wording (Certificate
+    // Settings), so the canvas mock shows the RTO's own terminology. A per-field override
+    // (field.head_<slot>) wins over these, exactly as it does in the issued PDF.
+    'tableheadings'     => local_rtocompliance_cert_table_headings(),
+    'tableheaddefaults' => local_rtocompliance_cert_table_heading_defaults(),
     // FONTS (v6.2.63): font-key -> CSS family for the canvas, plus the Google font family list so
     // the editor can load them as webfonts and preview the real typeface.
     'fontcss'        => (function () {

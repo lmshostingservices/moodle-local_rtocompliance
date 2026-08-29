@@ -64,7 +64,8 @@ $OUTCOMES = [
 // Currently selected student (per-student records).
 $studentid = optional_param('studentid', 0, PARAM_INT);
 
-$returnurl = new moodle_url('/local/rtocompliance/student_support_input.php',
+$returnurl = new moodle_url(
+    '/local/rtocompliance/student_support_input.php',
     $studentid ? ['studentid' => $studentid] : []);
 
 // =====================================================================
@@ -91,8 +92,9 @@ if ($action === 'save' && confirm_sesskey()) {
     }
 
     if ($detail === '') {
-        redirect(new moodle_url('/local/rtocompliance/student_support_input.php', ['studentid' => $sid]),
-            'A detail note is required — nothing was saved.', null,
+        redirect(
+            new moodle_url('/local/rtocompliance/student_support_input.php', ['studentid' => $sid]),
+                'A detail note is required — nothing was saved.', null,
             \core\output\notification::NOTIFY_ERROR);
     }
 
@@ -110,8 +112,9 @@ if ($action === 'save' && confirm_sesskey()) {
     $record->timemodified = time();
     $DB->insert_record('local_rtocompliance_supportnotes', $record);
 
-    redirect(new moodle_url('/local/rtocompliance/student_support_input.php', ['studentid' => $sid]),
-        'Support record saved securely.', null,
+    redirect(
+        new moodle_url('/local/rtocompliance/student_support_input.php', ['studentid' => $sid]),
+            'Support record saved securely.', null,
         \core\output\notification::NOTIFY_SUCCESS);
 }
 
@@ -122,8 +125,9 @@ if ($action === 'delete' && confirm_sesskey()) {
     if ($DB->record_exists('local_rtocompliance_supportnotes', ['id' => $noteid, 'studentid' => $sid])) {
         $DB->delete_records('local_rtocompliance_supportnotes', ['id' => $noteid, 'studentid' => $sid]);
     }
-    redirect(new moodle_url('/local/rtocompliance/student_support_input.php', ['studentid' => $sid]),
-        'Support record deleted.', null,
+    redirect(
+        new moodle_url('/local/rtocompliance/student_support_input.php', ['studentid' => $sid]),
+            'Support record deleted.', null,
         \core\output\notification::NOTIFY_SUCCESS);
 }
 
@@ -171,7 +175,8 @@ echo html_writer::end_div();
 
 echo html_writer::start_div('info-card');
 echo html_writer::tag('h4', 'Per-student support record');
-echo html_writer::tag('p', '
+echo html_writer::tag(
+    'p', '
     Use this form to capture an individual student\'s support, adjustments, referrals, interventions,
     diversity considerations and wellbeing notes. Records are stored securely on the server against the
     selected student and retained as the per-student evidence trail for Standards 2.3 (Training Support),
@@ -189,12 +194,14 @@ echo html_writer::start_div('info-card', ['style' => 'margin-top:1.5rem;']);
 echo html_writer::tag('h4', 'Select student');
 echo '<form method="get" action="' . (new moodle_url('/local/rtocompliance/student_support_input.php'))->out() . '" style="margin-top:0.5rem;display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">';
 echo '<label for="studentid" style="font-weight:600;">Student</label>';
-echo html_writer::select($studentoptions, 'studentid', $studentid, ['' => 'Choose a student…'],
+echo html_writer::select(
+    $studentoptions, 'studentid', $studentid, ['' => 'Choose a student…'],
     ['id' => 'studentid', 'onchange' => 'this.form.submit();']);
 echo '<noscript><button type="submit" class="btn btn-primary btn-sm">Go</button></noscript>';
 echo '</form>';
 if (!$selectedstudent) {
-    echo html_writer::tag('p', 'Choose a student above to view and add their support records.',
+    echo html_writer::tag(
+        'p', 'Choose a student above to view and add their support records.',
         ['style' => 'margin-top:0.75rem;color:#6b7280;']);
 }
 echo html_writer::end_div();
@@ -293,15 +300,18 @@ if ($selectedstudent) {
     // =====================================================================
     echo html_writer::start_div('info-card', ['style' => 'margin-top:1.5rem;']);
     echo html_writer::tag('h4', 'Saved Support Records for ' . s($selectedname));
-    echo html_writer::tag('p',
-        'These records are stored securely on the server and retained as the per-student evidence trail for Standards 2.3–2.6. They are visible to authorised staff and auditors.',
+    echo html_writer::tag(
+        'p',
+            'These records are stored securely on the server and retained as the per-student evidence trail for Standards 2.3–2.6. They are visible to authorised staff and auditors.',
         ['style' => 'font-size:0.88rem;color:#6b7280;']);
 
-    $notes = $DB->get_records('local_rtocompliance_supportnotes',
+    $notes = $DB->get_records(
+        'local_rtocompliance_supportnotes',
         ['studentid' => $studentid], 'timecreated DESC');
 
     if (!$notes) {
-        echo html_writer::tag('p', 'No records saved yet for this student.',
+        echo html_writer::tag(
+            'p', 'No records saved yet for this student.',
             ['style' => 'color:#6b7280;font-style:italic;']);
     } else {
         $usercache = [];
@@ -317,7 +327,8 @@ if ($selectedstudent) {
 
         foreach ($notes as $note) {
             if (!array_key_exists($note->recordedby, $usercache)) {
-                $usercache[$note->recordedby] = $DB->get_record('user',
+                $usercache[$note->recordedby] = $DB->get_record(
+                    'user',
                     ['id' => $note->recordedby], '*', IGNORE_MISSING);
             }
             $rbname = $usercache[$note->recordedby]

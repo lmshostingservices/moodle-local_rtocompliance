@@ -102,10 +102,11 @@ if ($action === 'generate' && confirm_sesskey()) {
         $log->itemid = $export->id;
         $log->userid = $USER->id;
         $log->targetuserid = null;
-        $log->details = json_encode([
-            'year' => $year,
-            'files' => array_keys($files),
-            'record_counts' => $result['record_counts'],
+        $log->details = json_encode(
+            [
+                'year' => $year,
+                'files' => array_keys($files),
+                'record_counts' => $result['record_counts'],
         ]);
         $log->ipaddress = getremoteaddr();
         $log->timecreated = time();
@@ -187,22 +188,26 @@ if (!empty($_configured_ids)) {
     echo '&#128193; ' . get_string('portal_reference_ids_heading', 'local_rtocompliance');
     echo '</summary>';
     echo '<div style="padding:0 20px 16px 20px;">';
-    echo html_writer::tag('p',
-        get_string('portal_reference_ids_desc', 'local_rtocompliance') . ' ' .
-        html_writer::link($_statefundingurl, get_string('portal_reference_ids_edit_link', 'local_rtocompliance'),
-            ['style' => 'font-size:0.85rem;']),
-        ['style' => 'font-size:0.85rem;color:#0369a1;margin:0 0 12px 0;']
+    echo html_writer::tag(
+        'p',
+            get_string('portal_reference_ids_desc', 'local_rtocompliance') . ' ' .
+            html_writer::link(
+            $_statefundingurl, get_string('portal_reference_ids_edit_link', 'local_rtocompliance'),
+                ['style' => 'font-size:0.85rem;']),
+            ['style' => 'font-size:0.85rem;color:#0369a1;margin:0 0 12px 0;']
     );
     echo html_writer::start_tag('table', ['style' => 'border-collapse:collapse;width:100%;max-width:700px;']);
     foreach ($_configured_ids as $_key => $_val) {
         echo html_writer::start_tag('tr');
-        echo html_writer::tag('td',
-            get_string($_key, 'local_rtocompliance') . ':',
-            ['style' => $_labelStyle]
+        echo html_writer::tag(
+            'td',
+                get_string($_key, 'local_rtocompliance') . ':',
+                ['style' => $_labelStyle]
         );
-        echo html_writer::tag('td',
-            html_writer::tag('code', s($_val), ['style' => $_codeStyle]),
-            ['style' => $_valueStyle]
+        echo html_writer::tag(
+            'td',
+                html_writer::tag('code', s($_val), ['style' => $_codeStyle]),
+                ['style' => $_valueStyle]
         );
         $_portalLink = '';
         if (!empty($_portal_urls[$_key])) {
@@ -221,10 +226,12 @@ if (!empty($_configured_ids)) {
     echo '</details>';
 } else {
     // None configured — show a subtle prompt so admins know the feature exists.
-    echo html_writer::start_div('', [
-        'style' => 'background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px 16px;margin-bottom:24px;font-size:0.85rem;color:#6b7280;',
+    echo html_writer::start_div(
+        '', [
+            'style' => 'background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px 16px;margin-bottom:24px;font-size:0.85rem;color:#6b7280;',
     ]);
-    echo get_string('portal_reference_ids_unconfigured', 'local_rtocompliance',
+    echo get_string(
+        'portal_reference_ids_unconfigured', 'local_rtocompliance',
         html_writer::link($_statefundingurl, get_string('statefunding_settings', 'local_rtocompliance')));
     echo html_writer::end_div();
 }
@@ -255,25 +262,28 @@ if (!empty($SESSION->nat_validation)) {
     echo html_writer::start_div('', ['style' => 'margin-bottom: 24px;']);
     
     if (!empty($validation['errors'])) {
-        echo html_writer::tag('div',
-            html_writer::tag('h4', 'Validation Errors') .
-            html_writer::alist($validation['errors']),
-            ['style' => 'background: #fef2f2; border: 1px solid #ef4444; border-radius: 8px; padding: 16px; margin-bottom: 12px; color: #991b1b;']
+        echo html_writer::tag(
+            'div',
+                html_writer::tag('h4', 'Validation Errors') .
+                html_writer::alist($validation['errors']),
+                ['style' => 'background: #fef2f2; border: 1px solid #ef4444; border-radius: 8px; padding: 16px; margin-bottom: 12px; color: #991b1b;']
         );
     }
     
     if (!empty($validation['warnings'])) {
-        echo html_writer::tag('div',
-            html_writer::tag('h4', 'Validation Warnings') .
-            html_writer::alist($validation['warnings']),
-            ['style' => 'background: #fffbeb; border: 1px solid #f59e0b; border-radius: 8px; padding: 16px; margin-bottom: 12px; color: #92400e;']
+        echo html_writer::tag(
+            'div',
+                html_writer::tag('h4', 'Validation Warnings') .
+                html_writer::alist($validation['warnings']),
+                ['style' => 'background: #fffbeb; border: 1px solid #f59e0b; border-radius: 8px; padding: 16px; margin-bottom: 12px; color: #92400e;']
         );
     }
     
     if (empty($validation['errors']) && empty($validation['warnings'])) {
-        echo html_writer::tag('div',
-            html_writer::tag('strong', 'Validation Passed') . ' - Data is ready for AVETMISS export.',
-            ['style' => 'background: #f0fdf4; border: 1px solid #22c55e; border-radius: 8px; padding: 16px; color: #166534;']
+        echo html_writer::tag(
+            'div',
+                html_writer::tag('strong', 'Validation Passed') . ' - Data is ready for AVETMISS export.',
+                ['style' => 'background: #f0fdf4; border: 1px solid #22c55e; border-radius: 8px; padding: 16px; color: #166534;']
         );
     }
     
@@ -321,19 +331,23 @@ if ($_blank_programcode_count > 0) {
     $_skipped_url = new moodle_url('/local/rtocompliance/skipped_programcodes.php');
     echo html_writer::tag(
         'div',
-        html_writer::tag('strong',
-            html_writer::tag('svg', '<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="9" x2="12" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="17" x2="12.01" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
-                ['xmlns' => 'http://www.w3.org/2000/svg', 'viewBox' => '0 0 24 24', 'fill' => 'none', 'style' => 'width:16px;height:16px;vertical-align:middle;margin-right:6px;flex-shrink:0;']
-            ) .
-            get_string('nat_warn_blank_programcode_heading', 'local_rtocompliance', $_blank_programcode_count)
+        html_writer::tag(
+            'strong',
+                html_writer::tag(
+                'svg', '<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="9" x2="12" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="17" x2="12.01" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+                        ['xmlns' => 'http://www.w3.org/2000/svg', 'viewBox' => '0 0 24 24', 'fill' => 'none', 'style' => 'width:16px;height:16px;vertical-align:middle;margin-right:6px;flex-shrink:0;']
+                ) .
+                get_string('nat_warn_blank_programcode_heading', 'local_rtocompliance', $_blank_programcode_count)
         ) .
-        html_writer::tag('p',
-            get_string('nat_warn_blank_programcode_body', 'local_rtocompliance') . ' ' .
-            html_writer::link($_skipped_url,
-                get_string('nat_warn_blank_programcode_link', 'local_rtocompliance'),
-                ['style' => 'color:#92400e;font-weight:600;text-decoration:underline;']
-            ),
-            ['style' => 'margin:6px 0 0 22px;font-size:0.9rem;']
+        html_writer::tag(
+            'p',
+                get_string('nat_warn_blank_programcode_body', 'local_rtocompliance') . ' ' .
+                html_writer::link(
+                $_skipped_url,
+                        get_string('nat_warn_blank_programcode_link', 'local_rtocompliance'),
+                        ['style' => 'color:#92400e;font-weight:600;text-decoration:underline;']
+                ),
+                ['style' => 'margin:6px 0 0 22px;font-size:0.9rem;']
         ),
         ['style' => 'background:#fffbeb;border:1px solid #f59e0b;border-left:4px solid #d97706;border-radius:8px;padding:14px 18px;margin-bottom:20px;color:#92400e;']
     );
@@ -388,12 +402,13 @@ if ($exports) {
         }
         echo html_writer::tag('td', $validationhtml);
 
-        echo html_writer::tag('td',
-            html_writer::link(
-                new moodle_url('/local/rtocompliance/download_nat.php', ['id' => $export->id, 'sesskey' => sesskey()]),
-                get_string('nat_download', 'local_rtocompliance'),
-                ['class' => 'btn btn-sm btn-primary', 'title' => 'Download the ZIP of NAT files for this export']
-            )
+        echo html_writer::tag(
+            'td',
+                html_writer::link(
+                    new moodle_url('/local/rtocompliance/download_nat.php', ['id' => $export->id, 'sesskey' => sesskey()]),
+                    get_string('nat_download', 'local_rtocompliance'),
+                    ['class' => 'btn btn-sm btn-primary', 'title' => 'Download the ZIP of NAT files for this export']
+                )
         );
         echo html_writer::end_tag('tr');
     }

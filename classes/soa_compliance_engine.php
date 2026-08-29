@@ -21,7 +21,7 @@
  * @copyright  2025 LMS Labs
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-// v4.6.101 MULTI-UNIT-SOA — Backend compliance engine.
+// Version 4.6.101 MULTI-UNIT-SOA — Backend compliance engine.
 // Fetches eligible units for a student from Moodle course completions,
 // runs per-unit AQF/ASQA compliance checks, groups units into suggested
 // SOA bundles, and writes immutable compliance snapshots at issue time.
@@ -137,7 +137,8 @@ class soa_compliance_engine {
         $outcomeMap = [];  // courseid => outcomeidentifier
         if ($dbman->table_exists('local_rtocompliance_enrolments') &&
             $dbman->table_exists('local_rtocompliance_students')) {
-            $stud = $DB->get_record('local_rtocompliance_students',
+            $stud = $DB->get_record(
+                'local_rtocompliance_students',
                 ['userid' => $userid], 'id', IGNORE_MISSING);
             if ($stud) {
                 $rows = $DB->get_records_sql(
@@ -157,7 +158,8 @@ class soa_compliance_engine {
         // ── Student record for USI check ─────────────────────────────────────
         $student = null;
         if ($dbman->table_exists('local_rtocompliance_students')) {
-            $student = $DB->get_record('local_rtocompliance_students',
+            $student = $DB->get_record(
+                'local_rtocompliance_students',
                 ['userid' => $userid], 'id, usi, usiverified, usiexempt', IGNORE_MISSING);
         }
 
@@ -196,7 +198,7 @@ class soa_compliance_engine {
         // ── Build unit list ──────────────────────────────────────────────────
         $units = [];
         foreach ($completions as $comp) {
-            // v6.2.86 TREE-FIRST CODE: resolve the national unit code from the course (ID number ->
+            // Version 6.2.86 TREE-FIRST CODE: resolve the national unit code from the course (ID number ->
             // full-name prefix -> shortname) instead of blindly using the shortname, which at many
             // RTOs is a semester code ("DIT 20S2") rather than the national code (TLIX5049).
             $unitcode = self::resolve_national_unit_code(
@@ -219,7 +221,7 @@ class soa_compliance_engine {
             $u->categoryid       = (int)$comp->category;
             $u->categoryname     = $comp->catname;
             $u->categoryidnumber = $comp->catidnumber ?? '';
-            // v5.9.369 QUAL-RESOLVE: the immediate Moodle category is usually a
+            // Version 5.9.369 QUAL-RESOLVE: the immediate Moodle category is usually a
             // semester/archive folder ("Archive s21"), not the qualification. Keep it
             // as the semester label; the real qualification is resolved below.
             $u->semesterlabel    = $comp->catname;
@@ -233,7 +235,7 @@ class soa_compliance_engine {
             $units[] = $u;
         }
 
-        // v6.2.86 DE-DUPLICATE ACROSS SEMESTER COPIES. The same national unit is delivered as a
+        // Version 6.2.86 DE-DUPLICATE ACROSS SEMESTER COPIES. The same national unit is delivered as a
         // fresh Moodle course every semester (course copy => new courseid), so a learner who did
         // TLIX5049 across two intakes has two completions in two courses. Collapse to ONE row per
         // resolved national unit code (the key that survives course-copying; courseid does not).
@@ -270,7 +272,7 @@ class soa_compliance_engine {
         }
         $units = array_values($byCode);
 
-        // v5.9.369 QUAL-RESOLVE: attach the real qualification to every unit from the
+        // Version 5.9.369 QUAL-RESOLVE: attach the real qualification to every unit from the
         // source-of-truth mapping (Course → Category → Qualification), so units group
         // by qualification (e.g. "ABC12345 — Certificate IV in ...") instead of the raw
         // semester category, and Step 3 can auto-fill the qual code + name.
@@ -299,10 +301,11 @@ class soa_compliance_engine {
             }
         }
 
-        usort($units, function ($a, $b) {
-            $c = strcmp($a->qualgrouplabel, $b->qualgrouplabel);
-            return $c !== 0 ? $c : strcmp($a->unitcode, $b->unitcode);
-        });
+        usort(
+            $units, function ($a, $b) {
+                $c = strcmp($a->qualgrouplabel, $b->qualgrouplabel);
+                return $c !== 0 ? $c : strcmp($a->unitcode, $b->unitcode);
+            });
 
         return $units;
     }
@@ -328,10 +331,11 @@ class soa_compliance_engine {
         }
         $dbman = $DB->get_manager();
 
-        // qualcode → {name,type} from the Qualification Builder (active products only).
+        // Qualcode → {name,type} from the Qualification Builder (active products only).
         $qualNames = [];
         if ($dbman->table_exists('local_rtocompliance_qualbuilder')) {
-            $qbs = $DB->get_records_select('local_rtocompliance_qualbuilder',
+            $qbs = $DB->get_records_select(
+                'local_rtocompliance_qualbuilder',
                 "status = 'active'", [], '', 'id, qualificationcode, qualificationname, producttype');
             foreach ($qbs as $qb) {
                 $qualNames[strtoupper(trim($qb->qualificationcode))] = [
@@ -343,7 +347,7 @@ class soa_compliance_engine {
 
         $addhit = function (int $cid, string $qcode, string $source) use (&$out, $qualNames) {
             if (isset($out[$cid])) {
-                return; // first (higher-priority) hit wins
+                return; // First (higher-priority) hit wins
             }
             $qcode = strtoupper(trim($qcode));
             if ($qcode === '') {
@@ -442,7 +446,7 @@ class soa_compliance_engine {
                 $vstat = (int) $student->usiverified;
                 if ($vstat === 2) { // STATUS_FAILED
                     $errors[] = 'USI verification failed — student details do not match the USI Registry record. The student must correct their USI or details (Clause 12).';
-                } else if ($vstat !== 1) { // anything other than STATUS_VERIFIED
+                } else if ($vstat !== 1) { // Anything other than STATUS_VERIFIED
                     $warnings[] = 'USI recorded but not yet verified with USI Registry (Clause 12)';
                 }
             }
@@ -468,7 +472,7 @@ class soa_compliance_engine {
     public static function get_suggested_groups(array $units): array {
         $groups = [];
         foreach ($units as $unit) {
-            // v5.9.369: group by the resolved qualification, not the raw semester category.
+            // Version 5.9.369: group by the resolved qualification, not the raw semester category.
             $key = $unit->qualgroupkey ?? ('cat:' . $unit->categoryid);
             if (!isset($groups[$key])) {
                 $groups[$key] = [
@@ -492,12 +496,13 @@ class soa_compliance_engine {
             }
         }
         // Resolved qualifications first, then by unit count (largest bundle first).
-        usort($groups, function ($a, $b) {
-            $ar = ($a['source'] !== 'none') ? 0 : 1;
-            $br = ($b['source'] !== 'none') ? 0 : 1;
-            if ($ar !== $br) { return $ar - $br; }
-            return count($b['units']) - count($a['units']);
-        });
+        usort(
+            $groups, function ($a, $b) {
+                $ar = ($a['source'] !== 'none') ? 0 : 1;
+                $br = ($b['source'] !== 'none') ? 0 : 1;
+                if ($ar !== $br) { return $ar - $br; }
+                return count($b['units']) - count($a['units']);
+            });
         return array_values($groups);
     }
 
@@ -532,7 +537,7 @@ class soa_compliance_engine {
             $snap->unittitle           = $unit->unittitle;
             $snap->moodlecourseid      = $unit->courseid;
             $snap->qualcategoryid      = $unit->categoryid;
-            // v5.9.369: store the resolved qualification label when known (falls back to
+            // Version 5.9.369: store the resolved qualification label when known (falls back to
             // the raw category) so the immutable snapshot names the qualification.
             $snap->qualcategoryname    = !empty($unit->qualgrouplabel) ? $unit->qualgrouplabel : $unit->categoryname;
             $snap->completiondate      = $unit->completiondate;
@@ -571,7 +576,8 @@ class soa_compliance_engine {
         ];
 
         if ($dbman->table_exists('local_rtocompliance_students')) {
-            $stud = $DB->get_record('local_rtocompliance_students',
+            $stud = $DB->get_record(
+                'local_rtocompliance_students',
                 ['userid' => $userid], 'id, usi, usiverified, usiexempt', IGNORE_MISSING);
             if ($stud) {
                 $result['usi']         = $stud->usi;
@@ -588,7 +594,8 @@ class soa_compliance_engine {
             ['uid' => $userid]
         );
 
-        $result['existingsoas'] = (int)$DB->count_records('local_rtocompliance_certs',
+        $result['existingsoas'] = (int)$DB->count_records(
+            'local_rtocompliance_certs',
             ['userid' => $userid, 'certtype' => 'statement', 'status' => 'issued']);
 
         return $result;

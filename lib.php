@@ -283,14 +283,16 @@ function local_rtocompliance_get_rpl_evidence_files(int $rplid, string $filearea
     }
     $fs = get_file_storage();
     $contextid = \context_system::instance()->id;
-    $files = $fs->get_area_files($contextid, 'local_rtocompliance', $filearea, $rplid,
+    $files = $fs->get_area_files(
+        $contextid, 'local_rtocompliance', $filearea, $rplid,
         'filename', false);
     $out = [];
     foreach ($files as $f) {
         if ($f->is_directory()) {
             continue;
         }
-        $url = \moodle_url::make_pluginfile_url($f->get_contextid(), $f->get_component(),
+        $url = \moodle_url::make_pluginfile_url(
+            $f->get_contextid(), $f->get_component(),
             $f->get_filearea(), $f->get_itemid(), $f->get_filepath(), $f->get_filename());
         $out[] = [
             'filename' => $f->get_filename(),
@@ -319,7 +321,8 @@ function local_rtocompliance_delete_rpl_evidence_file(int $rplid, string $filear
     }
     $fs = get_file_storage();
     $contextid = \context_system::instance()->id;
-    $file = $fs->get_file($contextid, 'local_rtocompliance', $filearea, $rplid, '/',
+    $file = $fs->get_file(
+        $contextid, 'local_rtocompliance', $filearea, $rplid, '/',
         clean_param($filename, PARAM_FILE));
     if ($file && !$file->is_directory()) {
         $file->delete();
@@ -703,7 +706,7 @@ function local_rtocompliance_help_icon_name($lookup) {
         'alerts.php' => 'bell', 'auditlog.php' => 'scroll', 'audit.php' => 'scroll',
         'practice_guides.php' => 'book', 'student_declaration_send.php' => 'send',
         'suitability_bulk.php' => 'clipboardcheck', 'suitability_send.php' => 'send', 'suitability_view.php' => 'clipboardcheck',
-        // settings sections
+        // Settings sections
         'plugin_settings.php:local_rtocompliance_settings' => 'briefcase',
         'plugin_settings.php:local_rtocompliance_api' => 'link',
         'plugin_settings.php:local_rtocompliance_certs' => 'award',
@@ -2667,7 +2670,7 @@ function local_rtocompliance_cert_allowed_orientations(): array {
     if ($raw === false || $raw === null || $raw === '') {
         return ['L', 'P'];
     }
-    // configmulticheckbox stores a comma-separated list of the ticked keys.
+    // Configmulticheckbox stores a comma-separated list of the ticked keys.
     $picked = array_values(array_intersect(['L', 'P'], array_map('trim', explode(',', $raw))));
     return empty($picked) ? ['L', 'P'] : $picked;
 }
@@ -2749,6 +2752,49 @@ function local_rtocompliance_cert_header_colour(): string {
         $c = '#0f6cbf';
     }
     return $c;
+}
+
+/**
+ * CERT-TABLE-HEADINGS (v6.3.20): the column heading wording used on the certificate tables —
+ * the student details table and the units / Record of Results tables. Every heading has an
+ * ASQA-conventional default; an RTO that uses different terminology (e.g. "COMPETENCY CODE"
+ * instead of "UNIT CODE", or "OUTCOME" instead of "RESULT") overrides any of them in
+ * Certificate Settings. An individual certificate template may override again per table
+ * field, in the certificate template editor.
+ *
+ * Slot keys: code, title, date, result, enroldate, completiondate, student, usi, qual.
+ *
+ * @return array<string,string> slot => heading text (admin override, or the default)
+ */
+function local_rtocompliance_cert_table_headings(): array {
+    $defaults = local_rtocompliance_cert_table_heading_defaults();
+    $out = [];
+    foreach ($defaults as $slot => $default) {
+        $custom = trim((string) get_config('local_rtocompliance', 'certtablehead_' . $slot));
+        $out[$slot] = ($custom !== '') ? $custom : $default;
+    }
+    return $out;
+}
+
+/**
+ * CERT-TABLE-HEADINGS (v6.3.20): the built-in ASQA-conventional heading for each table column
+ * slot. Used as the fallback when neither the template field nor the admin setting supplies
+ * wording, and as the placeholder text shown in the settings + editor inputs.
+ *
+ * @return array<string,string> slot => default heading text
+ */
+function local_rtocompliance_cert_table_heading_defaults(): array {
+    return [
+        'code'           => 'UNIT CODE',
+        'title'          => 'UNIT TITLE',
+        'date'           => 'DATE',
+        'result'         => 'RESULT',
+        'enroldate'      => 'ENROLMENT DATE',
+        'completiondate' => 'COMPLETION DATE',
+        'student'        => 'STUDENT NAME',
+        'usi'            => 'USI',
+        'qual'           => 'QUALIFICATION',
+    ];
 }
 
 /**
@@ -2941,13 +2987,15 @@ function local_rtocompliance_usi_status_badge(array $st): string {
     $key = isset($st['status'], $map[$st['status']]) ? $st['status'] : 'norecord';
     list($bg, $fg, $text) = $map[$key];
 
-    $html = html_writer::tag('span', $text, [
-        'style' => "background:$bg;color:$fg;padding:2px 8px;border-radius:4px;"
-            . "font-size:0.78rem;font-weight:600;white-space:nowrap;display:inline-block;",
+    $html = html_writer::tag(
+        'span', $text, [
+            'style' => "background:$bg;color:$fg;padding:2px 8px;border-radius:4px;"
+                . "font-size:0.78rem;font-weight:600;white-space:nowrap;display:inline-block;",
     ]);
     if ($key === 'verified' && !empty($st['usi'])) {
-        $html .= html_writer::tag('div', s($st['usi']), [
-            'style' => 'font-size:0.72rem;color:#6b7280;margin-top:2px;font-family:monospace;',
+        $html .= html_writer::tag(
+            'div', s($st['usi']), [
+                'style' => 'font-size:0.72rem;color:#6b7280;margin-top:2px;font-family:monospace;',
         ]);
     }
     return $html;
@@ -2963,11 +3011,12 @@ function local_rtocompliance_usi_status_badge(array $st): string {
  */
 function local_rtocompliance_usi_fix_link(int $userid, string $label = 'Add / verify USI'): string {
     $url = new moodle_url('/local/rtocompliance/student_profile.php', ['userid' => $userid]);
-    return html_writer::link($url, $label . ' &rarr;', [
-        'style'  => 'font-size:0.78rem;font-weight:600;color:#b45309;text-decoration:underline;white-space:nowrap;',
-        'title'  => 'Open this student\'s AVETMISS profile to record and verify their USI',
-        'target' => '_blank',
-        'rel'    => 'noopener',
+    return html_writer::link(
+        $url, $label . ' &rarr;', [
+            'style'  => 'font-size:0.78rem;font-weight:600;color:#b45309;text-decoration:underline;white-space:nowrap;',
+            'title'  => 'Open this student\'s AVETMISS profile to record and verify their USI',
+            'target' => '_blank',
+            'rel'    => 'noopener',
     ]);
 }
 
@@ -3050,7 +3099,7 @@ function local_rtocompliance_pop_gen_summary(string $key): ?array {
 }
 
 function local_rtocompliance_practice_guide_url($script) {
-    // page script => practice-guide key (resolved to an official ASQA PDF below)
+    // Page script => practice-guide key (resolved to an official ASQA PDF below)
     $map = [
         // Quality Area 1 — Training & Assessment
         'qualbuilder.php'          => 'integrity-nationally-recognised-training-products',
@@ -4257,19 +4306,21 @@ function local_rtocompliance_myprofile_navigation(core_user\output\myprofile\tre
     $tree->add_category($category);
 
     $certs = \local_rtocompliance\cache_helper::get_user_certificate_count($user->id);
-    $tree->add_node(new core_user\output\myprofile\node(
-        'rtocompliance',
-        'mydocuments',
-        get_string('mydocuments', 'local_rtocompliance'),
-        null,
-        new moodle_url('/local/rtocompliance/mydocs.php', ['userid' => $user->id])
+    $tree->add_node(
+        new core_user\output\myprofile\node(
+            'rtocompliance',
+            'mydocuments',
+            get_string('mydocuments', 'local_rtocompliance'),
+            null,
+            new moodle_url('/local/rtocompliance/mydocs.php', ['userid' => $user->id])
     ));
-    $tree->add_node(new core_user\output\myprofile\node(
-        'rtocompliance',
-        'certificates',
-        get_string('mycertificates', 'local_rtocompliance') . ': ' . $certs,
-        null,
-        new moodle_url('/local/rtocompliance/mycerts.php', ['userid' => $user->id])
+    $tree->add_node(
+        new core_user\output\myprofile\node(
+            'rtocompliance',
+            'certificates',
+            get_string('mycertificates', 'local_rtocompliance') . ': ' . $certs,
+            null,
+            new moodle_url('/local/rtocompliance/mycerts.php', ['userid' => $user->id])
     ));
     
     if ($iscurrentuser && local_rtocompliance_user_requires_avetmiss($user->id)) {
@@ -4279,12 +4330,13 @@ function local_rtocompliance_myprofile_navigation(core_user\output\myprofile\tre
             $profilestatus = ' (' . get_string('incomplete', 'local_rtocompliance') . ')';
         }
         
-        $tree->add_node(new core_user\output\myprofile\node(
-            'rtocompliance',
-            'avetmissprofile',
-            get_string('myavetmissprofile', 'local_rtocompliance') . $profilestatus,
-            null,
-            new moodle_url('/local/rtocompliance/my_profile.php')
+        $tree->add_node(
+            new core_user\output\myprofile\node(
+                'rtocompliance',
+                'avetmissprofile',
+                get_string('myavetmissprofile', 'local_rtocompliance') . $profilestatus,
+                null,
+                new moodle_url('/local/rtocompliance/my_profile.php')
         ));
     }
 }
@@ -4316,30 +4368,32 @@ function local_rtocompliance_publish_cert_to_registry(stdClass $cert, stdClass $
     }
 
     $certstatusmap = ['issued' => 'active', 'superseded' => 'superseded', 'revoked' => 'revoked'];
-    $payload = json_encode([
-        'siteId'             => (string) $siteid,
-        'apiKey'             => (string) $apikey,
-        'token'              => (string) $cert->verifytoken,
-        'certNumber'         => (string) ($cert->certnumber ?? ''),
-        'certType'           => (string) ($cert->certtype ?? 'completion'),
-        'qualificationCode'  => $cert->qualificationcode ?? null,
-        'qualificationName'  => $cert->qualificationname ?? null,
-        'studentFirstName'   => (string) ($user->firstname ?? ''),
-        'studentLastInitial' => substr((string) ($user->lastname ?? ''), 0, 1),
-        'rtoName'            => (string) (get_config('local_rtocompliance', 'rtoname')
-                                    ?: get_config('moodle', 'fullname')
-                                    ?: 'Training Organisation'),
-        'issueDate'          => (int) ($cert->issuedate ?? time()),
-        'expiryDate'         => !empty($cert->expirydate) ? (int) $cert->expirydate : null,
-        'status'             => $certstatusmap[$cert->status ?? 'issued'] ?? 'active',
+    $payload = json_encode(
+        [
+            'siteId'             => (string) $siteid,
+            'apiKey'             => (string) $apikey,
+            'token'              => (string) $cert->verifytoken,
+            'certNumber'         => (string) ($cert->certnumber ?? ''),
+            'certType'           => (string) ($cert->certtype ?? 'completion'),
+            'qualificationCode'  => $cert->qualificationcode ?? null,
+            'qualificationName'  => $cert->qualificationname ?? null,
+            'studentFirstName'   => (string) ($user->firstname ?? ''),
+            'studentLastInitial' => substr((string) ($user->lastname ?? ''), 0, 1),
+            'rtoName'            => (string) (get_config('local_rtocompliance', 'rtoname')
+                                        ?: get_config('moodle', 'fullname')
+                                        ?: 'Training Organisation'),
+            'issueDate'          => (int) ($cert->issuedate ?? time()),
+            'expiryDate'         => !empty($cert->expirydate) ? (int) $cert->expirydate : null,
+            'status'             => $certstatusmap[$cert->status ?? 'issued'] ?? 'active',
     ]);
 
     try {
         $curl = new \curl();
-        $curl->setopt([
-            'CURLOPT_TIMEOUT'     => 8,
-            'CURLOPT_SSL_VERIFYPEER' => true,
-            'CURLOPT_SSL_VERIFYHOST' => 2,
+        $curl->setopt(
+            [
+                'CURLOPT_TIMEOUT'     => 8,
+                'CURLOPT_SSL_VERIFYPEER' => true,
+                'CURLOPT_SSL_VERIFYHOST' => 2,
         ]);
         $curl->setHeader(['Content-Type: application/json', 'Accept: application/json']);
         $raw      = $curl->post($apiurl . '/api/cert-registry/publish', $payload);
@@ -4383,17 +4437,18 @@ function local_rtocompliance_update_registry_status(string $verifytoken, string 
     // the existing record gets its status column updated without touching other fields.
     // We send a minimal but schema-valid payload (certNumber/certType/etc. are
     // ignored on update — only status + updatedAt change, see routes.ts).
-    $payload = json_encode([
-        'siteId'             => (string) $siteid,
-        'apiKey'             => (string) $apikey,
-        'token'              => $verifytoken,
-        'certNumber'         => 'VOID',    // ignored on update
-        'certType'           => 'completion', // ignored on update
-        'studentFirstName'   => '',         // ignored on update
-        'studentLastInitial' => '',         // ignored on update
-        'rtoName'            => '',         // ignored on update
-        'issueDate'          => time(),     // ignored on update
-        'status'             => $status,
+    $payload = json_encode(
+        [
+            'siteId'             => (string) $siteid,
+            'apiKey'             => (string) $apikey,
+            'token'              => $verifytoken,
+            'certNumber'         => 'VOID',    // Ignored on update
+            'certType'           => 'completion', // Ignored on update
+            'studentFirstName'   => '',         // Ignored on update
+            'studentLastInitial' => '',         // Ignored on update
+            'rtoName'            => '',         // Ignored on update
+            'issueDate'          => time(),     // Ignored on update
+            'status'             => $status,
     ]);
 
     try {
@@ -4893,7 +4948,7 @@ function local_rtocompliance_seed_course_map(string $qualcode = ''): array {
                 $rx = '/^' . preg_quote($uc, '/') . '(?:[^A-Z0-9]|$)/u';
                 if (preg_match($rx, $fn) || preg_match($rx, $sn)) {
                     $tryInsert((int)$course->id, (int)$course->category, $qc, $uc, 'auto', 0);
-                    break; // one unit code per course
+                    break; // One unit code per course
                 }
             }
         }
@@ -4952,13 +5007,13 @@ function local_rtocompliance_seed_course_map(string $qualcode = ''): array {
                     $rx = '/^' . preg_quote($uc, '/') . '(?:[^A-Z0-9]|$)/u';
                     if (preg_match($rx, $fn) || preg_match($rx, $sn)) {
                         $before = $inserted;
-                        // source='auto', confirmed=0 → appears as an unreviewed
+                        // With source='auto' and confirmed=0 the row appears as an unreviewed
                         // auto-mapping the RTO can confirm on the Course Map page.
                         $tryInsert((int)$course->id, (int)$course->category, $unambiguous[$uc], $uc, 'auto', 0);
                         if ($inserted > $before) {
                             $globalInserted++;
                         }
-                        break; // one unit code per course
+                        break; // One unit code per course
                     }
                 }
             }
@@ -5081,7 +5136,7 @@ function local_rtocompliance_resolve_cert_types_for_course(int $courseid, int $u
     $allunits = local_rtocompliance_get_qualbuilder_unit_list($qualbuilder->id);
 
     if ($fullcomplete) {
-        // v5.9.367 ROR-OUTCOME-FIX: a full-qual issue produces a Record of Results, which
+        // Version 5.9.367 ROR-OUTCOME-FIX: a full-qual issue produces a Record of Results, which
         // must carry each unit's REAL AVETMISS outcome (RPL 51 / Credit Transfer 60 / etc.),
         // not the hardcoded '20' Competent returned by get_qualbuilder_unit_list(). This
         // mirrors generate_qual_certs.php, which already uses the outcomes-aware lookup.
@@ -5114,10 +5169,11 @@ function local_rtocompliance_get_qualbuilder_unit_list(int $qualbuilderid): arra
     global $DB;
     // BUG-B-FIX (v5.9.221): added selected=1 so only required units are returned.
     // Previously missing, causing deselected/optional units to appear on certs.
-    $rows = $DB->get_records('local_rtocompliance_qualunits',
-        ['qualbuilderid' => $qualbuilderid, 'status' => 'active', 'selected' => 1],
-        'sequenceorder ASC',
-        'unitcode, unitname'
+    $rows = $DB->get_records(
+        'local_rtocompliance_qualunits',
+            ['qualbuilderid' => $qualbuilderid, 'status' => 'active', 'selected' => 1],
+            'sequenceorder ASC',
+            'unitcode, unitname'
     );
     $units = [];
     foreach ($rows as $row) {
@@ -5141,10 +5197,11 @@ function local_rtocompliance_get_qualbuilder_unit_list(int $qualbuilderid): arra
  */
 function local_rtocompliance_get_qualbuilder_unit_list_with_outcomes(int $qualbuilderid, int $studentid): array {
     global $DB;
-    $rows = $DB->get_records('local_rtocompliance_qualunits',
-        ['qualbuilderid' => $qualbuilderid, 'status' => 'active', 'selected' => 1],
-        'sequenceorder ASC',
-        'unitcode, unitname'
+    $rows = $DB->get_records(
+        'local_rtocompliance_qualunits',
+            ['qualbuilderid' => $qualbuilderid, 'status' => 'active', 'selected' => 1],
+            'sequenceorder ASC',
+            'unitcode, unitname'
     );
     if (!$rows) {
         return [];
@@ -5367,8 +5424,9 @@ function local_rtocompliance_check_full_qual_completion(int $qualbuilderid, int 
                     ['quid' => $row->id]
                 );
                 if ($variantCids) {
-                    $courseids = array_values(array_unique(
-                        array_merge($courseids, array_map('intval', $variantCids))
+                    $courseids = array_values(
+                        array_unique(
+                            array_merge($courseids, array_map('intval', $variantCids))
                     ));
                 }
             }
@@ -5509,8 +5567,9 @@ function local_rtocompliance_get_completed_units_for_qual(int $qualbuilderid, in
                     ['quid' => $row->id]
                 );
                 if ($variantCids) {
-                    $courseids = array_values(array_unique(
-                        array_merge($courseids, array_map('intval', $variantCids))
+                    $courseids = array_values(
+                        array_unique(
+                            array_merge($courseids, array_map('intval', $variantCids))
                     ));
                 }
             }
@@ -5652,7 +5711,8 @@ function local_rtocompliance_get_initial_timecompleted(int $userid, int $coursei
     }
     // Fallback: course_completions row (may drift on grade re-saves but is
     // the only source available when completion criteria are not configured).
-    $cc = (int) $DB->get_field('course_completions', 'timecompleted',
+    $cc = (int) $DB->get_field(
+        'course_completions', 'timecompleted',
         ['userid' => $userid, 'course' => $courseid]);
     return $cc > 0 ? $cc : 0;
 }
@@ -5684,7 +5744,7 @@ function local_rtocompliance_generate_cert_number(string $certtype): string {
     ];
     $typecode = $typecodes[$certtype] ?? strtoupper(substr($certtype, 0, 3));
 
-    $prefix = $base . '-' . $typecode;   // hyphens only, e.g. ABC-SOA
+    $prefix = $base . '-' . $typecode;   // Hyphens only, e.g. ABC-SOA
     $year   = date('Y');
 
     // Per-type starting number (RTO setting) — lets e.g. SoA begin at 1000. Default 1.
@@ -5814,8 +5874,9 @@ function local_rtocompliance_apply_rpl_outcome(int $studentid, string $unitcode,
     $outcome = $isct ? '60' : '51';
     $now     = time();
 
-    $existing = $DB->get_records_select('local_rtocompliance_enrolments',
-        'studentid = :sid AND UPPER(unitcode) = :uc',
+    $existing = $DB->get_records_select(
+        'local_rtocompliance_enrolments',
+            'studentid = :sid AND UPPER(unitcode) = :uc',
         ['sid' => $studentid, 'uc' => $unitcode], 'id ASC', 'id', 0, 1);
     if ($existing) {
         $row = reset($existing);
@@ -5895,7 +5956,8 @@ function local_rtocompliance_lookup_nominalhours(string $unitcode): ?array {
     $state = strtoupper(trim((string) (get_config('local_rtocompliance', 'defaultreportingstate') ?: 'NAT')));
     // Try the reporting state first, then the national baseline.
     foreach (array_unique([$state, 'NAT']) as $st) {
-        $row = $DB->get_record('local_rtocompliance_nominalhours',
+        $row = $DB->get_record(
+            'local_rtocompliance_nominalhours',
             ['unitcode' => $unitcode, 'state' => $st], 'nominalhours, state, sourceref');
         if ($row) {
             return ['nominalhours' => (int) $row->nominalhours, 'state' => $row->state, 'sourceref' => $row->sourceref];
@@ -5933,14 +5995,15 @@ function local_rtocompliance_upsert_nominalhours(string $unitcode, int $hours, s
         $DB->update_record('local_rtocompliance_nominalhours', $existing);
         return 'updated';
     }
-    $DB->insert_record('local_rtocompliance_nominalhours', (object) [
-        'unitcode'        => $unitcode,
-        'state'           => $state,
-        'nominalhours'    => $hours,
-        'trainingpackage' => $trainingpackage ?: null,
-        'sourceref'       => $sourceref ?: null,
-        'timecreated'     => $now,
-        'timemodified'    => $now,
+    $DB->insert_record(
+        'local_rtocompliance_nominalhours', (object) [
+            'unitcode'        => $unitcode,
+            'state'           => $state,
+            'nominalhours'    => $hours,
+            'trainingpackage' => $trainingpackage ?: null,
+            'sourceref'       => $sourceref ?: null,
+            'timecreated'     => $now,
+            'timemodified'    => $now,
     ]);
     return 'created';
 }
@@ -5967,7 +6030,8 @@ function local_rtocompliance_qual_nominal_total(string $qualcode): int {
         return 0;
     }
     // 1) Stored product total (most recent product row for this code).
-    $products = $DB->get_records('local_rtocompliance_qualbuilder',
+    $products = $DB->get_records(
+        'local_rtocompliance_qualbuilder',
         ['qualificationcode' => $qualcode], 'id DESC', 'id, nominalhours', 0, 1);
     $product = $products ? reset($products) : null;
     if ($product && (int) $product->nominalhours > 0) {
@@ -5977,7 +6041,8 @@ function local_rtocompliance_qual_nominal_total(string $qualcode): int {
     // Gather the qualification's units (for paths 2 and 3).
     $units = [];
     if ($product && $DB->get_manager()->table_exists('local_rtocompliance_qualunits')) {
-        $units = $DB->get_records('local_rtocompliance_qualunits',
+        $units = $DB->get_records(
+            'local_rtocompliance_qualunits',
             ['qualbuilderid' => $product->id], '', 'id, unitcode, nominalhours');
     }
 
@@ -6086,7 +6151,8 @@ function local_rtocompliance_preenrolment_readiness(int $userid): array {
 
     // --- USI verified (student record) ---
     if ($DB->get_manager()->table_exists('local_rtocompliance_students')) {
-        $stu = $DB->get_record('local_rtocompliance_students', ['userid' => $userid],
+        $stu = $DB->get_record(
+            'local_rtocompliance_students', ['userid' => $userid],
             'id, usi, usiverified, usiexempt');
         if ($stu) {
             if (local_rtocompliance_usi_is_verified($stu->usiverified)) {
@@ -6142,9 +6208,10 @@ function local_rtocompliance_retract_rpl_outcome(int $studentid, string $unitcod
     if ($studentid <= 0 || $unitcode === '') {
         return false;
     }
-    $rows = $DB->get_records_select('local_rtocompliance_enrolments',
-        'studentid = :sid AND UPPER(unitcode) = :uc AND manualoutcome = 1 '
-        . "AND outcomeidentifier IN ('51','60')",
+    $rows = $DB->get_records_select(
+        'local_rtocompliance_enrolments',
+            'studentid = :sid AND UPPER(unitcode) = :uc AND manualoutcome = 1 '
+            . "AND outcomeidentifier IN ('51','60')",
         ['sid' => $studentid, 'uc' => $unitcode], 'id ASC');
     if (!$rows) {
         return false;
@@ -6154,11 +6221,12 @@ function local_rtocompliance_retract_rpl_outcome(int $studentid, string $unitcod
         if ((int) $row->courseid === 0) {
             $DB->delete_records('local_rtocompliance_enrolments', ['id' => $row->id]);
         } else {
-            $DB->update_record('local_rtocompliance_enrolments', (object) [
-                'id'                => $row->id,
-                'outcomeidentifier' => '70',
-                'manualoutcome'     => 0,
-                'timemodified'      => $now,
+            $DB->update_record(
+                'local_rtocompliance_enrolments', (object) [
+                    'id'                => $row->id,
+                    'outcomeidentifier' => '70',
+                    'manualoutcome'     => 0,
+                    'timemodified'      => $now,
             ]);
         }
     }
@@ -6258,8 +6326,9 @@ function local_rtocompliance_moodle_completed_courses(int $userid): array {
     }
     $out = [];
     try {
-        $rs = $DB->get_records_select('course_completions',
-            'userid = :uid AND timecompleted IS NOT NULL AND timecompleted > 0',
+        $rs = $DB->get_records_select(
+            'course_completions',
+                'userid = :uid AND timecompleted IS NOT NULL AND timecompleted > 0',
             ['uid' => $userid], '', 'course, timecompleted');
         foreach ($rs as $r) {
             $out[(int) $r->course] = (int) $r->timecompleted;
@@ -6345,7 +6414,9 @@ function local_rtocompliance_sync_student_demographics_from_staging(): int {
 
         $dobstr = trim((string) ($st->dob ?? ''));
         if (strlen($dobstr) === 8 && ctype_digit($dobstr)) {
-            $dd = (int) substr($dobstr, 0, 2); $mm = (int) substr($dobstr, 2, 2); $yy = (int) substr($dobstr, 4, 4);
+            $dd = (int) substr($dobstr, 0, 2);
+            $mm = (int) substr($dobstr, 2, 2);
+            $yy = (int) substr($dobstr, 4, 4);
             if ($dd >= 1 && $dd <= 31 && $mm >= 1 && $mm <= 12 && $yy >= 1900) {
                 $ts = mktime(0, 0, 0, $mm, $dd, $yy);
                 if ($ts) { $upd['dateofbirth'] = $ts; }
@@ -6367,7 +6438,7 @@ function local_rtocompliance_sync_student_demographics_from_staging(): int {
             if ($rv !== null) { $upd[$col] = $rv; }
         }
 
-        if (count($upd) > 2) { // more than id + timemodified
+        if (count($upd) > 2) { // More than id + timemodified
             $DB->update_record('local_rtocompliance_students', (object) $upd);
             $updated++;
         }
@@ -6443,7 +6514,7 @@ function local_rtocompliance_programmatic_issue_cert(
         $unitsjson = json_encode($units);
     }
 
-    // v5.9.367 EMPTY-SOA-GUARD: never issue a Statement of Attainment / Record of Results
+    // Version 5.9.367 EMPTY-SOA-GUARD: never issue a Statement of Attainment / Record of Results
     // that has NO units AND no qualification code to fall back on. The renderer's NULL-units
     // path re-fetches from enrolments by qualification code, so with both empty it would
     // silently emit a unit-less compliance document. Refuse before consuming credits and
@@ -6469,7 +6540,8 @@ function local_rtocompliance_programmatic_issue_cert(
     // 'statement' as well, so a programmatically issued SoA can no longer bypass the
     // gate, and it hard-blocks the UNVERIFIED state (previously presence-only).
     if (!$bypassusi && in_array($certtype, ['testamur', 'record', 'statement'], true)) {
-        $stusi = $DB->get_record('local_rtocompliance_students', ['userid' => $userid],
+        $stusi = $DB->get_record(
+            'local_rtocompliance_students', ['userid' => $userid],
             'usi, usiverified, usiexempt');
         $studusi = trim((string)($stusi->usi ?? ''));
         // USI-EXEMPTION (v6.3.19): a student recorded as exempt clears the gate. The USI
@@ -6631,13 +6703,14 @@ function local_rtocompliance_programmatic_issue_cert(
                 $certtypename = $certtypes[$certtype] ?? $certtype;
                 $qualstr      = $qualcode ? ($qualcode . ($qualname ? ' - ' . $qualname : '')) : '';
                 $downloadurl  = new moodle_url('/local/rtocompliance/mycerts.php');
-                $messagehtml  = get_string('certificate_notification_message', 'local_rtocompliance', [
-                    'firstname'   => $recipient->firstname,
-                    'certtype'    => $certtypename,
-                    'certnumber'  => $certnumber,
-                    'qualification' => $qualstr,
-                    'downloadlink'  => $downloadurl->out(false),
-                    'rtoname'       => get_config('local_rtocompliance', 'rtoname') ?: 'Training Organisation',
+                $messagehtml  = get_string(
+                    'certificate_notification_message', 'local_rtocompliance', [
+                        'firstname'   => $recipient->firstname,
+                        'certtype'    => $certtypename,
+                        'certnumber'  => $certnumber,
+                        'qualification' => $qualstr,
+                        'downloadlink'  => $downloadurl->out(false),
+                        'rtoname'       => get_config('local_rtocompliance', 'rtoname') ?: 'Training Organisation',
                 ]);
                 $eventdata                    = new \core\message\message();
                 $eventdata->component         = 'local_rtocompliance';
@@ -6820,7 +6893,7 @@ function local_rtocompliance_avetmiss_mandatory_fields(): array {
         return $default;
     }
 
-    // admin_setting_configmulticheckbox stores a comma separated list of ticked keys.
+    // The admin_setting_configmulticheckbox setting stores a comma separated list of ticked keys.
     $chosen = array_filter(array_map('trim', explode(',', (string)$raw)));
     $fields = array_values(array_intersect($all, $chosen));
 
@@ -6842,7 +6915,7 @@ function local_rtocompliance_avetmiss_mandatory_fields(): array {
  */
 function local_rtocompliance_avetmiss_value_missing(string $field, $value): bool {
     if ($field === 'dateofbirth') {
-        // v6.3.10 PRE-1970 DOB FIX: the DOB is a unix timestamp, and anyone born
+        // Version 6.3.10 PRE-1970 DOB FIX: the DOB is a unix timestamp, and anyone born
         // before 1 Jan 1970 has a NEGATIVE one (the form offers years back to
         // 1920). The old "(int)$value <= 0" rule therefore treated every
         // pre-1970 date of birth as unanswered — the student would enter their
@@ -6965,7 +7038,8 @@ function local_rtocompliance_profile_gate_applies($userid = null) {
     // requires local/rtocompliance:editownprofile, so if a site has overridden that
     // capability away, redirecting there would throw a permissions exception on every
     // page and leave the user with nothing but the logout link.
-    if (!has_capability('local/rtocompliance:editownprofile',
+    if (!has_capability(
+        'local/rtocompliance:editownprofile',
             context_user::instance($userid, IGNORE_MISSING) ?: context_system::instance(), $userid)) {
         return false;
     }
@@ -7229,7 +7303,8 @@ function local_rtocompliance_repair_stranded_version() {
     }
 
     return ['ok' => true, 'from' => $state['stored'], 'to' => $state['target'],
-            'message' => get_string('versionrepair_done', 'local_rtocompliance',
+            'message' => get_string(
+                'versionrepair_done', 'local_rtocompliance',
                 (object) ['from' => $state['stored'], 'to' => $state['target']])];
 }
 
@@ -7332,9 +7407,9 @@ function local_rtocompliance_render_quickadd_helper($gridid, $textareaid, $headi
     $html .= '</div>';
     $html .= '<p style="font-size:11px;color:#666;margin:6px 0 0;">'
            . 'Tick the categories you want, then click <strong>Add Selected</strong>.</p>';
-    $html .= '</div>'; // close inner padding wrapper
+    $html .= '</div>'; // Close inner padding wrapper
     $html .= '</details>';
-    $html .= '</div>'; // close .rtoc-dropdown-helper
+    $html .= '</div>'; // Close .rtoc-dropdown-helper
     return $html;
 }
 
@@ -7744,25 +7819,28 @@ function local_rtocompliance_auto_send_suitability(int $userid, int $tasid): voi
         return;
     }
     $token = bin2hex(random_bytes(32));
-    $suitabilityid = $DB->insert_record('local_rtocompliance_suitability', (object)[
-        'tasid'        => $tasid,
-        'userid'       => $userid,
-        'token'        => $token,
-        'status'       => 'pending',
-        'timesent'     => time(),
-        'timecreated'  => time(),
-        'timemodified' => time(),
+    $suitabilityid = $DB->insert_record(
+        'local_rtocompliance_suitability', (object)[
+            'tasid'        => $tasid,
+            'userid'       => $userid,
+            'token'        => $token,
+            'status'       => 'pending',
+            'timesent'     => time(),
+            'timecreated'  => time(),
+            'timemodified' => time(),
     ]);
     foreach ($questions as $i => $q) {
-        $DB->insert_record('local_rtocompliance_suitability_answers', (object)[
-            'suitabilityid' => $suitabilityid,
-            'question'      => $q,
-            'answer'        => null,
-            'displayorder'  => $i,
+        $DB->insert_record(
+            'local_rtocompliance_suitability_answers', (object)[
+                'suitabilityid' => $suitabilityid,
+                'question'      => $q,
+                'answer'        => null,
+                'displayorder'  => $i,
         ]);
     }
     local_rtocompliance_send_suitability_email($user, $tas, $token);
-    local_rtocompliance_log_action('suitability_auto_sent', 'suitability', $suitabilityid,
+    local_rtocompliance_log_action(
+        'suitability_auto_sent', 'suitability', $suitabilityid,
         ['userid' => $userid, 'tasid' => $tasid]);
 }
 
@@ -7776,7 +7854,7 @@ function local_rtocompliance_render_sidebar(): string {
     global $PAGE, $CFG;
 
     $currentpath = (!empty($PAGE->url)) ? $PAGE->url->get_path() : '';
-    // v5.9.341: also capture the ?section= param so the four plugin_settings.php
+    // Version 5.9.341: also capture the ?section= param so the four plugin_settings.php
     // items (which share one path and differ only by section) highlight correctly
     // instead of all matching — or none matching — via a path-only substring test.
     $currentsection = (!empty($PAGE->url)) ? (string)($PAGE->url->get_param('section') ?? '') : '';
@@ -7814,7 +7892,7 @@ function local_rtocompliance_render_sidebar(): string {
         'menu'       => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="18" x2="20" y2="18"/></svg>',
         'layout'     => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>',
         'play-sq'    => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><polygon points="10 8 16 12 10 16 10 8"/></svg>',
-        // v5.9.341: registered so Marketing Information, Issue Multi-Unit SOA and
+        // Version 5.9.341: registered so Marketing Information, Issue Multi-Unit SOA and
         // NAT Reconciliation no longer fall back to the "?" help glyph.
         'info'       => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
         'file-check' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="m9 15 2 2 4-4"/></svg>',
@@ -7993,7 +8071,7 @@ function local_rtocompliance_render_sidebar(): string {
         }
 
         foreach ($group['items'] as [$path, $label, $iconname]) {
-            // v5.9.341: match on the resolved path, and when the menu item carries a
+            // Version 5.9.341: match on the resolved path, and when the menu item carries a
             // ?section= query (settings pages) require that section to match too.
             $itemparts = explode('?', $path, 2);
             $itempath  = $itemparts[0];
@@ -8496,7 +8574,7 @@ CSSEND;
     $_rtoc_sb_jsurl = (new moodle_url('/local/rtocompliance/js/sidebar.js'))->out();
     $html .= '<script src="' . $_rtoc_sb_jsurl . '"></script>';
 
-    // v4.4.40: table scroll-wrapper + full-screen expand (tables.js)
+    // Version 4.4.40: table scroll-wrapper + full-screen expand (tables.js)
     $_rtoc_tbl_jsurl = (new moodle_url('/local/rtocompliance/js/tables.js'))->out();
     $html .= '<script src="' . $_rtoc_tbl_jsurl . '"></script>';
 
@@ -8722,9 +8800,9 @@ CSSEND;
 })();
 </script>
 JSEND;
-    } // end if (false) — dead code block
+    } // End if (false) — dead code block
 
-    // v6.2.68: Emit the floating AI assistant here, inside the plugin's own
+    // Version 6.2.68: Emit the floating AI assistant here, inside the plugin's own
     // main-region output, so it renders on themes that drop hook-injected HTML
     // (e.g. "academi"). Returns '' unless enabled + staff + creds ready.
     $html .= local_rtocompliance_assistant_widget_html();
@@ -8801,7 +8879,8 @@ function local_rtocompliance_user_role(): string {
     // capability assignment in Site Administration → Permissions.  This means
     // teachers see their trainer-scoped view straight away after installation,
     // before the administrator has had a chance to assign custom capabilities.
-    $teacherroleids = $DB->get_fieldset_select('role', 'id',
+    $teacherroleids = $DB->get_fieldset_select(
+        'role', 'id',
         "archetype IN ('editingteacher', 'teacher')");
     if ($teacherroleids) {
         list($insql, $params) = $DB->get_in_or_equal($teacherroleids);
@@ -8876,7 +8955,7 @@ function local_rtocompliance_extend_navigation(global_navigation $nav) {
     }
     $role = local_rtocompliance_user_role();
     if ($role === 'student') {
-        // v5.9.393: give students a persistent "My Certificates" navigation link so
+        // Version 5.9.393: give students a persistent "My Certificates" navigation link so
         // they can reach their certificate download portal from anywhere after logging
         // in (previously students got no plugin nav entry at all — the only link was
         // buried on their Moodle profile page). mycerts.php enforces its own access
@@ -8930,7 +9009,7 @@ function local_rtocompliance_extend_navigation(global_navigation $nav) {
 function local_rtocompliance_send_certificate_email(object $cert, object $user): array {
     global $CFG, $DB, $USER;
 
-    // v5.9.321 ORPHAN-FIX: emailcerts setting was defined in RTO Settings → Certificate
+    // Version 5.9.321 ORPHAN-FIX: emailcerts setting was defined in RTO Settings → Certificate
     // Settings but never checked here. When disabled, return early without sending or
     // recording. Callers should treat success=false + reason='disabled' as non-fatal.
     if (!get_config('local_rtocompliance', 'emailcerts')) {
@@ -8951,7 +9030,7 @@ function local_rtocompliance_send_certificate_email(object $cert, object $user):
     $certtypes = local_rtocompliance_get_certificate_types();
     $certtypename = $certtypes[$cert->certtype] ?? $cert->certtype;
 
-    // v4.2.58 — Single source of truth for PDF rendering: route through the
+    // Version 4.2.58 — Single source of truth for PDF rendering: route through the
     // canonical render_certificate_pdf_string() (which itself dispatches
     // to template renderer first, then ASQA-compliant legacy fallback).
     // This eliminates the second hard-coded TCPDF generator that used to
@@ -8966,36 +9045,40 @@ function local_rtocompliance_send_certificate_email(object $cert, object $user):
     // the temp PDF even if email_to_user() throws an uncaught exception before
     // the explicit @unlink() below is reached.  The shutdown callback is a no-op
     // if the file has already been deleted by the normal path.
-    register_shutdown_function (function () use ($temppath) {
-        if (file_exists($temppath)) {
-            @unlink($temppath);
-        }
-    });
+    register_shutdown_function (
+        function () use ($temppath) {
+            if (file_exists($temppath)) {
+                @unlink($temppath);
+            }
+        });
 
     // Subject/body — reissues use different strings.
     $isreissue = !empty($cert->replacement_of);
     $originalcert = $isreissue ? $DB->get_record('local_rtocompliance_certs', ['id' => $cert->replacement_of]) : null;
 
     if ($isreissue && $originalcert) {
-        $subject = get_string('email_reissue_subject', 'local_rtocompliance', [
-            'certtype'       => $certtypename,
-            'originalnumber' => $originalcert->certnumber,
+        $subject = get_string(
+            'email_reissue_subject', 'local_rtocompliance', [
+                'certtype'       => $certtypename,
+                'originalnumber' => $originalcert->certnumber,
         ]);
-        $messagehtml = get_string('email_reissue_body', 'local_rtocompliance', [
-            'fullname'       => fullname($user),
-            'certtype'       => $certtypename,
-            'certnumber'     => $cert->certnumber,
-            'originalnumber' => $originalcert->certnumber,
-            'originaldate'   => userdate($originalcert->issuedate, '%d %B %Y'),
-            'rtoname'        => $rtoname,
+        $messagehtml = get_string(
+            'email_reissue_body', 'local_rtocompliance', [
+                'fullname'       => fullname($user),
+                'certtype'       => $certtypename,
+                'certnumber'     => $cert->certnumber,
+                'originalnumber' => $originalcert->certnumber,
+                'originaldate'   => userdate($originalcert->issuedate, '%d %B %Y'),
+                'rtoname'        => $rtoname,
         ]);
     } else {
         $subject = get_string('email_certificate_subject', 'local_rtocompliance', $certtypename);
-        $messagehtml = get_string('email_certificate_body', 'local_rtocompliance', [
-            'fullname'   => fullname($user),
-            'certtype'   => $certtypename,
-            'certnumber' => $cert->certnumber,
-            'rtoname'    => $rtoname,
+        $messagehtml = get_string(
+            'email_certificate_body', 'local_rtocompliance', [
+                'fullname'   => fullname($user),
+                'certtype'   => $certtypename,
+                'certnumber' => $cert->certnumber,
+                'rtoname'    => $rtoname,
         ]);
     }
 
@@ -9014,19 +9097,21 @@ function local_rtocompliance_send_certificate_email(object $cert, object $user):
     $DB->set_field('local_rtocompliance_certs', 'emailsentdate', $now, ['id' => $cert->id]);
     $DB->set_field('local_rtocompliance_certs', 'timemodified', $now, ['id' => $cert->id]);
 
-    $DB->insert_record('local_rtocompliance_log', [
-        'action'       => 'email_certificate',
-        'component'    => 'certificates',
-        'itemid'       => $cert->id,
-        'userid'       => $USER->id,
-        'targetuserid' => $user->id,
-        'details'      => json_encode([
-            'certnumber' => $cert->certnumber,
-            'email'      => $user->email,
-            'isreissue'  => $isreissue,
-        ]),
-        'ipaddress'    => getremoteaddr(),
-        'timecreated'  => $now,
+    $DB->insert_record(
+        'local_rtocompliance_log', [
+            'action'       => 'email_certificate',
+            'component'    => 'certificates',
+            'itemid'       => $cert->id,
+            'userid'       => $USER->id,
+            'targetuserid' => $user->id,
+            'details'      => json_encode(
+            [
+                    'certnumber' => $cert->certnumber,
+                    'email'      => $user->email,
+                    'isreissue'  => $isreissue,
+            ]),
+            'ipaddress'    => getremoteaddr(),
+            'timecreated'  => $now,
     ]);
 
     return ['ok' => true, 'email' => $user->email];
@@ -9054,7 +9139,7 @@ function local_rtocompliance_render_certificate_pdf_string(object $cert, object 
     require_once(__DIR__ . '/classes/cert_template.php');
     require_once(__DIR__ . '/classes/cert_template_renderer.php');
     try {
-        // v4.3.0 CERT-TEMPLATE-AUDIENCES — pick_for_cert() honours
+        // Version 4.3.0 CERT-TEMPLATE-AUDIENCES — pick_for_cert() honours
         // (1) the cert's saved certtmplid (set at issue time on every
         //     v4.3.0+ cert, stable across reissues), then
         // (2) (certtype + cert->audience) when an audience hint was
@@ -9063,7 +9148,7 @@ function local_rtocompliance_render_certificate_pdf_string(object $cert, object 
         // (4) any active template for the certtype (back-compat).
         $activetmpl = \local_rtocompliance\cert_template::pick_for_cert($cert);
         if (!$activetmpl) {
-            // v5.9.361 NO-MULTIPAGE: with no admin template active, render the
+            // Version 5.9.361 NO-MULTIPAGE: with no admin template active, render the
             // single-page ASQA starter design through the (single-page) template
             // renderer instead of dropping to the legacy multi-page TCPDF fallback
             // below (which uses SetAutoPageBreak(true) + flowing MultiCell content
@@ -9082,7 +9167,7 @@ function local_rtocompliance_render_certificate_pdf_string(object $cert, object 
         }
         if ($activetmpl) {
             $payload = \local_rtocompliance\cert_template_renderer::resolve_payload($cert, $user);
-            // v4.3.0 — apply per-template payload overrides written into
+            // Version 4.3.0 — apply per-template payload overrides written into
             // designjson.overrides{} by cert_template_edit.php so an
             // audience-specific template can stamp e.g. its own
             // apprenticeship statement without re-typing every field.
@@ -9097,7 +9182,8 @@ function local_rtocompliance_render_certificate_pdf_string(object $cert, object 
                     }
                 }
             } catch (\Throwable $eov) {
-                debugging('cert_template overrides apply failed (non-fatal): ' . $eov->getMessage(),
+                debugging(
+                    'cert_template overrides apply failed (non-fatal): ' . $eov->getMessage(),
                     DEBUG_DEVELOPER);
             }
             return \local_rtocompliance\cert_template_renderer::render($activetmpl, $payload, $orientation_override);
@@ -9115,7 +9201,8 @@ function local_rtocompliance_render_certificate_pdf_string(object $cert, object 
         // Fix: always log to local_rtocompliance_log (visible in the admin audit view)
         // AND write a lightweight config flag so the dashboard can surface a warning
         // banner even if no one is watching the logs.
-        debugging('cert_template render failed, falling back to legacy layout: ' . $e->getMessage(),
+        debugging(
+            'cert_template render failed, falling back to legacy layout: ' . $e->getMessage(),
             DEBUG_DEVELOPER);
         try {
             global $DB, $USER;
@@ -9126,10 +9213,11 @@ function local_rtocompliance_render_certificate_pdf_string(object $cert, object 
                 $fallbacklog->itemid       = $cert->id ?? 0;
                 $fallbacklog->userid       = $USER->id ?? 0;
                 $fallbacklog->targetuserid = $cert->userid ?? null;
-                $fallbacklog->details      = json_encode([
-                    'certnumber' => $cert->certnumber ?? '',
-                    'certtype'   => $cert->certtype   ?? '',
-                    'error'      => substr($e->getMessage(), 0, 500),
+                $fallbacklog->details      = json_encode(
+                    [
+                        'certnumber' => $cert->certnumber ?? '',
+                        'certtype'   => $cert->certtype   ?? '',
+                        'error'      => substr($e->getMessage(), 0, 500),
                 ]);
                 $fallbacklog->ipaddress   = getremoteaddr('');
                 $fallbacklog->timecreated = time();
@@ -9138,11 +9226,13 @@ function local_rtocompliance_render_certificate_pdf_string(object $cert, object 
             // Lightweight config flag — dashboard reads this and shows an amber warning.
             $prev = (int) get_config('local_rtocompliance', 'cert_template_fallback_count');
             set_config('cert_template_fallback_count', $prev + 1, 'local_rtocompliance');
-            set_config('cert_template_fallback_last', json_encode([
-                'certnumber' => $cert->certnumber ?? '',
-                'certtype'   => $cert->certtype   ?? '',
-                'time'       => time(),
-                'error'      => substr($e->getMessage(), 0, 255),
+            set_config(
+                'cert_template_fallback_last', json_encode(
+                [
+                        'certnumber' => $cert->certnumber ?? '',
+                        'certtype'   => $cert->certtype   ?? '',
+                        'time'       => time(),
+                        'error'      => substr($e->getMessage(), 0, 255),
             ]), 'local_rtocompliance');
         } catch (\Throwable $logex) {
             // Log write must never throw — this is inside a fallback handler.
@@ -9255,7 +9345,7 @@ function local_rtocompliance_render_certificate_legacy_pdf(object $cert, object 
     $pdf->setPrintHeader(false);
     $pdf->setPrintFooter(false);
     $pdf->SetMargins(20, 18, 20);
-    // v5.9.361 NO-MULTIPAGE: auto page-break OFF so this legacy fallback can never
+    // Version 5.9.361 NO-MULTIPAGE: auto page-break OFF so this legacy fallback can never
     // paginate to 2-3 pages (the "3-page nightmare"). It is now only reached if the
     // single-page template renderer above throws; a clipped single page is the
     // correct degraded behaviour there.
@@ -9273,14 +9363,15 @@ function local_rtocompliance_render_certificate_legacy_pdf(object $cert, object 
     // other content on the SoA.
     $topoffset = 18;
     if ($cert->certtype === 'statement') {
-        $pdf->SetFillColor(255, 247, 230);   // light amber wash
-        $pdf->SetDrawColor(217, 119, 6);     // amber border
+        $pdf->SetFillColor(255, 247, 230);   // Light amber wash
+        $pdf->SetDrawColor(217, 119, 6);     // Amber border
         $pdf->Rect(20, $topoffset, $contentw, 14, 'DF');
         $pdf->SetXY(22, $topoffset + 2);
         $pdf->SetFont('helvetica', 'B', 9);
         $pdf->SetTextColor(120, 53, 15);
-        $pdf->MultiCell($contentw - 4, 4,
-            'A STATEMENT OF ATTAINMENT IS ISSUED BY A REGISTERED TRAINING ORGANISATION WHEN AN INDIVIDUAL HAS COMPLETED ONE OR MORE ACCREDITED UNITS. THIS IS NOT A TESTAMUR.',
+        $pdf->MultiCell(
+            $contentw - 4, 4,
+                'A STATEMENT OF ATTAINMENT IS ISSUED BY A REGISTERED TRAINING ORGANISATION WHEN AN INDIVIDUAL HAS COMPLETED ONE OR MORE ACCREDITED UNITS. THIS IS NOT A TESTAMUR.',
             0, 'C');
         $topoffset += 18;
     }
@@ -9618,7 +9709,8 @@ function local_rtocompliance_extract_code_from_text(string $text): array {
 function local_rtocompliance_scan_categories_for_quals(): array {
     global $DB;
 
-    $cats = $DB->get_records('course_categories', null, 'depth ASC, sortorder ASC',
+    $cats = $DB->get_records(
+        'course_categories', null, 'depth ASC, sortorder ASC',
         'id, name, parent, depth');
     if (empty($cats)) {
         return [];
@@ -9664,15 +9756,15 @@ function local_rtocompliance_scan_categories_for_quals(): array {
     foreach ($cats as $cat) {
         $cid = (int)$cat->id;
         if (empty($codeinfo[$cid]['code'])) {
-            continue;                     // not a coded category
+            continue;                     // Not a coded category
         }
         if ($hasCodedDescendant($cid)) {
-            continue;                     // a container (qualification / grouping), not a unit
+            continue;                     // A container (qualification / grouping), not a unit
         }
         // $cid is the bottom-most coded category = a UNIT.
         $qualcatid = $nearestCodedAncestor($cid);
         if ($qualcatid <= 0) {
-            continue;                     // no parent qualification category — cannot place it
+            continue;                     // No parent qualification category — cannot place it
         }
         if (!isset($quals[$qualcatid])) {
             $qn = $codeinfo[$qualcatid]['name'] !== '' ? $codeinfo[$qualcatid]['name'] : $codeinfo[$qualcatid]['code'];
@@ -9708,7 +9800,8 @@ function local_rtocompliance_scan_categories_for_quals(): array {
         if (empty($q['units'])) {
             continue;
         }
-        $exists = $DB->record_exists_select('local_rtocompliance_qualbuilder',
+        $exists = $DB->record_exists_select(
+            'local_rtocompliance_qualbuilder',
             'UPPER(qualificationcode) = ?', [strtoupper($q['qualcode'])]);
         $unitlist = [];
         $linked   = 0;
@@ -9724,9 +9817,10 @@ function local_rtocompliance_scan_categories_for_quals(): array {
                 'coursenames' => array_values($u['courses']),
             ];
         }
-        usort($unitlist, function ($a, $b) {
-            return strcmp($a['unitcode'], $b['unitcode']);
-        });
+        usort(
+            $unitlist, function ($a, $b) {
+                return strcmp($a['unitcode'], $b['unitcode']);
+            });
         $out[] = [
             'qualcode'    => $q['qualcode'],
             'qualname'    => $q['qualname'],
@@ -9738,9 +9832,10 @@ function local_rtocompliance_scan_categories_for_quals(): array {
             'units'       => $unitlist,
         ];
     }
-    usort($out, function ($a, $b) {
-        return strcmp($a['qualcode'], $b['qualcode']);
-    });
+    usort(
+        $out, function ($a, $b) {
+            return strcmp($a['qualcode'], $b['qualcode']);
+        });
     return $out;
 }
 
@@ -9821,7 +9916,8 @@ function local_rtocompliance_scan_coursemap_for_quals(): array {
         if ($rootcat > 0) {
             $catname = (string)($DB->get_field('course_categories', 'name', ['id' => $rootcat]) ?: '');
         }
-        $exists = $DB->record_exists_select('local_rtocompliance_qualbuilder',
+        $exists = $DB->record_exists_select(
+            'local_rtocompliance_qualbuilder',
             'UPPER(qualificationcode) = ?', [strtoupper($qc)]);
 
         $unitlist = [];
@@ -9833,14 +9929,15 @@ function local_rtocompliance_scan_coursemap_for_quals(): array {
             }
             $unitlist[] = [
                 'unitcode'    => $uc,
-                'unitname'    => $namemap[$uc] ?? $uc, // resolved from the unit's category name.
+                'unitname'    => $namemap[$uc] ?? $uc, // Resolved from the unit's category name.
                 'courseids'   => array_values(array_map('intval', $courseids)),
                 'coursenames' => array_values($u['courses']),
             ];
         }
-        usort($unitlist, function ($a, $b) {
-            return strcmp($a['unitcode'], $b['unitcode']);
-        });
+        usort(
+            $unitlist, function ($a, $b) {
+                return strcmp($a['unitcode'], $b['unitcode']);
+            });
         $out[] = [
             'qualcode'    => $qc,
             'qualname'    => $qname,
@@ -9852,9 +9949,10 @@ function local_rtocompliance_scan_coursemap_for_quals(): array {
             'units'       => $unitlist,
         ];
     }
-    usort($out, function ($a, $b) {
-        return strcmp($a['qualcode'], $b['qualcode']);
-    });
+    usort(
+        $out, function ($a, $b) {
+            return strcmp($a['qualcode'], $b['qualcode']);
+        });
     return $out;
 }
 
@@ -9904,14 +10002,20 @@ function local_rtocompliance_autocreate_quals_from_scan(array $codes, bool $uset
         if (!isset($wanted[$qc])) {
             continue;
         }
-        if (!empty($cand['exists']) || $DB->record_exists_select('local_rtocompliance_qualbuilder',
+        if (!empty($cand['exists']) || $DB->record_exists_select(
+            'local_rtocompliance_qualbuilder',
                 'UPPER(qualificationcode) = ?', [$qc])) {
             $result['skipped'][] = ['qualcode' => $qc, 'reason' => 'A Qual Builder product already exists for this code'];
             continue;
         }
 
         // ── Optional best-effort TGA enrichment (never blocks). ──────────────────
-        $tgaName = ''; $tgaUnits = []; $tgaTotal = 0; $tgaCore = 0; $tgaElective = 0; $tgaAqf = null;
+        $tgaName = '';
+        $tgaUnits = [];
+        $tgaTotal = 0;
+        $tgaCore = 0;
+        $tgaElective = 0;
+        $tgaAqf = null;
         if ($usetga) {
             try {
                 $t = \local_rtocompliance\external::tga_get_builder_data($qc, (int)$cand['categoryid']);
@@ -10000,15 +10104,16 @@ function local_rtocompliance_autocreate_quals_from_scan(array $codes, bool $uset
                             continue;
                         }
                         try {
-                            $DB->insert_record('local_rtocompliance_qualunit_courses', (object)[
-                                'qualunitid'     => $uid,
-                                'courseid'       => (int)$vc,
-                                'semester_label' => null,
-                                'is_archive'     => 1,
-                                'timecreated'    => $now,
+                            $DB->insert_record(
+                                'local_rtocompliance_qualunit_courses', (object)[
+                                    'qualunitid'     => $uid,
+                                    'courseid'       => (int)$vc,
+                                    'semester_label' => null,
+                                    'is_archive'     => 1,
+                                    'timecreated'    => $now,
                             ]);
                         } catch (\dml_exception $ignore) {
-                            true; // unique (qualunitid,courseid) already present — ignore.
+                            true; // Unique (qualunitid,courseid) already present — ignore.
                         }
                     }
                 }
@@ -10025,11 +10130,13 @@ function local_rtocompliance_autocreate_quals_from_scan(array $codes, bool $uset
             // Best-effort cleanup so no half-built product is left behind.
             if ($qbid > 0) {
                 try {
-                    $uids = $DB->get_fieldset_select('local_rtocompliance_qualunits', 'id',
+                    $uids = $DB->get_fieldset_select(
+                        'local_rtocompliance_qualunits', 'id',
                         'qualbuilderid = ?', [$qbid]);
                     if ($variantsTableExists && !empty($uids)) {
                         list($insql, $inparams) = $DB->get_in_or_equal($uids);
-                        $DB->delete_records_select('local_rtocompliance_qualunit_courses',
+                        $DB->delete_records_select(
+                            'local_rtocompliance_qualunit_courses',
                             "qualunitid $insql", $inparams);
                     }
                     $DB->delete_records('local_rtocompliance_qualunits', ['qualbuilderid' => $qbid]);
@@ -10116,7 +10223,7 @@ function local_rtocompliance_recover_scan(): array {
 
         foreach ($codes as $code) {
             if (isset($index[$code])) {
-                continue; // already a current unit — not this tool's problem.
+                continue; // Already a current unit — not this tool's problem.
             }
             $target = '';
             $conf   = '';
@@ -10160,12 +10267,14 @@ function local_rtocompliance_recover_scan(): array {
         }
     }
 
-    uasort($proposals, function ($a, $b) {
-        return $b['completions'] <=> $a['completions'];
-    });
-    uasort($unresolved, function ($a, $b) {
-        return $b['completions'] <=> $a['completions'];
-    });
+    uasort(
+        $proposals, function ($a, $b) {
+            return $b['completions'] <=> $a['completions'];
+        });
+    uasort(
+        $unresolved, function ($a, $b) {
+            return $b['completions'] <=> $a['completions'];
+        });
     return ['proposals' => $proposals, 'unresolved' => $unresolved];
 }
 
@@ -10334,8 +10443,13 @@ function local_rtocompliance_scan_semester_intakes(): array {
         $secondcount = 0;
         $i = 0;
         foreach ($votes as $qc => $n) {
-            if ($i === 0) { $best = $qc; $bestcount = $n; }
-            else if ($i === 1) { $secondcount = $n; break; }
+            if ($i === 0) {
+                $best = $qc;
+                $bestcount = $n;
+            } else if ($i === 1) {
+                $secondcount = $n;
+                break;
+            }
             $i++;
         }
         $coverage = $total > 0 ? ($bestcount / $total) : 0;
@@ -10411,9 +10525,10 @@ function local_rtocompliance_scan_semester_intakes(): array {
             $coursecount += count($cids);
             $unitlist[] = ['unitcode' => $uc, 'unitname' => $nm, 'courseids' => $cids];
         }
-        usort($unitlist, function ($a, $b) {
-            return strcmp($a['unitcode'], $b['unitcode']);
-        });
+        usort(
+            $unitlist, function ($a, $b) {
+                return strcmp($a['unitcode'], $b['unitcode']);
+            });
 
         // Parent category + the full category path (root → parent), so the admin can see exactly
         // where this version sits in Moodle and verify it — the path excludes the version itself
@@ -10445,9 +10560,10 @@ function local_rtocompliance_scan_semester_intakes(): array {
             'units'           => $unitlist,
         ];
     }
-    usort($out, function ($a, $b) {
-        return strcmp($a['semester'], $b['semester']);
-    });
+    usort(
+        $out, function ($a, $b) {
+            return strcmp($a['semester'], $b['semester']);
+        });
     return $out;
 }
 
@@ -10509,7 +10625,8 @@ function local_rtocompliance_create_semester_intakes(array $intakes): array {
             $result['skipped'][] = ['semester' => $sem, 'reason' => 'No qualification code assigned'];
             continue;
         }
-        if ($DB->record_exists_select('local_rtocompliance_qualbuilder',
+        if ($DB->record_exists_select(
+            'local_rtocompliance_qualbuilder',
                 'UPPER(qualificationcode) = ? AND streamname = ?', [$qc, $sem])) {
             $result['skipped'][] = ['semester' => $sem, 'reason' => 'A ' . $qc . ' / ' . $sem . ' product already exists'];
             continue;
@@ -10561,12 +10678,13 @@ function local_rtocompliance_create_semester_intakes(array $intakes): array {
                             continue;
                         }
                         try {
-                            $DB->insert_record('local_rtocompliance_qualunit_courses', (object)[
-                                'qualunitid'     => $uid,
-                                'courseid'       => (int)$vc,
-                                'semester_label' => $sem !== '' ? $sem : null,
-                                'is_archive'     => 1,
-                                'timecreated'    => $now,
+                            $DB->insert_record(
+                                'local_rtocompliance_qualunit_courses', (object)[
+                                    'qualunitid'     => $uid,
+                                    'courseid'       => (int)$vc,
+                                    'semester_label' => $sem !== '' ? $sem : null,
+                                    'is_archive'     => 1,
+                                    'timecreated'    => $now,
                             ]);
                         } catch (\dml_exception $ig) {
                             true;
@@ -10690,7 +10808,7 @@ function local_rtocompliance_assistant_kb(string $currentscript = '', array $pag
             }
         }
         if (!empty($cur['features']) && is_array($cur['features'])) {
-            // v6.3.14: each feature is ['title'=>..,'desc'=>..], so strval() produced
+            // Version 6.3.14: each feature is ['title'=>..,'desc'=>..], so strval() produced
             // "Array; Array; Array" plus one "Array to string conversion" warning per feature
             // — emitted before assistant.php's json_encode(), which corrupts the JSON response
             // on any site with debugdisplay on. Flatten properly.
@@ -10899,7 +11017,7 @@ function local_rtocompliance_assistant_kb(string $currentscript = '', array $pag
 
     $kb = implode("\n", $lines);
 
-    // v6.3.14: the knowledge base is sent with EVERY question, so it needs a ceiling. Section
+    // Version 6.3.14: the knowledge base is sent with EVERY question, so it needs a ceiling. Section
     // order is deliberate and is what makes truncation safe: the live site facts, the
     // documentation bound to the page the admin is actually on, and the answering instructions
     // all come FIRST, and the release-note history — the least likely thing to be the answer,
@@ -10988,7 +11106,8 @@ function local_rtocompliance_assistant_widget_html(): string {
     // previous build's copy kept POSTing the old request shape after an upgrade — silently
     // losing the page context until the file happened to be refetched. Stamping the plugin
     // version means every upgrade serves a new URL.
-    $asst_js       = (new moodle_url('/local/rtocompliance/js/rtoc_assistant.js',
+    $asst_js       = (new moodle_url(
+        '/local/rtocompliance/js/rtoc_assistant.js',
         ['v' => (string) (get_config('local_rtocompliance', 'version') ?: '1')]))->out();
     $asst_page     = ($PAGE && $PAGE->url) ? basename((string) $PAGE->url->get_path()) : '';
     $asst_sk       = sesskey();
@@ -11101,7 +11220,7 @@ function local_rtocompliance_assistant_creds(): array {
         ? trim((string) (local_aiconfig_get_apikey('local_rtocompliance') ?: get_config('local_rtocompliance', 'apikey') ?: ''))
         : trim((string) (get_config('local_rtocompliance', 'apikey') ?: ''));
 
-    // apiurl has no Central Config equivalent — plugin setting, defaulting to the platform.
+    // Apiurl has no Central Config equivalent — plugin setting, defaulting to the platform.
     $apiurl = rtrim(trim((string) (get_config('local_rtocompliance', 'apiurl') ?: 'https://lms-labs.com')), '/');
 
     $directkey = trim((string) (get_config('local_rtocompliance', 'assistant_claude_key') ?: ''));
@@ -11132,7 +11251,7 @@ function local_rtocompliance_assistant_ask(array $messages, string $page = '', a
     $clean = [];
     foreach (array_slice($messages, -10) as $m) {
         $role = (isset($m['role']) && $m['role'] === 'assistant') ? 'assistant' : 'user';
-        // is_string(): the messages come from a JSON body, and an array here would raise
+        // The is_string() guard: the messages come from a JSON body, and an array here would raise
         // 'Array to string conversion' before json_encode() runs, corrupting the response.
         $content = (isset($m['content']) && is_string($m['content'])) ? trim($m['content']) : '';
         if ($content === '') {
@@ -11151,7 +11270,7 @@ function local_rtocompliance_assistant_ask(array $messages, string $page = '', a
 
     \core\session\manager::write_close();
 
-    // v6.2.69: assistant.php is an AJAX_SCRIPT that does NOT auto-include lib/filelib.php,
+    // Version 6.2.69: assistant.php is an AJAX_SCRIPT that does NOT auto-include lib/filelib.php,
     // where Moodle's \curl class lives — so the first question errored with
     // 'Class "curl" not found'. Load it here (idempotent) before either curl branch below.
     global $CFG;
@@ -11159,25 +11278,27 @@ function local_rtocompliance_assistant_ask(array $messages, string $page = '', a
 
     // ── Primary: platform broker (1 credit/question) ─────────────────────────────
     if ($apiurl !== '' && $siteid !== '' && $apikey !== '') {
-        $payload = json_encode([
-            // v6.2.70: the platform's /api/credits endpoint (which correctly reports this
-            // site's 3,469 credits) reads camelCase 'siteId'/'apiKey' from the body, but the
-            // ask endpoint was only sent lowercase 'siteid'/'apikey' — so the ask endpoint did
-            // not recognise the site and reported "out of credits" despite a healthy balance.
-            // Send BOTH camelCase (to match the credits contract) and lowercase (back-compat).
-            'siteId'         => $siteid,
-            'apiKey'         => $apikey,
-            'siteid'         => $siteid,
-            'apikey'         => $apikey,
-            'product'        => 'local_rtocompliance',
-            'plugin_version' => (string) (get_config('local_rtocompliance', 'version') ?: ''),
-            'page'           => $page,
-            'knowledge_base' => $kb,
-            'messages'       => $clean,
+        $payload = json_encode(
+            [
+                // Version 6.2.70: the platform's /api/credits endpoint (which correctly reports this
+                // site's 3,469 credits) reads camelCase 'siteId'/'apiKey' from the body, but the
+                // ask endpoint was only sent lowercase 'siteid'/'apikey' — so the ask endpoint did
+                // not recognise the site and reported "out of credits" despite a healthy balance.
+                // Send BOTH camelCase (to match the credits contract) and lowercase (back-compat).
+                'siteId'         => $siteid,
+                'apiKey'         => $apikey,
+                'siteid'         => $siteid,
+                'apikey'         => $apikey,
+                'product'        => 'local_rtocompliance',
+                'plugin_version' => (string) (get_config('local_rtocompliance', 'version') ?: ''),
+                'page'           => $page,
+                'knowledge_base' => $kb,
+                'messages'       => $clean,
         ]);
         $curl = new \curl();
         $curl->setopt(['CURLOPT_TIMEOUT' => 60, 'CURLOPT_SSL_VERIFYPEER' => true, 'CURLOPT_SSL_VERIFYHOST' => 2]);
-        $curl->setHeader(['Content-Type: application/json', 'Accept: application/json',
+        $curl->setHeader(
+            ['Content-Type: application/json', 'Accept: application/json',
             'X-Site-Id: ' . $siteid, 'X-Api-Key: ' . $apikey]);
         $raw  = $curl->post(rtrim($apiurl, '/') . '/api/assistant/ask', $payload);
         $code = (int) ($curl->info['http_code'] ?? 0);
@@ -11208,18 +11329,20 @@ function local_rtocompliance_assistant_ask(array $messages, string $page = '', a
     // ── Fallback: direct Anthropic key (no platform credits) ──────────────────────
     if ($directkey !== '') {
         $system = $kb;
-        $body = json_encode([
-            'model'      => $model,
-            'max_tokens' => 1024,
-            'system'     => $system,
-            'messages'   => $clean,
+        $body = json_encode(
+            [
+                'model'      => $model,
+                'max_tokens' => 1024,
+                'system'     => $system,
+                'messages'   => $clean,
         ]);
         $curl = new \curl();
         $curl->setopt(['CURLOPT_TIMEOUT' => 60, 'CURLOPT_SSL_VERIFYPEER' => true, 'CURLOPT_SSL_VERIFYHOST' => 2]);
-        $curl->setHeader([
-            'Content-Type: application/json',
-            'x-api-key: ' . $directkey,
-            'anthropic-version: 2023-06-01',
+        $curl->setHeader(
+            [
+                'Content-Type: application/json',
+                'x-api-key: ' . $directkey,
+                'anthropic-version: 2023-06-01',
         ]);
         $raw  = $curl->post('https://api.anthropic.com/v1/messages', $body);
         $code = (int) ($curl->info['http_code'] ?? 0);
@@ -11262,17 +11385,18 @@ function local_rtocompliance_cert_autodesign(string $certtype, string $orientati
             'error' => 'The platform API is not connected. Add your Site ID and API key in Plugin Settings to use auto-design.'];
     }
 
-    $payload = json_encode([
-        'siteid'         => $siteid,
-        'apikey'         => $apikey,
-        'product'        => 'local_rtocompliance',
-        'plugin_version' => (string) (get_config('local_rtocompliance', 'version') ?: ''),
-        'certtype'       => $certtype,
-        'orientation'    => $orientation,
-        'page_w_mm'      => $pw,
-        'page_h_mm'      => $ph,
-        'image_base64'   => $imagebase64,
-        'available_fields' => array_values($availablefields),
+    $payload = json_encode(
+        [
+            'siteid'         => $siteid,
+            'apikey'         => $apikey,
+            'product'        => 'local_rtocompliance',
+            'plugin_version' => (string) (get_config('local_rtocompliance', 'version') ?: ''),
+            'certtype'       => $certtype,
+            'orientation'    => $orientation,
+            'page_w_mm'      => $pw,
+            'page_h_mm'      => $ph,
+            'image_base64'   => $imagebase64,
+            'available_fields' => array_values($availablefields),
     ]);
 
     // CURL-CLASS-FIX (v6.2.12): ensure Moodle's \curl class is loaded even when called
@@ -11283,7 +11407,8 @@ function local_rtocompliance_cert_autodesign(string $certtype, string $orientati
 
     $curl = new \curl();
     $curl->setopt(['CURLOPT_TIMEOUT' => 120, 'CURLOPT_SSL_VERIFYPEER' => true, 'CURLOPT_SSL_VERIFYHOST' => 2]);
-    $curl->setHeader(['Content-Type: application/json', 'Accept: application/json',
+    $curl->setHeader(
+        ['Content-Type: application/json', 'Accept: application/json',
         'X-Site-Id: ' . $siteid, 'X-Api-Key: ' . $apikey]);
     $raw  = $curl->post(rtrim($apiurl, '/') . '/api/certtemplate/autodesign', $payload);
     $code = (int) ($curl->info['http_code'] ?? 0);

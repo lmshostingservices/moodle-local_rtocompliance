@@ -178,10 +178,11 @@ echo html_writer::end_div();
 // BUG-SURVEY-AI FIX: Wrap count_records in try/catch — if the surveys table or year column
 // is missing on an older installation the page would crash before showing any content.
 try {
-    $responsecount = $DB->count_records('local_rtocompliance_surveys', [
-        'surveytype' => $type,
-        'year' => $year,
-        'status' => 'completed',
+    $responsecount = $DB->count_records(
+        'local_rtocompliance_surveys', [
+            'surveytype' => $type,
+            'year' => $year,
+            'status' => 'completed',
     ]);
 } catch (\Throwable $ignored) {
     $responsecount = 0;
@@ -207,22 +208,23 @@ if ($inlineanalysis !== null) {
 if ($analysistorender !== null) {
     $analysis = $analysistorender;
 
-    echo html_writer::tag('div',
-        '<strong style="display:block;font-size:18px;margin-bottom:4px;">'
-        . 'AI analysis completed successfully'
-        . '</strong>'
-        . 'Your results are shown below — '
-        . (int) $analysis->responsecount . ' '
-        . s($type) . ' survey response'
-        . ((int) $analysis->responsecount === 1 ? '' : 's')
-        . ' analysed for '
-        . (int) $year . '.',
-        [
-            'class' => 'alert alert-success',
-            'style' => 'margin:16px 0;border-left:4px solid #22c55e;'
-                     . 'background:#f0fdf4;color:#14532d;padding:16px 20px;'
-                     . 'border-radius:6px;font-size:15px;',
-        ]
+    echo html_writer::tag(
+        'div',
+            '<strong style="display:block;font-size:18px;margin-bottom:4px;">'
+            . 'AI analysis completed successfully'
+            . '</strong>'
+            . 'Your results are shown below — '
+            . (int) $analysis->responsecount . ' '
+            . s($type) . ' survey response'
+            . ((int) $analysis->responsecount === 1 ? '' : 's')
+            . ' analysed for '
+            . (int) $year . '.',
+            [
+                'class' => 'alert alert-success',
+                'style' => 'margin:16px 0;border-left:4px solid #22c55e;'
+                         . 'background:#f0fdf4;color:#14532d;padding:16px 20px;'
+                         . 'border-radius:6px;font-size:15px;',
+            ]
     );
 
     echo html_writer::tag('h3', 'Analysis Results', ['class' => 'section-title']);
@@ -268,7 +270,7 @@ if ($analysistorender !== null) {
     echo html_writer::end_div();
     echo html_writer::end_div();
 
-    echo html_writer::end_div(); // end stats-cards
+    echo html_writer::end_div(); // End stats-cards
 
     if (!empty($analysis->trendsummary)) {
         echo html_writer::tag('h4', 'Trend Summary', ['class' => 'rtoc-section-heading']);
@@ -320,7 +322,7 @@ if ($analysistorender !== null) {
         echo html_writer::tag('div', format_text($analysis->fullanalysis, FORMAT_MARKDOWN), ['class' => 'rtoc-analysis-report']);
     }
 
-    echo html_writer::end_div(); // end form-card results
+    echo html_writer::end_div(); // End form-card results
 }
 
 if (!$analyzer->is_configured()) {
@@ -337,9 +339,10 @@ if (!$analyzer->is_configured()) {
 
 echo html_writer::start_div('info-card');
 echo html_writer::tag('h4', 'AI-Powered Survey Insights — 5 Credits');
-echo html_writer::tag('p',
-    'Analyse your Quality Indicator survey responses using AI to generate actionable insights, identify themes, and track sentiment trends for continuous improvement. ' .
-    'Each analysis uses <strong>' . survey_analyzer::CREDIT_COST . ' platform credits</strong> and is deducted automatically when you run the analysis.'
+echo html_writer::tag(
+    'p',
+        'Analyse your Quality Indicator survey responses using AI to generate actionable insights, identify themes, and track sentiment trends for continuous improvement. ' .
+        'Each analysis uses <strong>' . survey_analyzer::CREDIT_COST . ' platform credits</strong> and is deducted automatically when you run the analysis.'
 );
 echo html_writer::end_div();
 
@@ -358,10 +361,11 @@ echo html_writer::start_div('rtoc-form-card-actions');
 // Credit cost badge — always visible so users know the cost before clicking.
 echo html_writer::tag(
     'span',
-    html_writer::tag('svg',
-        '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>',
-        ['xmlns' => 'http://www.w3.org/2000/svg', 'viewBox' => '0 0 24 24', 'width' => '14', 'height' => '14',
-         'fill' => 'currentColor', 'style' => 'flex-shrink:0;']
+    html_writer::tag(
+        'svg',
+            '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>',
+            ['xmlns' => 'http://www.w3.org/2000/svg', 'viewBox' => '0 0 24 24', 'width' => '14', 'height' => '14',
+             'fill' => 'currentColor', 'style' => 'flex-shrink:0;']
     ) . ' ' . $creditcost . ' credits per analysis',
     ['class' => 'rtoc-credit-badge']
 );
@@ -384,10 +388,11 @@ if ($analyzer->is_configured() && $responsecount > 0) {
     // shown in the badge above AND in the button label "— X Credits" so the
     // confirmation modal was redundant UX noise anyway.
     $formurl = new moodle_url('/local/rtocompliance/ai_analysis.php');
-    echo html_writer::start_tag('form', [
-        'method' => 'post',
-        'action' => $formurl->out(false),
-        'style'  => 'display:inline;margin:0;',
+    echo html_writer::start_tag(
+        'form', [
+            'method' => 'post',
+            'action' => $formurl->out(false),
+            'style'  => 'display:inline;margin:0;',
     ]);
     echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
     echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'action',  'value' => 'analyze']);
@@ -408,19 +413,20 @@ if ($analyzer->is_configured() && $responsecount > 0) {
     // message, and submits the form via .form.submit() so the disabled button
     // is still "in" the form payload.  No AMD/JS module dependency to keep
     // this 100% Moodle-version-agnostic (same rationale as v4.2.25).
-    echo html_writer::tag('button',
-        'Run AI Analysis — ' . $creditcost . ' Credits',
-        [
-            'type'    => 'submit',
-            'class'   => 'btn btn-primary',
-            'onclick' => "if (this.dataset.busy) { return false; } this.dataset.busy='1'; "
-                      .  "this.disabled = true; "
-                      .  "this.innerHTML = '<span style=\"display:inline-block;vertical-align:middle;margin-right:8px;\">"
-                      .  "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"animation:rtoc-spin 1s linear infinite;\">"
-                      .  "<path d=\"M21 12a9 9 0 1 1-6.219-8.56\"></path></svg></span>"
-                      .  "Analysing responses (please wait 30-60 seconds)...'; "
-                      .  "this.form.submit(); return false;",
-        ]
+    echo html_writer::tag(
+        'button',
+            'Run AI Analysis — ' . $creditcost . ' Credits',
+            [
+                'type'    => 'submit',
+                'class'   => 'btn btn-primary',
+                'onclick' => "if (this.dataset.busy) { return false; } this.dataset.busy='1'; "
+                          .  "this.disabled = true; "
+                          .  "this.innerHTML = '<span style=\"display:inline-block;vertical-align:middle;margin-right:8px;\">"
+                          .  "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"animation:rtoc-spin 1s linear infinite;\">"
+                          .  "<path d=\"M21 12a9 9 0 1 1-6.219-8.56\"></path></svg></span>"
+                          .  "Analysing responses (please wait 30-60 seconds)...'; "
+                          .  "this.form.submit(); return false;",
+            ]
     );
     // Inject keyframes for the inline spinner once per page render.
     echo '<style>@keyframes rtoc-spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}</style>';
@@ -431,18 +437,20 @@ if ($analyzer->is_configured() && $responsecount > 0) {
     // exact UX symptom reported as "Run AI Analysis does nothing".  Promote
     // the empty-state to a full-width yellow alert so the reason is unmistakable.
     if (!$analyzer->is_configured()) {
-        echo html_writer::tag('div',
-            '<strong>AI analysis disabled —</strong> the platform API key is not configured. Ask your site administrator to add it under Site Administration → Plugins → Local plugins → RTO Compliance.',
-            ['class' => 'alert alert-warning', 'style' => 'margin:0;width:100%;']
+        echo html_writer::tag(
+            'div',
+                '<strong>AI analysis disabled —</strong> the platform API key is not configured. Ask your site administrator to add it under Site Administration → Plugins → Local plugins → RTO Compliance.',
+                ['class' => 'alert alert-warning', 'style' => 'margin:0;width:100%;']
         );
     } else {
         $sendurl = (new moodle_url('/local/rtocompliance/survey_send.php', ['type' => $type]))->out(false);
-        echo html_writer::tag('div',
-            '<strong>No completed ' . s($type) . ' surveys yet for ' . (int)$year . '.</strong> '
-            . 'AI analysis needs at least one completed survey response to work — '
-            . 'send a survey first, wait for respondents to complete it, then return here. '
-            . '<a href="' . $sendurl . '" class="btn btn-primary btn-sm" style="margin-left:12px;">Send ' . s($type) . ' survey →</a>',
-            ['class' => 'alert alert-warning', 'style' => 'margin:0;width:100%;']
+        echo html_writer::tag(
+            'div',
+                '<strong>No completed ' . s($type) . ' surveys yet for ' . (int)$year . '.</strong> '
+                . 'AI analysis needs at least one completed survey response to work — '
+                . 'send a survey first, wait for respondents to complete it, then return here. '
+                . '<a href="' . $sendurl . '" class="btn btn-primary btn-sm" style="margin-left:12px;">Send ' . s($type) . ' survey →</a>',
+                ['class' => 'alert alert-warning', 'style' => 'margin:0;width:100%;']
         );
     }
 }
@@ -487,12 +495,13 @@ if ($recentanalyses) {
         echo html_writer::tag('td', $a->responsecount);
         echo html_writer::tag('td', html_writer::tag('span', ucfirst($a->overallsentiment ?: 'N/A'), ['class' => 'badge ' . $sentimentbadge]));
         echo html_writer::tag('td', round($a->satisfactionindex ?? 0) . '%');
-        echo html_writer::tag('td', 
-            html_writer::link(
-                new moodle_url('/local/rtocompliance/ai_analysis.php', ['type' => $type, 'year' => date('Y', $a->periodstart), 'id' => $a->id]),
-                'View',
-                ['class' => 'btn btn-sm btn-secondary']
-            )
+        echo html_writer::tag(
+            'td', 
+                html_writer::link(
+                    new moodle_url('/local/rtocompliance/ai_analysis.php', ['type' => $type, 'year' => date('Y', $a->periodstart), 'id' => $a->id]),
+                    'View',
+                    ['class' => 'btn btn-sm btn-secondary']
+                )
         );
         echo html_writer::end_tag('tr');
     }

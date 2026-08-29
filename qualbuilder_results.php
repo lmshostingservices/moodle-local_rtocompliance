@@ -46,8 +46,8 @@ $export = optional_param('export', '', PARAM_ALPHA);
 // ROSTER-OVERHAUL (v5.9.373): the no-id landing is now a full cross-qualification
 // "Master Student Roster" — the single table an RTO looks at first.  These extra
 // filters drive it.  They are ignored by the per-product (id=N) drill-down below.
-$rqual = optional_param('rqual', '', PARAM_RAW_TRIMMED);  // filter roster by a qualification code  // pipeline-ignore: PARAM_RAW — free-text value, escaped at output; a narrower type would corrupt legitimate punctuation
-$rcat  = optional_param('rcat', 0, PARAM_INT);            // filter roster by Moodle category (sub-category)
+$rqual = optional_param('rqual', '', PARAM_RAW_TRIMMED);  // Filter roster by a qualification code  // pipeline-ignore: PARAM_RAW — free-text value, escaped at output; a narrower type would corrupt legitimate punctuation
+$rcat  = optional_param('rcat', 0, PARAM_INT);            // Filter roster by Moodle category (sub-category)
 $rusi  = optional_param('rusi', 'all', PARAM_ALPHA);      // USI health filter: all|verified|unverified|missing
 $rsort = optional_param('rsort', 'name', PARAM_ALPHA);    // name|progress|recent|units
 // v6.2.84 CASCADE ROSTER FILTER — parent category -> sub-category -> course, sourced from
@@ -55,9 +55,9 @@ $rsort = optional_param('rsort', 'name', PARAM_ALPHA);    // name|progress|recen
 // because most qualbuilder products have no Moodle categoryid so the old $rcat dropdown was
 // nearly empty. These three narrow the roster (and every stat card, which reuses the same
 // WHERE) to learners who hold a result in a matching course. Additive / narrowing only.
-$rparent = optional_param('rparent', 0, PARAM_INT);       // parent category id
+$rparent = optional_param('rparent', 0, PARAM_INT);       // Parent category id
 $rsub    = optional_param('rsub', 0, PARAM_INT);          // sub-category id
-$rcourse = optional_param('rcourse', 0, PARAM_INT);       // specific course id
+$rcourse = optional_param('rcourse', 0, PARAM_INT);       // Specific course id
 
 // BUG-RESULTS-NOID-BOUNCE (v4.2.29, 30 Apr 2026): the "Student Results" item in
 // the Site Administration tree (settings.php) and the side nav (lib.php) both
@@ -113,7 +113,8 @@ if (empty($qualbuilderid)) {
             . ($rsum['skipped_nostudent'] ? ', ' . $rsum['skipped_nostudent'] . ' with no student record' : '')
             . ($rsum['skipped_nomap'] ? ', ' . $rsum['skipped_nomap'] . ' unmapped courses' : '')
             . '.';
-        redirect(new moodle_url('/local/rtocompliance/qualbuilder_results.php'),
+        redirect(
+            new moodle_url('/local/rtocompliance/qualbuilder_results.php'),
             $msg, null, \core\output\notification::NOTIFY_SUCCESS);
     }
 
@@ -153,7 +154,7 @@ if (empty($qualbuilderid)) {
     // "Competent / credit" AVETMISS outcome set — a unit genuinely achieved.
     $competentin = "('20','51','60','81')";
 
-    // v6.2.84 CASCADE DATA — the category tree + course list built from the courses students
+    // Version 6.2.84 CASCADE DATA — the category tree + course list built from the courses students
     // ACTUALLY hold results in (enrolments.courseid -> course -> course_categories). Mirrors the
     // SoA-issue cascade so both pages present the same parent/sub/course picker.
     $resCourses = [];   // courseid => ['name'=>.., 'catpath'=>.., 'catid'=>..]
@@ -212,7 +213,7 @@ if (empty($qualbuilderid)) {
             use ($DB, $search, $rqual, $rcat, $rusi, $cascadeActive, $matchCourseIds) {
         $w = [];
         $p = [];
-        // v6.2.84 cascade: narrow to students who hold a result in a matching result-course.
+        // Version 6.2.84 cascade: narrow to students who hold a result in a matching result-course.
         // If a cascade level is chosen but resolves to no courses, force an empty roster
         // rather than silently ignoring the filter.
         if ($cascadeActive) {
@@ -329,7 +330,8 @@ if (empty($qualbuilderid)) {
         header('Content-Type: text/csv; charset=utf-8');
         header('Content-Disposition: attachment; filename="student_roster_' . date('Y-m-d') . '.csv"');
         $out = fopen('php://output', 'w');
-        fputcsv($out, ['Student Name', 'Client ID', 'USI', 'USI Verified', 'Date of Birth', 'Sex',
+        fputcsv(
+            $out, ['Student Name', 'Client ID', 'USI', 'USI Verified', 'Date of Birth', 'Sex',
                        'State', 'Qualifications', 'Units Attempted', 'Units Competent', 'Progress %', 'Status', 'Last Activity']);
         foreach ($csvrows as $r) {
             $name = trim(trim((string)$r->dfirst) . ' ' . trim((string)$r->dlast));
@@ -345,26 +347,27 @@ if (empty($qualbuilderid)) {
             $att  = (int)$r->unitsattempted;
             $comp = (int)$r->unitscompetent;
             $pct  = $att > 0 ? round($comp / $att * 100) : 0;
-            fputcsv($out, [
-                $name,
-                (string)$r->clientid,
-                (string)$r->usi,
-                // USI-VERIFIED-ACCURACY (v6.2.8): only usiverified===1 (STATUS_VERIFIED, confirmed
-                // against usi.gov.au) is a real "Yes". The previous truthy test wrongly reported
-                // usiverified===3 (verification PENDING/stuck) as "Yes", overstating verified USIs
-                // in AVETMISS/compliance reporting. Pending, failed and unset all correctly read "No".
-                ((int)$r->usiverified === 1) ? 'Yes' : 'No',
-                $r->dateofbirth ? date('d/m/Y', (int)$r->dateofbirth) : '',
-                // AVETMISS-TERMINOLOGY (v6.2.9): fall back to "Not stated" for any null/blank
-                // value so the roster never shows an empty cell for sex or state.
-                ($r->sex === null || $r->sex === '') ? 'Not stated' : ($sexlabels[$r->sex] ?? (string)$r->sex),
-                ($r->statecode === null || $r->statecode === '') ? 'Not stated' : ($statelabels[$r->statecode] ?? (string)$r->statecode),
-                implode(' | ', $progs),
-                $att,
-                $comp,
-                $pct . '%',
-                ($att > 0 && $att === $comp) ? 'All competent' : 'In progress',
-                $r->lastactivity ? date('d/m/Y', (int)$r->lastactivity) : '',
+            fputcsv(
+                $out, [
+                    $name,
+                    (string)$r->clientid,
+                    (string)$r->usi,
+                    // USI-VERIFIED-ACCURACY (v6.2.8): only usiverified===1 (STATUS_VERIFIED, confirmed
+                    // against usi.gov.au) is a real "Yes". The previous truthy test wrongly reported
+                    // usiverified===3 (verification PENDING/stuck) as "Yes", overstating verified USIs
+                    // in AVETMISS/compliance reporting. Pending, failed and unset all correctly read "No".
+                    ((int)$r->usiverified === 1) ? 'Yes' : 'No',
+                    $r->dateofbirth ? date('d/m/Y', (int)$r->dateofbirth) : '',
+                    // AVETMISS-TERMINOLOGY (v6.2.9): fall back to "Not stated" for any null/blank
+                    // value so the roster never shows an empty cell for sex or state.
+                    ($r->sex === null || $r->sex === '') ? 'Not stated' : ($sexlabels[$r->sex] ?? (string)$r->sex),
+                    ($r->statecode === null || $r->statecode === '') ? 'Not stated' : ($statelabels[$r->statecode] ?? (string)$r->statecode),
+                    implode(' | ', $progs),
+                    $att,
+                    $comp,
+                    $pct . '%',
+                    ($att > 0 && $att === $comp) ? 'All competent' : 'In progress',
+                    $r->lastactivity ? date('d/m/Y', (int)$r->lastactivity) : '',
             ]);
         }
         fclose($out);
@@ -383,10 +386,18 @@ if (empty($qualbuilderid)) {
 
     // ---- Sort ----
     switch ($rsort) {
-        case 'progress': $orderby = "ORDER BY unitscompetent DESC, unitsattempted DESC"; break;
-        case 'recent':   $orderby = "ORDER BY lastactivity DESC"; break;
-        case 'units':    $orderby = "ORDER BY unitsattempted DESC"; break;
-        default:         $orderby = "ORDER BY dlast ASC, dfirst ASC"; break;
+        case 'progress':
+            $orderby = "ORDER BY unitscompetent DESC, unitsattempted DESC";
+            break;
+        case 'recent':
+            $orderby = "ORDER BY lastactivity DESC";
+            break;
+        case 'units':
+            $orderby = "ORDER BY unitsattempted DESC";
+            break;
+        default
+            :         $orderby = "ORDER BY dlast ASC, dfirst ASC";
+            break;
     }
 
     // ---- Page of roster rows ----
@@ -564,7 +575,7 @@ if (empty($qualbuilderid)) {
         echo '<option value="' . s($qo->qualificationcode) . '"' . $sel . '>' . s($qo->qualificationcode) . ' ' . s(shorten_text($qo->qualificationname, 40)) . '</option>';
     }
     echo '</select>';
-    // v6.2.84 CASCADE: Parent category -> Sub-category -> Course, sourced from the students'
+    // Version 6.2.84 CASCADE: Parent category -> Sub-category -> Course, sourced from the students'
     // actual result courses. Replaces the old near-empty $rcat dropdown (which read categoryid
     // off qualbuilder, populated on only a handful of products). All options are rendered with
     // data-parent / data-sub attributes; the small script below hides the ones that don't apply
@@ -623,7 +634,7 @@ if (empty($qualbuilderid)) {
         echo '<option value="' . $sv . '"' . ($rsort === $sv ? ' selected' : '') . '>' . $sl . '</option>';
     }
     echo '</select>';
-    echo '</div>'; // end rtoc-rf-grid
+    echo '</div>'; // End rtoc-rf-grid
     echo '<div class="rtoc-rf-actions">';
     echo '<button type="submit" class="btn btn-primary">Apply</button>';
     $hasfilters = ($search !== '' || $rqual !== '' || $rcat > 0 || $rusi !== 'all' || $filter !== 'all'
@@ -631,13 +642,14 @@ if (empty($qualbuilderid)) {
     if ($hasfilters) {
         echo ' <a href="' . (new moodle_url('/local/rtocompliance/qualbuilder_results.php'))->out() . '" class="btn btn-outline-secondary">Clear</a>';
     }
-    echo ' <a href="' . (new moodle_url('/local/rtocompliance/qualbuilder_results.php',
-        ['export' => 'csv', 'search' => $search, 'rqual' => $rqual, 'rcat' => $rcat, 'rusi' => $rusi, 'filter' => $filter,
+    echo ' <a href="' . (new moodle_url(
+        '/local/rtocompliance/qualbuilder_results.php',
+            ['export' => 'csv', 'search' => $search, 'rqual' => $rqual, 'rcat' => $rcat, 'rusi' => $rusi, 'filter' => $filter,
          'rparent' => $rparent, 'rsub' => $rsub, 'rcourse' => $rcourse]))->out()
         . '" class="btn btn-outline-secondary">Export CSV</a>';
-    echo '</div>'; // end rtoc-rf-actions
+    echo '</div>'; // End rtoc-rf-actions
     echo '</form>';
-    // v6.2.84 cascade behaviour: keep the sub/course dropdowns showing only options that belong
+    // Version 6.2.84 cascade behaviour: keep the sub/course dropdowns showing only options that belong
     // to the current upstream selection, and clear downstream picks when an upstream changes.
     // Runs on load (to apply the server-selected state) and on every change (then submits).
     echo <<<'RFCASCADE'
@@ -774,12 +786,14 @@ RFCASCADE;
             echo '</tr>';
         }
         echo '</tbody></table></div>';
-        echo $OUTPUT->paging_bar($rtotal, $page, $perpage,
-            new moodle_url('/local/rtocompliance/qualbuilder_results.php',
+        echo $OUTPUT->paging_bar(
+            $rtotal, $page, $perpage,
+                new moodle_url(
+                '/local/rtocompliance/qualbuilder_results.php',
                 ['search' => $search, 'rqual' => $rqual, 'rcat' => $rcat, 'rusi' => $rusi, 'filter' => $filter, 'rsort' => $rsort]));
     }
 
-    echo '</div>'; // left column
+    echo '</div>'; // Left column
 
     // ---- Right column: pivots ----
     echo '<div style="width:100%;margin-top:16px;">';
@@ -885,8 +899,8 @@ RFCASCADE;
         . 'Download unmapped completions (CSV)</a>';
     echo '</div>';
 
-    echo '</div>'; // right column
-    echo '</div>'; // flex wrapper
+    echo '</div>'; // Right column
+    echo '</div>'; // Flex wrapper
 
     echo html_writer::end_div(); // .compliance-container
     echo $OUTPUT->footer();
@@ -922,13 +936,16 @@ $PAGE->requires->css('/local/rtocompliance/styles.css');
 // (c) the progress % denominator is not inflated by unselected/deselected unit rows.
 $units = $DB->get_records('local_rtocompliance_qualunits', ['qualbuilderid' => $qualbuilderid, 'selected' => 1], 'unittype ASC, unitcode ASC');
 $unitcodes = array_column($units, 'unitcode');
-// v5.9.375: uppercased set of THIS product's selected unit codes, used to scope
+// Version 5.9.375: uppercased set of THIS product's selected unit codes, used to scope
 // the per-student outcome grid by unit (see the grid lookup below).
-$productunitcodes = array_values(array_filter(array_map(function ($uc) {
-    return strtoupper(trim((string)$uc));
-}, $unitcodes), function ($uc) {
-    return $uc !== '';
-}));
+$productunitcodes = array_values(
+    array_filter(
+    array_map(
+    function ($uc) {
+                return strtoupper(trim((string)$uc));
+            }, $unitcodes), function ($uc) {
+            return $uc !== '';
+        }));
 
 // CROSS-CATEGORY-FIX (v5.9.373): the student LIST query below admits students
 // who completed this product via a variant delivery course (any category) using
@@ -962,7 +979,7 @@ $productcourseids = array_values(array_filter(array_map('intval', $productcourse
 // headers can show how many courses were found and whether they are QB-linked,
 // auto-discovered, or manually added.  Units with zero map entries are highlighted
 // so admins know completion falls back to raw enrolment outcome matching.
-$unitMapCounts       = [];  // uc → ['total'=>int,'auto'=>int,'qb'=>int,'manual'=>int]
+$unitMapCounts       = [];  // Uc → ['total'=>int,'auto'=>int,'qb'=>int,'manual'=>int]
 $mapTableExistsForResults = $DB->get_manager()->table_exists('local_rtocompliance_course_map');
 if ($mapTableExistsForResults && !empty($unitcodes)) {
     list($ucInsql, $ucInparams) = $DB->get_in_or_equal($unitcodes, SQL_PARAMS_NAMED, 'uc');
@@ -1004,7 +1021,7 @@ $outcomecodes = [
     '81' => ['label' => 'Non-Assessed - Satisfactory',    'badge' => 'badge-success',   'short' => 'S'],
     '82' => ['label' => 'Non-Assessed - Unsatisfactory',  'badge' => 'badge-danger',    'short' => 'U'],
     '85' => ['label' => 'Not Yet Started',                'badge' => 'badge-secondary', 'short' => 'NYS'],
-    // v5.9.440: an enrolment that exists but has no recorded AVETMISS outcome (blank / NULL /
+    // Version 5.9.440: an enrolment that exists but has no recorded AVETMISS outcome (blank / NULL /
     // '00') is "not yet assessed" — it must render as a clear dash, NOT a confusing "?".
     '00' => ['label' => 'Not yet assessed',               'badge' => 'badge-light',     'short' => '—'],
 ];
@@ -1178,7 +1195,7 @@ if ($export === 'csv') {
         foreach ($units as $unit) {
             $enrolment = $enrolments[strtoupper(trim((string)$unit->unitcode))] ?? null;
             if ($enrolment) {
-                // v5.9.440: blank/NULL outcome exports as the "Not yet assessed" dash, not empty.
+                // Version 5.9.440: blank/NULL outcome exports as the "Not yet assessed" dash, not empty.
                 $ocode = trim((string)($enrolment->outcomeidentifier ?? ''));
                 if ($ocode === '') {
                     $ocode = '00';
@@ -1225,7 +1242,7 @@ echo html_writer::start_div('compliance-header');
 echo html_writer::tag('h2', get_string('student_results', 'local_rtocompliance'));
 echo html_writer::end_div();
 echo html_writer::tag('p', $producttype . ': <strong>' . s($product->qualificationcode) . ' ' . s($product->qualificationname) . '</strong>', ['class' => 'text-muted', 'style' => 'margin: 0 0 0.5rem;']);
-// v5.9.373: link back up to the cross-qualification Master Roster.
+// Version 5.9.373: link back up to the cross-qualification Master Roster.
 echo '<p style="margin:0 0 1rem;"><a href="' . (new moodle_url('/local/rtocompliance/qualbuilder_results.php'))->out()
     . '" style="font-size:13px;text-decoration:none;">&larr; All students (Master Roster)</a></p>';
 
@@ -1342,7 +1359,7 @@ echo html_writer::end_div();
 // Shows which units have no mapped courses so admins can catch gaps before
 // they affect certificate issuance, without having to scroll through the table.
 if ($mapTableExistsForResults && !empty($units)) {
-    $zeroUnits    = [];  // unit objects with no map entries
+    $zeroUnits    = [];  // Unit objects with no map entries
     $mappedTotal  = 0;
     foreach ($units as $unit) {
         $uc      = strtoupper($unit->unitcode);
@@ -1544,7 +1561,7 @@ if (empty($students)) {
         echo '<td style="position: sticky; left: 0; background: white; z-index: 5;">';
         echo '<strong>' . fullname($student) . '</strong><br>';
         echo '<small class="text-muted">' . s($student->email) . '</small>';
-        // v5.9.373: surface key AVETMISS identity fields inline so the RTO can
+        // Version 5.9.373: surface key AVETMISS identity fields inline so the RTO can
         // read client ID, DOB and state without leaving the grid.
         $ddstatelabels = ['01' => 'NSW', '02' => 'VIC', '03' => 'QLD', '04' => 'SA', '05' => 'WA',
                           '06' => 'TAS', '07' => 'NT', '08' => 'ACT', '09' => 'Other'];
@@ -1572,7 +1589,7 @@ if (empty($students)) {
         foreach ($units as $unit) {
             $enrolment = $enrolments[strtoupper(trim((string)$unit->unitcode))] ?? null;
             if ($enrolment) {
-                // v5.9.440: normalise a blank/NULL outcome to '00' ("Not yet assessed") and
+                // Version 5.9.440: normalise a blank/NULL outcome to '00' ("Not yet assessed") and
                 // show any unrecognised-but-present code as itself, so a cell is never "?".
                 $ocode = trim((string)($enrolment->outcomeidentifier ?? ''));
                 if ($ocode === '') {

@@ -43,13 +43,14 @@ $PAGE->set_title('Recover Unmapped Completions');
 $PAGE->set_heading('Recover Unmapped Completions');
 $PAGE->requires->css('/local/rtocompliance/styles.css');
 $PAGE->add_body_class('path-local-rtocompliance');
-$PAGE->navbar->add(get_string('qualbuilder', 'local_rtocompliance'),
+$PAGE->navbar->add(
+    get_string('qualbuilder', 'local_rtocompliance'),
     new moodle_url('/local/rtocompliance/qualbuilder.php'));
 $PAGE->navbar->add('Recover Unmapped Completions');
 
 // ── APPLY (POST) ──────────────────────────────────────────────────────────────
 if ($action === 'apply' && $_SERVER['REQUEST_METHOD'] === 'POST' && confirm_sesskey()) {
-    $pairs = optional_param_array('map', [], PARAM_ALPHANUMEXT); // values "OLD:CURRENT"
+    $pairs = optional_param_array('map', [], PARAM_ALPHANUMEXT); // Values "OLD:CURRENT"
     $mappings = [];
     foreach ($pairs as $p) {
         $bits = explode(':', $p, 2);
@@ -62,7 +63,8 @@ if ($action === 'apply' && $_SERVER['REQUEST_METHOD'] === 'POST' && confirm_sess
     $msg = $n
         ? ($n . ' supersession mapping(s) added. Now run "Sync results from Moodle completions" on Student Results to credit the recovered completions.')
         : 'No new mappings were added (they may already exist).';
-    redirect(new moodle_url('/local/rtocompliance/qualbuilder_recover.php'),
+    redirect(
+        new moodle_url('/local/rtocompliance/qualbuilder_recover.php'),
         $msg, null, \core\output\notification::NOTIFY_SUCCESS);
 }
 
@@ -75,7 +77,8 @@ $unresolved = $scan['unresolved'];
 
 echo $OUTPUT->header();
 echo local_rtocompliance_render_nav_header('Recover Unmapped Completions', null, null, 'qualbuilder');
-echo local_rtocompliance_page_banner('Recover Unmapped Completions',
+echo local_rtocompliance_page_banner(
+    'Recover Unmapped Completions',
     'Map superseded / renumbered unit codes from archived courses to your current units.');
 
 echo html_writer::start_div('', ['style' => 'max-width:1100px;']);
@@ -129,8 +132,9 @@ if (!empty($proposals)) {
     echo '</tbody></table>';
 
     echo '<button type="submit" class="btn btn-primary" style="margin-top:6px;">Add selected mappings</button> ';
-    echo html_writer::link(new moodle_url('/local/rtocompliance/qualbuilder_results.php'),
-        'Then go to Student Results to Sync',
+    echo html_writer::link(
+        new moodle_url('/local/rtocompliance/qualbuilder_results.php'),
+            'Then go to Student Results to Sync',
         ['class' => 'btn btn-outline-primary', 'style' => 'margin-top:6px;']);
     echo '</form>';
 
@@ -143,9 +147,11 @@ if (!empty($proposals)) {
 
 // ── UNRESOLVED ────────────────────────────────────────────────────────────────
 if (!empty($unresolved)) {
-    $totalcompl = array_sum(array_map(function ($u) {
-        return (int)$u['completions'];
-    }, $unresolved));
+    $totalcompl = array_sum(
+        array_map(
+        function ($u) {
+                return (int)$u['completions'];
+            }, $unresolved));
     echo '<hr style="margin:26px 0 16px;">';
     echo '<h5 style="color:#b45309;">' . count($unresolved) . ' code(s) have no current unit to map to ('
         . $totalcompl . ' completions)</h5>';

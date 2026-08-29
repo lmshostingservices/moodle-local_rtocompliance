@@ -60,19 +60,21 @@ $yearselect .= html_writer::end_tag('select');
 echo $yearselect;
 echo html_writer::end_div();
 
-$completed = $DB->get_records('local_rtocompliance_surveys', [
-    'surveytype' => $type,
-    'year' => $year,
-    'status' => 'completed',
+$completed = $DB->get_records(
+    'local_rtocompliance_surveys', [
+        'surveytype' => $type,
+        'year' => $year,
+        'status' => 'completed',
 ], 'timecompleted DESC');
 
 // RESPONSE-RATE-FIX (v5.9.381): "outstanding" is every invited survey that is
 // not yet completed — regardless of whether its status is 'sent' (manual send),
 // 'pending' (auto-task) or anything else. Counting only 'pending' made the rate
 // read ~100% for manually-sent batches. Denominator = all invited for type+year.
-$totalsurveys   = $DB->count_records('local_rtocompliance_surveys', [
-    'surveytype' => $type,
-    'year' => $year,
+$totalsurveys   = $DB->count_records(
+    'local_rtocompliance_surveys', [
+        'surveytype' => $type,
+        'year' => $year,
 ]);
 $totalresponses = count($completed);
 $pending        = max(0, $totalsurveys - $totalresponses);
@@ -137,8 +139,9 @@ if ($completed) {
         echo html_writer::start_tag('tr');
         echo html_writer::tag('td', format_string($survey->respondentname) ?: 'Anonymous');
         echo html_writer::tag('td', $survey->respondentemail ?: '-');
-        echo html_writer::tag('td', 
-            html_writer::tag('span', $survey->overallsatisfaction . '/5', ['class' => 'badge ' . $satclass])
+        echo html_writer::tag(
+            'td', 
+                html_writer::tag('span', $survey->overallsatisfaction . '/5', ['class' => 'badge ' . $satclass])
         );
         echo html_writer::tag('td', userdate($survey->timecompleted, '%d %b %Y'));
         echo html_writer::end_tag('tr');

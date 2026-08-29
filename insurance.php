@@ -131,12 +131,13 @@ if ($policies) {
         echo html_writer::tag('td', '$' . number_format($policy->coverageamount, 0));
         echo html_writer::tag('td', userdate($policy->expirydate, '%d %b %Y'));
         echo html_writer::tag('td', html_writer::tag('span', $status, ['class' => 'badge ' . $statusclass]));
-        echo html_writer::tag('td',
-            html_writer::link(
-                new moodle_url('/local/rtocompliance/insurance_edit.php', ['id' => $policy->id]),
-                'Edit',
-                ['class' => 'btn btn-sm btn-secondary', 'title' => 'Edit this insurance policy']
-            )
+        echo html_writer::tag(
+            'td',
+                html_writer::link(
+                    new moodle_url('/local/rtocompliance/insurance_edit.php', ['id' => $policy->id]),
+                    'Edit',
+                    ['class' => 'btn btn-sm btn-secondary', 'title' => 'Edit this insurance policy']
+                )
         );
         echo html_writer::end_tag('tr');
     }

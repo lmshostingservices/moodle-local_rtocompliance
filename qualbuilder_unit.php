@@ -259,8 +259,9 @@ $PAGE->add_body_class("path-local-rtocompliance");
 // NOMINAL-HOURS-INTERNAL (v5.9.418): auto-fill nominal hours from the plugin's OWN
 // authoritative reference table (nominalhours_lookup.php) — no longer from lms-labs.com.
 $nhendpoint = (new moodle_url('/local/rtocompliance/nominalhours_lookup.php'))->out(false);
-$PAGE->requires->js_call_amd('local_rtocompliance/nominalhours_autofill', 'init', [
-    'id_unitcode', 'id_unitname', 'id_nominalhours', $nhendpoint,
+$PAGE->requires->js_call_amd(
+    'local_rtocompliance/nominalhours_autofill', 'init', [
+        'id_unitcode', 'id_unitname', 'id_nominalhours', $nhendpoint,
 ]);
 
 echo $OUTPUT->header();

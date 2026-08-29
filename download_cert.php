@@ -21,7 +21,7 @@
  * @copyright  2025 LMS Labs
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-// v4.2.48 BUG-MAY2-AUDIT — download_cert.php previously built its own
+// Version 4.2.48 BUG-MAY2-AUDIT — download_cert.php previously built its own
 // hard-coded PDF here and bypassed the certificate template builder
 // entirely. That meant students who downloaded a certificate directly
 // (e.g. via the Verify or My Certificates page) ALWAYS got the legacy

@@ -112,7 +112,8 @@ if ($action === 'save' && confirm_sesskey()) {
             }
         }
     }
-    redirect(new moodle_url('/local/rtocompliance/integrations.php'),
+    redirect(
+        new moodle_url('/local/rtocompliance/integrations.php'),
         'Integration settings saved.', null, \core\output\notification::NOTIFY_SUCCESS);
 }
 
@@ -124,9 +125,10 @@ if ($action === 'testteams' && confirm_sesskey()) {
         redirect($redir, 'Enter and save a valid https Teams webhook URL first.', null, \core\output\notification::NOTIFY_ERROR);
     }
     require_once($CFG->libdir . '/filelib.php');
-    $payload = json_encode([
-        'text' => 'RTO Compliance test message — your Microsoft Teams integration is connected. '
-            . 'Sent ' . userdate(time()) . '.',
+    $payload = json_encode(
+        [
+            'text' => 'RTO Compliance test message — your Microsoft Teams integration is connected. '
+                . 'Sent ' . userdate(time()) . '.',
     ]);
     $curl = new \curl();
     $curl->setopt(['CURLOPT_TIMEOUT' => 15, 'CURLOPT_SSL_VERIFYPEER' => true]);
@@ -136,7 +138,8 @@ if ($action === 'testteams' && confirm_sesskey()) {
     if ($code >= 200 && $code < 300) {
         redirect($redir, 'Test message sent to Teams — check your channel.', null, \core\output\notification::NOTIFY_SUCCESS);
     }
-    redirect($redir, 'Teams webhook test failed (HTTP ' . $code . '): ' . s(substr((string) $resp, 0, 200)),
+    redirect(
+        $redir, 'Teams webhook test failed (HTTP ' . $code . '): ' . s(substr((string) $resp, 0, 200)),
         null, \core\output\notification::NOTIFY_ERROR);
 }
 
@@ -145,12 +148,14 @@ if (function_exists('local_rtocompliance_render_nav_header')) {
     echo local_rtocompliance_render_nav_header('Integrations', null, null, 'link');
 }
 
-echo html_writer::tag('p', 'Connect RTO Compliance to your business systems. Credentials are '
-    . 'stored in Moodle configuration and used only to push your RTO\'s own data to these services.',
+echo html_writer::tag(
+    'p', 'Connect RTO Compliance to your business systems. Credentials are '
+        . 'stored in Moodle configuration and used only to push your RTO\'s own data to these services.',
     ['class' => 'text-muted']);
 
 $sk = sesskey();
-echo html_writer::start_tag('form', ['method' => 'post',
+echo html_writer::start_tag(
+    'form', ['method' => 'post',
     'action' => new moodle_url('/local/rtocompliance/integrations.php')]);
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'action', 'value' => 'save']);
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => $sk]);
@@ -159,7 +164,10 @@ foreach ($integrations as $svckey => $svc) {
     $enabled = $cfg($svckey . '_enable') === '1';
     $complete = true;
     foreach ($svc['required'] as $rk) {
-        if ($cfg($rk) === '') { $complete = false; break; }
+        if ($cfg($rk) === '') {
+            $complete = false;
+            break;
+        }
     }
     $status = !$enabled ? '<span class="badge badge-secondary">Disabled</span>'
         : ($complete ? '<span class="badge badge-success">Configured</span>'
@@ -175,7 +183,8 @@ foreach ($integrations as $svckey => $svc) {
         [$label, $type] = $meta;
         echo html_writer::start_div('form-group');
         if ($type === 'checkbox') {
-            echo html_writer::empty_tag('input', ['type' => 'checkbox', 'name' => $key, 'value' => 1,
+            echo html_writer::empty_tag(
+                'input', ['type' => 'checkbox', 'name' => $key, 'value' => 1,
                 'id' => $key, 'class' => 'mr-2'] + ($cfg($key) === '1' ? ['checked' => 'checked'] : []));
             echo html_writer::tag('label', ' ' . s($label), ['for' => $key]);
         } else {
@@ -184,7 +193,8 @@ foreach ($integrations as $svckey => $svc) {
             // Never render a stored secret back into the field; text fields show their value.
             $value = ($type === 'secret') ? '' : $cfg($key);
             $ph = ($type === 'secret' && $cfg($key) !== '') ? '(unchanged — enter a new value to replace)' : '';
-            echo html_writer::empty_tag('input', ['type' => $inputtype, 'name' => $key, 'id' => $key,
+            echo html_writer::empty_tag(
+                'input', ['type' => $inputtype, 'name' => $key, 'id' => $key,
                 'class' => 'form-control', 'value' => $value, 'placeholder' => $ph, 'style' => 'max-width:640px;']);
         }
         echo html_writer::end_div();

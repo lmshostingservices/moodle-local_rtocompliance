@@ -50,7 +50,7 @@ $capabilities = [
         'contextlevel' => CONTEXT_COURSE,
         'archetypes' => [
             'manager' => CAP_ALLOW,
-            // v4.2.30 ROLE-SPLIT: editingteacher REMOVED — trainers should not
+            // Version 4.2.30 ROLE-SPLIT: editingteacher REMOVED — trainers should not
             // be able to write to compliance registers; they get :viewtrainer
             // for the trainer-scoped dashboard instead.
         ],
@@ -61,12 +61,12 @@ $capabilities = [
         'contextlevel' => CONTEXT_SYSTEM,
         'archetypes' => [
             'manager' => CAP_ALLOW,
-            // v4.2.30 ROLE-SPLIT: editingteacher REMOVED — :viewall reads
+            // Version 4.2.30 ROLE-SPLIT: editingteacher REMOVED — :viewall reads
             // ALL students across ALL programs which is a privacy breach for
             // a trainer who should only see their own classes.
         ],
     ],
-    // v4.2.30 ROLE-SPLIT: NEW capability — trainer-scoped read access to the
+    // Version 4.2.30 ROLE-SPLIT: NEW capability — trainer-scoped read access to the
     // Trainer Dashboard, own students, own surveys, own currency profile, and
     // read-only Validation Schedule for events they're assigned to.
     'local/rtocompliance:viewtrainer' => [
@@ -74,8 +74,8 @@ $capabilities = [
         'captype' => 'read',
         'contextlevel' => CONTEXT_SYSTEM,
         'archetypes' => [
-            'manager' => CAP_ALLOW,        // managers can view what trainers see too
-            'editingteacher' => CAP_ALLOW, // primary intended audience
+            'manager' => CAP_ALLOW,        // Managers can view what trainers see too
+            'editingteacher' => CAP_ALLOW, // Primary intended audience
             'teacher' => CAP_ALLOW,        // non-editing teachers also legitimate trainers/assessors
         ],
     ],
@@ -115,7 +115,7 @@ $capabilities = [
         'contextlevel' => CONTEXT_SYSTEM,
         'archetypes' => [
             'manager' => CAP_ALLOW,
-            // v4.2.30 ROLE-SPLIT: editingteacher REMOVED — sending surveys is
+            // Version 4.2.30 ROLE-SPLIT: editingteacher REMOVED — sending surveys is
             // a management function (cohort selection, AI analysis credits).
             // Trainers can VIEW their own classes' survey responses through
             // the Trainer Dashboard but should not be able to mass-send.

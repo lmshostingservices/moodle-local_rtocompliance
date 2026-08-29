@@ -21,7 +21,7 @@
  * @copyright  2025 LMS Labs
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-// v4.9.108 STUDENT-DOC-REPOSITORY — File download handler for student_docs.
+// Version 4.9.108 STUDENT-DOC-REPOSITORY — File download handler for student_docs.
 // Serves files stored via Moodle file API (component=local_rtocompliance, filearea=student_doc).
 // Access: students see own docs, admins/trainers with viewall see any.
 

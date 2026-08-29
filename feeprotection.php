@@ -83,7 +83,8 @@ if ($protectiontype) {
             new moodle_url('/admin/settings.php', ['section' => 'local_rtocompliance_asqa2025']),
             'Update Settings', ['class' => 'btn btn-sm btn-secondary', 'title' => 'Open plugin settings to update the fee protection arrangement']);
     } else {
-        echo html_writer::tag('p', 'Fee protection is configured in the plugin settings (ask a site administrator).',
+        echo html_writer::tag(
+            'p', 'Fee protection is configured in the plugin settings (ask a site administrator).',
             ['class' => 'text-muted', 'style' => 'font-size:0.85rem;']);
     }
 } else {
@@ -93,7 +94,8 @@ if ($protectiontype) {
             new moodle_url('/admin/settings.php', ['section' => 'local_rtocompliance_asqa2025']),
             'Configure Fee Protection', ['class' => 'btn btn-primary', 'title' => 'Open plugin settings to configure the fee protection arrangement']);
     } else {
-        echo html_writer::tag('p', 'A site administrator must configure fee protection in the plugin settings.',
+        echo html_writer::tag(
+            'p', 'A site administrator must configure fee protection in the plugin settings.',
             ['class' => 'text-muted', 'style' => 'font-size:0.85rem;']);
     }
 }
@@ -151,12 +153,13 @@ if ($fees) {
         echo html_writer::tag('td', '$' . number_format($fee->amount, 2));
         echo html_writer::tag('td', userdate($fee->paymentdate, '%d %b %Y'));
         echo html_writer::tag('td', html_writer::tag('span', $status, ['class' => 'badge ' . $statusclass]));
-        echo html_writer::tag('td',
-            html_writer::link(
-                new moodle_url('/local/rtocompliance/feeprotection_edit.php', ['id' => $fee->id]),
-                'View',
-                ['class' => 'btn btn-sm btn-secondary', 'title' => 'View this student fee record']
-            )
+        echo html_writer::tag(
+            'td',
+                html_writer::link(
+                    new moodle_url('/local/rtocompliance/feeprotection_edit.php', ['id' => $fee->id]),
+                    'View',
+                    ['class' => 'btn btn-sm btn-secondary', 'title' => 'View this student fee record']
+                )
         );
         echo html_writer::end_tag('tr');
     }

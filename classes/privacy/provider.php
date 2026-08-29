@@ -37,7 +37,7 @@ class provider implements
     \core_privacy\local\request\core_userlist_provider {
 
     public static function get_metadata(collection $collection): collection {
-        // v6.3.14: the AI assistant sends the staff member's question to the lms-labs.com
+        // Version 6.3.14: the AI assistant sends the staff member's question to the lms-labs.com
         // broker, and — when "Let the assistant see this site's data" is on — a short
         // read-only summary of this site with it. That summary can name the ONE student whose
         // page the staff member is viewing, together with whether their USI is verified, so
@@ -299,7 +299,7 @@ class provider implements
                 );
             }
         }
-        // complaints and appeals link directly via complainantuserid / appellantuserid.
+        // Complaints and appeals link directly via complainantuserid / appellantuserid.
         $complaints = $DB->get_records('local_rtocompliance_complaints', ['complainantuserid' => $user->id]);
         if ($complaints) {
             \core_privacy\local\request\writer::with_context($context)->export_data(

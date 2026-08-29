@@ -41,7 +41,7 @@ defined('MOODLE_INTERNAL') || die();
 
 class results_importer {
     /** @var string[] Valid AVETMISS national outcome identifiers we accept from NAT files. */
-    // v5.9.440: '41' (incomplete due to RTO closure) is a valid AVETMISS outcome the NAT
+    // Version 5.9.440: '41' (incomplete due to RTO closure) is a valid AVETMISS outcome the NAT
     // parser accepts and the Student Results grid can display, but it was missing here — so an
     // imported '41' was silently collapsed to '00' (which renders as "?"). Added so it survives.
     const VALID_OUTCOMES = ['20', '30', '40', '41', '51', '52', '53', '60', '61', '70', '81', '82', '85', '90', '00'];
@@ -83,7 +83,8 @@ class results_importer {
         // needed). Chunk to stay within IN() parameter limits.
         foreach (array_chunk($clientids, 1000) as $chunk) {
             list($insql, $inparams) = $DB->get_in_or_equal($chunk, SQL_PARAMS_NAMED, 'cid');
-            $rows = $DB->get_records_select('local_rtocompliance_students',
+            $rows = $DB->get_records_select(
+                'local_rtocompliance_students',
                 "clientid $insql", $inparams, '', 'id, clientid, userid');
             foreach ($rows as $sr) {
                 $sidByClient[strtoupper(trim((string) $sr->clientid))] = (int) $sr->id;
@@ -118,14 +119,16 @@ class results_importer {
             $courseid  = $courseByUnit[$unitcode] ?? 0;
 
             // Idempotent: match an existing register row on (studentid, unitcode, programcode).
-            $existing = $DB->get_records_select('local_rtocompliance_enrolments',
-                "studentid = :sid AND UPPER(unitcode) = :uc AND "
-                . "(UPPER(COALESCE(programcode,'')) = :pc)",
-                ['sid' => $studentid, 'uc' => $unitcode, 'pc' => $qualcode],
+            $existing = $DB->get_records_select(
+                'local_rtocompliance_enrolments',
+                    "studentid = :sid AND UPPER(unitcode) = :uc AND "
+                    . "(UPPER(COALESCE(programcode,'')) = :pc)",
+                    ['sid' => $studentid, 'uc' => $unitcode, 'pc' => $qualcode],
                 'id ASC', '*', 0, 1);
             $existing = $existing ? reset($existing) : null;
 
-            $rec = self::build_record($studentid, $courseid, $unitcode,
+            $rec = self::build_record(
+                $studentid, $courseid, $unitcode,
                 $nameByUnit[$unitcode] ?? null, $qualcode, $row, $outcome, $now);
 
             if ($existing) {
@@ -286,7 +289,8 @@ class results_importer {
         foreach (array_chunk($units, 1000) as $chunk) {
             list($insql, $inparams) = $DB->get_in_or_equal($chunk, SQL_PARAMS_NAMED, 'u');
             if ($dbman->table_exists('local_rtocompliance_qualunits')) {
-                $rs = $DB->get_records_select('local_rtocompliance_qualunits',
+                $rs = $DB->get_records_select(
+                    'local_rtocompliance_qualunits',
                     "UPPER(unitcode) $insql", $inparams, '', 'id, unitcode, unitname, courseid');
                 foreach ($rs as $q) {
                     $u = strtoupper(trim((string) $q->unitcode));
@@ -299,8 +303,9 @@ class results_importer {
                 }
             }
             if ($dbman->table_exists('local_rtocompliance_course_map')) {
-                $rs = $DB->get_records_select('local_rtocompliance_course_map',
-                    "UPPER(unitcode) $insql AND confirmed = 1 AND courseid > 0", $inparams,
+                $rs = $DB->get_records_select(
+                    'local_rtocompliance_course_map',
+                        "UPPER(unitcode) $insql AND confirmed = 1 AND courseid > 0", $inparams,
                     'confirmed DESC, id ASC', 'id, unitcode, courseid');
                 foreach ($rs as $m) {
                     $u = strtoupper(trim((string) $m->unitcode));

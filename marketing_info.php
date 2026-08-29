@@ -91,7 +91,8 @@ if ($canmanage && optional_param('action', '', PARAM_ALPHA) === 'save' && confir
     if (function_exists('local_rtocompliance_log_action')) {
         local_rtocompliance_log_action('update', 'marketing_disclosures', 0, ['items' => count($new)]);
     }
-    redirect(new moodle_url('/local/rtocompliance/marketing_info.php'),
+    redirect(
+        new moodle_url('/local/rtocompliance/marketing_info.php'),
         'Pre-enrolment disclosure register saved.', null, \core\output\notification::NOTIFY_SUCCESS);
 }
 
@@ -116,7 +117,8 @@ echo html_writer::end_div();
 
 echo html_writer::start_div('info-card');
 echo html_writer::tag('h4', 'Standard 2.1 – Information about the organisation and training products');
-echo html_writer::tag('p', '
+echo html_writer::tag(
+    'p', '
     <strong>Clause 2.1:</strong> The RTO must provide accurate and accessible information to prospective and current students about its training products and services,
     including any third party arrangements, entry requirements, fees, refund arrangements, and complaints processes &mdash; before the student enrols and before they pay.
 ');
@@ -150,7 +152,8 @@ if ($canmanage) {
 
 echo html_writer::start_div('info-card', ['style' => 'margin-top:1.5rem;']);
 echo html_writer::tag('h4', 'Pre-enrolment information disclosure register');
-echo html_writer::tag('p', 'Confirm each mandatory item is disclosed to prospective students before they enrol, and record where it is provided (e.g. website, student handbook, course guide, enrolment form). This is your Standard 2.1 evidence.',
+echo html_writer::tag(
+    'p', 'Confirm each mandatory item is disclosed to prospective students before they enrol, and record where it is provided (e.g. website, student handbook, course guide, enrolment form). This is your Standard 2.1 evidence.',
     ['class' => 'text-muted', 'style' => 'font-size:0.875rem;margin-bottom:12px;']);
 
 echo '<table class="table" style="margin-bottom:0;"><thead><tr>'
@@ -203,7 +206,8 @@ if ($canmanage) {
     echo '<div>' . ($reviewdate !== '' ? s($reviewdate) : '<span class="text-muted">Not recorded</span>') . '</div>';
 }
 echo '</div>';
-echo html_writer::tag('p', 'Keep marketing materials, the student handbook and course guides under review so the disclosed information stays accurate and current.',
+echo html_writer::tag(
+    'p', 'Keep marketing materials, the student handbook and course guides under review so the disclosed information stays accurate and current.',
     ['class' => 'text-muted', 'style' => 'font-size:0.82rem;margin:10px 0 0;']);
 echo html_writer::end_div();
 
@@ -213,7 +217,8 @@ if ($canmanage) {
     echo '</div>';
     echo '</form>';
 } else {
-    echo html_writer::tag('p', 'You have read-only access to this register.',
+    echo html_writer::tag(
+        'p', 'You have read-only access to this register.',
         ['class' => 'text-muted', 'style' => 'font-size:0.82rem;margin-top:12px;']);
 }
 

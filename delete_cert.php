@@ -21,7 +21,7 @@
  * @copyright  2025 LMS Labs
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-// v5.2.69 CERT-DELETE — Soft-deletes (revokes) a certificate record.
+// Version 5.2.69 CERT-DELETE — Soft-deletes (revokes) a certificate record.
 //
 // Sets the certificate status to 'revoked' so it no longer appears in the
 // issued list. The record is preserved in the database for audit purposes.
@@ -74,19 +74,21 @@ if ($cert->status !== 'revoked') {
 // Previously used error_log() which went only to the PHP error log and was
 // invisible in the Moodle admin UI.  (mtrace() is not used here because it
 // echoes to stdout in a web context, which would corrupt the JSON response.)
-$DB->insert_record('local_rtocompliance_log', [
-    'action'       => 'revoke_certificate',
-    'component'    => 'certificates',
-    'itemid'       => $certid,
-    'userid'       => $USER->id,
-    'targetuserid' => $cert->userid,
-    'details'      => json_encode([
-        'certnumber' => $cert->certnumber,
-        'certtype'   => $cert->certtype ?? '',
-        'status_was' => $cert->status,
-    ]),
-    'ipaddress'    => getremoteaddr(),
-    'timecreated'  => time(),
+$DB->insert_record(
+    'local_rtocompliance_log', [
+        'action'       => 'revoke_certificate',
+        'component'    => 'certificates',
+        'itemid'       => $certid,
+        'userid'       => $USER->id,
+        'targetuserid' => $cert->userid,
+        'details'      => json_encode(
+        [
+                'certnumber' => $cert->certnumber,
+                'certtype'   => $cert->certtype ?? '',
+                'status_was' => $cert->status,
+        ]),
+        'ipaddress'    => getremoteaddr(),
+        'timecreated'  => time(),
 ]);
 
 echo json_encode(['ok' => true, 'certnumber' => $cert->certnumber]);

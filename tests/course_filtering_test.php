@@ -44,38 +44,44 @@ class course_filtering_test extends \advanced_testcase {
         parent::setUp();
         $this->resetAfterTest(true);
 
-        $this->student1 = $this->getDataGenerator()->create_user([
-            'firstname' => 'Student',
-            'lastname' => 'One',
-            'email' => 'student1@test.com',
+        $this->student1 = $this->getDataGenerator()->create_user(
+            [
+                'firstname' => 'Student',
+                'lastname' => 'One',
+                'email' => 'student1@test.com',
         ]);
 
-        $this->student2 = $this->getDataGenerator()->create_user([
-            'firstname' => 'Student',
-            'lastname' => 'Two',
-            'email' => 'student2@test.com',
+        $this->student2 = $this->getDataGenerator()->create_user(
+            [
+                'firstname' => 'Student',
+                'lastname' => 'Two',
+                'email' => 'student2@test.com',
         ]);
 
-        $this->teacher = $this->getDataGenerator()->create_user([
-            'firstname' => 'Teacher',
-            'lastname' => 'Test',
-            'email' => 'teacher@test.com',
+        $this->teacher = $this->getDataGenerator()->create_user(
+            [
+                'firstname' => 'Teacher',
+                'lastname' => 'Test',
+                'email' => 'teacher@test.com',
         ]);
 
-        $this->admin = $this->getDataGenerator()->create_user([
-            'firstname' => 'Admin',
-            'lastname' => 'Test',
-            'email' => 'admin@test.com',
+        $this->admin = $this->getDataGenerator()->create_user(
+            [
+                'firstname' => 'Admin',
+                'lastname' => 'Test',
+                'email' => 'admin@test.com',
         ]);
 
-        $this->course_recognised = $this->getDataGenerator()->create_course([
-            'fullname' => 'BSB50420 Diploma of Leadership and Management',
-            'shortname' => 'BSB50420',
+        $this->course_recognised = $this->getDataGenerator()->create_course(
+            [
+                'fullname' => 'BSB50420 Diploma of Leadership and Management',
+                'shortname' => 'BSB50420',
         ]);
 
-        $this->course_nonrecognised = $this->getDataGenerator()->create_course([
-            'fullname' => 'Internal Training Course',
-            'shortname' => 'INTERNAL001',
+        $this->course_nonrecognised = $this->getDataGenerator()->create_course(
+            [
+                'fullname' => 'Internal Training Course',
+                'shortname' => 'INTERNAL001',
         ]);
     }
 

@@ -129,7 +129,12 @@ if ($transitions) {
             // Check actual Moodle self-enrolment status on the linked course.
             $selfenrols = $DB->get_records('enrol', ['courseid' => $linkedcourseid, 'enrol' => 'self']);
             $hasopen = false;
-            foreach ($selfenrols as $se) { if ($se->status == 0) { $hasopen = true; break; } }
+            foreach ($selfenrols as $se) {
+                if ($se->status == 0) {
+                    $hasopen = true;
+                    break;
+                }
+            }
 
             if ($trans->enrolmentsclosed) {
                 $enrollabel  = html_writer::tag('span', '&#10003; Closed in Moodle', ['class' => 'badge badge-success', 'title' => 'Self-enrolment disabled on: ' . $coursename]);
@@ -144,10 +149,12 @@ if ($transitions) {
         } else {
             // No linked course — show manual flag only.
             if ($trans->enrolmentsclosed) {
-                $enrolcell = html_writer::tag('span', 'Closed (manual)', ['class' => 'badge badge-secondary',
+                $enrolcell = html_writer::tag(
+                    'span', 'Closed (manual)', ['class' => 'badge badge-secondary',
                     'title' => 'Marked as closed — link a Moodle course in Manage to enforce this in Moodle']);
             } elseif ($daysuntil < 0) {
-                $enrolcell = html_writer::tag('span', '&#9888; No Moodle control', ['class' => 'badge badge-warning',
+                $enrolcell = html_writer::tag(
+                    'span', '&#9888; No Moodle control', ['class' => 'badge badge-warning',
                     'title' => 'Teach-out deadline passed — link a Moodle course in Manage to block new enrolments']);
             } else {
                 $enrolcell = html_writer::tag('span', '—', []);
@@ -165,12 +172,13 @@ if ($transitions) {
         echo html_writer::tag('td', $trans->studentsaffected);
         echo html_writer::tag('td', html_writer::tag('span', $status, ['class' => 'badge ' . $statusclass, 'title' => $statustitle]));
         echo html_writer::tag('td', $enrolcell);
-        echo html_writer::tag('td',
-            html_writer::link(
-                new moodle_url('/local/rtocompliance/transition_edit.php', ['id' => $trans->id]),
-                'Manage',
-                ['class' => 'btn btn-sm btn-secondary', 'title' => 'Manage this transition plan']
-            )
+        echo html_writer::tag(
+            'td',
+                html_writer::link(
+                    new moodle_url('/local/rtocompliance/transition_edit.php', ['id' => $trans->id]),
+                    'Manage',
+                    ['class' => 'btn btn-sm btn-secondary', 'title' => 'Manage this transition plan']
+                )
         );
         echo html_writer::end_tag('tr');
     }

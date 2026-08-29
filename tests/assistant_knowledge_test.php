@@ -40,7 +40,6 @@ require_once($CFG->dirroot . '/local/rtocompliance/lib.php');
  * @coversDefaultClass \local_rtocompliance\assistant\knowledge
  */
 final class assistant_knowledge_test extends \advanced_testcase {
-
     /**
      * The docs tree must actually parse, and every document must carry a title and a body.
      *
@@ -77,9 +76,11 @@ final class assistant_knowledge_test extends \advanced_testcase {
     public function test_a_quoted_directive_does_not_bind_a_document(): void {
         foreach (knowledge::docs() as $doc) {
             if ($doc['file'] === 'README.md') {
-                $this->assertSame([], $doc['pages'],
+                $this->assertSame(
+                    [], $doc['pages'],
                     'README.md must not be bound to the pages it quotes as an example.');
-                $this->assertStringContainsString('<!-- pages:', $doc['body'],
+                $this->assertStringContainsString(
+                    '<!-- pages:', $doc['body'],
                     'The quoted example must survive in the body.');
                 return;
             }
@@ -166,10 +167,12 @@ final class assistant_knowledge_test extends \advanced_testcase {
      * @covers ::page_param_keys
      */
     public function test_page_param_whitelist(): void {
-        $this->assertSame(['qualid' => 12],
+        $this->assertSame(
+            ['qualid' => 12],
             knowledge::filter_page_params(['qualid' => 12, 'tab' => 'ready']));
         $this->assertSame(['qualid' => 12], knowledge::filter_page_params(['qualid' => '12']));
-        $this->assertSame(['courseid' => 7, 'userid' => 3],
+        $this->assertSame(
+            ['courseid' => 7, 'userid' => 3],
             knowledge::filter_page_params(['userid' => 3, 'courseid' => 7]));
 
         // Not whitelisted, non-scalar, non-numeric, zero or negative — all dropped.
@@ -216,12 +219,13 @@ final class assistant_knowledge_test extends \advanced_testcase {
         $this->resetAfterTest();
 
         $user = $this->getDataGenerator()->create_user(['firstname' => 'Testy', 'lastname' => 'Learner']);
-        $DB->insert_record('local_rtocompliance_students', (object) [
-            'userid'       => $user->id,
-            'usi'          => '',
-            'usiverified'  => 0,
-            'timecreated'  => time(),
-            'timemodified' => time(),
+        $DB->insert_record(
+            'local_rtocompliance_students', (object) [
+                'userid'       => $user->id,
+                'usi'          => '',
+                'usiverified'  => 0,
+                'timecreated'  => time(),
+                'timemodified' => time(),
         ]);
 
         $facts = knowledge::page_facts('generate_qual_certs.php', ['userid' => (int) $user->id]);
@@ -242,12 +246,13 @@ final class assistant_knowledge_test extends \advanced_testcase {
         $this->resetAfterTest();
 
         $user = $this->getDataGenerator()->create_user();
-        $DB->insert_record('local_rtocompliance_students', (object) [
-            'userid'       => $user->id,
-            'usi'          => 'AB12CD34EF',
-            'usiverified'  => \local_rtocompliance\usi\usi_verification_service::STATUS_VERIFIED,
-            'timecreated'  => time(),
-            'timemodified' => time(),
+        $DB->insert_record(
+            'local_rtocompliance_students', (object) [
+                'userid'       => $user->id,
+                'usi'          => 'AB12CD34EF',
+                'usiverified'  => \local_rtocompliance\usi\usi_verification_service::STATUS_VERIFIED,
+                'timecreated'  => time(),
+                'timemodified' => time(),
         ]);
 
         $facts = knowledge::page_facts('generate_qual_certs.php', ['userid' => (int) $user->id]);
@@ -299,7 +304,8 @@ final class assistant_knowledge_test extends \advanced_testcase {
 
         set_config('assistant_site_context', 0, 'local_rtocompliance');
         $this->assertFalse(knowledge::site_context_enabled());
-        $this->assertStringNotContainsString('This site right now',
+        $this->assertStringNotContainsString(
+            'This site right now',
             local_rtocompliance_assistant_kb('generate_qual_certs.php', []));
 
         set_config('assistant_site_context', 1, 'local_rtocompliance');

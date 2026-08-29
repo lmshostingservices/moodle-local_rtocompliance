@@ -21,7 +21,7 @@
  * @copyright  2025 LMS Labs
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-// v4.2.36 CERTIFICATES-REDESIGN — Substantial UX overhaul.
+// Version 4.2.36 CERTIFICATES-REDESIGN — Substantial UX overhaul.
 //
 // Replaces the previous filter-tabs + 50-card grid with a proper management UI:
 //   - Filter bar: search, cert type, qualification, issue year, date range,
@@ -89,33 +89,35 @@ echo html_writer::link(
     get_string('soa_issue', 'local_rtocompliance'),
     ['class' => 'btn btn-primary', 'title' => 'Issue a Statement of Attainment listing multiple units of competency with automatic compliance validation']
 );
-// v4.7.104 BULK-COURSE-CERTS — Generate all certificates for a course
-echo html_writer::tag('button',
-    'Generate by Course',
-    [
-        'type'            => 'button',
-        'class'           => 'btn btn-success',
-        // Dual BS4 + BS5 attributes so the modal opens on Moodle 4.4 (Bootstrap 4)
-        // and Moodle 5.x (Bootstrap 5). v5.9.341.
-        'data-toggle'     => 'modal',
-        'data-target'     => '#generateCourseModal',
-        'data-bs-toggle'  => 'modal',
-        'data-bs-target'  => '#generateCourseModal',
-        'title'           => 'Bulk-generate certificates for all students who completed a specific unit-of-competency course',
-    ]
+// Version 4.7.104 BULK-COURSE-CERTS — Generate all certificates for a course
+echo html_writer::tag(
+    'button',
+        'Generate by Course',
+        [
+            'type'            => 'button',
+            'class'           => 'btn btn-success',
+            // Dual BS4 + BS5 attributes so the modal opens on Moodle 4.4 (Bootstrap 4)
+            // and Moodle 5.x (Bootstrap 5). v5.9.341.
+            'data-toggle'     => 'modal',
+            'data-target'     => '#generateCourseModal',
+            'data-bs-toggle'  => 'modal',
+            'data-bs-target'  => '#generateCourseModal',
+            'title'           => 'Bulk-generate certificates for all students who completed a specific unit-of-competency course',
+        ]
 );
 // GEN-BY-QUAL (v5.2.0) — Generate Testamur + RoR directly from a Qualification Builder qualification
-echo html_writer::tag('button',
-    'Generate by Qualification',
-    [
-        'type'            => 'button',
-        'class'           => 'btn btn-primary',
-        'data-toggle'     => 'modal',
-        'data-target'     => '#generateQualModal',
-        'data-bs-toggle'  => 'modal',
-        'data-bs-target'  => '#generateQualModal',
-        'title'           => 'Bulk-generate Testamur + Record of Results for all students who completed all units of a full qualification',
-    ]
+echo html_writer::tag(
+    'button',
+        'Generate by Qualification',
+        [
+            'type'            => 'button',
+            'class'           => 'btn btn-primary',
+            'data-toggle'     => 'modal',
+            'data-target'     => '#generateQualModal',
+            'data-bs-toggle'  => 'modal',
+            'data-bs-target'  => '#generateQualModal',
+            'title'           => 'Bulk-generate Testamur + Record of Results for all students who completed all units of a full qualification',
+        ]
 );
 echo html_writer::end_div();
 echo html_writer::end_div();
@@ -284,12 +286,13 @@ $yearOptions = $DB->get_fieldset_sql(
      WHERE issuedate > 0 ORDER BY yr DESC"
 );
 
-echo html_writer::start_tag('form', [
-    'method' => 'get',
-    'action' => new moodle_url('/local/rtocompliance/certificates.php'),
-    'class'  => 'rtoc-filter-bar',
-    'id'     => 'rtoc-cert-filters',
-    'style'  => 'background: var(--rtoc-card-bg, #f7f7f9); border: 1px solid var(--rtoc-border, #e1e1e8); border-radius: 6px; padding: 12px 16px; margin: 16px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px 12px; align-items: end;',
+echo html_writer::start_tag(
+    'form', [
+        'method' => 'get',
+        'action' => new moodle_url('/local/rtocompliance/certificates.php'),
+        'class'  => 'rtoc-filter-bar',
+        'id'     => 'rtoc-cert-filters',
+        'style'  => 'background: var(--rtoc-card-bg, #f7f7f9); border: 1px solid var(--rtoc-border, #e1e1e8); border-radius: 6px; padding: 12px 16px; margin: 16px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px 12px; align-items: end;',
 ]);
 
 // Search
@@ -502,9 +505,10 @@ echo html_writer::start_div('', ['style' => 'display:flex; align-items:center; j
 if ($totalmatching > 0) {
     $from = ($page * $perpage) + 1;
     $to   = min($from + $perpage - 1, $totalmatching);
-    echo html_writer::tag('div',
-        get_string('certificates_showing', 'local_rtocompliance', (object)['from' => $from, 'to' => $to, 'total' => $totalmatching]),
-        ['class' => 'text-muted', 'style' => 'font-size:0.9rem;']
+    echo html_writer::tag(
+        'div',
+            get_string('certificates_showing', 'local_rtocompliance', (object)['from' => $from, 'to' => $to, 'total' => $totalmatching]),
+            ['class' => 'text-muted', 'style' => 'font-size:0.9rem;']
     );
 } else {
     echo html_writer::tag('div', '', ['class' => 'text-muted']);
@@ -551,7 +555,8 @@ $buildActions = function ($cert, $usiMissing, $isReplacedOriginal) use ($USER) {
 
     // Download
     if ($isReplacedOriginal) {
-        $out .= html_writer::tag('button', get_string('certificates_action_download', 'local_rtocompliance'),
+        $out .= html_writer::tag(
+            'button', get_string('certificates_action_download', 'local_rtocompliance'),
             ['class' => 'btn btn-sm btn-secondary', 'disabled' => 'disabled', 'title' => $replacedTitle, 'style' => 'cursor:not-allowed; opacity:0.55;']);
     } else {
         $downloadAttrs = ['class' => 'btn btn-sm btn-primary', 'title' => 'Download this certificate as a PDF', 'data-testid' => ($usiMissing ? 'link-download-warn-' : 'link-download-') . $cert->id];
@@ -568,7 +573,8 @@ $buildActions = function ($cert, $usiMissing, $isReplacedOriginal) use ($USER) {
     // to the delegated rtoc-cert-email-btn handler which performs the
     // AJAX send.
     if ($isReplacedOriginal) {
-        $out .= ' ' . html_writer::tag('button', get_string('certificates_action_email', 'local_rtocompliance'),
+        $out .= ' ' . html_writer::tag(
+            'button', get_string('certificates_action_email', 'local_rtocompliance'),
             ['class' => 'btn btn-sm btn-secondary', 'disabled' => 'disabled', 'title' => $replacedTitle, 'style' => 'cursor:not-allowed; opacity:0.55;']);
     } else if ($cert->emailsent) {
         // FIX-EMAIL-BADGE (v5.2.52): Show a green pill badge with the sent date.
@@ -576,14 +582,15 @@ $buildActions = function ($cert, $usiMissing, $isReplacedOriginal) use ($USER) {
         // issued before lib.php was fixed to save emailsentdate at issuance time.
         $sentDateStr = (!empty($cert->emailsentdate) && $cert->emailsentdate > 86400)
             ? userdate($cert->emailsentdate, '%d %b %Y')
-            : date('d M Y'); // fallback to today for legacy rows with missing date
-        $out .= ' ' . html_writer::tag('span',
-            '&#10003; Emailed ' . $sentDateStr,
-            [
-                'class' => 'badge',
-                'style' => 'background-color:#16a34a; color:#fff; padding:5px 10px; border-radius:20px; font-size:0.78rem; font-weight:600; white-space:nowrap; letter-spacing:0.01em;',
-                'title' => 'Certificate emailed on ' . $sentDateStr,
-            ]
+            : date('d M Y'); // Fallback to today for legacy rows with missing date
+        $out .= ' ' . html_writer::tag(
+            'span',
+                '&#10003; Emailed ' . $sentDateStr,
+                [
+                    'class' => 'badge',
+                    'style' => 'background-color:#16a34a; color:#fff; padding:5px 10px; border-radius:20px; font-size:0.78rem; font-weight:600; white-space:nowrap; letter-spacing:0.01em;',
+                    'title' => 'Certificate emailed on ' . $sentDateStr,
+                ]
         );
     } else {
         $emailAttrs = [
@@ -602,18 +609,20 @@ $buildActions = function ($cert, $usiMissing, $isReplacedOriginal) use ($USER) {
     // not by USI.  USI verification is a download / email gate, not an
     // issue / reissue gate.
     if ($isReplacedOriginal) {
-        $out .= ' ' . html_writer::tag('button', get_string('certificates_action_reissue', 'local_rtocompliance'),
+        $out .= ' ' . html_writer::tag(
+            'button', get_string('certificates_action_reissue', 'local_rtocompliance'),
             ['class' => 'btn btn-sm btn-secondary', 'disabled' => 'disabled', 'title' => 'Already reissued', 'style' => 'cursor:not-allowed; opacity:0.55;']);
     } else {
-        $out .= ' ' . html_writer::tag('button', get_string('certificates_action_reissue', 'local_rtocompliance'), [
-            'type'              => 'button',
-            'class'             => 'btn btn-sm btn-warning rtoc-cert-reissue-btn',
-            'title'             => 'Issue a replacement with a fresh number (charges credits; original kept for audit)',
-            'data-cert-id'      => $cert->id,
-            'data-cert-number'  => $cert->certnumber,
-            'data-fullname'     => fullname($cert),
-            'data-sesskey'      => $sesskey,
-            'data-testid'       => 'button-reissue-' . $cert->id,
+        $out .= ' ' . html_writer::tag(
+            'button', get_string('certificates_action_reissue', 'local_rtocompliance'), [
+                'type'              => 'button',
+                'class'             => 'btn btn-sm btn-warning rtoc-cert-reissue-btn',
+                'title'             => 'Issue a replacement with a fresh number (charges credits; original kept for audit)',
+                'data-cert-id'      => $cert->id,
+                'data-cert-number'  => $cert->certnumber,
+                'data-fullname'     => fullname($cert),
+                'data-sesskey'      => $sesskey,
+                'data-testid'       => 'button-reissue-' . $cert->id,
         ]);
     }
 
@@ -631,9 +640,10 @@ $buildActions = function ($cert, $usiMissing, $isReplacedOriginal) use ($USER) {
             $packAttrs['onclick'] = $usiWarnJs;
         }
         $out .= ' ' . html_writer::link(
-            new moodle_url('/local/rtocompliance/download_cert_pack.php', [
-                'userid'   => $cert->userid,
-                'qualcode' => $cert->qualificationcode,
+            new moodle_url(
+                '/local/rtocompliance/download_cert_pack.php', [
+                    'userid'   => $cert->userid,
+                    'qualcode' => $cert->qualificationcode,
             ]),
             '&#128230; Pack',
             $packAttrs
@@ -659,15 +669,16 @@ $buildActions = function ($cert, $usiMissing, $isReplacedOriginal) use ($USER) {
     );
 
     // Delete — revokes the certificate (soft-delete, audit trail preserved).
-    $out .= ' ' . html_writer::tag('button', get_string('certificates_action_delete', 'local_rtocompliance'), [
-        'type'              => 'button',
-        'class'             => 'btn btn-sm btn-outline-danger rtoc-cert-delete-btn',
-        'data-cert-id'      => $cert->id,
-        'data-cert-number'  => $cert->certnumber,
-        'data-fullname'     => fullname($cert),
-        'data-sesskey'      => $sesskey,
-        'data-testid'       => 'button-delete-' . $cert->id,
-        'title'             => 'Revoke and remove this certificate',
+    $out .= ' ' . html_writer::tag(
+        'button', get_string('certificates_action_delete', 'local_rtocompliance'), [
+            'type'              => 'button',
+            'class'             => 'btn btn-sm btn-outline-danger rtoc-cert-delete-btn',
+            'data-cert-id'      => $cert->id,
+            'data-cert-number'  => $cert->certnumber,
+            'data-fullname'     => fullname($cert),
+            'data-sesskey'      => $sesskey,
+            'data-testid'       => 'button-delete-' . $cert->id,
+            'title'             => 'Revoke and remove this certificate',
     ]);
 
     return $out;
@@ -683,7 +694,8 @@ if (!$certs) {
     // Sortable column header link helper.
     $sortLink = function ($column, $label) use ($baseparams, $sort, $dir, $view) {
         $newdir = ($sort === $column && $dir === 'ASC') ? 'DESC' : 'ASC';
-        $url = new moodle_url('/local/rtocompliance/certificates.php',
+        $url = new moodle_url(
+            '/local/rtocompliance/certificates.php',
             $baseparams + ['view' => $view, 'sort' => $column, 'dir' => $newdir]);
         $arrow = '';
         if ($sort === $column) {
@@ -803,15 +815,19 @@ if (!$certs) {
         echo html_writer::tag('p', html_writer::tag('span', $cert->certnumber, ['class' => 'certificate-number']));
 
         if ($isReplacedOriginal && isset($replacedByMap[(int)$cert->id])) {
-            echo html_writer::tag('p',
-                html_writer::tag('span', get_string('certificates_replaced_by', 'local_rtocompliance', $replacedByMap[(int)$cert->id]),
-                ['class' => 'badge badge-secondary', 'title' => 'This certificate was reissued. The number shown is the replacement now in use; this original is kept only for the audit trail.'])
+            echo html_writer::tag(
+                'p',
+                    html_writer::tag(
+                    'span', get_string('certificates_replaced_by', 'local_rtocompliance', $replacedByMap[(int)$cert->id]),
+                    ['class' => 'badge badge-secondary', 'title' => 'This certificate was reissued. The number shown is the replacement now in use; this original is kept only for the audit trail.'])
             );
         }
         if ($isReissue && isset($replacesMap[(int)$cert->replacement_of])) {
-            echo html_writer::tag('p',
-                html_writer::tag('span', get_string('certificates_replaces', 'local_rtocompliance', $replacesMap[(int)$cert->replacement_of]),
-                ['class' => 'badge badge-info', 'title' => 'This is a reissued certificate that takes the place of the earlier certificate number shown.'])
+            echo html_writer::tag(
+                'p',
+                    html_writer::tag(
+                    'span', get_string('certificates_replaces', 'local_rtocompliance', $replacesMap[(int)$cert->replacement_of]),
+                    ['class' => 'badge badge-info', 'title' => 'This is a reissued certificate that takes the place of the earlier certificate number shown.'])
             );
         }
 
@@ -823,17 +839,20 @@ if (!$certs) {
         if ($studentsTableExists && $requiresUsi) {
             if ($usiVerified) {
                 $usiVerifiedDate = !empty($cert->usiverifieddate) ? ' (' . userdate($cert->usiverifieddate, '%d %b %Y') . ')' : '';
-                echo html_writer::tag('p',
-                    html_writer::tag('span', 'USI Verified' . $usiVerifiedDate, ['class' => 'badge badge-success', 'title' => 'The student USI (the student ID number) has been checked against the USI Registry, so this certificate meets Clause 12.'])
+                echo html_writer::tag(
+                    'p',
+                        html_writer::tag('span', 'USI Verified' . $usiVerifiedDate, ['class' => 'badge badge-success', 'title' => 'The student USI (the student ID number) has been checked against the USI Registry, so this certificate meets Clause 12.'])
                 );
             } else if (!empty($cert->usiexempt)) {
                 // USI-EXEMPTION (v6.3.19).
-                echo html_writer::tag('p',
-                    html_writer::tag('span', 'USI Exempt', ['class' => 'badge badge-info', 'title' => 'This student is recorded as exempt from the USI requirement — for example an international student who completed all study outside Australia.'])
+                echo html_writer::tag(
+                    'p',
+                        html_writer::tag('span', 'USI Exempt', ['class' => 'badge badge-info', 'title' => 'This student is recorded as exempt from the USI requirement — for example an international student who completed all study outside Australia.'])
                 );
             } else {
-                echo html_writer::tag('p',
-                    html_writer::tag('span', 'USI Not Verified — Clause 12 Issue', ['class' => 'badge badge-danger', 'title' => 'The student USI (the student ID number) has not been checked yet. Verify it on the Students page as soon as you can (Clause 12).'])
+                echo html_writer::tag(
+                    'p',
+                        html_writer::tag('span', 'USI Not Verified — Clause 12 Issue', ['class' => 'badge badge-danger', 'title' => 'The student USI (the student ID number) has not been checked yet. Verify it on the Students page as soon as you can (Clause 12).'])
                 );
             }
         }

@@ -42,7 +42,8 @@ $PAGE->set_title('Semester Intake Builder');
 $PAGE->set_heading('Semester Intake Builder');
 $PAGE->requires->css('/local/rtocompliance/styles.css');
 $PAGE->add_body_class('path-local-rtocompliance');
-$PAGE->navbar->add(get_string('qualbuilder', 'local_rtocompliance'),
+$PAGE->navbar->add(
+    get_string('qualbuilder', 'local_rtocompliance'),
     new moodle_url('/local/rtocompliance/qualbuilder.php'));
 $PAGE->navbar->add('Semester Intake Builder');
 
@@ -65,7 +66,8 @@ if ($action === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST' && confirm_ses
         . ($s ? ', ' . $s . ' skipped' : '')
         . ($e ? ', ' . $e . ' error(s)' : '')
         . '. Now link courses stay attached automatically; run Sync on Student Results to credit their completions.';
-    redirect(new moodle_url('/local/rtocompliance/qualbuilder.php'),
+    redirect(
+        new moodle_url('/local/rtocompliance/qualbuilder.php'),
         $msg, null, $e ? \core\output\notification::NOTIFY_WARNING : \core\output\notification::NOTIFY_SUCCESS);
 }
 
@@ -76,7 +78,8 @@ $intakes = local_rtocompliance_scan_semester_intakes();
 
 echo $OUTPUT->header();
 echo local_rtocompliance_render_nav_header('Semester Intake Builder', null, null, 'qualbuilder');
-echo local_rtocompliance_page_banner('Semester Intake Builder',
+echo local_rtocompliance_page_banner(
+    'Semester Intake Builder',
     'Create a separate qualification product for every semester intake.');
 
 // Fill the available width so collapsing the sidebar actually widens the table (rather than
@@ -139,13 +142,15 @@ foreach ($intakes as $intk) {
     $groups[$gkey]['versions'][] = $intk;
 }
 // Coded qualifications first (alphabetically by code), then code-less parent categories (by name).
-uasort($groups, function ($a, $b) {
-    $an = !empty($a['nocode']); $bn = !empty($b['nocode']);
-    if ($an !== $bn) { return $an ? 1 : -1; }
-    $ak = $an ? $a['label'] : $a['code'];
-    $bk = $bn ? $b['label'] : $b['code'];
-    return strcasecmp((string) $ak, (string) $bk);
-});
+uasort(
+    $groups, function ($a, $b) {
+        $an = !empty($a['nocode']);
+        $bn = !empty($b['nocode']);
+        if ($an !== $bn) { return $an ? 1 : -1; }
+        $ak = $an ? $a['label'] : $a['code'];
+        $bk = $bn ? $b['label'] : $b['code'];
+        return strcasecmp((string) $ak, (string) $bk);
+    });
 
 echo '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin:6px 0 6px;">';
 echo '<h4 style="margin:0;">' . count($groups) . ' qualification(s), ' . count($intakes) . ' version(s) detected</h4>';
@@ -277,7 +282,8 @@ foreach ($groups as $g) {
 }
 
 echo '<button type="submit" class="btn btn-primary" style="margin-top:6px;">Create ticked semester products</button> ';
-echo html_writer::link(new moodle_url('/local/rtocompliance/qualbuilder.php'), 'Cancel',
+echo html_writer::link(
+    new moodle_url('/local/rtocompliance/qualbuilder.php'), 'Cancel',
     ['class' => 'btn btn-outline-secondary', 'style' => 'margin-top:6px;']);
 echo '</form>';
 

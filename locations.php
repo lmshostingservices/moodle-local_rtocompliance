@@ -43,7 +43,7 @@ $PAGE->requires->css('/local/rtocompliance/styles.css');
 if ($action === 'delete' && $id && confirm_sesskey()) {
     $loc = $DB->get_record('local_rtocompliance_locations', ['id' => $id], '*', MUST_EXIST);
     $DB->delete_records('local_rtocompliance_locations', ['id' => $id]);
-    // v5.9.368 AUDIT-FIX: a deletion was being logged as a CREATE with empty data.
+    // Version 5.9.368 AUDIT-FIX: a deletion was being logged as a CREATE with empty data.
     // Use log_delete and capture the deleted record so the audit trail is correct.
     audit_logger::log_delete('location', $id, 'Delivery location deleted: ' . $loc->locationname, (array) $loc);
     redirect(
@@ -130,13 +130,15 @@ if ($locations) {
         if (!empty($certfiles)) {
             $certlinksArr = [];
             foreach ($certfiles as $certfile) {
-                $certurl = moodle_url::make_pluginfile_url($syscontext->id, 'local_rtocompliance',
+                $certurl = moodle_url::make_pluginfile_url(
+                    $syscontext->id, 'local_rtocompliance',
                     'certificate9b', $loc->id, '/', $certfile->get_filename(), true);
-                $certlinksArr[] = html_writer::link($certurl,
-                    '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:2px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
-                    . htmlspecialchars($certfile->get_filename(), ENT_QUOTES, 'UTF-8'),
-                    ['target' => '_blank', 'rel' => 'noopener', 'class' => 'rtoc-cert-link',
-                     'style' => 'font-size:11px;white-space:nowrap;display:block;']
+                $certlinksArr[] = html_writer::link(
+                    $certurl,
+                        '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:2px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
+                        . htmlspecialchars($certfile->get_filename(), ENT_QUOTES, 'UTF-8'),
+                        ['target' => '_blank', 'rel' => 'noopener', 'class' => 'rtoc-cert-link',
+                         'style' => 'font-size:11px;white-space:nowrap;display:block;']
                 );
             }
             $certlinks = implode('', $certlinksArr);
@@ -193,7 +195,7 @@ echo html_writer::start_div('', ['style' => 'margin-top:2rem;padding:1.5rem;back
 echo html_writer::tag('h4', 'Related pages', ['style' => 'margin:0 0 0.75rem;color:#0369a1;']);
 echo html_writer::tag('p', 'Delivery locations and physical resources feed directly into TAS Section 7 — Learning Resources &amp; Equipment. Document what facilities are available at each location and why they are fit-for-purpose for the training products delivered there.', ['style' => 'margin:0 0 0.75rem;font-size:0.9rem;color:#374151;']);
 echo '<div style="display:flex;flex-wrap:wrap;gap:0.75rem;">';
-echo '<a href="' . (new moodle_url('/local/rtocompliance/tas_edit.php'))->out() . '#tas-section-7" class="btn btn-outline-primary btn-sm" title="Open TAS Section 7 — Learning Resources and Equipment">TAS Section 7 — Learning Resources &amp; Equipment</a>'; // v5.9.368: drop bogus ?%23= param, keep real #fragment
+echo '<a href="' . (new moodle_url('/local/rtocompliance/tas_edit.php'))->out() . '#tas-section-7" class="btn btn-outline-primary btn-sm" title="Open TAS Section 7 — Learning Resources and Equipment">TAS Section 7 — Learning Resources &amp; Equipment</a>'; // Version 5.9.368: drop bogus ?%23= param, keep real #fragment
 echo '<a href="' . (new moodle_url('/local/rtocompliance/tas.php'))->out() . '" class="btn btn-outline-primary btn-sm" title="Open the TAS Generator">TAS Generator</a>';
 echo '<a href="' . (new moodle_url('/local/rtocompliance/practice_guides.php', ['guide' => 'facilities']))->out() . '" class="btn btn-outline-primary btn-sm" title="Open the ASQA practice guide on facilities">ASQA Practice Guide — Facilities</a>';
 echo '</div>';

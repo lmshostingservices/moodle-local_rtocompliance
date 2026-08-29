@@ -53,7 +53,8 @@ $PAGE->set_url(new moodle_url('/local/rtocompliance/governance_edit.php', ['id' 
 // a different table. These two branches handle their own tables and then exit,
 // leaving the original governing-person flow (type=persons) below untouched.
 if ($type === 'changes' || $type === 'adc') {
-    $backurl = new moodle_url('/local/rtocompliance/governance.php',
+    $backurl = new moodle_url(
+        '/local/rtocompliance/governance.php',
         ['tab' => $type === 'changes' ? 'changes' : 'adc']);
     $table   = $type === 'changes' ? 'local_rtocompliance_materialchanges' : 'local_rtocompliance_adc';
     $record  = $id ? $DB->get_record($table, ['id' => $id], '*', MUST_EXIST) : null;
@@ -89,7 +90,7 @@ if ($type === 'changes' || $type === 'adc') {
             $rec->mitigationactions     = optional_param('mitigationactions', '', PARAM_TEXT);
             $rec->evidence              = optional_param('evidence', '', PARAM_TEXT);
             $rec->notes                 = optional_param('notes', '', PARAM_TEXT);
-        } else { // adc
+        } else { // Adc
             $rec->year                  = optional_param('year', (int) date('Y'), PARAM_INT);
             $rec->duedate               = strtotime(optional_param('duedate', '', PARAM_TEXT)) ?: $now;
             $sdate                      = optional_param('submissiondate', '', PARAM_TEXT);
@@ -115,7 +116,8 @@ if ($type === 'changes' || $type === 'adc') {
             $msg = 'Record saved.';
         }
         if (function_exists('local_rtocompliance_log_action')) {
-            local_rtocompliance_log_action($id ? 'update' : 'create',
+            local_rtocompliance_log_action(
+                $id ? 'update' : 'create',
                 $type === 'changes' ? 'materialchange' : 'adc', $id, []);
         }
         redirect($backurl, $msg, null, \core\output\notification::NOTIFY_SUCCESS);
@@ -128,13 +130,17 @@ if ($type === 'changes' || $type === 'adc') {
     $PAGE->set_title($heading);
     $PAGE->add_body_class('path-local-rtocompliance');
     echo $OUTPUT->header();
-    echo local_rtocompliance_render_nav_header($heading, get_string('governance', 'local_rtocompliance'),
+    echo local_rtocompliance_render_nav_header(
+        $heading, get_string('governance', 'local_rtocompliance'),
         '/local/rtocompliance/governance.php', 'governance');
     echo local_rtocompliance_page_banner($heading);
 
-    $fdate = function ($ts) { return (!empty($ts)) ? date('Y-m-d', (int) $ts) : ''; };
-    echo html_writer::start_tag('form', ['method' => 'post',
-        'action' => (new moodle_url('/local/rtocompliance/governance_edit.php', ['id' => $id, 'type' => $type]))->out(false),
+    $fdate = function ($ts) {
+        return (!empty($ts)) ? date('Y-m-d', (int) $ts) : '';
+    };
+    echo html_writer::start_tag(
+        'form', ['method' => 'post',
+            'action' => (new moodle_url('/local/rtocompliance/governance_edit.php', ['id' => $id, 'type' => $type]))->out(false),
         'style' => 'max-width:760px;']);
     echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
     echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'savegov', 'value' => '1']);
@@ -142,7 +148,8 @@ if ($type === 'changes' || $type === 'adc') {
     $text = function ($name, $label, $val, $ph = '', $inputtype = 'text') {
         echo html_writer::start_div('form-group', ['style' => 'margin-bottom:12px;']);
         echo html_writer::tag('label', $label, ['class' => 'form-label', 'style' => 'font-weight:600;']);
-        echo html_writer::empty_tag('input', ['type' => $inputtype, 'name' => $name, 'value' => s($val),
+        echo html_writer::empty_tag(
+            'input', ['type' => $inputtype, 'name' => $name, 'value' => s($val),
             'class' => 'form-control', 'placeholder' => $ph]);
         echo html_writer::end_div();
     };
@@ -160,36 +167,42 @@ if ($type === 'changes' || $type === 'adc') {
     };
     $check = function ($name, $label, $val) {
         echo html_writer::start_div('form-group', ['style' => 'margin-bottom:12px;']);
-        echo html_writer::tag('label',
-            html_writer::empty_tag('input', array_merge(['type' => 'checkbox', 'name' => $name, 'value' => '1', 'style' => 'margin-right:8px;'],
-                $val ? ['checked' => 'checked'] : [])) . $label,
+        echo html_writer::tag(
+            'label',
+                html_writer::empty_tag(
+                'input', array_merge(
+                ['type' => 'checkbox', 'name' => $name, 'value' => '1', 'style' => 'margin-right:8px;'],
+                    $val ? ['checked' => 'checked'] : [])) . $label,
             ['style' => 'font-weight:500;']);
         echo html_writer::end_div();
     };
 
     if ($type === 'changes') {
         $text('reference', 'Reference', $record->reference ?? '', 'Auto-generated if left blank');
-        $select('changetype', 'Change type', [
-            'governance' => 'Governance / management', 'ownership' => 'Ownership', 'location' => 'Delivery location',
-            'scope' => 'Scope of registration', 'other' => 'Other',
+        $select(
+            'changetype', 'Change type', [
+                'governance' => 'Governance / management', 'ownership' => 'Ownership', 'location' => 'Delivery location',
+                'scope' => 'Scope of registration', 'other' => 'Other',
         ], $record->changetype ?? 'governance');
         $area('changedescription', 'Description of the change *', $record->changedescription ?? '');
         $text('effectivedate', 'Effective date', $fdate($record->effectivedate ?? 0), '', 'date');
-        echo html_writer::tag('p', 'ASQA must be notified within 10 business days of a material change. The notification deadline is calculated automatically from the effective date.',
+        echo html_writer::tag(
+            'p', 'ASQA must be notified within 10 business days of a material change. The notification deadline is calculated automatically from the effective date.',
             ['class' => 'text-muted', 'style' => 'font-size:0.85rem;']);
         $check('asqanotified', 'ASQA has been notified', !empty($record->asqanotified));
         $text('asqanotificationdate', 'Date ASQA notified', $fdate($record->asqanotificationdate ?? 0), '', 'date');
         $check('asqaacknowledged', 'ASQA has acknowledged', !empty($record->asqaacknowledged));
         $text('asqareference', 'ASQA reference', $record->asqareference ?? '');
-        $select('status', 'Status', [
-            'pending' => 'Pending', 'notified' => 'Notified', 'acknowledged' => 'Acknowledged',
-            'completed' => 'Completed', 'overdue' => 'Overdue',
+        $select(
+            'status', 'Status', [
+                'pending' => 'Pending', 'notified' => 'Notified', 'acknowledged' => 'Acknowledged',
+                'completed' => 'Completed', 'overdue' => 'Overdue',
         ], $record->status ?? 'pending');
         $area('impactassessment', 'Impact assessment', $record->impactassessment ?? '');
         $area('mitigationactions', 'Mitigation actions', $record->mitigationactions ?? '');
         $area('evidence', 'Evidence', $record->evidence ?? '');
         $area('notes', 'Notes', $record->notes ?? '');
-    } else { // adc
+    } else { // Adc
         $text('year', 'Declaration year', $record->year ?? date('Y'), '', 'number');
         $text('duedate', 'Due date', $fdate($record->duedate ?? 0), '', 'date');
         $text('declarantname', 'Declarant name', $record->declarantname ?? '');
@@ -197,8 +210,9 @@ if ($type === 'changes' || $type === 'adc') {
         $area('declarationtext', 'Declaration statement', $record->declarationtext ?? '');
         $text('evidencecount', 'Evidence items collected', $record->evidencecount ?? 0, '', 'number');
         $text('submissiondate', 'Submission date (leave blank until submitted)', $fdate($record->submissiondate ?? 0), '', 'date');
-        $select('status', 'Status', [
-            'due' => 'Due', 'inprogress' => 'In progress', 'submitted' => 'Submitted', 'confirmed' => 'Confirmed',
+        $select(
+            'status', 'Status', [
+                'due' => 'Due', 'inprogress' => 'In progress', 'submitted' => 'Submitted', 'confirmed' => 'Confirmed',
         ], $record->status ?? 'due');
         $text('asqaconfirmationref', 'ASQA confirmation reference', $record->asqaconfirmationref ?? '');
         $area('notes', 'Notes', $record->notes ?? '');

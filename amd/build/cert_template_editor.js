@@ -58,6 +58,31 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
     };
     var rorQualData = [];
     var headerColour = '#0f6cbf';   // STYLE-A-TABLE (v5.9.447) — units table header bar fill.
+    // CERT-TABLE-HEADINGS (v6.3.20) — site-wide column heading wording + the built-in
+    // defaults (used as input placeholders). A field-level head_<slot> override wins.
+    var tableHeadings = {};
+    var tableHeadDefaults = {};
+    // The column heading slots an author can override on a table field, in panel order.
+    var HEAD_SLOTS = ['code', 'title', 'date', 'result', 'enroldate', 'completiondate',
+        'student', 'usi', 'qual'];
+
+    /**
+     * CERT-TABLE-HEADINGS (v6.3.20) — resolve one column heading for the canvas mock the
+     * same way cert_template_renderer::table_heading() does for the PDF: the field's own
+     * override first, then the site-wide setting, then the built-in default.
+     *
+     * @param {Object} field the selected template field (may be null)
+     * @param {String} slot  code|title|date|result|enroldate|completiondate|student|usi|qual
+     * @param {String} fallback built-in default wording
+     * @return {String} heading text
+     */
+    function headingFor(field, slot, fallback) {
+        var own = (field && field['head_' + slot] != null) ? String(field['head_' + slot]).trim() : '';
+        if (own !== '') { return own; }
+        var site = (tableHeadings[slot] != null) ? String(tableHeadings[slot]).trim() : '';
+        if (site !== '') { return site; }
+        return fallback;
+    }
 
     var pageW = 297, pageH = 210;
     var zoom = 1.0;
@@ -94,6 +119,9 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
         rtoIdentity = data.rtoidentity || {};
         rorQualData = data.rorqualdata || [];
         headerColour = data.headercolour || '#0f6cbf';
+        // CERT-TABLE-HEADINGS (v6.3.20) — site wording + built-in defaults for the mock.
+        tableHeadings = data.tableheadings || {};
+        tableHeadDefaults = data.tableheaddefaults || {};
         // FONTS (v6.2.63): load the Google fonts as webfonts so the canvas previews the real
         // typeface, and keep the key -> CSS family map for rendering field text.
         fontCss = data.fontcss || {};
@@ -591,7 +619,14 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
                 ['12 Feb 2024', 'BSBSUS211', 'Participate in sustainable work practices', 'NYC', '—']
             ];
             var aligns = ['center', 'left', 'left', 'center', 'center'];
-            var heads5 = ['ENROLMENT DATE', 'UNIT CODE', 'UNIT TITLE', 'RESULT', 'COMPLETION DATE'];
+            // CERT-TABLE-HEADINGS (v6.3.20): field override → site setting → ASQA default.
+            var heads5 = [
+                headingFor(field, 'enroldate', 'ENROLMENT DATE'),
+                headingFor(field, 'code', 'UNIT CODE'),
+                headingFor(field, 'title', 'UNIT TITLE'),
+                headingFor(field, 'result', 'RESULT'),
+                headingFor(field, 'completiondate', 'COMPLETION DATE')
+            ];
             var body5 = '';
             rows5.forEach(function (r, i) {
                 var zeb = (i % 2 === 1) ? ' style="background:#f6f8fb;"' : '';
@@ -633,7 +668,13 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
         var p1 = (c1 / tot * 100).toFixed(2);
         var p2 = (c2 / tot * 100).toFixed(2);
         var p3 = (c3 / tot * 100).toFixed(2);
-        var c3head = 'DATE';
+        // CERT-TABLE-HEADINGS (v6.3.20): field override → site setting → built-in default.
+        var isResultCol = (field.kind === 'ror_table' && field.col3mode === 'result');
+        var c1head = headingFor(field, 'code', 'UNIT CODE');
+        var c2head = headingFor(field, 'title', 'UNIT TITLE');
+        var c3head = isResultCol
+            ? headingFor(field, 'result', 'RESULTS')
+            : headingFor(field, 'date', 'DATE');
         var sampleRows = [
             ['BSBCMM311', 'Apply critical thinking skills in a team environment', '15 Mar 2024'],
             ['BSBCRT311', 'Apply critical thinking skills', '02 May 2024'],
@@ -650,8 +691,8 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
         return '<table class="rtoc-tmpl-ror-mock"><colgroup>'
             + '<col style="width:' + p1 + '%"><col style="width:' + p2 + '%"><col style="width:' + p3 + '%">'
             + '</colgroup><thead><tr>'
-            + '<th style="' + thStyle + 'font-size:0.82em;">UNIT CODE</th>'
-            + '<th style="' + thStyle + 'text-align:left;font-size:0.82em;">UNIT TITLE</th>'
+            + '<th style="' + thStyle + 'font-size:0.82em;">' + escapeHtml(c1head) + '</th>'
+            + '<th style="' + thStyle + 'text-align:left;font-size:0.82em;">' + escapeHtml(c2head) + '</th>'
             + '<th style="' + thStyle + 'text-align:center;font-size:0.82em;">' + escapeHtml(c3head) + '</th>'
             + '</tr></thead><tbody>' + body + '</tbody></table>';
     }
@@ -660,7 +701,7 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
     // one shaded three-column table (STUDENT NAME | USI | QUALIFICATION) matching what
     // cert_template_renderer::render_student_details_table() draws in the PDF. Values come
     // from the coherent sample payload so the canvas mirrors the issued document.
-    function studentDetailsTableMockHtml() {
+    function studentDetailsTableMockHtml(field) {
         var hc = escapeAttr(headerColour || '#0f6cbf');
         var thStyle = 'background:' + hc + ';color:#fff;font-weight:bold;font-size:0.82em;';
         var name = (samplePayload['student.fullname'] != null) ? String(samplePayload['student.fullname']) : 'Jane Citizen';
@@ -672,9 +713,10 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
         return '<table class="rtoc-tmpl-ror-mock"><colgroup>'
             + '<col style="width:34%"><col style="width:26%"><col style="width:40%">'
             + '</colgroup><thead><tr>'
-            + '<th style="' + thStyle + '">STUDENT NAME</th>'
-            + '<th style="' + thStyle + '">USI</th>'
-            + '<th style="' + thStyle + '">QUALIFICATION</th>'
+            // CERT-TABLE-HEADINGS (v6.3.20): field override → site setting → default.
+            + '<th style="' + thStyle + '">' + escapeHtml(headingFor(field, 'student', 'STUDENT NAME')) + '</th>'
+            + '<th style="' + thStyle + '">' + escapeHtml(headingFor(field, 'usi', 'USI')) + '</th>'
+            + '<th style="' + thStyle + '">' + escapeHtml(headingFor(field, 'qual', 'QUALIFICATION')) + '</th>'
             + '</tr></thead><tbody><tr>'
             + '<td style="text-align:center;font-weight:bold;">' + escapeHtml(name) + '</td>'
             + '<td style="text-align:center;font-weight:bold;">' + escapeHtml(usi) + '</td>'
@@ -726,7 +768,7 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
             html = '';
         } else if (field.kind === 'dynamic' && field.dynamickey === 'student.detailstable') {
             // STUDENT-DETAILS-TABLE (v6.2.51): the identity table (Name | USI | Qualification).
-            html = studentDetailsTableMockHtml();
+            html = studentDetailsTableMockHtml(field);
         } else if (field.kind === 'ror_table'
                    || (field.kind === 'dynamic' && field.dynamickey === 'qualification.units')) {
             // STYLE-A-TABLE (v5.9.447): both the RoR ror_table field and the SoA
@@ -1238,6 +1280,14 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
         if (c3) { c3.value = field.col3_w != null ? field.col3_w : 36; }
         var c3m = document.getElementById('p-col3mode');
         if (c3m) { c3m.value = (field.col3mode === 'result') ? 'result' : 'date'; }
+        // CERT-TABLE-HEADINGS (v6.3.20) — per-template column heading overrides. Blank means
+        // "use the site-wide wording", which is shown as the input's placeholder.
+        HEAD_SLOTS.forEach(function (slot) {
+            var el = document.getElementById('p-head-' + slot);
+            if (!el) { return; }
+            el.value = field['head_' + slot] != null ? field['head_' + slot] : '';
+            el.placeholder = (tableHeadings[slot] || tableHeadDefaults[slot] || '');
+        });
         // ROR-CAPACITY-HINT: refresh on field selection.
         updateRorCapacityHint(field);
     }
@@ -1252,6 +1302,22 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
         // ROR-TABLE-AUTHOR (v5.9.366) — column-width inputs only for ror_table.
         var rorcols = document.getElementById('p-rorcols-wrap');
         if (rorcols) { rorcols.style.display = (kind === 'ror_table') ? '' : 'none'; }
+        // CERT-TABLE-HEADINGS (v6.3.20) — heading overrides for whichever table is selected.
+        var isUnitsTable = (kind === 'ror_table')
+            || (kind === 'dynamic' && field.dynamickey === 'qualification.units');
+        var isIdTable = (kind === 'dynamic' && field.dynamickey === 'student.detailstable');
+        var unitheads = document.getElementById('p-unitheads-wrap');
+        if (unitheads) { unitheads.style.display = isUnitsTable ? '' : 'none'; }
+        var idheads = document.getElementById('p-idheads-wrap');
+        if (idheads) { idheads.style.display = isIdTable ? '' : 'none'; }
+        // The five-column Record of Results layout (col3mode='result') is the only one with
+        // separate enrolment/completion date columns; the three-column layout has one date.
+        var isFiveCol = (kind === 'ror_table' && field.col3mode === 'result');
+        [['date', !isFiveCol], ['result', kind === 'ror_table'], ['enroldate', isFiveCol],
+            ['completiondate', isFiveCol]].forEach(function (pair) {
+            var row = document.getElementById('p-head-' + pair[0] + '-row');
+            if (row) { row.style.display = pair[1] ? '' : 'none'; }
+        });
     }
 
     function wirePropsForm() {
@@ -1274,6 +1340,10 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
             ['p-col2w', 'col2_w', parseFloat],
             ['p-col3w', 'col3_w', parseFloat],
         ];
+        // CERT-TABLE-HEADINGS (v6.3.20) — one text input per overridable column heading.
+        HEAD_SLOTS.forEach(function (slot) {
+            bindings.push(['p-head-' + slot, 'head_' + slot, String]);
+        });
         bindings.forEach(function (b) {
             var el = document.getElementById(b[0]);
             if (!el) { return; }

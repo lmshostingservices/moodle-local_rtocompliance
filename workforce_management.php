@@ -49,7 +49,8 @@ echo html_writer::end_div();
 
 echo html_writer::start_div('info-card');
 echo html_writer::tag('h4', 'Standard 3.1 — VET Workforce Management');
-echo html_writer::tag('p', '
+echo html_writer::tag(
+    'p', '
     <strong>Standard 3.1:</strong> The RTO must ensure it has sufficient trainers and assessors to deliver quality training and assessment to its students.
     This requires workforce planning, capability assessment, and maintaining appropriate staffing ratios aligned to student load and scope of registration.<br><br>
     The RTO must be able to demonstrate it has the right number of suitably qualified and experienced trainers and assessors to deliver every training product on its scope of registration.
