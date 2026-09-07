@@ -9045,7 +9045,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026060215) {
-        // Version 5.9.12: FIX-PARSE-ERROR: Removed spurious extra } at end of data_import.php
+        // Version 5.9.12: FIX-PARSE-ERROR: Removed a spurious extra closing brace at the end of data_import.php
         // (line 6058) that caused a PHP brace-depth imbalance (-1), preventing the file
         // from compiling at all — producing a 500 on every visit with zero log output.
         upgrade_plugin_savepoint(true, 2026060215, 'local', 'rtocompliance');
@@ -9056,7 +9056,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026060300, 'local', 'rtocompliance');
     }
 
-    // Version 5.9.14: FIX-PARSE-ERROR — removed spurious } + added missing closing } in data_import.php. No DB schema change.
+    // Version 5.9.14: FIX-PARSE-ERROR — removed a spurious closing brace and added the missing one in data_import.php. No DB schema change.
     if ($oldversion < 2026060301) {
         upgrade_plugin_savepoint(true, 2026060301, 'local', 'rtocompliance');
     }
@@ -12591,7 +12591,7 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         // (confirmed bug — see moodle-amd-jquery-default-error memory note).
         //
         // Fix: amd/src/cert_template_editor.js line 25 updated to named define:
-        //   define('local_rtocompliance/cert_template_editor', [], function () {
+        //   define('local_rtocompliance/cert_template_editor', [], function () ... );
         // All three AMD files rebuilt (src → build, terser → min).
         //
         // Also fixed: BUILD_INFO.json was stuck at "version": "5.9.267" (stale by
@@ -14991,6 +14991,76 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         // release-pipeline sweep (statement-per-line, multi-line call layout, comment
         // capitalisation, AMD strings via core/str, language-string wording).
         upgrade_plugin_savepoint(true, 2026082105, 'local', 'rtocompliance');
+    }
+
+    if ($oldversion < 2026090300) {
+        // Version 6.3.22 — no schema change: the Qualification Builder's QPR paste handler
+        // called renderRulesCard(), which does not exist; it now calls renderPackagingRules().
+        upgrade_plugin_savepoint(true, 2026090300, 'local', 'rtocompliance');
+    }
+
+    if ($oldversion < 2026090701) {
+        // Version 6.3.23 - no schema change: the RPL student selector is searched
+        // server-side instead of rendering the whole student table into the page.
+        upgrade_plugin_savepoint(true, 2026090701, 'local', 'rtocompliance');
+    }
+
+    if ($oldversion < 2026090702) {
+        // Version 6.3.24 - no schema change: the RPL student search minimum query
+        // length is now script-aware so single-character CJK surnames are searchable.
+        upgrade_plugin_savepoint(true, 2026090702, 'local', 'rtocompliance');
+    }
+
+    if ($oldversion < 2026090703) {
+        // Version 6.3.25 - no schema change: the RPL student picker's suggestions
+        // dropdown is width-constrained to the field instead of the page wrapper.
+        upgrade_plugin_savepoint(true, 2026090703, 'local', 'rtocompliance');
+    }
+
+    if ($oldversion < 2026090704) {
+        // Version 6.3.26 - no schema change: deleting an approved RPL / Credit Transfer
+        // record now retracts the outcome it posted to the results register.
+        upgrade_plugin_savepoint(true, 2026090704, 'local', 'rtocompliance');
+    }
+
+    if ($oldversion < 2026090800) {
+        // RPL-RESTORE (v6.3.27): SCHEMA CHANGE - two nullable columns on
+        // local_rtocompliance_enrolments that remember what an enrolment's delivery
+        // looked like BEFORE an RPL or Credit Transfer outcome overwrote it.
+        //
+        // apply_rpl_outcome() sets deliverymode to 90 (no delivery) and, for a credit
+        // transfer, zeroes scheduledhours. retract_rpl_outcome() restored only the
+        // outcome, so a reversed decision left a classroom enrolment reported to NCVER
+        // as continuing (70) with delivery mode 90, and a reversed credit transfer with
+        // its hours permanently at zero. There was nowhere to restore the originals
+        // from; these two columns are that place.
+        //
+        // Both are nullable and default to NULL, which means "no RPL/CT outcome is
+        // currently applied to this row" - so existing rows need no backfill.
+        $table = new xmldb_table('local_rtocompliance_enrolments');
+
+        $field = new xmldb_field(
+            'prerpldeliverymode', XMLDB_TYPE_CHAR, '3', null, null, null, null, 'timemodified');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        $field = new xmldb_field(
+            'prerplscheduledhours', XMLDB_TYPE_INTEGER, '5', null, null, null, null, 'prerpldeliverymode');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        upgrade_plugin_savepoint(true, 2026090800, 'local', 'rtocompliance');
+    }
+
+    if ($oldversion < 2026090900) {
+        // PRIVACY-COMPLETE (v6.3.28): the privacy provider now declares all 44 tables
+        // holding personal data, deletes from the 29 where the person is the subject
+        // or a child of one, and retains the 15 that only record a staff member acting
+        // on someone else's compliance record. Purely a code change - no table, column
+        // or index is touched, and no plugin code path calls the provider.
+        upgrade_plugin_savepoint(true, 2026090900, 'local', 'rtocompliance');
     }
 
     return true;

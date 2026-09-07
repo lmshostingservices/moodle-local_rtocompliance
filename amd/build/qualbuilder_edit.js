@@ -315,7 +315,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
                 'Click <strong>Save Qualification</strong> to store these values.</span>');
             // Refresh the dashboard and rules card with new values (paste box disappears).
             renderComplianceDashboard();
-            renderRulesCard();
+            renderPackagingRules();
         });
 
         // QB-VARIANTS: show the hidden select when the + button is clicked.
@@ -464,8 +464,6 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
             if (!map[uc]) map[uc] = [];
             map[uc].push({ id: e.courseid, category: e.category, shortname: e.shortname || '' });
         });
-        console.log('[QB] unitCodeMap: ' + Object.keys(map).length + ' unit codes from ' +
-            (entries || []).length + ' course-code entries');
         return map;
     }
 
@@ -852,13 +850,11 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
             // Resolve to the full course object from QB.courses (needed for id, shortname, etc.)
             var resolved = QB.courses.find(function (c) { return c.id === chosen.id; });
             if (resolved) {
-                console.log('[QB] ' + uc + ' → ' + resolved.shortname + ' (map, cat=' + resolved.category + ')');
                 return resolved;
             }
         }
 
         // No map entry for this unit at all — no course has this unit code in name/idnumber.
-        console.log('[QB] ' + uc + ': no match found (not in unitCodeMap)');
         return null;
     }
 

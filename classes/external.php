@@ -1574,4 +1574,105 @@ class external extends external_api {
                 ),
         ]);
     }
+
+    /**
+     * RPL-STUDENT-SEARCH (v6.3.23) — parameters for the RPL/Credit Transfer student search.
+     *
+     * @return external_function_parameters
+     */
+    public static function search_students_parameters() {
+        return new external_function_parameters(
+            [
+                'query' => new external_value(PARAM_TEXT, 'Search text matched against name and USI', VALUE_REQUIRED),
+        ]);
+    }
+
+    /**
+     * RPL-STUDENT-SEARCH (v6.3.23) — server-side search behind the RPL student selector.
+     *
+     * Replaces a full-table SELECT that was capped at 2,000 rows and ordered by surname,
+     * which silently hid every student after the alphabetical cutoff on a large site. The
+     * search runs in the database and returns a bounded result set, so the browser never
+     * receives the whole student population or the whole USI list.
+     *
+     * Returns local_rtocompliance_students.id, NOT the Moodle user ID: the RPL save path
+     * and the results-posting path both key on the local student record.
+     *
+     * @param string $query
+     * @return array
+     */
+    public static function search_students($query) {
+        global $DB;
+
+        $params = self::validate_parameters(self::search_students_parameters(), ['query' => $query]);
+
+        $context = \context_system::instance();
+        self::validate_context($context);
+        require_capability('local/rtocompliance:manage', $context);
+
+        $query = trim($params['query']);
+
+        // Minimum query length is two characters for Latin script, because one Latin
+        // letter matches most of the register and forces a scan on every keystroke.
+        // It is ONE character for anything outside ASCII: a Chinese, Japanese or Korean
+        // family name is a single character, and a two-character floor made those
+        // students unsearchable by surname entirely.
+        $minlength = preg_match('/[^\x00-\x7F]/u', $query) ? 1 : 2;
+        if (\core_text::strlen($query) < $minlength) {
+            return ['students' => []];
+        }
+
+        // Match against given name, family name, the full name in either order, and USI.
+        $like = $DB->sql_like_escape($query);
+        $namesql = $DB->sql_concat('u.firstname', "' '", 'u.lastname');
+        $revsql  = $DB->sql_concat('u.lastname', "' '", 'u.firstname');
+        $where = '(' . $DB->sql_like('u.firstname', ':q1', false) . ' OR '
+               . $DB->sql_like('u.lastname', ':q2', false) . ' OR '
+               . $DB->sql_like($namesql, ':q3', false) . ' OR '
+               . $DB->sql_like($revsql, ':q4', false) . ' OR '
+               . $DB->sql_like('s.usi', ':q5', false) . ')';
+        $sqlparams = [
+            'q1' => '%' . $like . '%', 'q2' => '%' . $like . '%', 'q3' => '%' . $like . '%',
+            'q4' => '%' . $like . '%', 'q5' => '%' . $like . '%',
+        ];
+
+        // LIMIT is deliberate: the selector shows matches, never the whole register.
+        $recs = $DB->get_records_sql(
+            "SELECT s.id, u.firstname, u.lastname, s.usi
+               FROM {local_rtocompliance_students} s
+               JOIN {user} u ON u.id = s.userid
+              WHERE u.deleted = 0 AND $where
+           ORDER BY u.lastname, u.firstname",
+            $sqlparams, 0, 30);
+
+        $out = [];
+        foreach ($recs as $r) {
+            $out[] = [
+                'id'   => (int) $r->id,
+                'name' => trim($r->firstname . ' ' . $r->lastname),
+                'usi'  => (string) ($r->usi ?? ''),
+            ];
+        }
+
+        return ['students' => $out];
+    }
+
+    /**
+     * RPL-STUDENT-SEARCH (v6.3.23) — return shape for search_students().
+     *
+     * @return external_single_structure
+     */
+    public static function search_students_returns() {
+        return new external_single_structure(
+            [
+                'students' => new external_multiple_structure(
+                    new external_single_structure(
+                        [
+                            'id'   => new external_value(PARAM_INT, 'local_rtocompliance_students.id'),
+                            'name' => new external_value(PARAM_TEXT, 'Student full name'),
+                            'usi'  => new external_value(PARAM_TEXT, 'Unique Student Identifier, may be empty'),
+                    ])
+                ),
+        ]);
+    }
 }

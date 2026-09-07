@@ -27,29 +27,9 @@ $string['pluginname'] = 'RTO Compliance';
 $string['privacy:metadata'] = 'The RTO Compliance plugin stores student AVETMISS data, trainer credentials, and issued certificates.';
 $string['privacy:metadata:core_files'] = 'The RTO Compliance plugin stores files uploaded as RPL evidence and credit-transfer source certificates against the relevant records.';
 
-$string['privacy:metadata:trainers'] = 'Information about trainer credentials and compliance status.';
-$string['privacy:metadata:trainers:userid'] = 'The ID of the trainer user.';
-$string['privacy:metadata:trainers:taecredential'] = 'The TAE qualification code held by the trainer.';
-$string['privacy:metadata:trainers:vocationalqualifications'] = 'Vocational qualifications held by the trainer.';
-$string['privacy:metadata:trainers:industrycurrency'] = 'Industry currency information for the trainer.';
-$string['privacy:metadata:trainers:cpdhours'] = 'Continuing Professional Development hours recorded.';
 
-$string['privacy:metadata:certs'] = 'Information about certificates issued to students.';
-$string['privacy:metadata:certs:userid'] = 'The ID of the student who received the certificate.';
-$string['privacy:metadata:certs:certnumber'] = 'The unique certificate number.';
-$string['privacy:metadata:certs:certtype'] = 'The type of certificate (Testamur, Statement of Attainment, etc).';
-$string['privacy:metadata:certs:qualificationname'] = 'The name of the qualification on the certificate.';
-$string['privacy:metadata:certs:issuedate'] = 'The date the certificate was issued.';
 
-$string['privacy:metadata:surveys'] = 'Quality Indicator survey responses.';
-$string['privacy:metadata:surveys:respondentid'] = 'The ID of the user who completed the survey.';
-$string['privacy:metadata:surveys:responses'] = 'The survey question responses.';
-$string['privacy:metadata:surveys:comments'] = 'Any comments provided in the survey.';
 
-$string['privacy:metadata:log'] = 'Audit log entries for compliance actions.';
-$string['privacy:metadata:log:userid'] = 'The ID of the user who performed the action.';
-$string['privacy:metadata:log:action'] = 'The action that was performed.';
-$string['privacy:metadata:log:ipaddress'] = 'The IP address from which the action was performed.';
 
 $string['dashboard'] = 'Compliance Dashboard';
 $string['qualificationbuilder'] = 'Qualification Builder';
@@ -68,7 +48,6 @@ $string['nav_continuous_improvement'] = 'Continuous Improvement';
 $string['nav_rto_governance'] = 'RTO Governance';
 $string['nav_help_support'] = 'Help & Support';
 $string['settings'] = 'Settings';
-$string['trainers'] = 'Trainer Compliance';
 $string['certificates'] = 'Certificates';
 $string['natexport'] = 'NAT/AVETMISS Export';
 $string['surveys'] = 'Quality Indicator Surveys';
@@ -122,7 +101,6 @@ $string['nominalhours_source_ncver'] = 'National NCVER data';
 $string['nominalhours_source_local'] = 'Local reference table';
 $string['rtocode'] = 'RTO Code';
 $string['rtocode_desc'] = 'Your National RTO ID (e.g. 12345)';
-$string['abn'] = 'ABN';  // pipeline-ignore: all-caps — established Australian VET acronym used as the field label, not shouting
 $string['abn_desc'] = 'Australian Business Number';
 $string['rtologo'] = 'RTO Logo';
 $string['rtologo_desc'] = 'Upload your RTO logo for certificates (PNG, JPG or SVG recommended)';
@@ -131,10 +109,7 @@ $string['logo_includes_rto_identity_desc'] = 'Tick this if your uploaded RTO log
 $string['regulator'] = 'State/Territory Regulator';
 $string['regulator_desc'] = 'Select your registering body (ASQA for most RTOs, or your state authority)';
 
-$string['contactdetails'] = 'Contact Details';
 $string['address'] = 'Address';
-$string['phone'] = 'Phone';
-$string['email'] = 'Email';
 $string['website'] = 'Website';
 $string['student_handbook_url'] = 'Student Handbook URL';
 $string['student_handbook_url_desc'] = 'Full URL to the Student Handbook on your RTO website (e.g. https://yourrto.edu.au/student-handbook). Used as the "Show Evidence" link on the Standard 2.1 Student Obligations card. Leave blank to fall back to the Student Declaration records page.';
@@ -243,7 +218,6 @@ $string['disability'] = 'Disability Status';
 $string['disabilitytype'] = 'Disability Type';
 $string['prioreducation'] = 'Prior Educational Achievement';
 $string['employmentstatus'] = 'Employment Category';
-$string['studyreason'] = 'Study Reason';
 $string['residentialpostcode'] = 'Residential Postcode';
 $string['residentialstate'] = 'Residential State/Territory';
 $string['residentialsuburb'] = 'Residential Suburb';
@@ -291,7 +265,6 @@ $string['soa_issue'] = 'Issue Multi-Unit SOA';
 $string['soa_issue_pagetitle'] = 'Issue Multi-Unit Statement of Attainment';
 $string['soa_issue_desc'] = 'Issue a compliant Statement of Attainment listing multiple units of competency on a single document with automatic AQF/ASQA compliance validation.';
 $string['certificate_issued'] = 'Certificate issued successfully';
-$string['certificate_emailed'] = 'Certificate emailed to student';
 $string['certificate_verified'] = 'Certificate Verified';
 $string['certificate_invalid'] = 'Certificate Not Found';
 $string['certificate_number'] = 'Certificate Number';
@@ -350,14 +323,6 @@ $string['auditlog_user'] = 'User';
 $string['auditlog_time'] = 'Time';
 $string['auditlog_details'] = 'Details';
 
-$string['complaints_appeals'] = 'Complaints & Appeals';
-$string['thirdparty'] = 'Third-Party Arrangements';
-$string['governance'] = 'Governance & ADC';
-$string['feeprotection'] = 'Fee Protection';
-$string['insurance'] = 'Insurance Register';
-$string['transitions'] = 'Training Product Transitions';
-$string['validation'] = 'Validation Schedule';
-$string['tas'] = 'TAS Generator';
 
 $string['rtocompliance:manage'] = 'Manage RTO compliance settings';
 $string['rtocompliance:viewall'] = 'View all compliance data';
@@ -441,16 +406,7 @@ $string['surveyconsent_desc'] = 'Student consents to be contacted for NCVER surv
 $string['surveycontactemail'] = 'Survey Contact Email';
 $string['surveycontactphone'] = 'Survey Contact Phone';
 $string['notstated'] = 'Not stated';
-$string['none'] = 'None';
 
-$string['qldlui'] = 'QLD LUI';  // pipeline-ignore: all-caps — established Australian VET acronym used as the field label, not shouting
-$string['qldlui_help'] = 'Queensland Learner Unique Identifier for state reporting.';
-$string['viccohortid'] = 'VIC Cohort ID';
-$string['viccohortid_help'] = 'Victoria Commencing Program Cohort Identifier for SVTS reporting.';
-$string['nswsmartskilled'] = 'NSW Smart & Skilled ID';
-$string['nswsmartskilled_help'] = 'NSW Smart and Skilled contract identifier.';
-$string['waraptid'] = 'WA RAPT ID';  // pipeline-ignore: all-caps — established Australian VET acronym used as the field label, not shouting
-$string['waraptid_help'] = 'Western Australia RAPT integration identifier.';
 
 $string['profileupdated'] = 'Student profile updated successfully';
 $string['profilecreated'] = 'Student profile created successfully';
@@ -458,7 +414,6 @@ $string['profileincomplete'] = 'Profile has missing or invalid data:';
 $string['profilecomplete_msg'] = 'Profile is complete and valid for AVETMISS reporting.';
 $string['profilestatus'] = 'Profile Status';
 $string['complete'] = 'Complete';
-$string['incomplete'] = 'Incomplete';
 $string['allstudents'] = 'All Students';
 $string['incompleteonly'] = 'Incomplete Profiles Only';
 $string['missingusionly'] = 'Missing USI Only';
@@ -482,11 +437,9 @@ $string['unit'] = 'Unit of Competency';
 $string['activitystartdate'] = 'Activity Start Date';
 $string['activityenddate'] = 'Activity End Date';
 $string['scheduledhours'] = 'Scheduled Hours';
-$string['outcome'] = 'Outcome';
 $string['deliverymode'] = 'Delivery Mode';
 $string['fundingsource'] = 'Funding Source';
 $string['enrolmentstatus'] = 'Status';
-$string['active'] = 'Active';
 $string['onhold'] = 'On Hold';
 $string['withdrawn'] = 'Withdrawn';
 
@@ -512,11 +465,7 @@ $string['filterbystatus'] = 'Filter by Status';
 $string['filterbystate'] = 'Filter by State';
 $string['searchstudent'] = 'Search students...';
 
-$string['qualificationcode'] = 'Qualification Code';
-$string['qualificationcode_help'] = 'National qualification code (e.g. BSB50420 for Diploma of Leadership and Management)';
-$string['qualificationname'] = 'Qualification Name';
 $string['unitcode'] = 'Unit Code';
-$string['unitcode_help'] = 'National unit of competency code (e.g. BSBWHS411)';
 $string['unitname'] = 'Unit Name';
 $string['tuitionfee'] = 'Tuition Fee ($)';
 $string['feecharged'] = 'Fee Charged';
@@ -534,8 +483,6 @@ $string['confirmdelete'] = 'Are you sure you want to delete this enrolment?';
 $string['error_endbeforestart'] = 'End date cannot be before start date';
 $string['error_invalidhours'] = 'Hours must be a positive number';
 
-$string['programcode'] = 'Program Code';
-$string['programcode_help'] = 'AVETMISS program identifier for this qualification.';
 
 $string['error_no_profile'] = 'Student does not have an AVETMISS profile';
 $string['error_no_units'] = 'At least one completed unit is required for Statement of Attainment';
@@ -565,14 +512,12 @@ $string['already_issued'] = 'Already issued';
 $string['not_ready'] = 'Not ready for issuance';
 $string['ready_to_issue'] = 'Ready to issue';
 
-$string['trainers'] = 'Trainers & Assessors';
 $string['trainer_compliance'] = 'Trainer Compliance';
 $string['trainer_credentials'] = 'Trainer Credentials';
 $string['trainer_profile'] = 'Trainer Profile';
 
 $string['taecredential'] = 'TAE Qualification';
 $string['taecredential_help'] = 'TAE qualification code (e.g. TAE40122)';
-$string['taedateachieved'] = 'TAE Date Achieved';
 $string['taeevidence'] = 'TAE Certificate';
 $string['vocationalqualifications'] = 'Vocational Qualifications';
 $string['vocationalqualifications_help'] = 'List of vocational qualifications held by the trainer';
@@ -603,9 +548,7 @@ $string['wwccevidence'] = 'WWCC Evidence';
 $string['policecheck'] = 'Police Check';
 $string['policechecknumber'] = 'Police Check Number';
 $string['policechecknumber_help'] = 'National Police Check reference number';
-$string['policecheckdate'] = 'Police Check Date';
 $string['policecheckexpiry'] = 'Police Check Expiry';
-$string['policecheckstatus'] = 'Police Check Status';
 $string['policecheckevidence'] = 'Police Check Evidence';
 
 $string['scopemapping'] = 'Scope Mapping';
@@ -658,7 +601,6 @@ $string['waraptid'] = 'WA RAPT Identifier';
 $string['waraptid_help'] = 'Registered Apprenticeship/Traineeship identifier for Western Australia';
 
 $string['fundingsourcestate'] = 'State Funding Source';
-$string['fundingsourcestate_help'] = 'State-specific funding source code for state reporting requirements';
 
 $string['state_qld'] = 'Queensland';
 $string['state_vic'] = 'Victoria';
@@ -673,54 +615,13 @@ $string['warning_continuing_units'] = 'Some units still have continuing/pending 
 
 $string['task_cleanup_certificates'] = 'Clean up expired certificate verification codes';
 
-$string['privacy:metadata:students'] = 'Student AVETMISS profile data for NCVER reporting';
-$string['privacy:metadata:students:userid'] = 'The Moodle user ID of the student';
-$string['privacy:metadata:students:usi'] = 'Unique Student Identifier';
-$string['privacy:metadata:students:dateofbirth'] = 'Date of birth';
-$string['privacy:metadata:students:indigenousstatus'] = 'Indigenous status code';
-$string['privacy:metadata:students:countryofbirth'] = 'Country of birth code';
-$string['privacy:metadata:students:disabilityflag'] = 'Disability flag';
 
-$string['privacy:metadata:enrolments'] = 'Training activity enrolment records for AVETMISS reporting';
-$string['privacy:metadata:enrolments:studentid'] = 'The student record ID';
-$string['privacy:metadata:enrolments:courseid'] = 'The Moodle course ID';
-$string['privacy:metadata:enrolments:outcomeidentifier'] = 'AVETMISS outcome code';
-$string['privacy:metadata:enrolments:activitystartdate'] = 'Activity start date';
 
-$string['privacy:metadata:trainers'] = 'Trainer credential records for RTO compliance';
-$string['privacy:metadata:trainers:userid'] = 'The user ID of the trainer';
-$string['privacy:metadata:trainers:taecredential'] = 'TAE qualification details';
-$string['privacy:metadata:trainers:vocationalqualifications'] = 'Vocational qualifications';
-$string['privacy:metadata:trainers:industrycurrency'] = 'Industry currency evidence';
-$string['privacy:metadata:trainers:cpdhours'] = 'CPD hours logged';
 
-$string['privacy:metadata:certs'] = 'Certificate issuance records';
-$string['privacy:metadata:certs:userid'] = 'The user ID of the certificate holder';
-$string['privacy:metadata:certs:certnumber'] = 'Certificate number';
-$string['privacy:metadata:certs:certtype'] = 'Certificate type';
-$string['privacy:metadata:certs:qualificationname'] = 'Qualification name';
-$string['privacy:metadata:certs:issuedate'] = 'Issue date';
 
-$string['privacy:metadata:surveys'] = 'Quality indicator survey responses';
-$string['privacy:metadata:surveys:respondentid'] = 'The user ID of the respondent';
-$string['privacy:metadata:surveys:responses'] = 'Survey responses';
-$string['privacy:metadata:surveys:comments'] = 'Additional comments';
 
-$string['privacy:metadata:log'] = 'Compliance audit log entries';
-$string['privacy:metadata:log:userid'] = 'The user ID who performed the action';
-$string['privacy:metadata:log:action'] = 'The action performed';
-$string['privacy:metadata:log:ipaddress'] = 'IP address';
 
-$string['privacy:metadata:cricos_students'] = 'International student CRICOS data for ESOS/PRISMS reporting';
-$string['privacy:metadata:cricos_students:userid'] = 'The Moodle user ID';
-$string['privacy:metadata:cricos_students:visasubclass'] = 'Visa subclass';
-$string['privacy:metadata:cricos_students:passportnumber'] = 'Passport number';
-$string['privacy:metadata:cricos_students:guardianname'] = 'Guardian name';
 
-$string['privacy:metadata:cricos_coe'] = 'Confirmation of Enrolment records';
-$string['privacy:metadata:cricos_coe:cricosstudentid'] = 'CRICOS student record ID';
-$string['privacy:metadata:cricos_coe:coenumber'] = 'CoE number';
-$string['privacy:metadata:cricos_coe:coursestartdate'] = 'Course start date';
 
 $string['email_certificate_confirm'] = 'Are you sure you want to email the {$a->certtype} (#{$a->certnumber}) to {$a->fullname} at {$a->email}?';
 $string['email_certificate_subject'] = 'Your {$a} Certificate';
@@ -777,13 +678,9 @@ $string['no_avetmiss_required'] = 'This student is not currently enrolled in any
 $string['complete_avetmiss_profile'] = 'Complete AVETMISS Profile';
 
 $string['labourforcestatus'] = 'Labour Force Status';
-$string['labourforcestatus_help'] = 'The client\'s labour force status at the time of enrolment. This is a required AVETMISS field for NAT00080.';
 $string['studyreason'] = 'Study Reason';
-$string['studyreason_help'] = 'The main reason why the client is undertaking the training. This is a required AVETMISS field for NAT00080.';
 $string['prioreducationflag'] = 'Prior Educational Achievement';
-$string['prioreducationflag_help'] = 'Whether the client has successfully completed any qualification or statement of attainment prior to commencing this program.';
 $string['surveycontactstatus'] = 'Survey Contact Status';
-$string['surveycontactstatus_help'] = 'Indicates whether the client agrees to be contacted for Quality Indicator surveys. A=Agrees, E=Valid excuse, M=No mail contact, N=Does not agree.';
 
 $string['ai_not_configured'] = 'AI integration is not configured. Please add your API key in the plugin settings.';
 $string['no_survey_responses'] = 'No survey responses found for the selected period.';
@@ -853,7 +750,6 @@ $string['complaints'] = 'Complaints';
 $string['continuous_improvement'] = 'Continuous Improvement';
 
 $string['complaint_details'] = 'Complaint Details';
-$string['complaint_reference'] = 'Reference Number';
 $string['complainant_type'] = 'Complainant Type';
 $string['complainant_student'] = 'Student';
 $string['complainant_employer'] = 'Employer';
@@ -864,10 +760,6 @@ $string['complainant_name'] = 'Complainant Name';
 $string['complainant_email'] = 'Complainant Email';
 $string['complainant_phone'] = 'Complainant Phone';
 $string['issue_information'] = 'Issue Information';
-$string['complaint_category'] = 'Category';
-$string['complaint_subcategory'] = 'Subcategory';
-$string['complaint_subject'] = 'Subject';
-$string['complaint_description'] = 'Description';
 $string['category_training'] = 'Training & Delivery';
 $string['category_assessment'] = 'Assessment';
 $string['category_service'] = 'Service Delivery';
@@ -896,7 +788,6 @@ $string['actual_resolution_date_help'] = 'Select the date the complaint was actu
 $string['outcome_satisfactory'] = 'Outcome Satisfactory';
 $string['is_systemic'] = 'Systemic Issue Identified';
 $string['additional_information'] = 'Additional Information';
-$string['notes'] = 'Notes';
 $string['new_complaint'] = 'New Complaint';
 $string['edit_complaint'] = 'Edit Complaint';
 $string['complaint_created'] = 'Complaint created successfully';
@@ -987,7 +878,6 @@ $string['improvement_updated'] = 'Improvement action updated successfully';
 $string['improvement_deleted'] = 'Improvement action deleted successfully';
 
 // Third-Party Arrangements
-$string['thirdparty'] = 'Third-Party Arrangements';
 $string['thirdparty_details'] = 'Arrangement Details';
 $string['organisation_name'] = 'Organisation Name';
 $string['trading_name'] = 'Trading Name';
@@ -1044,7 +934,6 @@ $string['police_check_date'] = 'Police Check Date';
 $string['police_check_status'] = 'Police Check Status';
 $string['change_type'] = 'Change Type';
 $string['change_description'] = 'Change Description';
-$string['effective_date'] = 'Effective Date';
 $string['asqa_acknowledged'] = 'ASQA Acknowledged';
 $string['asqa_reference'] = 'ASQA Reference';
 $string['impact_assessment'] = 'Impact Assessment';
@@ -1086,10 +975,8 @@ $string['insurance_workers_comp'] = 'Workers Compensation';
 $string['provider'] = 'Provider';
 $string['policy_number'] = 'Policy Number';
 $string['coverage_amount'] = 'Coverage Amount';
-$string['premium'] = 'Premium';
 $string['excess_amount'] = 'Excess Amount';
 $string['coverage_details'] = 'Coverage Details';
-$string['exclusions'] = 'Exclusions';
 $string['delivery_modes'] = 'Delivery Modes Covered';
 $string['locations'] = 'Locations Covered';
 $string['start_date'] = 'Start Date';
@@ -1118,7 +1005,6 @@ $string['enrolments_closed'] = 'Enrolments Closed';
 // Validation Schedule
 $string['validation'] = 'Validation Schedule';
 $string['validation_details'] = 'Validation Details';
-$string['validation_reference'] = 'Reference';
 $string['product_code'] = 'Product Code';
 $string['product_name'] = 'Product Name';
 $string['unit_codes'] = 'Unit Codes';
@@ -1127,7 +1013,6 @@ $string['validation_initial'] = 'Initial';
 $string['validation_ongoing'] = 'Ongoing';
 $string['validation_post_assessment'] = 'Post-Assessment';
 $string['risk_level'] = 'Risk Level';
-$string['risk_factors'] = 'Risk Factors';
 $string['scheduled_date'] = 'Scheduled Date';
 $string['actual_date'] = 'Actual Date';
 $string['lead_validator'] = 'Lead Validator';
@@ -1135,11 +1020,7 @@ $string['validators'] = 'Validators';
 $string['methodologies'] = 'Methodologies Used';
 $string['sample_size'] = 'Sample Size';
 $string['sampling_method'] = 'Sampling Method';
-$string['findings_count'] = 'Findings Count';
-$string['findings'] = 'Findings';
 $string['improvements_linked'] = 'Linked Improvements';
-$string['report_document'] = 'Report Document';
-$string['adc_linked'] = 'ADC Linked';
 
 // Validators Register
 $string['validators_register'] = 'Validators Register';
@@ -1160,11 +1041,8 @@ $string['validations_participated'] = 'Validations Participated';
 $string['last_validation_date'] = 'Last Validation Date';
 
 // TAS Generator
-$string['tas'] = 'Training & Assessment Strategy';
 $string['tas_deleted'] = 'TAS document deleted successfully.';
 $string['tas_details'] = 'TAS Details';
-$string['qualification_code'] = 'Qualification Code';
-$string['qualification_name'] = 'Qualification Name';
 $string['version'] = 'Version';
 $string['effective_date'] = 'Effective Date';
 $string['review_date'] = 'Review Date';
@@ -1227,11 +1105,7 @@ $string['evidence_document'] = 'Evidence Document';
 
 // Delivery Schedule
 $string['delivery_schedule'] = 'Delivery Schedule';
-$string['unit_code'] = 'Unit Code';
-$string['unit_name'] = 'Unit Name';
-$string['sequence_order'] = 'Sequence Order';
 $string['scheduled_weeks'] = 'Scheduled Weeks';
-$string['nominal_hours'] = 'Nominal Hours';
 $string['supervised_hours'] = 'Supervised Hours';
 $string['unsupervised_hours'] = 'Unsupervised Hours';
 
@@ -1421,20 +1295,14 @@ $string['surveycontactstatus_help'] = 'Survey Contact Status codes: A=Student ag
 
 // STATE-SPECIFIC FIELDS SECTION
 $string['statespecific_help'] = 'Some State Training Authorities require additional data fields beyond national AVETMISS requirements. Complete these fields if you deliver state-funded training or have reporting obligations to specific states. Fields shown depend on your RTO\'s registered state.';
-$string['fundingsourcestate_help'] = 'State-specific funding source code required by State Training Authorities. This code identifies the specific funding program or contract under which the training is delivered. Check your state STA guidelines for valid codes.';
 
 // TRAINER MANAGEMENT SECTION TOOLTIPS
-$string['trainers_help'] = 'Trainer compliance is your highest audit risk area. Under the 2025 RTO Standards (effective 1 July 2025), Standard 3.2 requires documented evidence that trainers hold appropriate credentials per the Credential Policy, and Standard 3.3 requires vocational competency, industry currency, and ongoing CPD. This section provides a single view of all trainer compliance status.';
 $string['trainer_profile_help'] = 'Each trainer must have a complete profile documenting their credentials before they can deliver training or conduct assessments. Under Standard 3.2, RTOs must authenticate credentials and have systems to verify qualifications, monitor performance, and ensure industry currency. Update profiles immediately when new evidence is obtained.';
 
 // TRAINER CREDENTIAL FIELDS
 $string['credentialrole_help'] = '2025 Credential Policy role classification: Section 1A/1B - Training and/or assessment WITHOUT direction (TAE40122/40116/40110 or Diploma VET). Section 1C/1D - Training UNDER direction (skill sets, cannot make assessment judgements). Section 2A-2C - TAE delivery (Diploma level). Section 3A/3B - Validation roles. See ASQA Practice Guide: Credential Policy.';
-$string['taecredential_help_long'] = 'TAE qualification per the 2025 Credential Policy. Section 1A/1B (without direction): TAE40122, TAE40116, or TAE40110 (now accepted without additional units), Diploma VET or higher. Section 1C/1D (under direction): TAESS00011, TAESS00024, or secondary teaching qualification - but persons CANNOT make assessment judgements. Enter full qualification code.';
-$string['taedateachieved_help'] = 'Date the TAE qualification was awarded. Enter the date shown on the testamur or Statement of Attainment. This is used to calculate currency and identify trainers who may need to transition to newer TAE qualifications.';
 $string['taeevidence_help'] = 'Upload a scan or photo of the TAE testamur or Statement of Attainment. ASQA auditors will request to see original evidence. Acceptable formats: PDF, JPG, PNG. Maximum file size 5MB.';
 
-$string['vocationalqualifications_help_long'] = 'List ALL vocational qualifications held by this trainer that are relevant to the training products they deliver and assess. Include: (1) Qualification code and title, (2) Date achieved, (3) Issuing RTO. Example: "BSB50420 Diploma of Leadership and Management, 2019, RTO 12345". Trainers must hold qualifications at or above the level being delivered.';
-$string['industrycurrency_help_long'] = 'Industry currency demonstrates current knowledge of industry practices. Document: (1) Current or recent work in industry (within 2-3 years), (2) Industry consultation activities, (3) Site visits, (4) Return-to-industry placements, (5) Industry association membership. ASQA requires evidence of currency for ALL trainers.';
 $string['industrycurrencydate_help'] = 'Date when industry currency was last verified. This should be reviewed at least annually. Set the next review date to ensure ongoing compliance. Trainers with currency older than 2 years may be flagged for review.';
 $string['industrycurrencyevidence_help'] = 'Upload evidence of industry currency: employer letters, industry site visit reports, industry association membership certificates, CPD records related to industry skills. Multiple documents can be uploaded.';
 
@@ -1442,7 +1310,6 @@ $string['vocationalcompetency_help_long'] = 'Vocational competency is the abilit
 $string['vocationalcompetencydate_help'] = 'Date when vocational competency was last formally verified. This may be through performance review, skills assessment, or competency conversation. Should be reviewed at least annually.';
 $string['vocationalcompetencyevidence_help'] = 'Upload evidence of vocational competency: performance reviews, skills assessments, employer references, portfolio of work, peer assessments. This demonstrates current capability to perform at industry standard.';
 
-$string['cpdhours_help_long'] = 'Continuing Professional Development (CPD) hours for the current calendar year. Track ALL activities that maintain or develop training and vocational competence: industry conferences, workshops, webinars, formal study, mentoring, research. ASQA expects trainers to maintain currency through ongoing CPD.';
 $string['cpdlog_help'] = 'Record each CPD activity with: Date, Activity description, Hours, Provider/Organisation, Relevance to training delivery. This log provides audit evidence of ongoing professional development and currency maintenance.';
 
 $string['wwccnumber_help_long'] = 'Working With Children Check (WWCC) number issued by the relevant state authority. Name varies by state: Blue Card (QLD), WWCC (NSW, VIC, WA, TAS), Working with Vulnerable People (ACT), DCSI Screening (SA). MANDATORY for all trainers working with students under 18.';
@@ -1451,7 +1318,6 @@ $string['wwccexpiry_help'] = 'WWCC expiry date. Set calendar reminders 90 days b
 $string['wwccevidence_help'] = 'Upload a copy of the WWCC card or approval letter. Auditors may ask to sight the original card. Keep this current - an expired evidence document with a valid check may cause confusion during audits.';
 
 $string['policechecknumber_help_long'] = 'National Police Check (Criminal History Check) reference number. RTOs should determine their own policy for police checks based on the training delivered. Recommended for all trainers, particularly those delivering aged care, disability, children\'s services, or security training.';
-$string['policecheckdate_help'] = 'Date the police check was conducted. RTOs typically require checks to be renewed every 3 years, though some licensing requirements specify shorter periods. Include in your trainer compliance policy.';
 $string['policecheckexpiry_help'] = 'Police check expiry date based on your RTO policy. Unlike WWCC, police checks don\'t have an official expiry - the expiry is determined by your RTO\'s policy (typically 3 years from issue).';
 $string['policecheckevidence_help'] = 'Upload the National Police Check result letter. This document contains sensitive information - ensure your RTO has appropriate data handling policies for criminal history information.';
 
@@ -1488,7 +1354,6 @@ $string['fitandproperdeclaration_help'] = 'Has this person signed a fit and prop
 $string['materialchanges_help'] = 'Record material changes requiring ASQA notification: change in control (ownership), change in governing persons, change in financial viability, significant adverse events, change in delivery locations or scope. Notification timeframes vary by change type. ASQA may impose conditions or take action for undisclosed material changes.';
 
 // THIRD PARTY ARRANGEMENTS SECTION
-$string['thirdparty_help'] = 'Under the 2025 RTO Standards, Standard 2 (Third-Party Arrangements) requires written agreements with third parties who deliver or assess training on your behalf. This includes partner RTOs, industry trainers, and organisations providing services under your RTO code. ASQA must be notified within 30 calendar days of entering any third-party arrangement for training delivery or assessment.';
 $string['thirdparty_form_help'] = 'Document each third-party arrangement including scope of services, quality assurance measures, and review dates. Agreements must specify: (1) NRT logo prohibition for third party, (2) Third party cannot issue AQF credentials, (3) Students must be informed of RTO responsibility. You retain full compliance responsibility.';
 $string['thirdpartytype_help'] = 'Type of third party: Delivery Partner (delivers training), Assessment Partner (conducts assessment), Recruitment Agent (recruits students), Support Service (provides student support), Venue Provider (provides facilities). Type determines mandatory contract clauses and monitoring requirements.';
 $string['thirdpartyscope_help'] = 'Define the scope of services: which qualifications/units, which locations, which cohorts. The written agreement must clearly specify what the third party is authorised to do. Third parties delivering training must have trainer credentials verified against the Credential Policy.';
@@ -1498,7 +1363,6 @@ $string['thirdpartyasqanotified_help'] = 'CRITICAL: ASQA notification is require
 // INSURANCE SECTION
 $string['insurance_help'] = 'RTOs must maintain appropriate insurance coverage. While ASQA doesn\'t mandate specific insurance types, most RTOs require: Public Liability, Professional Indemnity, and Workers Compensation. Some state funding contracts and licensing bodies require specific coverage levels.';
 $string['insurance_form_help'] = 'Record each insurance policy including the coverage type, insurer, policy number, coverage amount, and renewal dates. Set up alerts for policies approaching expiry to maintain continuous coverage.';
-$string['insurancetype_help'] = 'Type of insurance: Public Liability (injury on premises), Professional Indemnity (advice/training errors), Workers Compensation (staff injury), Building/Contents, Cyber Liability, Directors & Officers. Different delivery contexts require different coverage.';
 $string['insurancecoverage_help'] = 'Coverage amount in dollars. Industry standard for RTO public liability is typically $10-20 million. Check your state STA requirements and any industry licensing requirements for minimum coverage levels.';
 $string['insuranceexpiry_help'] = 'Policy expiry date. Set reminder 60 days before expiry to allow time for renewal quotes. Lapsed insurance creates significant risk and may breach funding contracts or licensing requirements.';
 
@@ -1511,7 +1375,6 @@ $string['feeprotectionamount_help'] = 'Total prepaid fees for this student requi
 // VALIDATION SECTION
 $string['validation_help'] = 'Under Standard 1.5 (Validation), validation ensures assessment tools and practices produce valid, reliable, fair, and flexible outcomes. The 2025 Standards require systematic validation with appropriately credentialed validators. For TAE qualifications: validators must collectively meet Credential Policy Section 1A or 1B. For other products: validators must collectively have industry expertise and relevant knowledge. Pre-use review of tools does NOT require formal validator credentials.';
 $string['validation_form_help'] = 'Record each validation event: units validated, participants, samples reviewed, and improvements identified. Under the 2025 Credential Policy Section 3: validators for TAE products must meet Section 1A/1B requirements. For other training products, validators must collectively have industry expertise and knowledge relevant to the qualification. Include industry representatives where possible.';
-$string['validationtype_help'] = 'Type of validation per Standard 1.5: Pre-implementation (new assessment tool - note: pre-use review does not require formal validator credentials), Scheduled (part of systematic cycle), Triggered (following complaint or adverse finding), Industry (with industry representatives), Peer (with other RTOs). All types must apply the 5 rules of evidence.';
 $string['validationfindings_help'] = 'Document findings from validation: what worked well, improvements needed, issues with assessment tools, judgement consistency, industry relevance. Findings must link to continuous improvement actions. Validation evidence supports Annual Declaration of Compliance.';
 $string['validatorcredentials_help'] = 'Record validator credentials per 2025 Credential Policy Section 3: For TAE qualifications/skill sets: validators must collectively meet Section 1A or 1B requirements. For other training products: validators must collectively have industry expertise and knowledge relevant to the qualification being validated. Document TAE credential, vocational competency, and industry currency for each validator.';
 
@@ -1959,24 +1822,6 @@ If this qualification includes mandatory work placement, document:
 
 **What auditors check:** That placement agreements exist, supervisors are briefed, and the RTO actively monitors learner welfare and experience quality during placement. Lack of monitoring evidence is a common finding.';
 
-$string['transitionplan'] = 'Transition/Teach-Out Procedures';
-$string['transitionplan_help'] = '**ASQA Standard 1.26 (2015) — Teach-Out and Transition Obligations**
-
-When a training product is superseded, RTOs must have a documented teach-out and transition plan. Document:
-
-- The supersession date of the old qualification
-- The teach-out end date (typically 2 years after supersession)
-- The equivalent current qualification code and title
-- How enrolled learners are notified of their options:
-  a) Complete under the superseded qualification (within teach-out period)
-  b) Transfer to the current equivalent (with credit transfer)
-  c) Withdraw with refund
-- Credit transfer arrangements between old and new qualifications
-- Process for learners who cannot complete within the teach-out period
-
-**What auditors check:** That enrolled learners are not disadvantaged by the qualification transition, that options are communicated clearly and promptly, and that transition records are maintained.
-
-**If qualification is current (not superseded):** State the current supersession status from training.gov.au and the anticipated end date of the current qualification version.';
 
 $string['riskmanagement'] = 'Training Delivery Risks & Mitigation';
 $string['riskmanagement_help'] = '**ASQA Standard 8 — Governance and Risk Management**
@@ -2131,27 +1976,18 @@ $string['error_same_trainer_supervisor'] = 'Trainer and supervisor cannot be the
 $string['notes'] = 'Notes';
 
 // TRAINER FORM ENHANCEMENTS
-$string['industry_currency_type'] = 'Industry Currency Type';
-$string['industry_currency_type_help'] = 'Select how industry currency is maintained. Per ASQA Credential Policy, trainers must demonstrate current industry skills. Options include ongoing employment, industry projects, professional development, industry engagement, and more. Refer to ASQA guidance for acceptable currency activities.';
 $string['resume_document'] = 'Resume/CV Upload';
 $string['resume_document_help'] = 'Upload the trainer\'s resume or CV documenting their industry experience and qualifications. This provides evidence of vocational competency and industry currency.';
-$string['manager_signoff'] = 'RTO Manager Sign-off';
-$string['manager_signoff_help'] = 'RTO Manager verification that this trainer\'s credentials have been verified and they are approved to deliver and assess the mapped training products.';
 $string['manager_signoff_date'] = 'Sign-off Date';
 $string['manager_signoff_by'] = 'Signed off by';
 $string['vocational_qualification_examples'] = 'e.g., BSB50420, TAE50216, etc. Include qualification code, title, and date achieved. One per line.';
 $string['industry_currency_examples'] = 'Describe current industry engagement: employment, consulting, projects, professional memberships, industry events attended, etc.';
-$string['credential_role'] = 'Credential Role Classification';
-$string['credential_role_help'] = 'ASQA Credential Policy role classification: 1A/1B (full TAE, can train/assess independently), 1C/1D (working towards TAE, requires supervision), 2A/2B/2C (industry experts, different supervision requirements), 3A/3B (validators).';
 
 // VALIDATION SCHEDULE ENHANCEMENTS
 $string['risk_factors'] = 'Risk Factors';
 $string['risk_factors_help'] = 'Select the risk factors that triggered this validation activity. High-risk products should be validated more frequently. Risk factors include: new product, student complaints, poor outcomes, audit findings, trainer changes, significant enrolment changes.';
 $string['methodology_samples'] = 'Validation Methodologies';
 $string['methodology_samples_help'] = 'Select the validation methodologies used: document review, observation of assessment, student interviews, industry expert review, benchmarking against other RTOs, mapping analysis, and more.';
-$string['findings_count_help'] = 'Number of findings or issues identified during validation. Findings should be categorised by severity and linked to improvement actions.';
-$string['report_document_help'] = 'Upload the validation report document. The report should include findings, recommendations, and required actions. This provides evidence for ADC and ASQA audits.';
-$string['adc_linked_help'] = 'Check this to link validation evidence to your Annual Declaration of Compliance. ASQA requires evidence of validation activities in the ADC.';
 
 // COMPLAINTS SUBCATEGORIES
 $string['complaint_subcategory'] = 'Complaint Subcategory';
@@ -3670,3 +3506,136 @@ $string['versionrepair_done'] = 'Recorded version corrected from {$a->from} to {
 $string['versionrepair_notneeded'] = 'Nothing to repair — the recorded version already matches the installed files.';
 $string['versionrepair_next'] = 'Now go to Site administration → Notifications and run the upgrade. It will bring the plugin up to the version of the files already installed, and apply anything this site had missed.';
 $string['versionrepair_gotonotifications'] = 'Go to Notifications';
+
+// RPL-STUDENT-SEARCH (v6.3.23) — the RPL / Credit Transfer student selector is now
+// searched server-side, so it needs a placeholder and a no-selection label of its own.
+$string['rpl_student_none'] = 'No student selected';
+$string['rpl_student_search'] = 'Type a name or USI to search';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PRIVACY METADATA (v6.3.28) — every table holding personal data is declared.
+// ═══════════════════════════════════════════════════════════════════════════
+$string['privacy:metadata:students'] = 'AVETMISS student profile: identity, contact and demographic data reported to NCVER';
+$string['privacy:metadata:students:userid'] = 'The Moodle user this record belongs to';
+$string['privacy:metadata:trainers'] = 'Trainer and assessor records: credentials, vocational competency and industry currency';
+$string['privacy:metadata:trainers:userid'] = 'The Moodle user this record belongs to';
+$string['privacy:metadata:certs'] = 'Certificates issued to the student: testamurs, statements of attainment and records of results';
+$string['privacy:metadata:certs:userid'] = 'The Moodle user this record belongs to';
+$string['privacy:metadata:surveys'] = 'Quality Indicator survey responses and free-text comments';
+$string['privacy:metadata:surveys:respondentid'] = 'The Moodle user who responded';
+$string['privacy:metadata:log'] = 'Plugin activity log: who did what, to whom, and from which IP address';
+$string['privacy:metadata:log:userid'] = 'The Moodle user this record belongs to';
+$string['privacy:metadata:log:targetuserid'] = 'The Moodle user this record is about';
+$string['privacy:metadata:audit'] = 'Audit trail of compliance actions taken in the plugin';
+$string['privacy:metadata:audit:userid'] = 'The Moodle user this record belongs to';
+$string['privacy:metadata:ai_alerts'] = 'AI-generated compliance alerts raised about a student';
+$string['privacy:metadata:ai_alerts:targetuserid'] = 'The Moodle user this record is about';
+$string['privacy:metadata:cricos_students'] = 'CRICOS overseas student records: visa, passport and guardian details';
+$string['privacy:metadata:cricos_students:userid'] = 'The Moodle user this record belongs to';
+$string['privacy:metadata:complaints'] = 'Complaints register: complainant identity, the complaint and its resolution';
+$string['privacy:metadata:complaints:complainantuserid'] = 'The Moodle user who made the complaint';
+$string['privacy:metadata:appeals'] = 'Appeals register: appellant identity, grounds for appeal and outcome';
+$string['privacy:metadata:appeals:appellantuserid'] = 'The Moodle user who lodged the appeal';
+$string['privacy:metadata:fees'] = 'Student fee records and fee-protection tracking';
+$string['privacy:metadata:fees:userid'] = 'The Moodle user this record belongs to';
+$string['privacy:metadata:supportnotes'] = 'Student support notes recorded by staff';
+$string['privacy:metadata:supportnotes:userid'] = 'The Moodle user this record belongs to';
+$string['privacy:metadata:validators'] = 'Validation panel members: credentials, experience and specialisations';
+$string['privacy:metadata:validators:userid'] = 'The Moodle user this record belongs to';
+$string['privacy:metadata:suitability'] = 'Pre-enrolment suitability assessments and their outcomes';
+$string['privacy:metadata:suitability:userid'] = 'The Moodle user this record belongs to';
+$string['privacy:metadata:declarations'] = 'Student declarations and the responses given';
+$string['privacy:metadata:declarations:userid'] = 'The Moodle user this record belongs to';
+$string['privacy:metadata:soa_snapshot'] = 'Point-in-time snapshot of the results shown on an issued statement of attainment';
+$string['privacy:metadata:soa_snapshot:userid'] = 'The Moodle user this record belongs to';
+$string['privacy:metadata:student_docs'] = 'Documents uploaded against a student record';
+$string['privacy:metadata:student_docs:userid'] = 'The Moodle user this record belongs to';
+$string['privacy:metadata:enrol_rollback'] = 'Enrolment rollback records kept for data-recovery purposes';
+$string['privacy:metadata:enrol_rollback:userid'] = 'The Moodle user this record belongs to';
+$string['privacy:metadata:foe_pending'] = 'Pending Field of Education assignments awaiting review';
+$string['privacy:metadata:foe_pending:userid'] = 'The Moodle user this record belongs to';
+$string['privacy:metadata:recov_candidate'] = 'Enrolment-recovery candidates identified from site history';
+$string['privacy:metadata:recov_candidate:userid'] = 'The Moodle user this record belongs to';
+$string['privacy:metadata:recov_action'] = 'Actions taken during an enrolment-recovery run';
+$string['privacy:metadata:recov_action:userid'] = 'The Moodle user this record belongs to';
+$string['privacy:metadata:supervision'] = 'Supervision log entries, recording the staff member who created each entry';
+$string['privacy:metadata:supervision:createdby'] = 'The Moodle user who created this record';
+$string['privacy:metadata:cricos_scv'] = 'CRICOS student course variations, recording who approved each one';
+$string['privacy:metadata:cricos_scv:approvedby'] = 'The Moodle user who approved this record';
+$string['privacy:metadata:cricos_progress'] = 'CRICOS course-progress reviews, recording who conducted each review';
+$string['privacy:metadata:cricos_progress:reviewedby'] = 'The Moodle user who carried out the review';
+$string['privacy:metadata:improvements'] = 'Continuous improvement register entries and their author';
+$string['privacy:metadata:improvements:createdby'] = 'The Moodle user who created this record';
+$string['privacy:metadata:thirdparty'] = 'Third-party arrangement records and their author';
+$string['privacy:metadata:thirdparty:createdby'] = 'The Moodle user who created this record';
+$string['privacy:metadata:govpersons'] = 'Governance personnel records and their author';
+$string['privacy:metadata:govpersons:createdby'] = 'The Moodle user who created this record';
+$string['privacy:metadata:materialchanges'] = 'Material change notifications and their author';
+$string['privacy:metadata:materialchanges:createdby'] = 'The Moodle user who created this record';
+$string['privacy:metadata:adc'] = 'Assessment and delivery capability records and their author';
+$string['privacy:metadata:adc:createdby'] = 'The Moodle user who created this record';
+$string['privacy:metadata:insurance'] = 'Insurance register entries and their author';
+$string['privacy:metadata:insurance:createdby'] = 'The Moodle user who created this record';
+$string['privacy:metadata:transitions'] = 'Training product transition plans and their author';
+$string['privacy:metadata:transitions:createdby'] = 'The Moodle user who created this record';
+$string['privacy:metadata:validations'] = 'Validation schedule and outcome records and their author';
+$string['privacy:metadata:validations:createdby'] = 'The Moodle user who created this record';
+$string['privacy:metadata:tas'] = 'Training and Assessment Strategies, recording who authored and who approved each';
+$string['privacy:metadata:tas:createdby'] = 'The Moodle user who created this record';
+$string['privacy:metadata:tas_consult'] = 'Industry consultation records attached to a TAS, and their author';
+$string['privacy:metadata:tas_consult:createdby'] = 'The Moodle user who created this record';
+$string['privacy:metadata:qualbuilder'] = 'Qualification Builder records and their author';
+$string['privacy:metadata:qualbuilder:createdby'] = 'The Moodle user who created this record';
+$string['privacy:metadata:certtmpl'] = 'Certificate templates, recording who created and who approved each';
+$string['privacy:metadata:certtmpl:createdby'] = 'The Moodle user who created this record';
+$string['privacy:metadata:certtmpl:approvedby'] = 'The Moodle user who approved this record';
+$string['privacy:metadata:enrolments'] = 'Unit enrolments and AVETMISS outcomes for the student';
+$string['privacy:metadata:enrolments:studentid'] = 'The RTO Compliance student record this belongs to';
+$string['privacy:metadata:usilog'] = 'Unique Student Identifier verification attempts and their results';
+$string['privacy:metadata:usilog:studentid'] = 'The RTO Compliance student record this belongs to';
+$string['privacy:metadata:autocerts'] = 'Automatic certificate generation records for the student';
+$string['privacy:metadata:autocerts:studentid'] = 'The RTO Compliance student record this belongs to';
+$string['privacy:metadata:rpl'] = 'Recognition of Prior Learning and Credit Transfer applications, evidence and decisions';
+$string['privacy:metadata:rpl:studentid'] = 'The RTO Compliance student record this belongs to';
+$string['privacy:metadata:trainer_currency'] = 'Industry currency evidence recorded against the trainer';
+$string['privacy:metadata:trainer_currency:trainerid'] = 'The RTO Compliance trainer record this belongs to';
+$string['privacy:metadata:trainer_voccomp'] = 'Vocational competency evidence recorded against the trainer';
+$string['privacy:metadata:trainer_voccomp:trainerid'] = 'The RTO Compliance trainer record this belongs to';
+$string['privacy:metadata:tas_trainers'] = 'Which trainers are assigned to deliver each Training and Assessment Strategy';
+$string['privacy:metadata:tas_trainers:trainerid'] = 'The RTO Compliance trainer record this belongs to';
+$string['privacy:metadata:suitability_answers'] = 'Individual answers given in a pre-enrolment suitability assessment';
+$string['privacy:metadata:suitability_answers:suitabilityid'] = 'The suitability assessment this answer belongs to';
+
+// Person-referencing columns declared for transparency but not used to find or
+// erase anyone - see provider::metadata_only_columns() and secondary_student_links().
+$string['privacy:metadata:tas:approvedby'] = 'Name of the staff member who approved the training and assessment strategy';
+$string['privacy:metadata:students:usiexemptby'] = 'The staff member who granted this student a USI exemption';
+$string['privacy:metadata:certs:issuedby'] = 'The staff member who issued the certificate';
+$string['privacy:metadata:soa_snapshot:issuedby'] = 'The staff member who issued the statement of attainment';
+$string['privacy:metadata:complaints:assignedto'] = 'The staff member the complaint is assigned to';
+$string['privacy:metadata:complaints:createdby'] = 'The staff member who recorded the complaint';
+$string['privacy:metadata:complaints:modifiedby'] = 'The staff member who last changed the complaint';
+$string['privacy:metadata:appeals:createdby'] = 'The staff member who recorded the appeal';
+$string['privacy:metadata:adc:submittedby'] = 'The staff member who submitted the annual declaration on compliance';
+$string['privacy:metadata:fees:createdby'] = 'The staff member who recorded the fee';
+$string['privacy:metadata:validators:createdby'] = 'The staff member who added the validator';
+$string['privacy:metadata:trainer_currency:verifiedby'] = 'The staff member who verified this industry currency evidence';
+$string['privacy:metadata:trainer_voccomp:verifiedby'] = 'The staff member who verified this vocational competency evidence';
+$string['privacy:metadata:supervision:trainerid'] = 'The trainer record being supervised';
+$string['privacy:metadata:suitability:trainerid'] = 'The trainer who completed the suitability review';
+$string['privacy:metadata:cricos_students:studentid'] = 'The student record this CRICOS enrolment belongs to';
+$string['privacy:metadata:fees:studentid'] = 'The student record this fee belongs to';
+$string['privacy:metadata:supportnotes:studentid'] = 'The student record this support note belongs to';
+
+// VALIDATOR-FORM-HELP (v6.3.28): each of these eight fields calls addHelpButton()
+// with an identifier whose '_help' body was written but whose TITLE string never
+// was, so validator_edit.php rendered eight literal [[validator_...]] placeholders
+// where the help-bubble headings belong. Each title matches the field's own label.
+$string['validator_organisation'] = 'Organisation';
+$string['validator_taecredential'] = 'TAE Credential';
+$string['validator_vocquals'] = 'Vocational Qualifications';
+$string['validator_industryexp'] = 'Industry Experience';
+$string['validator_expyears'] = 'Years of Experience';
+$string['validator_specialisations'] = 'Specialisations';
+$string['validator_status'] = 'Status';
+$string['validator_notes'] = 'Notes';

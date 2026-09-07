@@ -251,6 +251,20 @@ if ($action === 'save' && confirm_sesskey()) {
 
 if ($action === 'delete' && $id && confirm_sesskey()) {
     if ($dbman->table_exists('local_rtocompliance_rpl')) {
+        // RPL-DELETE-RETRACT (v6.3.26): deleting an APPROVED record must also retract the
+        // competency it granted. Reversing a decision on the edit path has retracted the
+        // posted outcome since v5.9.416, but deletion did not — so removing an approved RPL
+        // or Credit Transfer record left outcome 51 / 60 sitting in the results register
+        // with nothing behind it. The student stayed competent in completions, certificates
+        // and the AVETMISS NAT export, while the assessor decision, evidence and rationale
+        // that justified it were gone. An audit would find granted competency with no
+        // supporting record. Retract first, then delete.
+        if ($record
+                && in_array($record->decision, ['approved', 'partially_approved'], true)
+                && !empty($record->studentid)
+                && trim((string)$record->unitcode) !== '') {
+            local_rtocompliance_retract_rpl_outcome((int)$record->studentid, (string)$record->unitcode);
+        }
         // RPL-CT-EVIDENCE-UPLOAD (v5.9.410): clean up the record's uploaded files too.
         try {
             $fs = get_file_storage();
@@ -403,22 +417,53 @@ echo html_writer::end_div();
 
 // Version 5.9.381: link the record to a real student so an APPROVED decision writes the
 // RPL (51) / Credit Transfer (60) outcome into the results register automatically.
-$studentopts = ['' => '-- Select a student --'];
-$strecs = $DB->get_records_sql(
-    "SELECT s.id, u.firstname, u.lastname, s.usi
-       FROM {local_rtocompliance_students} s
-       JOIN {user} u ON u.id = s.userid
-      WHERE u.deleted = 0
-   ORDER BY u.lastname, u.firstname", null, 0, 2000);
-foreach ($strecs as $sr) {
-    $studentopts[$sr->id] = trim($sr->firstname . ' ' . $sr->lastname)
-        . ($sr->usi ? ' (USI ' . $sr->usi . ')' : '');
+// RPL-STUDENT-SEARCH (v6.3.23): this selector used to SELECT the whole student table
+// ordered by surname and capped at 2,000 rows. On a register larger than that, every
+// student after the alphabetical cutoff was silently unselectable — reported as
+// "only surnames A-G appear". The cap is gone and the search now runs in the database
+// via local_rtocompliance_search_students(), so the page ships only the student who is
+// already selected: the browser never receives the whole register or the whole USI list.
+$studentopts = ['' => get_string('rpl_student_none', 'local_rtocompliance')];
+$selectedsid = (int) ($formdata->studentid ?? 0);
+if ($selectedsid > 0) {
+    // Load the current selection explicitly so an existing record still shows its student.
+    $selrec = $DB->get_record_sql(
+        "SELECT s.id, u.firstname, u.lastname, s.usi
+           FROM {local_rtocompliance_students} s
+           JOIN {user} u ON u.id = s.userid
+          WHERE s.id = :sid AND u.deleted = 0",
+        ['sid' => $selectedsid]);
+    if ($selrec) {
+        $studentopts[$selrec->id] = trim($selrec->firstname . ' ' . $selrec->lastname)
+            . ($selrec->usi ? ' (USI ' . $selrec->usi . ')' : '');
+    }
 }
 echo html_writer::start_div('form-group');
 echo html_writer::tag('label', 'Student *', ['for' => 'studentid', 'class' => 'form-label']);
+// AUTOCOMPLETE-WIDTH (v6.3.25): the suggestions list is position:absolute, so its
+// width resolves against the nearest POSITIONED ancestor. Without this wrapper the
+// closest one is Moodle's page container, and the plugin's long-standing
+// "width:100% !important" rule on .form-autocomplete-suggestions then stretched the
+// dropdown across the whole viewport and off the left edge of the screen. The
+// wrapper is position:relative and width-capped, so 100% now means "this field".
+echo html_writer::start_div('rtoc-student-picker');
 echo html_writer::select(
     $studentopts, 'studentid', $formdata->studentid ?? '', false,
     ['id' => 'studentid', 'class' => 'form-control']);
+echo html_writer::end_div();
+// The option value stays local_rtocompliance_students.id — the save path and the
+// results-posting path both key on the local student record, not the Moodle user id.
+$PAGE->requires->js_call_amd(
+    'core/form-autocomplete', 'enhance',
+    [
+        '#studentid',
+        false,
+        'local_rtocompliance/rpl_student_selector',
+        get_string('rpl_student_search', 'local_rtocompliance'),
+        false,
+        true,
+        get_string('rpl_student_none', 'local_rtocompliance'),
+    ]);
 echo html_writer::tag(
     'small',
         'Linking a student lets an approved RPL / Credit Transfer decision post the outcome to Student Results automatically.',

@@ -10143,3 +10143,31 @@ html.rtoc-fs-open {
 .dark [class*="path-local-rtocompliance"] .rtoc-tmpl-toolbar {
     background: #2b2b2b;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   AUTOCOMPLETE-WIDTH (v6.3.25) — the RPL student picker.
+
+   .form-autocomplete-suggestions is position:absolute in Moodle core with no
+   width of its own, so it shrink-wraps its content. The plugin's v5.2.34 rule
+   forces width:100%, which for an absolutely positioned element resolves against
+   the nearest POSITIONED ancestor — on rpl_edit.php that was Moodle's page
+   wrapper, so the dropdown spanned the full viewport and ran off the left edge.
+
+   Making the picker itself position:relative gives that 100% something sensible
+   to resolve against, and caps the field at a readable width.
+   ───────────────────────────────────────────────────────────────────────────── */
+[class*="path-local-rtocompliance"] .rtoc-student-picker {
+    position: relative;
+    max-width: 520px;
+}
+
+[class*="path-local-rtocompliance"] .rtoc-student-picker .form-autocomplete-suggestions {
+    width: 100% !important;
+    max-width: 100% !important;
+    left: 0;
+}
+
+[class*="path-local-rtocompliance"] .rtoc-student-picker .form-autocomplete-selection,
+[class*="path-local-rtocompliance"] .rtoc-student-picker input[id^="form_autocomplete_input"] {
+    max-width: 100%;
+}

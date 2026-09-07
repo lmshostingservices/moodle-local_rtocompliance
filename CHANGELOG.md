@@ -1,3 +1,157 @@
+## [v6.3.28] - 2026-09-07
+
+### Fixed - a privacy erasure request now actually erases
+
+- The privacy provider declared **11** of the plugin's **44** tables holding personal
+  data, and deleted from only **8**. A seeded-user test proved that a *completed*
+  erasure request left that person's data behind in **28 tables**.
+- What survived a "successful" erasure: the student's suitability assessment and its
+  answers, their declarations, uploaded student documents, support notes, fee records,
+  Statement-of-Attainment snapshots, USI verification log, RPL and Credit Transfer
+  applications with their uploaded evidence files, CRICOS record, complaint, appeal,
+  audit rows, enrolments and issued certificates.
+- Every table is now classified, and the classification decides the outcome:
+  - **Subject** (21 tables) - the person *is* the record. Exported and **deleted**.
+  - **Foreign key** (8 tables) - reached through `studentid` / `trainerid` /
+    `suitabilityid`. Exported and **deleted with its parent**.
+  - **Authorship** (15 tables) - the person only *acted* on someone else's compliance
+    record (a `createdby` on a third-party arrangement, an `approvedby` on a TAS).
+    Declared and exported, but **retained**: destroying another party's compliance
+    record because the staff member who typed it asked for erasure would remove
+    evidence the RTO is legally required to keep under the Standards for RTOs and the
+    NVETR Act.
+- Personal file uploads now travel with their rows in both directions - purged on
+  erasure and included in an export: `rpl_evidence`, `ct_sourcecert`, `student_doc`,
+  `trainer_evidence`, `trainer_voccomp_evidence`. Areas belonging to retained records
+  (`supervision_evidence`, `consultation_evidence`) are deliberately left alone.
+- `get_users_in_context()` now finds every affected person rather than only those
+  present in the 8 previously-handled tables, so a site-wide erasure no longer misses
+  people entirely.
+- `delete_data_for_all_users_in_context()` previously truncated the log table alone.
+- 91 language strings added, so every declared table and column names itself on the
+  site's privacy registry page.
+
+### Not changed
+
+- **No schema change** - no table, column or index is touched.
+- **No functional change.** Nothing in the plugin calls the privacy provider; only
+  Moodle's own privacy subsystem does. Verified by search across all 207 files.
+
+## [v6.3.27] - 2026-09-08
+
+### Fixed - reversing an RPL / Credit Transfer now restores the enrolment's delivery
+
+- `apply_rpl_outcome()` overwrites an existing enrolment's `deliverymode` with `90`
+  (no delivery) and, for a credit transfer, zeroes `scheduledhours`. That part is right -
+  neither RPL nor credit transfer involves delivery.
+- `retract_rpl_outcome()` restored the outcome to `70` and cleared `manualoutcome`, but
+  never restored those two values, and nothing remembered them. A classroom enrolment
+  (mode 10, 40 hours) that was RPL'd and then reversed was reported to NCVER as a
+  **continuing enrolment with delivery mode "not applicable"**, and a reversed credit
+  transfer lost its scheduled hours permanently.
+- **Schema change:** two nullable columns on `local_rtocompliance_enrolments` -
+  `prerpldeliverymode` and `prerplscheduledhours` - hold the pre-RPL values while an
+  RPL/CT outcome is applied. `apply()` stashes them only on the *first* application, so an
+  approve / reverse / approve cycle still keeps the genuine originals. `retract()` restores
+  them and clears the stash. `NULL` means no RPL/CT outcome is applied, so **existing rows
+  need no backfill**.
+- Found by auditing the retraction path added in v6.3.26, not by a reported symptom.
+
+Savepoint 2026090800.
+
+## [v6.3.26] - 2026-09-07
+
+### Fixed - deleting an approved RPL / Credit Transfer left the student competent
+
+- An approved decision posts outcome **51** (RPL) or **60** (Credit Transfer) into the
+  results register. Reversing a decision on the edit path has retracted that outcome since
+  v5.9.416 - but **deleting** the record did not.
+- Deleting an approved application removed the assessor decision, the evidence and the
+  documented rationale, while the granted competency stayed in
+  `local_rtocompliance_enrolments` and flowed on into course completions, issued
+  certificates and the AVETMISS NAT export. An auditor would find a unit reported as
+  RPL-granted with no RPL record to justify it - the exact evidence trail Standards 1.6
+  and 1.7 require.
+- The delete path now calls `local_rtocompliance_retract_rpl_outcome()` before removing the
+  row, on the same conditions the edit path already used: decision approved or partially
+  approved, a linked student, and a unit code.
+- Found by an end-to-end audit of the RPL feature, not by the reported symptom.
+
+**No schema change** - the upgrade step bumps the savepoint only. Savepoint 2026090704.
+
+## [v6.3.25] - 2026-09-07
+
+### Fixed - RPL student picker: suggestions dropdown spanned the entire screen
+
+- `.form-autocomplete-suggestions` is `position: absolute` in Moodle core with no width,
+  so it shrink-wraps. The plugin has forced `width: 100% !important` on it since v5.2.34,
+  written for a different field. For an absolutely positioned element that resolves against
+  the nearest *positioned* ancestor - on `rpl_edit.php` that was Moodle's page wrapper, so
+  the dropdown rendered at full viewport width (measured 1500px on a 1500px viewport) and
+  ran off the left edge of the screen.
+- The picker is now wrapped in `.rtoc-student-picker`, which is `position: relative` and
+  capped at 520px, so `100%` resolves to the field itself.
+
+**No schema change** - the upgrade step bumps the savepoint only. Savepoint 2026090703.
+
+## [v6.3.24] - 2026-09-07
+
+### Fixed - RPL student search: single-character CJK surnames are searchable
+
+- The search service added in v6.3.23 required at least two characters before it would
+  query. That is correct for Latin script - a single letter matches most of the register
+  and forces a scan on every keystroke - but a Chinese, Japanese or Korean family name is
+  one character, so those students could not be found by surname at all. The record was
+  present and still reachable by USI or full name; only the surname search was blocked.
+- The minimum is now script-aware: one character when the query contains any non-ASCII
+  character, two otherwise.
+- Found by seeding students with Chinese, Spanish, Irish and Nordic names and re-running
+  the whole suite on MariaDB, where `sql_like()` emits
+  `LOWER(...) LIKE ... COLLATE utf8mb4_bin` instead of PostgreSQL's `ILIKE`.
+
+**No schema change** - the upgrade step bumps the savepoint only. Savepoint 2026090702.
+
+## [v6.3.23] - 2026-09-07
+
+### Fixed - RPL / Credit Transfer: every student is selectable again
+
+- The student selector on `rpl_edit.php` built its options from a `SELECT` over the whole
+  `local_rtocompliance_students` table, ordered by surname and capped at 2,000 rows. On a
+  register larger than that the cap fell inside the alphabet, so every student after the
+  cutoff was absent from the dropdown and could not be linked to an application - reported
+  as "only surnames A-G appear". The cap is a plugin limit, not a Moodle setting.
+- The cap is removed and the selector is searched in the database instead. New external
+  function `local_rtocompliance_search_students` (read, `local/rtocompliance:manage`, system
+  context) matches given name, family name, full name in either order, and USI, returning at
+  most 30 rows. New AMD module `local_rtocompliance/rpl_student_selector` supplies
+  `transport`/`processResults` to `core/form-autocomplete`.
+- The form now renders only the already-selected student, so the browser no longer receives
+  every student name and every USI on load - a data-minimisation improvement as well as a fix.
+- Deleted Moodle users remain excluded. The option value is still
+  `local_rtocompliance_students.id`, not the Moodle user id, because the save path and the
+  results-posting path both key on the local student record.
+
+**No schema change** - the upgrade step bumps the savepoint only. Savepoint 2026090701.
+
+## [v6.3.22] - 2026-09-03
+
+### Fixed — Qualification Builder: pasted packaging rules now refresh the rules card
+
+- The QPR paste handler in `amd/src/qualbuilder_edit.js` ended by calling `renderRulesCard()`, a
+  function that has never been defined anywhere in the plugin. Pasting packaging rules set
+  `QB.totalRequired` / `QB.coreRequired` / `QB.electiveReq`, printed the green confirmation and
+  refreshed the compliance dashboard, then threw a `ReferenceError` on the handler's last
+  statement — so the **Packaging Rules card kept showing the previous numbers** while the rest of
+  the page showed the new ones. The only other signal was a console error, so the natural reading
+  was that the parse had failed.
+- The call is now `renderPackagingRules()` — the function that repaints `#qb-rules-card` from
+  exactly those three values, and the one `loadFromTGA()` already calls after setting them from
+  training.gov.au.
+- One identifier changed, applied to `amd/src/qualbuilder_edit.js` and both `amd/build` artifacts,
+  because Moodle serves the build file.
+
+**No schema change** — the upgrade step bumps the savepoint only. Savepoint 2026090300.
+
 ## v6.3.21 — 21 Aug 2026
 
 ### Changed — release-pipeline sweep: one error and all seven warnings cleared, with no behaviour change

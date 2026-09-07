@@ -5874,10 +5874,12 @@ function local_rtocompliance_apply_rpl_outcome(int $studentid, string $unitcode,
     $outcome = $isct ? '60' : '51';
     $now     = time();
 
+    // RPL-RESTORE (v6.3.27): select the delivery columns too — they are stashed below.
     $existing = $DB->get_records_select(
         'local_rtocompliance_enrolments',
             'studentid = :sid AND UPPER(unitcode) = :uc',
-        ['sid' => $studentid, 'uc' => $unitcode], 'id ASC', 'id', 0, 1);
+        ['sid' => $studentid, 'uc' => $unitcode], 'id ASC',
+        'id, deliverymode, scheduledhours, prerpldeliverymode, prerplscheduledhours', 0, 1);
     if ($existing) {
         $row = reset($existing);
         $upd = (object)[
@@ -5897,6 +5899,20 @@ function local_rtocompliance_apply_rpl_outcome(int $studentid, string $unitcode,
         // (classroom) and its original delivered hours — NCVER then saw an RPL unit
         // reported as classroom-delivered. Set mode 90 for both; zero the scheduled
         // hours for CT (national recognition attracts none).
+        // RPL-RESTORE (v6.3.27): remember what this enrolment looked like BEFORE the
+        // RPL/CT outcome overwrote it, so retracting the decision can put it back.
+        // Previously apply() set deliverymode 90 (and zeroed hours for CT) and retract()
+        // restored only the outcome — leaving a reversed classroom enrolment reported to
+        // NCVER as "continuing" with delivery mode "not applicable", and a reversed credit
+        // transfer with its scheduled hours permanently zeroed.
+        // Only stash on the FIRST application: if a decision is approved, reversed and
+        // approved again, the values kept must still be the genuine pre-RPL ones.
+        if ($row->prerpldeliverymode === null) {
+            $upd->prerpldeliverymode = (string) $row->deliverymode;
+        }
+        if ($isct && $row->prerplscheduledhours === null) {
+            $upd->prerplscheduledhours = ($row->scheduledhours === null) ? null : (int) $row->scheduledhours;
+        }
         $upd->deliverymode = '90';
         if ($isct) { $upd->scheduledhours = 0; }
         $DB->update_record('local_rtocompliance_enrolments', $upd);
@@ -6219,15 +6235,28 @@ function local_rtocompliance_retract_rpl_outcome(int $studentid, string $unitcod
     $now = time();
     foreach ($rows as $row) {
         if ((int) $row->courseid === 0) {
+            // Created by the RPL/CT itself — there is no delivery to restore.
             $DB->delete_records('local_rtocompliance_enrolments', ['id' => $row->id]);
         } else {
-            $DB->update_record(
-                'local_rtocompliance_enrolments', (object) [
-                    'id'                => $row->id,
-                    'outcomeidentifier' => '70',
-                    'manualoutcome'     => 0,
-                    'timemodified'      => $now,
-            ]);
+            // RPL-RESTORE (v6.3.27): put the delivery values back. apply() overwrote
+            // deliverymode with 90 (and zeroed hours for CT); restoring only the outcome
+            // left this enrolment reported as "continuing" with no delivery mode.
+            $upd = (object) [
+                'id'                => $row->id,
+                'outcomeidentifier' => '70',
+                'manualoutcome'     => 0,
+                'timemodified'      => $now,
+            ];
+            if ($row->prerpldeliverymode !== null && $row->prerpldeliverymode !== '') {
+                $upd->deliverymode = (string) $row->prerpldeliverymode;
+            }
+            if ($row->prerplscheduledhours !== null) {
+                $upd->scheduledhours = (int) $row->prerplscheduledhours;
+            }
+            // Clear the stash so a later approval records fresh pre-RPL values.
+            $upd->prerpldeliverymode   = null;
+            $upd->prerplscheduledhours = null;
+            $DB->update_record('local_rtocompliance_enrolments', $upd);
         }
     }
     return true;

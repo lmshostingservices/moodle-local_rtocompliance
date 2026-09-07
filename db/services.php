@@ -24,6 +24,16 @@
 defined('MOODLE_INTERNAL') || die();
 
 $functions = [
+    // RPL-STUDENT-SEARCH (v6.3.23): backs the searchable student selector on rpl_edit.php.
+    // Read-only, capability-gated, returns at most 30 matches — never the whole register.
+    'local_rtocompliance_search_students' => [
+        'classname'   => 'local_rtocompliance\external',
+        'methodname'  => 'search_students',
+        'description' => 'Search RTO students by name or USI for the RPL student selector',
+        'type'        => 'read',
+        'capabilities' => 'local/rtocompliance:manage',
+        'ajax'        => true,
+    ],
     'local_rtocompliance_get_student' => [
         'classname'   => 'local_rtocompliance\external',
         'methodname'  => 'get_student',

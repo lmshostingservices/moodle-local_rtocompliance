@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<XMLDB PATH="local/rtocompliance/db" VERSION="20260502" COMMENT="XMLDB file for RTO Compliance plugin">
+<XMLDB PATH="local/rtocompliance/db" VERSION="20260907" COMMENT="XMLDB file for RTO Compliance plugin">
   <TABLES>
     <!-- Student AVETMISS profile data (NAT00080/85/90/100) -->
     <TABLE NAME="local_rtocompliance_students" COMMENT="Student AVETMISS profile and demographic data">
@@ -131,6 +131,8 @@
         <FIELD NAME="exportedinnat" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Last NAT export ID that included this"/>
         <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
         <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="prerpldeliverymode" TYPE="char" LENGTH="3" NOTNULL="false" COMMENT="RPL-RESTORE (v6.3.27): the deliverymode this enrolment had BEFORE an RPL/CT outcome overwrote it with 90. Restored when the outcome is retracted; NULL when no RPL/CT outcome is currently applied."/>
+        <FIELD NAME="prerplscheduledhours" TYPE="int" LENGTH="5" NOTNULL="false" COMMENT="RPL-RESTORE (v6.3.27): the scheduledhours this enrolment had BEFORE a Credit Transfer outcome zeroed them. Restored on retraction; NULL when no RPL/CT outcome is currently applied."/>
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
