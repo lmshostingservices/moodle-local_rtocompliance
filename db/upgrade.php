@@ -15085,5 +15085,14 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026090902, 'local', 'rtocompliance');
     }
 
+    if ($oldversion < 2026090903) {
+        // VERSION-BUMP-ONLY (v6.3.31): 6.3.30 was retired because more than one package had
+        // been built carrying that version string while the release was still being corrected,
+        // so the number could no longer identify what is installed on a site. The code is
+        // byte-identical to the final 6.3.30 build. Nothing to migrate; the savepoint moves so
+        // that a site which installed any 6.3.30 package still lands on a defined version.
+        upgrade_plugin_savepoint(true, 2026090903, 'local', 'rtocompliance');
+    }
+
     return true;
 }

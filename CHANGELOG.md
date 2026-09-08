@@ -1,3 +1,27 @@
+## [v6.3.31] - 2026-09-08
+
+### Changed - version bump only; the code is v6.3.30's, unchanged
+
+- More than one package was built and circulated carrying the version string **6.3.30** while
+  the release was still being corrected, and one of them was rejected by the release pipeline
+  for inconsistent metadata (`CHANGELOG.md` led with v6.3.28 while `version.php` said v6.3.30).
+- A version number attached to more than one artefact cannot identify what is installed on a
+  site. On sites already running this plugin that matters: *"the client is on 6.3.30"* would no
+  longer say **which** 6.3.30. This release retires that number.
+- **There is no functional difference between this and the final v6.3.30 build.** Not one line
+  of PHP, JavaScript or SQL differs. Only `version.php`, `db/upgrade.php` (a savepoint step) and
+  this file change.
+- In-code comment markers still read `v6.3.30`. That is deliberate: they record when each change
+  was made, and rewriting a hundred-odd of them would be churn carrying its own risk. Read
+  `v6.3.30` in a comment as "the credit-transfer release", which shipped as v6.3.31.
+- The v6.3.30 entry below remains the substantive record of what changed and why.
+
+### Not changed
+
+- **No schema change** - the upgrade step bumps the savepoint only.
+
+Savepoint 2026090903.
+
 ## [v6.3.30] - 2026-09-08
 
 ### Fixed - end-to-end audit of the credit transfer / RPL path
