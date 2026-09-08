@@ -5864,7 +5864,7 @@ function local_rtocompliance_compliance_modules(): array {
  * @return bool true if a register row was written/updated.
  */
 function local_rtocompliance_apply_rpl_outcome(int $studentid, string $unitcode, string $unitname,
-        string $qualcode, string $qualname, string $rpltype): bool {
+        string $qualcode, string $qualname, string $rpltype, int $decisiondate = 0): bool {
     global $DB;
     $unitcode = strtoupper(trim($unitcode));
     if ($studentid <= 0 || $unitcode === '') {
@@ -5873,13 +5873,23 @@ function local_rtocompliance_apply_rpl_outcome(int $studentid, string $unitcode,
     $isct    = ($rpltype === 'credit_transfer');
     $outcome = $isct ? '60' : '51';
     $now     = time();
+    // OUTCOME-DATE (v6.3.30): AVETMISS activity dates come from the assessor's DECISION date
+    // when the caller supplies one, not from the moment the form was saved. Back-entering a
+    // credit transfer decided in a prior collection period used to stamp it with "now", which
+    // moved the activity into the wrong collection year: the earlier NAT file was short a
+    // record and the current one carried an activity that did not happen in it. A future
+    // decision date is ignored (falls back to now) so a mistyped year cannot post forward.
+    $activityts = ($decisiondate > 0 && $decisiondate <= $now) ? $decisiondate : $now;
 
     // RPL-RESTORE (v6.3.27): select the delivery columns too — they are stashed below.
+    // v6.3.30: TRIM() as well as UPPER(), matching holds_granted_credit(). Without it a stored
+    // code carrying stray whitespace failed to match here and a second courseid = 0 row was
+    // inserted, while the duplicate guard in process_enrolment_task would have found it.
     $existing = $DB->get_records_select(
         'local_rtocompliance_enrolments',
-            'studentid = :sid AND UPPER(unitcode) = :uc',
+            'studentid = :sid AND UPPER(TRIM(unitcode)) = :uc',
         ['sid' => $studentid, 'uc' => $unitcode], 'id ASC',
-        'id, deliverymode, scheduledhours, prerpldeliverymode, prerplscheduledhours', 0, 1);
+        'id, deliverymode, scheduledhours, prerpldeliverymode, prerplscheduledhours, assessmentdate', 0, 1);
     if ($existing) {
         $row = reset($existing);
         $upd = (object)[
@@ -5915,6 +5925,13 @@ function local_rtocompliance_apply_rpl_outcome(int $studentid, string $unitcode,
         }
         $upd->deliverymode = '90';
         if ($isct) { $upd->scheduledhours = 0; }
+        // OUTCOME-DATE (v6.3.30): stamp the assessment date from the decision date ONLY when the
+        // row does not already carry one. The delivery dates on an existing enrolment are real
+        // reported data and nothing stashes them for restoration on retract (unlike delivery mode
+        // and scheduled hours, v6.3.27), so overwriting them here would be a one-way loss.
+        if (empty($row->assessmentdate)) {
+            $upd->assessmentdate = $activityts;
+        }
         $DB->update_record('local_rtocompliance_enrolments', $upd);
         return true;
     }
@@ -5938,12 +5955,12 @@ function local_rtocompliance_apply_rpl_outcome(int $studentid, string $unitcode,
     $row->feecharged        = 'Y';
     $row->scheduledhours    = $isct ? 0 : null;
     $row->status            = 'completed';
-    $row->assessmentdate    = $now;
+    $row->assessmentdate    = $activityts;
     // A-P1-2 (v5.9.387): populate activitystartdate so RPL/CT rows are not silently
     // excluded from NAT00120/NAT00060 (whose filter is activitystartdate <= periodend,
     // which drops NULLs) and so the exported start-date field is not blank.
-    $row->activitystartdate = $now;
-    $row->activityenddate   = $now;
+    $row->activitystartdate = $activityts;
+    $row->activityenddate   = $activityts;
     $row->timecreated       = $now;
     $row->timemodified      = $now;
     try {
@@ -5952,6 +5969,62 @@ function local_rtocompliance_apply_rpl_outcome(int $studentid, string $unitcode,
         return false;
     }
     return true;
+}
+
+/**
+ * MANUAL-CERT-OUTCOME (v6.3.30) — resolve the AVETMISS national outcome identifier this
+ * student actually holds for a unit code, from the results register.
+ *
+ * The manual "Issue certificate" form takes units as free text and used to stamp every one of
+ * them '20' (competency achieved/pass). For a unit granted by credit transfer (60) or RPL (51)
+ * that prints a factually wrong AQF document: the RTO certifies as assessed a unit it never
+ * delivered or assessed. Callers should use this to label a manually entered unit with the
+ * outcome on file, falling back to '20' only when the register knows nothing about it.
+ *
+ * Only COMPETENT outcomes are returned by default. A student may well hold a 70 (continuing)
+ * row for a unit they were also resulted outside the plugin, and stamping "Continuing enrolment"
+ * onto an issued Statement of Attainment would be worse than the '20' this replaced — the caller
+ * falls back to '20' on null, which is the historical behaviour. Pass $competentonly = false only
+ * where a non-competent outcome is genuinely wanted.
+ *
+ * @param  int    $userid        Moodle user id
+ * @param  string $unitcode      national unit code
+ * @param  bool   $competentonly restrict to 20/51/60/81 (default)
+ * @return string|null           AVETMISS outcome identifier, or null when nothing qualifies
+ */
+function local_rtocompliance_resolve_unit_outcome_for_user(int $userid, string $unitcode,
+        bool $competentonly = true): ?string {
+    global $DB;
+    $unitcode = strtoupper(trim($unitcode));
+    if ($userid <= 0 || $unitcode === '') {
+        return null;
+    }
+    $dbman = $DB->get_manager();
+    if (!$dbman->table_exists('local_rtocompliance_enrolments')
+            || !$dbman->table_exists('local_rtocompliance_students')) {
+        return null;
+    }
+    try {
+        // get_records_sql(..., 0, 1) rather than get_record_sql(): a student can legitimately hold
+        // more than one row for a unit (a legacy credit row alongside a delivery row), and
+        // get_record_sql() emits "found more than one record" debugging in exactly that case.
+        // The ORDER BY already decides which one wins.
+        $recs = $DB->get_records_sql(
+            "SELECT e.id, e.outcomeidentifier
+               FROM {local_rtocompliance_enrolments} e
+               JOIN {local_rtocompliance_students} s ON s.id = e.studentid
+              WHERE s.userid = :uid
+                AND UPPER(TRIM(e.unitcode)) = :uc
+                AND e.outcomeidentifier IS NOT NULL AND e.outcomeidentifier <> ''"
+                . ($competentonly ? " AND e.outcomeidentifier IN ('20','51','60','81')" : '') . "
+           ORDER BY CASE WHEN e.outcomeidentifier IN ('20','51','60','81') THEN 0 ELSE 1 END ASC,
+                    e.timemodified DESC, e.id DESC",
+            ['uid' => $userid, 'uc' => $unitcode], 0, 1);
+    } catch (\dml_exception $e) {
+        return null;
+    }
+    $rec = $recs ? reset($recs) : null;
+    return $rec ? (string) $rec->outcomeidentifier : null;
 }
 
 /**
@@ -6226,7 +6299,10 @@ function local_rtocompliance_retract_rpl_outcome(int $studentid, string $unitcod
     }
     $rows = $DB->get_records_select(
         'local_rtocompliance_enrolments',
-            'studentid = :sid AND UPPER(unitcode) = :uc AND manualoutcome = 1 '
+            // v6.3.30: TRIM() as well as UPPER(), so retraction matches exactly the rows
+            // apply_rpl_outcome() can create or convert. Without it, a code stored with stray
+            // whitespace could be granted but not withdrawn.
+            'studentid = :sid AND UPPER(TRIM(unitcode)) = :uc AND manualoutcome = 1 '
             . "AND outcomeidentifier IN ('51','60')",
         ['sid' => $studentid, 'uc' => $unitcode], 'id ASC');
     if (!$rows) {

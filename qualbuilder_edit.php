@@ -505,6 +505,20 @@ echo local_rtocompliance_page_banner($id ? get_string('edit_product', 'local_rto
                 <button type="button" class="btn btn-sm btn-outline-secondary qb-type-btn" data-type="elective">Electives only</button>
             </div>
             <span id="qb-unit-count" style="margin-left:auto"></span>
+<?php if ($id): ?>
+            <!-- MANUAL-UNIT-ENTRY (v6.3.30): qualbuilder_unit.php has existed for the whole life of
+                 the Qualification Builder but nothing has ever linked to it, so the only way to
+                 reach the Add/Edit Unit form was to type its URL — and typing it without
+                 qualbuilderid threw a missing-parameter error, which read as a broken page. It is
+                 now reachable from the product it belongs to, and every unit row carries an edit
+                 pencil to the same form (see qualbuilder_edit.js). Use it for a unit the TGA feed
+                 does not carry — an imported unit, or one being added by hand. -->
+            <a href="<?= $CFG->wwwroot ?>/local/rtocompliance/qualbuilder_unit.php?qualbuilderid=<?= (int)$id ?>"
+               class="btn btn-sm btn-outline-primary"
+               title="Add a unit to this qualification by hand — for an imported unit, or one the TGA feed does not carry. Saves straight to this product.">
+                &#43; Add unit manually
+            </a>
+<?php endif; ?>
         </div>
     </div>
 

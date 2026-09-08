@@ -589,13 +589,22 @@ $allcompleters = $DB->get_records_sql(
 // was recorded via NAT import (after the doenrol run creates course_completions) but
 // also guards legacy sites where Moodle course completion tracking is not configured.
 if (empty($allcompleters) && !empty($course->idnumber)) {
-    // FIX-FALLBACK-OUTCOMES (v5.2.29): Outcome set now matches the canonical competent
-    // set used by doenrol NAT-COMPLETION: '41' (VETiS satisfactorily completed) and
-    // '85' (non-assessable satisfactorily completed) added; '52' (RPL Not Granted)
-    // removed — it was mistakenly in the old list but was excluded from the competent
-    // set in v5.2.15 because a denied RPL application is not a completion.
+    // FIX-FALLBACK-OUTCOMES (v5.2.29): '52' (RPL not granted) removed — a denied RPL
+    // application is not a completion. See the v6.3.30 note below for the current set.
+    // OUTCOME-SET (v6.3.30): this fallback carried its own list which included '85' (Not yet
+    // started) and '53' (deleted from the AVETMISS standard in Edition 2.1 and unknown to this
+    // plugin). On a site without Moodle completion tracking it therefore offered certificates to
+    // students who had NOT STARTED the unit. Both are removed.
+    //
+    // '61' (superseded subject) is kept — it is treated as a completion by qi_report.php,
+    // nat_validate.php and student_profile.php, and dropping it would make superseded units
+    // vanish from this list. '41' is kept for the same reason of not changing behaviour
+    // silently, but note the plugin contradicts itself about it: avetmiss_codes.php calls it
+    // "Incomplete due to RTO closure" while the v4.9.127 release note documents it as the VETiS
+    // "Satisfactorily completed" code covering 88% of an audited real dataset. That needs
+    // deciding deliberately against the current NCVER definition, not changing in passing here.
     list($insql, $inparams) = $DB->get_in_or_equal(
-        ['20','41','51','53','60','61','81','85'],
+        ['20','41','51','60','61','81'],
         SQL_PARAMS_NAMED,
         'oc'
     );

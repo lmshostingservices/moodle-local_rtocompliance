@@ -30,7 +30,13 @@ require_once(__DIR__ . '/classes/audit_logger.php');
 use local_rtocompliance\audit_logger;
 
 $id = optional_param('id', 0, PARAM_INT);
-$qualbuilderid = required_param('qualbuilderid', PARAM_INT);
+// ENTRY-POINT (v6.3.30): this was a required_param, so reaching the page without a product id —
+// which was the ONLY way to reach it, because nothing in the plugin linked here until v6.3.30 —
+// threw "A required parameter (qualbuilderid) was missing" and read as a broken page. It is now
+// optional: with no product id the page asks which qualification the unit belongs to instead of
+// failing. The Qualification Builder edit screen now links here directly, per unit and for a new
+// one, so the picker is a fallback rather than the normal route.
+$qualbuilderid = optional_param('qualbuilderid', 0, PARAM_INT);
 $action = optional_param('action', '', PARAM_ALPHA);
 $confirm = optional_param('confirm', 0, PARAM_INT);
 
@@ -41,6 +47,72 @@ admin_externalpage_setup('local_rtocompliance_qualbuilder');
 require_capability('local/rtocompliance:manage', context_system::instance());
 require_login();
 $context = context_system::instance();
+
+// If a unit id was given without its product, resolve the product from the unit rather than
+// making the admin work out which one it belongs to.
+if (!$qualbuilderid && $id) {
+    $qualbuilderid = (int) $DB->get_field(
+        'local_rtocompliance_qualunits', 'qualbuilderid', ['id' => $id], IGNORE_MISSING);
+}
+
+if (!$qualbuilderid) {
+    // No product to work in — render a picker instead of throwing a missing-parameter error.
+    $PAGE->set_url(new moodle_url('/local/rtocompliance/qualbuilder_unit.php'));
+    $PAGE->set_title(get_string('add_unit', 'local_rtocompliance'));
+    $PAGE->set_heading(get_string('add_unit', 'local_rtocompliance'));
+    $PAGE->add_body_class('path-local-rtocompliance');
+    $PAGE->requires->css('/local/rtocompliance/styles.css');
+    $products = $DB->get_records(
+        'local_rtocompliance_qualbuilder', ['status' => 'active'],
+        'qualificationcode ASC', 'id, qualificationcode, qualificationname');
+    echo $OUTPUT->header();
+    echo local_rtocompliance_render_nav_header(
+        get_string('add_unit', 'local_rtocompliance'),
+        get_string('qualificationbuilder', 'local_rtocompliance'),
+        '/local/rtocompliance/qualbuilder.php',
+        'qualbuilder'
+    );
+    echo local_rtocompliance_page_banner(get_string('add_unit', 'local_rtocompliance'));
+    echo html_writer::start_div('', ['style' => 'max-width:640px;']);
+    if (optional_param('submitted', 0, PARAM_INT)) {
+        echo $OUTPUT->notification(
+            'Choose a training product from the list before continuing.',
+            \core\output\notification::NOTIFY_WARNING);
+    }
+    if (empty($products)) {
+        echo $OUTPUT->notification(
+            'There are no active training products yet. Build a qualification first, then add units to it.',
+            \core\output\notification::NOTIFY_INFO);
+        echo html_writer::link(
+            new moodle_url('/local/rtocompliance/qualbuilder.php'),
+            'Go to Qualification Builder', ['class' => 'btn btn-primary']);
+    } else {
+        echo html_writer::tag(
+            'p',
+            'Choose the training product this unit belongs to. Units are always added to a '
+            . 'qualification, skill set or single-unit product — that is what tells the plugin '
+            . 'which Statement of Attainment and AVETMISS program the unit reports against.');
+        echo html_writer::start_tag(
+            'form', ['method' => 'get', 'action' => (new moodle_url('/local/rtocompliance/qualbuilder_unit.php'))->out(false)]);
+        $opts = [];
+        foreach ($products as $prod) {
+            $opts[$prod->id] = $prod->qualificationcode . ' — ' . $prod->qualificationname;
+        }
+        echo html_writer::select($opts, 'qualbuilderid', '', ['' => 'Choose a training product…'], ['class' => 'form-control']);
+        echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'submitted', 'value' => '1']);
+        // Carry a unit id through the picker so arriving at ?id=N without a product (or with a
+        // stale one) still lands on that unit once the product is chosen.
+        if ($id) {
+            echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'id', 'value' => (string)$id]);
+        }
+        echo html_writer::empty_tag(
+            'input', ['type' => 'submit', 'value' => 'Continue', 'class' => 'btn btn-primary', 'style' => 'margin-top:10px;']);
+        echo html_writer::end_tag('form');
+    }
+    echo html_writer::end_div();
+    echo $OUTPUT->footer();
+    return;
+}
 
 $product = $DB->get_record('local_rtocompliance_qualbuilder', ['id' => $qualbuilderid], '*', MUST_EXIST);
 
@@ -99,7 +171,17 @@ if ($action === 'delete' && $id) {
 
 $unit = null;
 if ($id) {
-    $unit = $DB->get_record('local_rtocompliance_qualunits', ['id' => $id, 'qualbuilderid' => $qualbuilderid], '*', MUST_EXIST);
+    $unit = $DB->get_record('local_rtocompliance_qualunits', ['id' => $id, 'qualbuilderid' => $qualbuilderid]);
+    if (!$unit) {
+        // v6.3.30: a unit id that does not belong to this product used to surface as Moodle's raw
+        // "Can not find data record in database table". Say what is actually wrong instead.
+        redirect(
+            new moodle_url('/local/rtocompliance/qualbuilder_edit.php', ['id' => $qualbuilderid]),
+            'That unit does not belong to ' . s($product->qualificationcode) . '. It may have been '
+            . 'deleted, or moved to another training product.',
+            null, \core\output\notification::NOTIFY_ERROR
+        );
+    }
     $PAGE->set_title(get_string('edit_unit', 'local_rtocompliance'));
     $PAGE->set_heading(get_string('edit_unit', 'local_rtocompliance') . ': ' . $unit->unitcode);
     $PAGE->navbar->add(get_string('edit_unit', 'local_rtocompliance'));

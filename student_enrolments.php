@@ -284,6 +284,32 @@ if ($action === 'delete' && $enrolid) {
         // enrolment data required for compliance reporting.
         require_sesskey();
         $oldenrolment = $DB->get_record('local_rtocompliance_enrolments', ['id' => $enrolid, 'studentid' => $student->id]);
+        // RPL-CT-ORPHAN (v6.3.30): deleting a result that was GRANTED by an RPL or credit
+        // transfer decision leaves that decision showing Approved in the RPL register with the
+        // competency it granted gone — the mirror image of the gap v6.3.26 closed on the RPL
+        // side. Nothing re-posts it, so the unit silently stops appearing on Statements of
+        // Attainment and in the NAT export while the paperwork still says it was granted. Name
+        // the decision so the admin can reverse it there too rather than discovering it later.
+        $orphanwarning = '';
+        if ($oldenrolment
+                && in_array((string)$oldenrolment->outcomeidentifier, ['51', '60'], true)
+                && !empty($oldenrolment->manualoutcome)
+                && $DB->get_manager()->table_exists('local_rtocompliance_rpl')) {
+            $linked = $DB->get_records_select(
+                'local_rtocompliance_rpl',
+                    "studentid = :sid AND UPPER(TRIM(unitcode)) = :uc
+                     AND decision IN ('approved', 'partially_approved')",
+                ['sid' => $student->id, 'uc' => strtoupper(trim((string)$oldenrolment->unitcode))],
+                'id DESC', 'id, rpltype', 0, 1);
+            if ($linked) {
+                $lrec = reset($linked);
+                $orphanwarning = ' This result was granted by an approved '
+                    . ($lrec->rpltype === 'credit_transfer' ? 'credit transfer' : 'RPL')
+                    . ' decision, which still shows as Approved. Reverse or delete that record in '
+                    . 'RPL &amp; Credit Transfer as well, or the paperwork will claim credit the '
+                    . 'student no longer holds.';
+            }
+        }
         $DB->delete_records('local_rtocompliance_enrolments', ['id' => $enrolid, 'studentid' => $student->id]);
         
         $deletedata = $oldenrolment ? [
@@ -301,6 +327,12 @@ if ($action === 'delete' && $enrolid) {
             'Enrolment deleted: Student ' . $student->id . ', User ' . $userid . ', Unit ' . ($oldenrolment->unitcode ?? 'N/A'),
             $deletedata
         );
+        if ($orphanwarning !== '') {
+            \core\notification::add(
+                get_string('enrolment_deleted', 'local_rtocompliance') . $orphanwarning,
+                \core\output\notification::NOTIFY_WARNING);
+            redirect(new moodle_url('/local/rtocompliance/student_enrolments.php', ['userid' => $userid]));
+        }
         redirect(
             new moodle_url('/local/rtocompliance/student_enrolments.php', ['userid' => $userid]),
             get_string('enrolment_deleted', 'local_rtocompliance'),

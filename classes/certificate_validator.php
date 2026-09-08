@@ -770,7 +770,16 @@ class certificate_validator {
         $hascompetent = false;
         
         foreach ($units as $unit) {
-            $outcome = is_array($unit) ? ($unit['outcomeidentifier'] ?? '') : ($unit->outcomeidentifier ?? '');
+            // OUTCOME-KEY (v6.3.30): callers do not agree on the key. issue_certificate.php and
+            // soa_ajax.php build unit arrays with 'outcome'; the register-derived shape above uses
+            // 'outcomeidentifier'. Reading only the latter meant a manually entered unit always
+            // presented as '' and could never satisfy the competent-unit test — the check passed
+            // or failed on the OTHER units in the list, never on the ones typed in. Accept both.
+            if (is_array($unit)) {
+                $outcome = (string)($unit['outcomeidentifier'] ?? $unit['outcome'] ?? '');
+            } else {
+                $outcome = (string)($unit->outcomeidentifier ?? $unit->outcome ?? '');
+            }
             if (in_array($outcome, $competentoutcomes)) {
                 $hascompetent = true;
                 break;
@@ -815,8 +824,15 @@ class certificate_validator {
 
         $hasContinuing = false;
         foreach ($units as $unit) {
-            $outcome = is_array($unit) ? ($unit['outcomeidentifier'] ?? '') : ($unit->outcomeidentifier ?? '');
-            if (in_array($outcome, ['70', '90', '00'])) {
+            // v6.3.30: read the outcome the same way the competent-unit gate above does, so both
+            // loops in this method agree on the contract — the register-derived shape uses
+            // 'outcomeidentifier', issue_certificate.php uses 'outcome'.
+            if (is_array($unit)) {
+                $outcome = (string)($unit['outcomeidentifier'] ?? $unit['outcome'] ?? '');
+            } else {
+                $outcome = (string)($unit->outcomeidentifier ?? $unit->outcome ?? '');
+            }
+            if (in_array($outcome, ['70', '90', '00'], true)) {
                 $hasContinuing = true;
                 break;
             }

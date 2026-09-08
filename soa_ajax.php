@@ -86,26 +86,49 @@ try {
             global $DB, $USER;
 
             $userid    = required_param('userid', PARAM_INT);
-            $courseids = required_param('courseids', PARAM_RAW); // JSON array of ints  // pipeline-ignore: PARAM_RAW — JSON document, json_decode()'d immediately and rejected if it does not decode
+            // SELECTION-KEY (v6.3.29): the wizard now posts unitkeys (stable per unit, works for
+            // RPL/CT units that have no Moodle course). courseids stays accepted so an
+            // unrefreshed page — or any external caller — keeps working.
+            $unitkeys  = optional_param('unitkeys', '', PARAM_RAW); // JSON array of strings  // pipeline-ignore: PARAM_RAW — JSON document, json_decode()'d immediately and rejected if it does not decode
+            $courseids = optional_param('courseids', '', PARAM_RAW); // JSON array of ints  // pipeline-ignore: PARAM_RAW — JSON document, json_decode()'d immediately and rejected if it does not decode
             $audience  = optional_param('audience', 'default', PARAM_ALPHA);
             $qualcode  = optional_param('qualcode', '', PARAM_ALPHANUMEXT);
             $qualname  = optional_param('qualname', '', PARAM_TEXT);
             $notes     = optional_param('notes', '', PARAM_TEXT);
             $bypassval = optional_param('bypass', 0, PARAM_INT);
 
-            $cidArray = json_decode($courseids, true);
-            if (!is_array($cidArray) || empty($cidArray)) {
+            $keyArray = $unitkeys !== '' ? json_decode($unitkeys, true) : null;
+            $cidArray = $courseids !== '' ? json_decode($courseids, true) : null;
+            if ((!is_array($keyArray) || empty($keyArray)) && (!is_array($cidArray) || empty($cidArray))) {
                 echo json_encode(['ok' => false, 'error' => 'No units selected']);
                 break;
             }
-            $cidArray = array_map('intval', $cidArray);
+            $keyArray = is_array($keyArray) ? array_map('strval', $keyArray) : [];
+            $cidArray = is_array($cidArray) ? array_map('intval', $cidArray) : [];
 
             // Load all eligible units for this student
             $allUnits = soa_compliance_engine::get_eligible_units($userid, (bool)$bypassval);
 
-            // Keep only the ones the admin selected
+            // Keep only the ones the admin selected. unitkey is authoritative when the wizard
+            // sent it; courseid is consulted ONLY as a fallback for a caller that sent no
+            // unitkeys (an unrefreshed page, or an external caller).
+            //
+            // v6.3.30: the two used to be OR-ed, and the wizard posts both. Since v6.3.29 two
+            // eligible units can legitimately share one courseid — a course completion supplying
+            // one unit code, and a converted register row on the same course supplying another —
+            // so an OR could add a unit the admin had not ticked to the issued Statement of
+            // Attainment and to its immutable snapshot. A courseid match also ignores courseid 0,
+            // which is the "no delivery course" marker on granted rows, not an id.
             $selectedUnits = array_values(
-                array_filter($allUnits, function ($u) use ($cidArray) { return in_array((int)$u->courseid, $cidArray, true); })
+                array_filter(
+                    $allUnits, function ($u) use ($keyArray, $cidArray) {
+                        if ($keyArray) {
+                            return in_array((string)($u->unitkey ?? ''), $keyArray, true);
+                        }
+                        return (int)$u->courseid > 0
+                            && in_array((int)$u->courseid, $cidArray, true);
+                    }
+                )
             );
 
             if (empty($selectedUnits)) {
@@ -140,13 +163,21 @@ try {
             // unverified USI or with mandatory RTO identity unset. These gates are
             // deliberately NOT covered by the compliance $bypass (which only overrides
             // unit-level checks): USI (Clause 12) and RTO identity are non-negotiable.
-            $stusi   = $DB->get_record('local_rtocompliance_students', ['userid' => $userid], 'usi, usiverified');
+            // USI-EXEMPTION (v6.3.30): this gate selected only usi/usiverified and had no
+            // exemption branch, so a student recorded as exempt from the USI requirement — the
+            // case v6.3.19 added, and the one credit-transfer cohorts most often fall into,
+            // study completed outside Australia — was refused with a message telling the admin
+            // to do the very thing they had already done. programmatic_issue_cert() and the
+            // compliance engine both honour usiexempt; this path now does too.
+            $stusi   = $DB->get_record(
+                'local_rtocompliance_students', ['userid' => $userid], 'usi, usiverified, usiexempt');
             $studusi = trim((string)($stusi->usi ?? ''));
-            if ($studusi === '') {
+            $usiexempt = !empty($stusi->usiexempt);
+            if (!$usiexempt && $studusi === '') {
                 echo json_encode(['ok' => false, 'error' => 'Cannot issue — no USI is recorded for this student. A verified USI is required before issuing a Statement of Attainment (or mark the student USI-exempt).']);
                 break;
             }
-            if (!local_rtocompliance_usi_is_verified($stusi->usiverified)) {
+            if (!$usiexempt && !local_rtocompliance_usi_is_verified($stusi->usiverified)) {
                 echo json_encode(['ok' => false, 'error' => 'Cannot issue — the USI on file has not been verified with the USI Registry. Verify the USI before issuing this Statement of Attainment.']);
                 break;
             }

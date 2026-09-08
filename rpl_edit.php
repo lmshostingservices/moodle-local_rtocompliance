@@ -170,7 +170,15 @@ if ($action === 'save' && confirm_sesskey()) {
     if ($dbman->table_exists('local_rtocompliance_rpl')) {
         // Version 5.9.381: an APPROVED (or partially approved) decision linked to a real
         // student + unit posts the RPL/CT outcome into the results register.
-        $postoutcome = function () use ($data, $id) {
+        // CT-GATE-CREATE-PATH-FIX (v6.3.30): the closure used to capture $id by value, which is
+        // 0 on the create path. The uploaded-source-certificate branch of the credit-transfer
+        // gate below was guarded on that $id being truthy, so on a NEW record the ct_sourcecert
+        // files uploaded moments earlier were never counted: an assessor who attached the
+        // issuing RTO's testamur (rather than ticking "USI transcript verified") got a record
+        // saved as Approved with no outcome 60 posted, and a warning telling them to do exactly
+        // what they had just done. The record id is now passed in by the caller — $newid on the
+        // create path — so the gate sees the files in both cases.
+        $postoutcome = function (int $recordid) use ($data) {
             if (in_array($data->decision, ['approved', 'partially_approved'], true)
                     && !empty($data->studentid) && trim((string)$data->unitcode) !== '') {
                 // RPL-P1 (v5.9.424): a NOT-EQUIVALENT superseded-unit mapping cannot justify
@@ -194,8 +202,10 @@ if ($action === 'save' && confirm_sesskey()) {
                 // checkbox was required, with no source document or code enforced.
                 if ((string)$data->rpltype === 'credit_transfer') {
                     $hassource = !empty($data->usitranscriptverified);
-                    if (!$hassource && $id && function_exists('local_rtocompliance_get_rpl_evidence_files')) {
-                        $hassource = count(local_rtocompliance_get_rpl_evidence_files((int)$id, 'ct_sourcecert')) > 0;
+                    if (!$hassource && $recordid > 0
+                            && function_exists('local_rtocompliance_get_rpl_evidence_files')) {
+                        $hassource = count(
+                            local_rtocompliance_get_rpl_evidence_files($recordid, 'ct_sourcecert')) > 0;
                     }
                     $hasqualcode = trim((string)($data->sourcequalcode ?? '')) !== '';
                     if (!$hassource || !$hasqualcode) {
@@ -210,9 +220,47 @@ if ($action === 'save' && confirm_sesskey()) {
                         return;
                     }
                 }
-                local_rtocompliance_apply_rpl_outcome(
+                // OUTCOME-DATE (v6.3.30): the register row is dated from the assessor's decision
+                // date when one is recorded, not from the moment the form was saved. Back-entering
+                // a credit transfer decided in a previous collection period used to stamp it with
+                // "now", moving the activity into the wrong AVETMISS collection year.
+                $decisiondate = (int)($data->decisiondate ?? 0);
+
+                $posted = local_rtocompliance_apply_rpl_outcome(
                     (int)$data->studentid, (string)$data->unitcode,
-                    (string)$data->unitname, (string)$data->qualcode, (string)$data->qualname, (string)$data->rpltype);
+                    (string)$data->unitname, (string)$data->qualcode, (string)$data->qualname,
+                    (string)$data->rpltype, $decisiondate);
+
+                // POSTED-CONFIRMATION (v6.3.30): say plainly that the competency reached the
+                // results register, and name the outcome. Silence used to be the only signal —
+                // an approved decision that posted nothing looked identical to one that worked.
+                if ($posted) {
+                    $isct = ((string)$data->rpltype === 'credit_transfer');
+                    \core\notification::add(
+                        s(strtoupper(trim((string)$data->unitcode))) . ' recorded in the results register as '
+                        . ($isct ? 'Credit transfer / national recognition (AVETMISS outcome 60)'
+                                 : 'RPL granted (AVETMISS outcome 51)')
+                        . '. It is now available on Student Results, the Statement of Attainment '
+                        . 'wizard and the AVETMISS NAT export.',
+                        \core\output\notification::NOTIFY_SUCCESS
+                    );
+                } else {
+                    \core\notification::add(
+                        'The decision was saved but the outcome could NOT be written to the results '
+                        . 'register for ' . s((string)$data->unitcode) . '. Check the student is linked '
+                        . 'to a record in the student register, then save this record again.',
+                        \core\output\notification::NOTIFY_ERROR
+                    );
+                }
+            } else if (in_array($data->decision, ['approved', 'partially_approved'], true)
+                    && !empty($data->studentid) && trim((string)$data->unitcode) === '') {
+                // BLANK-UNIT-SILENT-NOOP (v6.3.30): an approved record with no unit code used to
+                // save with a green "Approved" badge and post nothing at all, with no message.
+                \core\notification::add(
+                    'This decision is marked Approved but has no unit code, so no outcome was '
+                    . 'recorded in the results register. Add the unit code and save again.',
+                    \core\output\notification::NOTIFY_WARNING
+                );
             }
         };
         if ($id && $record) {
@@ -222,8 +270,28 @@ if ($action === 'save' && confirm_sesskey()) {
             // can't leave a competent unit over-reporting into completion/certs/NAT.
             $wasapproved = in_array($record->decision, ['approved', 'partially_approved'], true);
             $nowapproved = in_array($data->decision, ['approved', 'partially_approved'], true);
-            if ($wasapproved && !$nowapproved && !empty($record->studentid) && trim((string)$record->unitcode) !== '') {
+            // ORPHANED-CREDIT-ON-EDIT (v6.3.30): retracting only on approved -> not-approved left
+            // credit stranded whenever an APPROVED record was re-pointed at a different unit or a
+            // different student (a typo correction, or the wrong student picked). The old outcome
+            // stayed in the register with no record behind it while a second one was posted for
+            // the new unit — the same audit gap the v6.3.26 delete fix closed, left open here.
+            // Retract the PREVIOUS (student, unit) whenever the record stops being approved OR
+            // stops pointing at that pair.
+            $identitymoved = $wasapproved && $nowapproved
+                && ((int)$record->studentid !== (int)$data->studentid
+                    || strtoupper(trim((string)$record->unitcode))
+                       !== strtoupper(trim((string)$data->unitcode)));
+            if ($wasapproved && (!$nowapproved || $identitymoved)
+                    && !empty($record->studentid) && trim((string)$record->unitcode) !== '') {
                 local_rtocompliance_retract_rpl_outcome((int)$record->studentid, (string)$record->unitcode);
+                if ($identitymoved) {
+                    \core\notification::add(
+                        'This record previously granted ' . s(strtoupper(trim((string)$record->unitcode)))
+                        . '. That credit has been withdrawn from the results register so it is not '
+                        . 'left behind with no decision supporting it.',
+                        \core\output\notification::NOTIFY_INFO
+                    );
+                }
             }
             $data->id = $id;
             $DB->update_record('local_rtocompliance_rpl', $data);
@@ -232,7 +300,7 @@ if ($action === 'save' && confirm_sesskey()) {
             // source-certificate files against this record id.
             $upev = local_rtocompliance_save_rpl_evidence_files($id, 'rpl_evidence', 'rpl_evidence');
             $upct = local_rtocompliance_save_rpl_evidence_files($id, 'ct_sourcecert', 'ct_sourcecert');
-            $postoutcome();
+            $postoutcome((int)$id);
             $upmsg = ($upev + $upct) > 0 ? ' ' . ($upev + $upct) . ' file(s) uploaded.' : '';
             redirect(new moodle_url('/local/rtocompliance/rpl.php', ['tab' => $tab]), 'Record updated successfully.' . $upmsg, null, \core\output\notification::NOTIFY_SUCCESS);
         } else {
@@ -242,7 +310,7 @@ if ($action === 'save' && confirm_sesskey()) {
             // RPL-CT-EVIDENCE-UPLOAD (v5.9.410): store uploads against the new record id.
             $upev = local_rtocompliance_save_rpl_evidence_files((int) $newid, 'rpl_evidence', 'rpl_evidence');
             $upct = local_rtocompliance_save_rpl_evidence_files((int) $newid, 'ct_sourcecert', 'ct_sourcecert');
-            $postoutcome();
+            $postoutcome((int) $newid);
             $upmsg = ($upev + $upct) > 0 ? ' ' . ($upev + $upct) . ' file(s) uploaded.' : '';
             redirect(new moodle_url('/local/rtocompliance/rpl.php', ['tab' => $tab]), 'Record saved successfully.' . $upmsg, null, \core\output\notification::NOTIFY_SUCCESS);
         }

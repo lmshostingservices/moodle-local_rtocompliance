@@ -158,10 +158,33 @@ class issue_certificate_form extends moodleform {
         if ($data['certtype'] === 'statement' && !empty($data['units'])) {
             $unitlines = array_filter(array_map('trim', explode("\n", $data['units'])));
             foreach ($unitlines as $line) {
+                // MANUAL-CERT-OUTCOME (v6.3.30): every manually typed unit used to be stamped
+                // '20' (competency achieved). A unit granted by credit transfer (60) or RPL (51)
+                // then printed on the Statement of Attainment as though this RTO assessed it.
+                // Take the outcome the student actually holds in the results register; fall back
+                // to '20' only when the register has no row for the unit.
                 if (preg_match('/^([A-Z0-9]+)\s*[-–]\s*(.+)$/i', $line, $matches)) {
-                    $unitsarray[] = ['code' => trim($matches[1]), 'name' => trim($matches[2]), 'outcome' => '20'];
+                    $_ucode = trim($matches[1]);
+                    $_res = local_rtocompliance_resolve_unit_outcome_for_user(
+                        (int)($data['userid'] ?? 0), $_ucode);
+                    $unitsarray[] = [
+                        'code' => $_ucode, 'name' => trim($matches[2]),
+                        // 'outcome' is what gets PRINTED — fall back to '20' as before.
+                        'outcome' => $_res ?? '20',
+                        // VALIDATION-GATE (v6.3.30): 'outcomeidentifier' is what the compliance
+                        // validator reads, and it deliberately carries '' when the register knows
+                        // nothing about this unit. Letting the '20' print-fallback reach the
+                        // validator would mean typing any line at all satisfied the "at least one
+                        // competent unit" gate, silently removing a check. A unit the register
+                        // confirms as competent now genuinely passes it, which is the improvement;
+                        // an unknown unit still needs Bypass Validation, exactly as before.
+                        'outcomeidentifier' => $_res ?? '',
+                    ];
                 } else {
-                    $unitsarray[] = ['code' => '', 'name' => trim($line), 'outcome' => '20'];
+                    $unitsarray[] = [
+                        'code' => '', 'name' => trim($line),
+                        'outcome' => '20', 'outcomeidentifier' => '',
+                    ];
                 }
             }
         }
@@ -196,10 +219,21 @@ if ($form->is_cancelled()) {
     if ($data->certtype === 'statement' && !empty($data->units)) {
         $unitlines = array_filter(array_map('trim', explode("\n", $data->units)));
         foreach ($unitlines as $line) {
+            // MANUAL-CERT-OUTCOME (v6.3.30): see the note on the validation copy above — the
+            // issued document must state the outcome the student actually holds, not '20'.
             if (preg_match('/^([A-Z0-9]+)\s*[-–]\s*(.+)$/i', $line, $matches)) {
-                $unitsarray[] = ['code' => trim($matches[1]), 'name' => trim($matches[2]), 'outcome' => '20'];
+                $_ucode = trim($matches[1]);
+                $_res = local_rtocompliance_resolve_unit_outcome_for_user((int)$data->userid, $_ucode);
+                $unitsarray[] = [
+                    'code' => $_ucode, 'name' => trim($matches[2]),
+                    'outcome' => $_res ?? '20',
+                    'outcomeidentifier' => $_res ?? '',   // see the note on the validation copy
+                ];
             } else {
-                $unitsarray[] = ['code' => '', 'name' => trim($line), 'outcome' => '20'];
+                $unitsarray[] = [
+                    'code' => '', 'name' => trim($line),
+                    'outcome' => '20', 'outcomeidentifier' => '',
+                ];
             }
         }
     }
@@ -619,7 +653,7 @@ echo html_writer::tag(
         html_writer::tag(
         'ul', 
                 html_writer::tag('li', '<strong>Testamur/Qualification:</strong> Requires valid USI and complete AVETMISS profile. Student must have completed all core and required elective units.') .
-                html_writer::tag('li', '<strong>Statement of Attainment:</strong> Requires valid USI. At least one unit must have a competent outcome (20, 51, 52, 60, 81, 82).') .
+                html_writer::tag('li', '<strong>Statement of Attainment:</strong> Requires valid USI. At least one unit must have a competent outcome &mdash; 20 (competency achieved), 51 (RPL granted), 60 (credit transfer) or 81 (non-assessable, satisfactorily completed). 52 (RPL not granted) and 82 (not satisfactorily completed) are NOT competent.') .
                 html_writer::tag('li', '<strong>Record of Results:</strong> Issued with Testamur. Lists all units and outcomes.') .
                 html_writer::tag('li', '<strong>Certificate of Attendance:</strong> For non-accredited training only. No USI or competency requirements.')
         ),

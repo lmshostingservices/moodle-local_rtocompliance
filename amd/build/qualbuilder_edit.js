@@ -74,6 +74,7 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
                 variants: u[8] || [],  // [8] extra course IDs that also deliver this unit
             };
         }),
+        qualbuilderid: INIT.qualbuilderid || 0,
         categories: [],
         courses: [],
         unitCodeMap: {},   // unitcode.toUpperCase() → [{id, category, shortname}] — PHP-built, O(1) lookup
@@ -1710,6 +1711,17 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
         var delBtn = (isImported || !isCore)
             ? '<button type=\"button\" class=\"qb-del-unit-btn btn btn-sm btn-outline-danger\" data-unitcode=\"' + escH(code) + '\" style=\"padding:1px 6px;font-size:0.75rem;visibility:hidden\">\u2717</button>'
             : '';
+        // MANUAL-UNIT-ENTRY (v6.3.30): a unit already saved against this product gets an edit
+        // link to qualbuilder_unit.php, the full Add/Edit Unit form (unit type, elective group,
+        // nominal hours, credit points, sequence, linked course). That form has existed all along
+        // but nothing linked to it, so it was unreachable except by typing its URL.
+        var savedUnit = QB.currentUnits.find(function (u) { return u.unitcode === code && u.id > 0; });
+        var editBtn = (savedUnit && QB.qualbuilderid)
+            ? '<a href=\"' + QB.wwwroot + '/local/rtocompliance/qualbuilder_unit.php?id=' + savedUnit.id +
+              '&qualbuilderid=' + QB.qualbuilderid + '\" class=\"qb-edit-unit-btn btn btn-sm btn-outline-secondary\" ' +
+              'title=\"Edit this unit&#39;s details \u2014 type, elective group, nominal hours, credit points, sequence and linked course\" ' +
+              'style=\"padding:1px 6px;font-size:0.75rem;visibility:hidden\">\u270E</a>'
+            : '';
         // QB-VARIANTS: look up variant course IDs for this unit from QB.currentUnits.
         var unitState = QB.currentUnits.find(function (u) { return u.unitcode === code; });
         var unitVariants = unitState ? (unitState.variants || []) : [];
@@ -1775,14 +1787,14 @@ define('local_rtocompliance/qualbuilder_edit', ['jquery', 'core/ajax', 'core/not
             groupHtml = '<span class=\"qb-badge qb-badge-group\" style=\"font-size:0.7rem;margin-left:4px\">Grp&nbsp;' + escH(group) + '</span>';
         }
         return '<div class=\"' + rowCls + '\" data-unitcode=\"' + escH(code) + '\" data-unittype=\"' + type + '\" data-unitgroup=\"' + escH(group) + '\" data-unitname=\"' + escH(name) + '\"' +
-            ' onmouseover=\"this.querySelector && this.querySelector(\'.qb-del-unit-btn\') && (this.querySelector(\'.qb-del-unit-btn\').style.visibility=\'visible\')\"' +
-            ' onmouseout=\"this.querySelector && this.querySelector(\'.qb-del-unit-btn\') && (this.querySelector(\'.qb-del-unit-btn\').style.visibility=\'hidden\')\">'+
+            ' onmouseover=\"this.querySelectorAll && this.querySelectorAll(\'.qb-del-unit-btn,.qb-edit-unit-btn\').forEach(function(b){b.style.visibility=\'visible\';})\"' +
+            ' onmouseout=\"this.querySelectorAll && this.querySelectorAll(\'.qb-del-unit-btn,.qb-edit-unit-btn\').forEach(function(b){b.style.visibility=\'hidden\';})\">'+
             '<div class=\"qb-unit-check\">' + checkHtml + '</div>' +
             '<div class=\"qb-unit-info\"><span class=\"qb-unit-code\">' + escH(code) + '</span>' +
             '<span class=\"qb-unit-name\">' + escH(name) + '</span>' + hoursHtml + ptsHtml +
             groupHtml + '</div>' +
             courseCell +
-            '<div style=\"width:28px;flex-shrink:0\">' + delBtn + '</div>' +
+            '<div style=\"width:58px;flex-shrink:0;display:flex;gap:2px;justify-content:flex-end\">' + editBtn + delBtn + '</div>' +
             '</div>';
     }
 

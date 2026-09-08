@@ -15063,5 +15063,27 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026090900, 'local', 'rtocompliance');
     }
 
+    if ($oldversion < 2026090901) {
+        // SOA-RPL-CT-VISIBILITY (v6.3.29): the multi-unit Statement of Attainment wizard
+        // built its eligible-unit list purely from Moodle {course_completions}, so an
+        // approved RPL (51) or Credit Transfer (60) - which apply_rpl_outcome() writes to
+        // the results register with courseid 0 and deliberately never records as a course
+        // completion - could never appear on the SoA. Purely a code change in
+        // soa_compliance_engine.php, soa_ajax.php and soa_issue.php; no table, column or
+        // index is touched.
+        upgrade_plugin_savepoint(true, 2026090901, 'local', 'rtocompliance');
+    }
+
+    if ($oldversion < 2026090902) {
+        // CT-END-TO-END (v6.3.30): full audit of the credit transfer / RPL path after the
+        // v6.3.29 SoA visibility fix - the create-path source gate, the In Results column on
+        // the RPL register, USI exemption on the SoA wizard, the manual certificate outcome,
+        // the duplicate NAT00120 row, orphaned credit on edit, the drifted competent-outcome
+        // list in generate_course_certs.php, decision-dated activity dates, the category
+        // filter, the delete warning, and the Add/Edit Unit entry point. Purely code and
+        // documentation; no table, column or index is touched.
+        upgrade_plugin_savepoint(true, 2026090902, 'local', 'rtocompliance');
+    }
+
     return true;
 }

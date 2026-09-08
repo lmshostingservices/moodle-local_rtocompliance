@@ -56,7 +56,9 @@ class soa_compliance_engine {
         '70' => 'Continuing activity',
         '81' => 'Non-assessable enrolment — satisfactorily completed',
         '82' => 'Non-assessable enrolment — withdrawn/not satisfactorily completed',
-        '85' => 'Not started',
+        // v6.3.30: aligned with avetmiss_codes::get_outcome_identifiers() (AVETMISS 2.3).
+        '41' => 'Incomplete due to RTO closure',
+        '85' => 'Not yet started',
         '00' => 'Result not finalised',
     ];
 
@@ -101,6 +103,23 @@ class soa_compliance_engine {
         return strtoupper(trim((string)$shortname));
     }
 
+    /**
+     * REGISTER-ONLY-UNITS (v6.3.29): the label shown in place of a Moodle category for a unit
+     * that exists only in the results register (no delivery course at this RTO).
+     *
+     * @param  string $outcome AVETMISS national outcome identifier
+     * @return string
+     */
+    private static function registeronly_label(string $outcome): string {
+        if ($outcome === '60') {
+            return 'Credit transfer (national recognition)';
+        }
+        if ($outcome === '51') {
+            return 'Recognition of prior learning';
+        }
+        return 'Results register (not delivered by this RTO)';
+    }
+
     public static function get_eligible_units(int $userid, bool $override = false): array {
         global $DB;
 
@@ -129,9 +148,13 @@ class soa_compliance_engine {
             ['uid' => $userid]
         );
 
-        if (empty($completions)) {
-            return [];
-        }
+        // REGISTER-ONLY-UNITS (v6.3.29): do NOT bail out when there are no Moodle course
+        // completions. RPL (51) and Credit Transfer (60) are posted straight to the results
+        // register by local_rtocompliance_apply_rpl_outcome() and deliberately never create a
+        // {course_completions} row (the RTO did not deliver or assess the unit). A student whose
+        // only competent results are credit transfers still has units eligible for a Statement of
+        // Attainment, so the register sweep below must run even with zero completions.
+        $completions = $completions ?: [];
 
         // ── AVETMISS outcome per course (from enrolments table if present) ───
         $outcomeMap = [];  // courseid => outcomeidentifier
@@ -141,10 +164,22 @@ class soa_compliance_engine {
                 'local_rtocompliance_students',
                 ['userid' => $userid], 'id', IGNORE_MISSING);
             if ($stud) {
+                // FIRST-COLUMN-UNIQUENESS (v6.3.30): this map is keyed by courseid, and
+                // get_records_sql() keys its result by the first column and silently drops
+                // duplicates — so the id DESC ordering the "first wins" loop below relies on was
+                // already being decided inside the DML layer, and on developer sites Moodle
+                // emitted "Did you remember to make the first column something unique … Duplicate
+                // value '0' found in column 'courseid'" on every load of the SoA wizard.
+                //
+                // courseid = 0 is the culprit: every granted RPL/credit transfer carries it, so a
+                // student with two credits always collides. Those rows have no course, contribute
+                // nothing to a map keyed BY course, and are handled by the register sweep further
+                // down — exclude them. Selecting e.id keeps the first column genuinely unique for
+                // the remaining rows, which is what the DML layer asks for.
                 $rows = $DB->get_records_sql(
-                    "SELECT courseid, outcomeidentifier
+                    "SELECT id, courseid, outcomeidentifier
                      FROM {local_rtocompliance_enrolments}
-                     WHERE studentid = :sid ORDER BY id DESC",
+                     WHERE studentid = :sid AND courseid > 0 ORDER BY id DESC",
                     ['sid' => $stud->id]
                 );
                 foreach ($rows as $row) {
@@ -272,6 +307,102 @@ class soa_compliance_engine {
         }
         $units = array_values($byCode);
 
+        // REGISTER-ONLY-UNITS (v6.3.29) — RPL / Credit Transfer.
+        //
+        // Everything above is driven by {course_completions}: a unit only becomes eligible if the
+        // student completed a Moodle course for it. RPL (outcome 51) and Credit Transfer (outcome
+        // 60) are, by definition, units this RTO did NOT deliver — apply_rpl_outcome() writes them
+        // to {local_rtocompliance_enrolments} with courseid = 0 and explicitly never touches
+        // {course_completions}. The result was that an approved credit transfer could never appear
+        // in the multi-unit SoA wizard: correct data, correct outcome, invisible unit.
+        //
+        // Sweep the results register for competent outcomes whose unit code is not already present
+        // from a course completion, and add them as first-class eligible units. Their qualification
+        // comes from the register row's programcode (set from the RPL/CT record) rather than the
+        // course map, because there is no course to map.
+        if ($student && $dbman->table_exists('local_rtocompliance_enrolments')) {
+            // SCOPE (v6.3.30): this sweep is deliberately confined to results that were GRANTED
+            // rather than delivered — the rows local_rtocompliance_apply_rpl_outcome() writes,
+            // whether it created them itself (courseid = 0, no Moodle course exists) or converted
+            // an existing delivery enrolment. Both carry manualoutcome = 1 with outcome 51 or 60,
+            // and that pair — not courseid — is the marker. It matches the predicate
+            // skipped_programcodes.php and process_enrolment_task.php already use.
+            //
+            // courseid = 0 alone is NOT sufficient and must not be used here: results_importer.php
+            // writes historical NAT-imported results with courseid = 0 and manualoutcome = 0
+            // whenever the unit has no Moodle course. Sweeping on courseid alone would put every
+            // such imported result into the wizard, labelled "not delivered by this RTO", and let
+            // an admin issue an AQF Statement of Attainment for a unit with no completion evidence
+            // behind it — removing the course-completion requirement that gates the whole screen.
+            $scopesql = ' AND e.manualoutcome = 1
+                          AND e.outcomeidentifier IN (:sc51, :sc60)';
+            $outparams = ['sc51' => '51', 'sc60' => '60'];
+            // With $override on, the wizard is explicitly showing non-competent results too, so
+            // the outcome filter is dropped — but the scope predicate above still applies, so an
+            // override can never turn this into a sweep of ordinary delivered enrolments.
+            $outsql = '';
+            if (!$override) {
+                list($outsql, $outinparams) = $DB->get_in_or_equal(
+                    self::COMPETENT_OUTCOMES, SQL_PARAMS_NAMED, 'roc');
+                $outsql = ' AND e.outcomeidentifier ' . $outsql;
+                $outparams = array_merge($outparams, $outinparams);
+            }
+            $outparams['rosid'] = $student->id;
+            $regrows = $DB->get_records_sql(
+                "SELECT e.id, e.courseid, e.unitcode, e.unitname, e.programcode, e.programname,
+                        e.outcomeidentifier, e.assessmentdate, e.activityenddate, e.timemodified
+                   FROM {local_rtocompliance_enrolments} e
+                  WHERE e.studentid = :rosid
+                    AND e.unitcode IS NOT NULL AND e.unitcode <> ''"
+                    . $scopesql . $outsql . "
+               ORDER BY CASE WHEN e.outcomeidentifier IN ('20','51','60','81') THEN 0 ELSE 1 END ASC,
+                        e.timemodified DESC, e.id DESC",
+                $outparams
+            );
+            foreach ($regrows as $r) {
+                $code = strtoupper(trim((string)$r->unitcode));
+                if ($code === '' || isset($byCode[$code])) {
+                    continue; // Already surfaced from a Moodle course completion.
+                }
+                $outcome = (string)$r->outcomeidentifier;
+                if (!$override && !in_array($outcome, self::COMPETENT_OUTCOMES, true)) {
+                    continue;
+                }
+                $date = (int)($r->assessmentdate ?: $r->activityenddate ?: $r->timemodified);
+
+                $u = new \stdClass();
+                $u->courseid          = (int)$r->courseid;
+                $u->unitcode          = $code;
+                $u->unittitle         = trim((string)$r->unitname) !== '' ? trim((string)$r->unitname) : $code;
+                $u->categoryid        = 0;
+                $u->categoryname      = self::registeronly_label($outcome);
+                $u->categoryidnumber  = '';
+                $u->semesterlabel     = self::registeronly_label($outcome);
+                $u->completiondate    = $date;
+                $u->outcomeidentifier = $outcome;
+                $u->outcomeLabel      = self::OUTCOME_LABELS[$outcome] ?? $outcome;
+                $u->compliance        = self::check_unit_compliance(
+                    $userid, (int)$r->courseid, $code, $outcome, $student, $useractive
+                );
+                $u->compliant         = empty($u->compliance['errors']);
+                $u->already_on_soa    = isset($issuedCodes[$code]);
+                $u->semestercopies    = 1;
+                // Marks a unit that exists only in the results register (no Moodle delivery
+                // course). The wizard uses this to label the row and to skip course-based
+                // qualification resolution.
+                $u->registeronly      = true;
+                $u->registerprogramcode = strtoupper(trim((string)$r->programcode));
+                $u->registerprogramname = trim((string)$r->programname);
+
+                $byCode[$code] = $u;
+                $units[] = $u;
+            }
+        }
+
+        if (empty($units)) {
+            return [];
+        }
+
         // Version 5.9.369 QUAL-RESOLVE: attach the real qualification to every unit from the
         // source-of-truth mapping (Course → Category → Qualification), so units group
         // by qualification (e.g. "ABC12345 — Certificate IV in ...") instead of the raw
@@ -290,6 +421,21 @@ class soa_compliance_engine {
                 $u->qualgrouplabel = $q['qualname'] !== ''
                     ? ($q['qualcode'] . ' — ' . $q['qualname'])
                     : $q['qualcode'];
+            } else if (!empty($u->registeronly) && $u->registerprogramcode !== '') {
+                // REGISTER-ONLY-UNITS (v6.3.29): an RPL/CT unit has no Moodle course to map, so
+                // the qualification comes from the programcode stored on the register row (set
+                // from the RPL/Credit Transfer record at approval). This is what makes a credit
+                // transfer group with the delivered units of the same qualification instead of
+                // sitting alone in an "unmapped" bucket.
+                $u->qualcode       = $u->registerprogramcode;
+                $u->qualname       = $u->registerprogramname !== ''
+                    ? $u->registerprogramname : $u->registerprogramcode;
+                $u->qualtype       = '';
+                $u->qualsource     = 'register';
+                $u->qualgroupkey   = 'qual:' . $u->registerprogramcode;
+                $u->qualgrouplabel = $u->registerprogramname !== ''
+                    ? ($u->registerprogramcode . ' — ' . $u->registerprogramname)
+                    : $u->registerprogramcode;
             } else {
                 // Unmapped — fall back to the raw category so nothing disappears.
                 $u->qualcode       = '';
@@ -298,6 +444,15 @@ class soa_compliance_engine {
                 $u->qualsource     = 'none';
                 $u->qualgroupkey   = 'cat:' . $u->categoryid;
                 $u->qualgrouplabel = $u->categoryname;
+            }
+
+            // SELECTION-KEY (v6.3.29): the wizard used to identify a selected row by its Moodle
+            // courseid. RPL/CT units have courseid 0, so every one of them collided on the same
+            // key and none could be ticked or posted back. unitkey is unique per row and survives
+            // a unit that has no course at all.
+            $u->unitkey = ($u->unitcode !== '') ? ('U:' . $u->unitcode) : ('C:' . (int)$u->courseid);
+            if (!isset($u->registeronly)) {
+                $u->registeronly = false;
             }
         }
 

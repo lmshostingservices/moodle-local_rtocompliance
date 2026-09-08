@@ -141,6 +141,60 @@ if ($dbman->table_exists('local_rtocompliance_rpl')) {
     $records = $DB->get_records_sql($sql, $params, 0, 100);
 }
 
+// POSTED-TO-REGISTER (v6.3.30): the register used to show only the assessor's decision. An
+// APPROVED record whose outcome never reached the results register — blocked by the credit
+// transfer source gate, saved with no unit code, or with the student left unlinked — looked
+// exactly like one that worked, and the first anyone knew of it was a Statement of Attainment
+// that came out short. Resolve, for every listed record, whether the competency it granted is
+// actually sitting in local_rtocompliance_enrolments, and say so in its own column.
+$postedMap = [];   // rpl record id => true when the granted outcome is in the results register.
+if ($records && $dbman->table_exists('local_rtocompliance_enrolments')) {
+    $wanted = [];
+    foreach ($records as $rec) {
+        if (in_array($rec->decision, ['approved', 'partially_approved'], true)
+                && !empty($rec->studentid) && trim((string)$rec->unitcode) !== '') {
+            $wanted[(int)$rec->studentid][strtoupper(trim((string)$rec->unitcode))] = true;
+        }
+    }
+    if ($wanted) {
+        list($sin, $sinp) = $DB->get_in_or_equal(array_keys($wanted), SQL_PARAMS_NAMED, 'ps');
+        $sinp['o51'] = '51';
+        $sinp['o60'] = '60';
+        // get_records_sql() keys by the FIRST column and silently drops duplicates, so the
+        // first column must be unique per row — hence the composite key rather than studentid.
+        // v6.3.30: keyed by (student, unit, OUTCOME), not just (student, unit). A student can
+        // hold both a 51 and a 60 for one unit from two different decisions; keying on the pair
+        // alone made MAX() pick one arbitrarily, so an RPL record could report "Recorded (60)"
+        // on the strength of somebody else's credit transfer. Each decision is now matched
+        // against the outcome IT grants. manualoutcome = 1 as well, so a NAT-imported historical
+        // 51/60 cannot make an unposted decision report "Recorded" — which is the exact failure
+        // this column exists to expose.
+        $keyexpr = $DB->sql_concat(
+            'e.studentid', "'|'", 'UPPER(TRIM(e.unitcode))', "'|'", 'e.outcomeidentifier');
+        $found = $DB->get_records_sql(
+            "SELECT $keyexpr AS k, e.studentid, UPPER(TRIM(e.unitcode)) AS uc,
+                    e.outcomeidentifier
+               FROM {local_rtocompliance_enrolments} e
+              WHERE e.studentid $sin
+                AND e.manualoutcome = 1
+                AND e.outcomeidentifier IN (:o51, :o60)
+           GROUP BY $keyexpr, e.studentid, UPPER(TRIM(e.unitcode)), e.outcomeidentifier", $sinp);
+        $have = [];
+        foreach ($found as $f) {
+            $have[(int)$f->studentid . '|' . $f->uc . '|' . (string)$f->outcomeidentifier] = true;
+        }
+        foreach ($records as $rec) {
+            if (in_array($rec->decision, ['approved', 'partially_approved'], true)
+                    && !empty($rec->studentid) && trim((string)$rec->unitcode) !== '') {
+                $wantout = ($rec->rpltype === 'credit_transfer') ? '60' : '51';
+                $k = (int)$rec->studentid . '|' . strtoupper(trim((string)$rec->unitcode))
+                   . '|' . $wantout;
+                $postedMap[(int)$rec->id] = isset($have[$k]) ? $wantout : false;
+            }
+        }
+    }
+}
+
 if ($records) {
     echo html_writer::start_tag('table', ['class' => 'data-table']);
     echo html_writer::start_tag('thead');
@@ -152,6 +206,11 @@ if ($records) {
     echo html_writer::tag('th', 'Evidence', ['title' => 'Summary of the evidence submitted and assessed']);
     echo html_writer::tag('th', 'Decision', ['title' => 'Outcome of the assessment']);
     echo html_writer::tag('th', 'Decision Date', ['title' => 'Date the decision was made']);
+    echo html_writer::tag(
+        'th', 'In Results',
+        ['title' => 'Whether the credit this decision granted has actually reached the student\'s '
+                  . 'results register. Only a unit that is in the register can appear on a '
+                  . 'Statement of Attainment or in the AVETMISS NAT export.']);
     echo html_writer::tag('th', 'Student Notified', ['title' => 'Whether the outcome has been communicated to the student']);
     if ($tab === 'credit' || $tab === 'all') {
         echo html_writer::tag('th', 'USI Verified', ['title' => 'Whether the USI transcript has been verified']);
@@ -202,6 +261,31 @@ if ($records) {
         echo html_writer::tag('td', $evidenceSummary);
         echo html_writer::tag('td', html_writer::tag('span', $decisionLabel, ['class' => 'badge ' . $decisionClass, 'title' => $decisionTitle]));
         echo html_writer::tag('td', $rec->decisiondate ? userdate($rec->decisiondate, '%d %b %Y') : html_writer::tag('span', 'Pending', ['class' => 'text-muted']));
+        // POSTED-TO-REGISTER (v6.3.30) — see the note above the table.
+        if (!in_array($rec->decision, ['approved', 'partially_approved'], true)) {
+            $postedCell = html_writer::tag('span', '—', ['class' => 'text-muted',
+                'title' => 'No credit is granted by this decision, so nothing is expected in the results register.']);
+        } else if (empty($rec->studentid) || trim((string)$rec->unitcode) === '') {
+            $postedCell = html_writer::tag(
+                'span', 'Cannot post', ['class' => 'badge badge-danger',
+                'title' => 'This decision is approved but has no ' . (empty($rec->studentid) ? 'linked student' : 'unit code')
+                         . ', so no outcome can be written to the results register. Edit the record to add it.']);
+        } else if (!empty($postedMap[(int)$rec->id])) {
+            $pout = (string)$postedMap[(int)$rec->id];
+            $postedCell = html_writer::tag(
+                'span', 'Recorded (' . $pout . ')', ['class' => 'badge badge-success',
+                'title' => 'Outcome ' . $pout . ' is in the results register for '
+                         . strtoupper(trim((string)$rec->unitcode)) . '. The unit is available on '
+                         . 'Student Results, the Statement of Attainment wizard and the NAT export.']);
+        } else {
+            $postedCell = html_writer::tag(
+                'span', 'Not recorded', ['class' => 'badge badge-danger',
+                'title' => 'This decision is approved but the credit is NOT in the results register, so the unit '
+                         . 'cannot be put on a Statement of Attainment. For a credit transfer this is usually the '
+                         . 'Standard 1.7 source gate: attach the issuing RTO\'s certificate or tick "USI transcript '
+                         . 'verified", enter the source qualification code, and save the record again.']);
+        }
+        echo html_writer::tag('td', $postedCell);
         // RPL-P2 (v5.9.421): procedural-fairness signal — has the student been told the
         // outcome? Only meaningful once a decision is finalised (not while pending).
         if ($rec->decision === 'pending') {

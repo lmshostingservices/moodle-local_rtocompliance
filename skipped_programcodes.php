@@ -318,6 +318,30 @@ foreach (array_keys($groups) as $cid) {
 echo $OUTPUT->header();
 echo local_rtocompliance_render_nav_header('Skipped Program Codes'); // Version 5.9.404: add sidebar.
 
+// REGISTER-ONLY BLANK PROGRAMCODE (v6.3.30): this page groups by Moodle course, so every query
+// on it filters courseid > 0 — which silently excluded RPL and credit-transfer results, written
+// with courseid 0 by design. A credited unit with no program code is exactly as broken as a
+// delivered one (it is left out of qualification completion, of a partial SoA issued by
+// qualification, and it exports a blank program identifier to NAT00120), but it could not be
+// seen here at all, and the course-based repair below cannot fix it because there is no course
+// to resolve the code from. Surface it, and point at the record that CAN be fixed.
+$rocount = (int) $DB->count_records_select(
+    'local_rtocompliance_enrolments',
+        "(programcode IS NULL OR programcode = '') AND courseid = 0 AND manualoutcome = 1
+         AND outcomeidentifier IN (:o51, :o60)",
+    ['o51' => '51', 'o60' => '60']);
+if ($rocount > 0) {
+    echo $OUTPUT->notification(
+        $rocount . ' RPL / credit transfer result' . ($rocount === 1 ? '' : 's')
+        . ' also ' . ($rocount === 1 ? 'has' : 'have') . ' no qualification code. Those are not '
+        . 'listed below and cannot be repaired here, because they have no Moodle course to resolve '
+        . 'a code from. Fix them in RPL &amp; Credit Transfer: open the decision, set the '
+        . 'Qualification Code and Name, and save — that rewrites the result. Until then the unit '
+        . 'is left out of qualification completion and exports a blank program identifier to '
+        . 'NAT00120.',
+        \core\output\notification::NOTIFY_WARNING);
+}
+
 echo '<div style="max-width:1200px;margin:0 auto 2rem auto;">';
 
 // Back link + summary header.

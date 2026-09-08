@@ -351,6 +351,13 @@ class process_enrolment_task extends \core\task\adhoc_task {
                 if ($exists) {
                     continue;
                 }
+                // RPL-CT-DUPLICATE (v6.3.30): see holds_granted_credit() — a credit granted
+                // before the student was enrolled lives on a courseid = 0 row the check above
+                // cannot see, and inserting here would report the unit to NCVER twice.
+                if ($this->holds_granted_credit(
+                        (int)$student->id, (string)$unitcode, (string)$programcode)) {
+                    continue;
+                }
 
                 $commencingprogramid = $commencing_by_program[$programcode] ?? '1';
 
@@ -424,6 +431,11 @@ class process_enrolment_task extends \core\task\adhoc_task {
                 ['studentid' => $student->id, 'courseid' => $courseid, 'unitcode' => $unitcode]
             );
             if ($exists) {
+                return;
+            }
+            // RPL-CT-DUPLICATE (v6.3.30): same guard as the primary path above.
+            if ($this->holds_granted_credit(
+                    (int)$student->id, (string)$unitcode, (string)$programcode)) {
                 return;
             }
 
@@ -507,6 +519,66 @@ class process_enrolment_task extends \core\task\adhoc_task {
             return strtoupper($m[1]);
         }
         return '';
+    }
+
+    /**
+     * RPL-CT-DUPLICATE (v6.3.30): does this student already hold a manually granted RPL (51) or
+     * Credit Transfer (60) for this unit that is not tied to any Moodle course?
+     *
+     * apply_rpl_outcome() writes those rows with courseid = 0, so the enrolment duplicate checks —
+     * which match on (studentid, courseid, unitcode) — never saw them. If the credit was granted
+     * BEFORE the student was enrolled in the delivery course, this task then inserted a SECOND row
+     * for the same unit with outcome 70 (continuing), and NCVER received two contradictory
+     * NAT00120 records for the same client, subject and program. The reverse order was already
+     * safe, because apply_rpl_outcome() finds and updates the existing enrolment.
+     *
+     * The credit row is left EXACTLY as it is — this only suppresses the second insert. Moving it
+     * onto the course would look tidier but would break the reversal path: courseid = 0 is the
+     * marker that tells retract_rpl_outcome() to DELETE a register-only credit rather than revert
+     * it to a delivery enrolment, and a moved row has no stashed pre-RPL delivery mode or hours to
+     * revert to. Reversing the decision would then leave a phantom continuing (70) record carrying
+     * delivery mode 90 and zero hours. Suppressing the insert is also the right answer on its own
+     * terms: a student who already holds the unit by credit is not being delivered it.
+     *
+     * Scoped to the PROGRAM as well as the unit (v6.3.30). A unit credited under qualification A
+     * says nothing about qualification B, which may genuinely deliver it: suppressing the
+     * enrolment on the unit code alone would leave B's NAT00120 record and its
+     * qualification-completion check permanently short that unit.
+     *
+     * Matching is STRICT: the credit's program code must equal the enrolment's. A credit granted
+     * with no qualification code (the RPL form leaves it optional) therefore suppresses nothing —
+     * treating a blank as a wildcard would let one legacy record silently block the delivery
+     * enrolment for that unit under EVERY qualification, forever, which is a worse failure than
+     * the duplicate this guard exists to prevent. Those rows are already surfaced for repair on
+     * skipped_programcodes.php. Likewise, when the caller cannot name its own program code,
+     * nothing is suppressed.
+     *
+     * @param  int    $studentid   local_rtocompliance_students.id
+     * @param  string $unitcode    national unit code
+     * @param  string $programcode the qualification this enrolment would be recorded against
+     * @return bool   true when the student already holds a granted credit — skip the insert
+     */
+    private function holds_granted_credit(int $studentid, string $unitcode, string $programcode = ''): bool {
+        global $DB;
+        // apply_rpl_outcome() stores unit codes upper-cased and trimmed; TRIM() here as well so a
+        // legacy row with stray whitespace still matches (and cannot become a duplicate).
+        $unitcode = strtoupper(trim($unitcode));
+        $programcode = strtoupper(trim($programcode));
+        if ($studentid <= 0 || $unitcode === '') {
+            return false;
+        }
+        if ($programcode === '') {
+            return false;
+        }
+        return $DB->record_exists_select(
+            'local_rtocompliance_enrolments',
+                'studentid = :sid AND courseid = 0 AND UPPER(TRIM(unitcode)) = :uc
+                 AND manualoutcome = 1 AND outcomeidentifier IN (:o51, :o60)
+                 AND UPPER(TRIM(programcode)) = :pc',
+            [
+                'sid' => $studentid, 'uc' => $unitcode,
+                'o51' => '51', 'o60' => '60', 'pc' => $programcode,
+            ]);
     }
 
     /**

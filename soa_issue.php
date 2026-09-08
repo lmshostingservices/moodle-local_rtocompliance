@@ -123,6 +123,7 @@ foreach ($DB->get_records_sql(
 
 // Category names for the filter dropdown (only categories used by a built qual).
 $soaCatNames = [];
+$soaCatPaths = [];   // v6.3.30: categoryid => category path, for register-only students below.
 $soaUsedCats = array_values(
     array_unique(
     array_filter(
@@ -132,8 +133,11 @@ $soaUsedCats = array_values(
                 }, $soaQualMeta))));
 if (!empty($soaUsedCats) && $DB->get_manager()->table_exists('course_categories')) {
     list($cin, $cinp) = $DB->get_in_or_equal($soaUsedCats, SQL_PARAMS_NAMED, 'sc');
-    foreach ($DB->get_records_select('course_categories', "id $cin", $cinp, '', 'id, name') as $cc) {
+    // v6.3.30: keep the category PATH too — used below to place register-only (RPL/credit
+    // transfer) students, who have no course to derive a path from.
+    foreach ($DB->get_records_select('course_categories', "id $cin", $cinp, '', 'id, name, path') as $cc) {
         $soaCatNames[(int)$cc->id] = $cc->name;
+        $soaCatPaths[(int)$cc->id] = (string)$cc->path;
     }
 }
 
@@ -180,6 +184,42 @@ foreach ($soaUserCourses as $uid => $cids) {
     $paths = [];
     foreach ($cids as $cid) { if (isset($soaCourses[$cid])) { $paths[$soaCourses[$cid]['catpath']] = true; } }
     $soaUserCatpaths[$uid] = array_keys($paths);
+}
+// REGISTER-ONLY STUDENTS (v6.3.30): a result granted by RPL or credit transfer carries no Moodle
+// course (courseid is 0 by design), so it contributes no category path above — and selecting ANY
+// parent or sub-category made a student whose credit sits in that qualification disappear from
+// the picker. Add the qualification's own category path, but ONLY for the qualifications the
+// student actually holds a register-only result in, so this does not widen the filter for
+// ordinary delivered results. The Course filter still cannot match a credited unit, which is
+// correct: there is no delivery course to match.
+if (!empty($soaCatPaths) && $DB->get_manager()->table_exists('local_rtocompliance_enrolments')) {
+    // Scoped to GRANTED results — manualoutcome = 1 with outcome 51 or 60 — the same predicate
+    // the eligible-unit sweep uses. courseid = 0 alone would also catch a NAT-imported historical
+    // result, which is not what this is for.
+    $regQuals = [];   // userid => [PROGRAMCODE, ...] held on a granted (RPL/CT) row.
+    foreach ($DB->get_records_sql(
+        "SELECT " . $DB->sql_concat('u.id', "'|'", 'UPPER(e.programcode)') . " AS k,
+                u.id AS userid, UPPER(e.programcode) AS pc
+           FROM {local_rtocompliance_students} s
+           JOIN {user} u ON u.id = s.userid
+           JOIN {local_rtocompliance_enrolments} e ON e.studentid = s.id
+          WHERE e.courseid = 0
+            AND e.manualoutcome = 1
+            AND e.outcomeidentifier IN ('51', '60')
+            AND e.programcode IS NOT NULL AND e.programcode <> ''
+       GROUP BY u.id, UPPER(e.programcode)") as $r) {
+        $regQuals[(int)$r->userid][] = $r->pc;
+    }
+    foreach ($regQuals as $uid => $qcodes) {
+        $paths = $soaUserCatpaths[$uid] ?? [];
+        foreach ($qcodes as $qc) {
+            $qcat = (int)($soaQualMeta[$qc]['cat'] ?? 0);
+            if ($qcat > 0 && !empty($soaCatPaths[$qcat]) && !in_array($soaCatPaths[$qcat], $paths, true)) {
+                $paths[] = $soaCatPaths[$qcat];
+            }
+        }
+        $soaUserCatpaths[$uid] = $paths;
+    }
 }
 
 // Build the hidden <option> markup with data-quals / data-cats for JS filtering,
@@ -570,6 +610,20 @@ echo <<<'HTML'
   // ── Helpers ───────────────────────────────────────────────────────────────
   function qs(sel) { return document.querySelector(sel); }
   function qsa(sel) { return Array.from(document.querySelectorAll(sel)); }
+  // UNITKEY-LOOKUP (v6.3.30): find a checkbox by its unitkey WITHOUT building a CSS selector
+  // from it. unitkey is 'U:' + the national unit code, which is DB text (a Moodle course
+  // shortname, or a unitcode typed into the results register) — not the integer courseid this
+  // replaced in v6.3.29. A value containing a quote used to break out of the selector string,
+  // and out of the inline event-handler attribute it was pasted into. Comparing dataset values
+  // is both injection-proof and immune to CSS-escaping rules.
+  function cbByKey(cls, key) {
+    var found = null;
+    qsa(cls).some(function (el){
+      if (String(el.dataset.unitkey) === String(key)) { found = el; return true; }
+      return false;
+    });
+    return found;
+  }
 
   function fmtDate(ts) {
     if (!ts) return '';
@@ -1004,8 +1058,8 @@ echo <<<'HTML'
       var picked = 0;
       g.units.forEach(function (u){
         if (!u.compliant || u.already_on_soa) { return; }
-        var cb  = qs('.rtoc-unit-cb[data-courseid="'+u.courseid+'"]');      if (cb)  cb.checked  = true;
-        var cbg = qs('.rtoc-unit-cb-grp[data-courseid="'+u.courseid+'"]');  if (cbg) cbg.checked = true;
+        var cb  = cbByKey('.rtoc-unit-cb', u.unitkey);      if (cb)  cb.checked  = true;
+        var cbg = cbByKey('.rtoc-unit-cb-grp', u.unitkey);  if (cbg) cbg.checked = true;
         picked++;
       });
       updateSelectionSummary();
@@ -1130,11 +1184,11 @@ echo <<<'HTML'
       return;
     }
 
-    // Preserve checked state by courseid
+    // Preserve checked state by unitkey (v6.3.29: was courseid, which is 0 for every RPL/CT unit)
     var checked = getCheckedCourseIds();
 
     tbody.innerHTML = filtered.map(function (u){
-      var isChecked = checked[u.courseid] ? 'checked' : '';
+      var isChecked = checked[u.unitkey] ? 'checked' : '';
       var tp = tpPrefix(u.unitcode);
       var tpBadge = tp
         ? '<span style="font-size:10px;font-family:monospace;background:#f1f5f9;color:#475569;padding:1px 5px;border-radius:3px;margin-right:4px;vertical-align:middle;" title="Training Package: '+escHtml(tp)+'">'+escHtml(tp)+'</span>'
@@ -1152,8 +1206,8 @@ echo <<<'HTML'
         qualCell = '<div style="color:#b45309;font-size:0.8rem;">Unmapped</div>'+
                    '<div style="color:#9ca3af;font-size:0.72rem;margin-top:1px;">'+escHtml(u.semesterlabel||u.categoryname||'')+'</div>';
       }
-      return '<tr data-courseid="'+u.courseid+'" data-compliant="'+(u.compliant?'1':'0')+'" data-haswarn="'+((u.compliance.warnings&&u.compliance.warnings.length)?'1':'0')+'" data-haserr="'+((u.compliance.errors&&u.compliance.errors.length)?'1':'0')+'" data-groupkey="'+escHtml(u.qualgroupkey||'')+'">' +
-        '<td><input type="checkbox" class="rtoc-unit-cb" data-courseid="'+u.courseid+'" '+isChecked+'></td>'+
+      return '<tr data-unitkey="'+escHtml(u.unitkey)+'" data-courseid="'+u.courseid+'" data-compliant="'+(u.compliant?'1':'0')+'" data-haswarn="'+((u.compliance.warnings&&u.compliance.warnings.length)?'1':'0')+'" data-haserr="'+((u.compliance.errors&&u.compliance.errors.length)?'1':'0')+'" data-groupkey="'+escHtml(u.qualgroupkey||'')+'">' +
+        '<td><input type="checkbox" class="rtoc-unit-cb" data-unitkey="'+escHtml(u.unitkey)+'" '+isChecked+'></td>'+
         '<td>'+tpBadge+'<strong style="color:#1e3a5f;font-family:monospace;font-size:0.83rem;">'+escHtml(u.unitcode)+'</strong>'+alreadyHtml+'</td>'+
         '<td>'+escHtml(u.unittitle)+'</td>'+
         '<td>'+qualCell+'</td>'+
@@ -1171,7 +1225,7 @@ echo <<<'HTML'
 
   function getCheckedCourseIds() {
     var map = {};
-    qsa('.rtoc-unit-cb:checked').forEach(function (cb){ map[cb.dataset.courseid] = true; });
+    qsa('.rtoc-unit-cb:checked').forEach(function (cb){ map[cb.dataset.unitkey] = true; });
     return map;
   }
 
@@ -1195,7 +1249,12 @@ echo <<<'HTML'
         ? '<span style="font-size:11px;font-family:monospace;background:#eff6ff;color:#1d4ed8;padding:1px 7px;border-radius:3px;margin-right:6px;" title="Qualification code">'+escHtml(qcode)+'</span>'
         : '<span style="font-size:11px;background:#fef3c7;color:#92400e;padding:1px 7px;border-radius:3px;margin-right:6px;" title="These units are not mapped to a qualification in your Course Map / Qualification Builder">Unmapped</span>';
       var qtitle = qcode ? (g.qualname || '') : (g.categoryname || '');
-      var gk = String(g.groupkey || '').replace(/'/g, '');
+      // GROUPKEY (v6.3.30): the group key used to be stripped of single quotes and pasted into
+      // an inline onclick. It is DB text — 'qual:' + a qualification code, which since v6.3.29 can
+      // come from a register row's programcode (PARAM_TEXT, so a double quote is possible) — and a
+      // double quote would terminate the attribute and inject markup into an admin page. It is now
+      // carried as an escaped data-groupkey and read by a delegated listener, same as unitkey.
+      var gk = String(g.groupkey || '');
       var badge = '<span style="font-size:11px;background:#d1fae5;color:#065f46;padding:1px 8px;border-radius:999px;margin-left:6px;">'+compliantCount+'/'+totalCount+' compliant</span>';
       var warnBadge = (totalCount - compliantCount) > 0
         ? '<span style="font-size:11px;background:#fee2e2;color:#991b1b;padding:1px 8px;border-radius:999px;margin-left:4px;">'+(totalCount-compliantCount)+' blocked</span>'
@@ -1204,7 +1263,7 @@ echo <<<'HTML'
         ? '<div style="color:#9ca3af;font-size:0.72rem;margin-top:2px;">from: '+escHtml(g.semesters.join(', '))+'</div>'
         : '';
       return '<div class="rtoc-group-card">'+
-        '<div class="rtoc-group-card-head" onclick="this.nextElementSibling.classList.toggle(\'open\');this.querySelector(\'.rtoc-chevron\').style.transform=this.nextElementSibling.classList.contains(\'open\')?\'rotate(90deg)\':\'\'">'+
+        '<div class="rtoc-group-card-head" onclick="if(event.target.closest(\'button\'))return;this.nextElementSibling.classList.toggle(\'open\');this.querySelector(\'.rtoc-chevron\').style.transform=this.nextElementSibling.classList.contains(\'open\')?\'rotate(90deg)\':\'\'">'+
           '<div style="flex:1;min-width:0;">'+
             '<div style="font-weight:600;font-size:0.9rem;color:#1e3a5f;">'+qcodeBadge+escHtml(qtitle)+badge+warnBadge+'</div>'+
             semLine+
@@ -1213,8 +1272,8 @@ echo <<<'HTML'
             '</div>'+
           '</div>'+
           '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:12px;">'+
-            '<button class="btn btn-sm btn-secondary rtoc-grp-select-btn" onclick="event.stopPropagation();selectGroup(\''+gk+'\',false)" title="Select every unit in this qualification group">Select all</button>'+
-            '<button class="btn btn-sm btn-primary rtoc-grp-select-ok-btn" onclick="event.stopPropagation();selectGroup(\''+gk+'\',true)" title="Select only compliant units in this group">Select compliant</button>'+
+            '<button type="button" class="btn btn-sm btn-secondary rtoc-grp-select-btn" data-groupkey="'+escHtml(gk)+'" title="Select every unit in this qualification group">Select all</button>'+
+            '<button type="button" class="btn btn-sm btn-primary rtoc-grp-select-ok-btn" data-groupkey="'+escHtml(gk)+'" title="Select only compliant units in this group">Select compliant</button>'+
             '<svg class="rtoc-chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:#9ca3af;transition:transform .2s;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>'+
           '</div>'+
         '</div>'+
@@ -1223,7 +1282,7 @@ echo <<<'HTML'
             var tp = tpPrefix(u.unitcode);
             var tpSpan = tp ? '<span style="font-size:10px;font-family:monospace;background:#f1f5f9;color:#475569;padding:1px 4px;border-radius:3px;margin-right:4px;">'+escHtml(tp)+'</span>' : '';
             return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #f3f4f6;">'+
-              '<input type="checkbox" class="rtoc-unit-cb-grp" data-courseid="'+u.courseid+'" style="cursor:pointer;" onchange="document.querySelector(\'.rtoc-unit-cb[data-courseid=\\\''+ u.courseid +'\\\']\')?document.querySelector(\'.rtoc-unit-cb[data-courseid=\\\''+ u.courseid +'\\\']\').checked=this.checked:null;updateSelectionSummary();">'+
+              '<input type="checkbox" class="rtoc-unit-cb-grp" data-unitkey="'+escHtml(u.unitkey)+'" style="cursor:pointer;">'+
               tpSpan+
               '<span style="font-family:monospace;font-weight:700;color:#1e3a5f;font-size:0.82rem;">'+escHtml(u.unitcode)+'</span>'+
               outcomeChip(u.outcomeidentifier)+
@@ -1236,13 +1295,38 @@ echo <<<'HTML'
     }).join('');
   }
 
+  // GROUP-CHECKBOX DELEGATION (v6.3.30): the group-card checkbox used to carry an inline
+  // onchange built by string-concatenating the unit key into a CSS selector. One delegated
+  // listener replaces every copy of it — no per-row handler, no interpolation, and it survives
+  // the group cards being re-rendered.
+  document.addEventListener('change', function (ev) {
+    var t = ev.target;
+    if (!t || !t.classList || !t.classList.contains('rtoc-unit-cb-grp')) { return; }
+    var row = cbByKey('.rtoc-unit-cb', t.dataset.unitkey);
+    if (row) { row.checked = t.checked; }
+    updateSelectionSummary();
+  });
+
+  // Group "Select all" / "Select compliant" — delegated for the same reason (v6.3.30).
+  document.addEventListener('click', function (ev) {
+    var t = ev.target && ev.target.closest
+      ? ev.target.closest('.rtoc-grp-select-btn, .rtoc-grp-select-ok-btn')
+      : null;
+    if (!t) { return; }
+    ev.preventDefault();
+    // The card header's own inline onclick fires first during bubbling, so stopPropagation()
+    // here would be too late to prevent the card toggling — the header ignores clicks that
+    // originated on a button instead.
+    selectGroup(t.dataset.groupkey || '', t.classList.contains('rtoc-grp-select-ok-btn'));
+  });
+
   window.selectGroup = function (groupkey, compliantOnly) {
     allUnits.forEach(function (u){
       if (String(u.qualgroupkey || ('cat:' + u.categoryid)) !== String(groupkey)) return;
       if (compliantOnly && !u.compliant) return;
-      var cb = qs('.rtoc-unit-cb[data-courseid="'+u.courseid+'"]');
+      var cb = cbByKey('.rtoc-unit-cb', u.unitkey);
       if (cb) cb.checked = true;
-      var cbg = qs('.rtoc-unit-cb-grp[data-courseid="'+u.courseid+'"]');
+      var cbg = cbByKey('.rtoc-unit-cb-grp', u.unitkey);
       if (cbg) cbg.checked = true;
     });
     // Auto-populate qualification code/name in Step 3 from the resolved qualification.
@@ -1253,7 +1337,7 @@ echo <<<'HTML'
   // ── Selection summary + compliance gate ───────────────────────────────────
   window.updateSelectionSummary = function () {
     var checked = getCheckedCourseIds();
-    var selected = allUnits.filter(function (u){ return checked[u.courseid]; });
+    var selected = allUnits.filter(function (u){ return checked[u.unitkey]; });
     var errCount  = 0;
     var warnCount = 0;
     selected.forEach(function (u){
@@ -1380,14 +1464,16 @@ echo <<<'HTML'
     if (!userid) { alert('Please select a student first.'); return; }
 
     var checked = getCheckedCourseIds();
-    var selected = allUnits.filter(function (u){ return checked[u.courseid]; });
+    var selected = allUnits.filter(function (u){ return checked[u.unitkey]; });
     if (!selected.length) { alert('Please select at least one unit.'); return; }
 
+    var unitkeys  = JSON.stringify(selected.map(function (u){ return u.unitkey; }));
     var courseids = JSON.stringify(selected.map(function (u){ return u.courseid; }));
 
     var params = {
       action:    'generatesoa',
       userid:    userid,
+      unitkeys:  unitkeys,
       courseids: courseids,
       audience:  'default',
       doctype:   qs('#rtoc-soa-doctype').value,

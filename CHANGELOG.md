@@ -1,3 +1,137 @@
+## [v6.3.30] - 2026-09-08
+
+### Fixed - end-to-end audit of the credit transfer / RPL path
+
+Triggered by a credit transfer (TLIX0008) that would not appear on a student's Statement
+of Attainment. v6.3.29 fixed the visibility; auditing the whole path found twelve more
+defects, and self-review found seven more before release.
+
+- **A new credit transfer evidenced by an attached certificate posted nothing.**
+  `rpl_edit.php`'s outcome closure captured the record id **by value**, which is `0` on the
+  create path, and the uploaded-source-certificate branch of the Standard 1.7 gate was
+  guarded on it. An assessor who attached the issuing RTO's testamur rather than ticking
+  *USI transcript verified* got a record saved as **Approved**, no outcome 60, and a warning
+  telling them to add the document they had just added. Editing and re-saving worked, which
+  made it look intermittent. The id is now passed in.
+- **New "In Results" column on the RPL & Credit Transfer register.** Approving writes two
+  things - the application record and the actual result - and only the result produces
+  certificates, completions and NAT records. The register showed only the first, so a
+  decision that posted nothing looked identical to one that worked. Every approved decision
+  now reports **Recorded (60)** / **Recorded (51)**, **Not recorded**, or **Cannot post**,
+  with the reason and the remedy. `rpl_edit.php` confirms the same in words on save, and
+  warns when an approved decision has no unit code (which used to post nothing, silently).
+- **A USI-exempt student could never be issued an SoA through the wizard.** `soa_ajax.php`
+  read only `usi` / `usiverified` with no exemption branch, while its own error text said
+  "or mark the student USI-exempt". The exempt cohort - study completed outside Australia -
+  is largely the credit-transfer cohort.
+- **A manually issued SoA printed a credit transfer as "Competent".**
+  `issue_certificate.php` stamped every free-typed unit `20`. New
+  `local_rtocompliance_resolve_unit_outcome_for_user()` reads the real outcome from the
+  register, restricted to competent codes so a stray `70` cannot print "Continuing
+  enrolment" on an AQF document.
+- **A duplicate, contradictory NAT00120 record.** `process_enrolment_task` deduped on
+  (studentid, courseid, unitcode); a credit row carries `courseid = 0`, so granting credit
+  *before* enrolment inserted a second row with outcome 70. The delivery insert is now
+  suppressed when the student holds a granted credit for that unit **under the same program
+  code**. A credit with no qualification code suppresses nothing - a blank must not act as a
+  wildcard.
+- **Correcting an approved record orphaned the credit it granted.** Retraction fired only on
+  approved -> not-approved, so re-pointing an approved record at a different unit or student
+  left the old credit in the register with no decision behind it. The gap v6.3.26 closed on
+  delete, still open on edit.
+- **`generate_course_certs.php` treated "not yet started" as a completion.** Its private
+  outcome list included `85` (not yet started, and listed as a *continuing* outcome by
+  `avetmiss_codes.php`) and `53` (deleted from the AVETMISS standard in Edition 2.1). On a
+  site without Moodle completion tracking the fallback offered certificates to students who
+  had not started. Both removed; `61` and `41` kept deliberately.
+- **Activity dates come from the assessor's decision date**, not the moment the form was
+  saved, so a back-entered decision lands in the right AVETMISS collection year. A future
+  date is ignored. A credit granted over an existing enrolment leaves its delivery dates
+  alone - nothing stashes those for restoration on retract.
+- Category filters on the SoA student picker no longer hide a student whose credit sits in
+  that qualification; deleting a result granted by an approved decision now warns that the
+  decision still stands; `skipped_programcodes.php` surfaces granted rows with a blank
+  program code, which its `courseid > 0` queries could never list.
+- `certificate_validator` read a unit's outcome from an `outcomeidentifier` key while its
+  only caller supplied `outcome`, so a manually typed unit always presented as blank to the
+  competent-unit test. Both keys are accepted in both loops. The `20` print-fallback is
+  deliberately kept *out* of the validator, so an unknown unit still requires Bypass
+  Validation exactly as before.
+
+### Added - the Add/Edit Unit page is reachable
+
+- `qualbuilder_unit.php` has existed for the life of the Qualification Builder and **nothing
+  ever linked to it**, while requiring `qualbuilderid` - so the only way to reach it threw
+  *"A required parameter (qualbuilderid) was missing"*.
+- `qualbuilder_edit.php` now has an **Add unit manually** button, and every saved unit row
+  carries an edit pencil to the same form. The page falls back to a training-product picker
+  instead of failing, resolves the product from a unit id alone, and replaces Moodle's raw
+  "Can not find data record" with a sentence.
+
+### Found in self-review, before release
+
+- The wizard's new `unitkey` was being concatenated into CSS selectors and an inline
+  `onchange` attribute. Unlike the integer `courseid` it replaced, it is DB text, so a value
+  containing a quote broke the group checkboxes and could inject script into an admin page.
+  Replaced with dataset comparison and delegated listeners; the same defect reached the group
+  cards' *Select all* buttons via the qualification code.
+- The v6.3.29 register sweep had **no scope predicate**, so it swept every register row with
+  no matching course completion - including historical results from a NAT/results import,
+  which carry `courseid = 0` and `manualoutcome = 0` - into the wizard, removing the
+  course-completion gate. Now confined to `manualoutcome = 1` with outcome 51 or 60.
+- `generatesoa` OR-ed `unitkeys` with `courseids` while the wizard posts both, so a unit the
+  admin never ticked could reach an issued SoA. `courseids` is now a fallback only.
+
+### Fixed - found by running it
+
+- Every load of the SoA wizard emitted *"Did you remember to make the first column something
+  unique in your call to get_records? Duplicate value '0' found in column 'courseid'"*. The
+  course->outcome map selected `courseid` first, and `get_records_sql()` keys on the first
+  column and silently drops duplicates - so the `id DESC` ordering the "first wins" loop
+  relies on was already being decided inside the DML layer. Every granted credit carries
+  `courseid = 0`. The query now selects `id` first and excludes those rows.
+
+### Verified
+
+Installed at v6.3.28 and upgraded to v6.3.30 on **Moodle 4.4.12 (PHP 8.3)** and **Moodle
+5.2.2 (PHP 8.4)**, both on PostgreSQL 16. A 70-assertion behaviour harness and a
+29-assertion page-render pass over real HTTP: **70/70 and 29/29 on both versions**, with
+developer debugging on and no notices.
+
+### Not changed
+
+- **No schema change** - the upgrade step bumps the savepoint only.
+
+Savepoint 2026090902.
+
+## [v6.3.29] - 2026-09-08
+
+### Fixed - an approved credit transfer could never be put on a Statement of Attainment
+
+- `soa_compliance_engine::get_eligible_units()` built the wizard's unit list entirely from
+  Moodle `{course_completions}` and returned an empty array when there were none.
+- `local_rtocompliance_apply_rpl_outcome()` writes RPL (51) and Credit Transfer (60) straight
+  to `local_rtocompliance_enrolments` with `courseid = 0` and, by design, never creates a
+  course completion - the RTO did not deliver or assess the unit.
+- So a credit transfer that was approved, evidenced, gated on its source certificate and
+  correctly posted to the register was **invisible to the one screen that issues the SoA**.
+- The engine now sweeps the results register for granted outcomes with no course completion
+  and adds them as first-class eligible units, taking the qualification from the register
+  row's `programcode` since there is no course to map.
+- Row identity in the wizard moved from Moodle `courseid` to a new `unitkey`: every RPL/CT
+  unit has `courseid = 0`, so all of them collided on one key and none could be ticked or
+  posted back.
+- `soa_ajax.php` `generatesoa` accepts `unitkeys` and still honours `courseids` for an
+  unrefreshed page.
+- Reported from a live site (unit TLIX0008, credit transfer approved, unit absent from the
+  SoA wizard).
+
+### Not changed
+
+- **No schema change** - the upgrade step bumps the savepoint only.
+
+Savepoint 2026090901.
+
 ## [v6.3.28] - 2026-09-07
 
 ### Fixed - a privacy erasure request now actually erases
