@@ -236,7 +236,7 @@ function qch_get_completers(stdClass $qual, array $det): array {
         }
 
         $allcompleters = $DB->get_records_sql(
-            "SELECT u.id, u.firstname, u.lastname, u.email,
+            "SELECT u.id, u.firstname, u.lastname, u.email, u.username,
                     u.firstnamephonetic, u.lastnamephonetic, u.middlename, u.alternatename,
                     u.suspended,
                     MIN(cc.timecompleted) AS timecompleted
@@ -247,7 +247,7 @@ function qch_get_completers(stdClass $qual, array $det): array {
                 AND cc.timecompleted IS NOT NULL
                 AND cc.timecompleted > 0
                 AND u.deleted = 0
-              GROUP BY u.id, u.firstname, u.lastname, u.email,
+              GROUP BY u.id, u.firstname, u.lastname, u.email, u.username,
                        u.firstnamephonetic, u.lastnamephonetic, u.middlename, u.alternatename, u.suspended
              HAVING COUNT(DISTINCT unitcourses.quid) >= :numcourses
               ORDER BY u.lastname, u.firstname",
@@ -261,7 +261,7 @@ function qch_get_completers(stdClass $qual, array $det): array {
         && $dbman->table_exists('local_rtocompliance_students')
     ) {
         $outcomecompleters = $DB->get_records_sql(
-            "SELECT u.id, u.firstname, u.lastname, u.email,
+            "SELECT u.id, u.firstname, u.lastname, u.email, u.username,
                     u.firstnamephonetic, u.lastnamephonetic, u.middlename, u.alternatename,
                     u.suspended,
                     MAX(COALESCE(e.activityenddate, e.timecreated)) AS timecompleted
@@ -273,7 +273,7 @@ function qch_get_completers(stdClass $qual, array $det): array {
                     AND qu.qualbuilderid = :qbid
                     AND qu.selected = 1
                     AND qu.status = 'active'
-              GROUP BY s.id, u.id, u.firstname, u.lastname, u.email,
+              GROUP BY s.id, u.id, u.firstname, u.lastname, u.email, u.username,
                        u.firstnamephonetic, u.lastnamephonetic, u.middlename, u.alternatename, u.suspended
              HAVING COUNT(DISTINCT qu.id) >= :numunits
              ORDER BY u.lastname, u.firstname",
@@ -1377,9 +1377,9 @@ echo '</div>';
 
 // Version 5.9.383: instant client-side filter across the active tab's rows — works on
 // every tab (not just Certs Issued), no page reload. Filters on whatever the row
-// shows (name, email, cert number, and USI where displayed).
+// shows (name, username, email, cert number, and USI where displayed).
 echo '<div style="margin-bottom:14px;">'
-    . '<input type="text" id="rtoc-hub-rowfilter" placeholder="Filter this tab — name, email, USI or cert number…" '
+    . '<input type="text" id="rtoc-hub-rowfilter" placeholder="Filter this tab — name, username, email, USI or cert number…" '
     . 'style="width:100%;max-width:440px;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.9rem;">'
     . '<span id="rtoc-hub-rowfilter-count" style="margin-left:10px;color:#6b7280;font-size:0.82rem;"></span></div>';
 echo '<script>document.addEventListener("DOMContentLoaded",function (){'
@@ -1517,6 +1517,7 @@ if ($activeTab === 'ready') {
             echo '<thead><tr>';
             echo '<th style="width:36px;"></th>';
             echo '<th>Student</th>';
+            echo '<th>Username</th>';
             echo '<th>Email</th>';
             echo '<th>Completion Date</th>';
             // USI-PREFLIGHT (v6.3.13)
@@ -1560,6 +1561,7 @@ if ($activeTab === 'ready') {
                         : ' checked')
                     . '></td>';
                 echo '<td>' . s(fullname($comp)) . $badge . '</td>';
+                echo '<td>' . s($comp->username ?? '') . '</td>';
                 echo '<td>' . s($comp->email ?? '') . '</td>';
                 echo '<td>' . $tcStr . '</td>';
                 echo '<td>' . $uCell . '</td>';
@@ -1582,9 +1584,9 @@ if ($activeTab === 'ready') {
             echo '<summary style="cursor:pointer;color:#6b7280;font-size:0.87rem;">'
                 . count($alreadyIssued) . ' student(s) already have an active Testamur — click to expand</summary>';
             echo '<table class="generaltable" style="margin-top:8px;">';
-            echo '<thead><tr><th>Student</th><th>Email</th></tr></thead><tbody>';
+            echo '<thead><tr><th>Student</th><th>Username</th><th>Email</th></tr></thead><tbody>';
             foreach ($alreadyIssued as $uid => $comp) {
-                echo '<tr><td>' . s(fullname($comp)) . '</td><td>' . s($comp->email ?? '') . '</td></tr>';
+                echo '<tr><td>' . s(fullname($comp)) . '</td><td>' . s($comp->username ?? '') . '</td><td>' . s($comp->email ?? '') . '</td></tr>';
             }
             echo '</tbody></table></details>';
         }
@@ -1612,12 +1614,13 @@ if ($activeTab === 'issued') {
     $likesql   = '';
     $likeparam = [];
     if ($qclean !== '') {
-        $likesql = " AND (u.firstname "  . $DB->sql_like('u.firstname',  ':fn', false)
-                 . " OR u.lastname "     . $DB->sql_like('u.lastname',   ':ln', false)
-                 . " OR u.email "        . $DB->sql_like('u.email',      ':em', false)
-                 . " OR c.certnumber "   . $DB->sql_like('c.certnumber', ':cn', false) . ")";
+        $likesql = " AND (" . $DB->sql_like('u.firstname',  ':fn', false)
+                 . " OR " . $DB->sql_like('u.lastname',   ':ln', false)
+                 . " OR " . $DB->sql_like('u.email',      ':em', false)
+                 . " OR " . $DB->sql_like('c.certnumber', ':cn', false)
+                 . " OR " . $DB->sql_like('u.username',   ':un', false) . ")";
         $esc       = '%' . $DB->sql_like_escape($qclean) . '%';
-        $likeparam = ['fn' => $esc, 'ln' => $esc, 'em' => $esc, 'cn' => $esc];
+        $likeparam = ['fn' => $esc, 'ln' => $esc, 'em' => $esc, 'cn' => $esc, 'un' => $esc];
     }
 
     $baseParams = array_merge(['qc' => $qualcode], $likeparam);
@@ -1629,7 +1632,7 @@ if ($activeTab === 'issued') {
     );
     $certrows   = $DB->get_records_sql(
         "SELECT c.id, c.userid, c.certtype, c.certnumber, c.timecreated,
-                u.firstname, u.lastname, u.email
+                u.firstname, u.lastname, u.email, u.username
            FROM {local_rtocompliance_certs} c
            JOIN {user} u ON u.id = c.userid
           WHERE c.qualificationcode = :qc AND c.status = 'issued'
@@ -1643,7 +1646,7 @@ if ($activeTab === 'issued') {
     echo '<form method="get" action="' . s($searchBaseUrl) . '" style="display:flex;gap:8px;margin-bottom:16px;">';
     echo '<input type="hidden" name="qualid" value="' . (int)$qualid . '">';
     echo '<input type="hidden" name="tab" value="issued">';
-    echo '<input type="text" name="q" value="' . s($qclean) . '" placeholder="Search by name, email, or cert number…" class="form-control" style="max-width:380px;">';
+    echo '<input type="text" name="q" value="' . s($qclean) . '" placeholder="Search by name, username, email, or cert number…" class="form-control" style="max-width:380px;">';
     echo '<button type="submit" class="btn btn-primary btn-sm">Search</button>';
     if ($qclean !== '') {
         echo '<a href="' . s($searchBaseUrl) . '" class="btn btn-outline-secondary btn-sm">Clear</a>';
@@ -1655,12 +1658,13 @@ if ($activeTab === 'issued') {
     } else {
         echo '<p style="color:#6b7280;font-size:0.88rem;margin-bottom:10px;">Showing ' . count($certrows) . ' of ' . $totalcerts . ' certificate(s).</p>';
         echo '<table class="generaltable"><thead><tr>';
-        echo '<th>Student</th><th>Email</th><th>Type</th><th>Cert Number</th><th>Issued</th>';
+        echo '<th>Student</th><th>Username</th><th>Email</th><th>Type</th><th>Cert Number</th><th>Issued</th>';
         echo '</tr></thead><tbody>';
         foreach ($certrows as $row) {
             $certUrl = (new moodle_url('/local/rtocompliance/certificates.php', ['view' => $row->id]))->out(false);
             echo '<tr>';
             echo '<td>' . s($row->firstname . ' ' . $row->lastname) . '</td>';
+            echo '<td>' . s($row->username ?? '') . '</td>';
             echo '<td>' . s($row->email ?? '') . '</td>';
             echo '<td><span title="The kind of certificate. A Testamur is the full qualification certificate; a Statement of Attainment covers only some units." style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:4px;font-size:0.78rem;font-weight:600;">' . s(ucfirst($row->certtype ?? '')) . '</span></td>';
             echo '<td><a href="' . s($certUrl) . '">' . s($row->certnumber ?? '') . '</a></td>';
@@ -1734,7 +1738,7 @@ if ($activeTab === 'partial') {
                 if (empty($doneUnits)) {
                     continue; // Zero progress — not worth showing.
                 }
-                $userobj = $DB->get_record('user', ['id' => $uid], 'id,firstname,lastname,email', IGNORE_MISSING);
+                $userobj = $DB->get_record('user', ['id' => $uid], 'id,firstname,lastname,email,username', IGNORE_MISSING);
                 if (!$userobj) {
                     continue;
                 }
@@ -1811,7 +1815,7 @@ if ($activeTab === 'partial') {
                 echo '<p style="color:#6b7280;font-size:0.88rem;margin-bottom:10px;">'
                     . count($partials) . ' student(s) with partial progress (read-only; sorted highest % first).</p>';
                 echo '<table class="generaltable"><thead><tr>';
-                echo '<th>Student</th><th>Email</th><th>Progress</th><th>Units Done</th><th>Still Needed</th>';
+                echo '<th>Student</th><th>Username</th><th>Email</th><th>Progress</th><th>Units Done</th><th>Still Needed</th>';
                 echo '</tr></thead><tbody>';
                 foreach ($partials as $p) {
                     $pct         = $p['percent'];
@@ -1820,6 +1824,7 @@ if ($activeTab === 'partial') {
                     $missingCnt  = count($missingList);
                     echo '<tr>';
                     echo '<td>' . s(fullname($p['user'])) . '</td>';
+                    echo '<td>' . s($p['user']->username ?? '') . '</td>';
                     echo '<td>' . s($p['user']->email ?? '') . '</td>';
                     echo '<td style="min-width:160px;">'
                         . '<div style="background:#e5e7eb;border-radius:4px;height:10px;width:120px;overflow:hidden;display:inline-block;vertical-align:middle;">'
@@ -1869,7 +1874,7 @@ if ($activeTab === 'queue') {
         $queueRows = $DB->get_records_sql(
             "SELECT ac.id, ac.status, ac.certtypes, ac.creditcost, ac.errormessage,
                     ac.timecreated, ac.timemodified,
-                    u.id AS userid, u.firstname, u.lastname, u.email
+                    u.id AS userid, u.firstname, u.lastname, u.email, u.username
                FROM {local_rtocompliance_autocerts} ac
                JOIN {local_rtocompliance_students} s ON s.id = ac.studentid
                JOIN {user} u ON u.id = s.userid
@@ -1947,7 +1952,7 @@ if ($activeTab === 'queue') {
             echo '<div class="no-deadlines"><p>No autocert queue entries for this qualification yet.</p></div>';
         } else {
             echo '<table class="generaltable"><thead><tr>';
-            echo '<th>Student</th><th>Email</th><th>Cert Types</th><th>Status</th><th>Added</th><th>Notes</th><th>Actions</th>';
+            echo '<th>Student</th><th>Username</th><th>Email</th><th>Cert Types</th><th>Status</th><th>Added</th><th>Notes</th><th>Actions</th>';
             echo '</tr></thead><tbody>';
             $statusStyles = [
                 'pending'  => 'background:#fffbeb;color:#92400e;',
@@ -1980,6 +1985,7 @@ if ($activeTab === 'queue') {
 
                 echo '<tr>';
                 echo '<td>' . s(fullname($row)) . '</td>';
+                echo '<td>' . s($row->username ?? '') . '</td>';
                 echo '<td>' . s($row->email ?? '') . '</td>';
                 echo '<td style="font-size:0.85rem;">' . s($row->certtypes ?? '') . '</td>';
                 echo '<td>' . $badge . '</td>';

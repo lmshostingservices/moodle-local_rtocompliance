@@ -280,22 +280,22 @@ $fmt = function ($v) {
 };
 
 // Title / context rows.
-fputcsv($out, ['AQTF Quality Indicator Annual Summary Report']);
-fputcsv($out, ['Year', $year]);
-fputcsv($out, ['Scale scale', '1 = Strongly Disagree .. 4 = Strongly Agree (aggregate averages only; no personal data)']);
-fputcsv($out, []);
+fputcsv($out, ['AQTF Quality Indicator Annual Summary Report'], ',', '"', '\\');
+fputcsv($out, ['Year', $year], ',', '"', '\\');
+fputcsv($out, ['Scale scale', '1 = Strongly Disagree .. 4 = Strongly Agree (aggregate averages only; no personal data)'], ',', '"', '\\');
+fputcsv($out, [], ',', '"', '\\');
 
 // Section 1: response summary.
-fputcsv($out, ['Response Summary']);
-fputcsv($out, ['Questionnaire', 'Completed Responses', 'Invited', 'Response Rate %']);
+fputcsv($out, ['Response Summary'], ',', '"', '\\');
+fputcsv($out, ['Questionnaire', 'Completed Responses', 'Invited', 'Response Rate %'], ',', '"', '\\');
 foreach ($data as $d) {
-    fputcsv($out, [$d['label'], $d['completed'], $d['invited'], $d['rate'] . '%']);
+    fputcsv($out, [$d['label'], $d['completed'], $d['invited'], $d['rate'] . '%'], ',', '"', '\\');
 }
-fputcsv($out, []);
+fputcsv($out, [], ',', '"', '\\');
 
 // Section 2: indicator + scale scores.
-fputcsv($out, ['Quality Indicator Scores']);
-fputcsv($out, ['Questionnaire', 'Quality Indicator', 'Scale', 'Average Score (1-4)', 'Items In Scale', 'Item Responses', 'Completed Respondents']);
+fputcsv($out, ['Quality Indicator Scores'], ',', '"', '\\');
+fputcsv($out, ['Questionnaire', 'Quality Indicator', 'Scale', 'Average Score (1-4)', 'Items In Scale', 'Item Responses', 'Completed Respondents'], ',', '"', '\\');
 foreach ($data as $d) {
     $bank = $d['bank'];
     $stats = $d['stats'];
@@ -311,7 +311,7 @@ foreach ($data as $d) {
                 '',
                 '',
                 $d['completed'],
-        ]);
+        ], ',', '"', '\\');
         // Constituent scale rows.
         foreach ($stats['scales'] as $sc) {
             if ($sc['indicator'] !== $ik) {
@@ -326,7 +326,7 @@ foreach ($data as $d) {
                     $sc['items'],
                     $sc['responses'],
                     $d['completed'],
-            ]);
+            ], ',', '"', '\\');
         }
     }
 }

@@ -501,9 +501,9 @@ if ($action === 'natdownload' && $importid) {
     $ndMakeCsv = function (array $headers, $rows) {
         $buf = "\xEF\xBB\xBF"; // UTF-8 BOM
         $fh  = fopen('php://memory', 'w+');
-        fputcsv($fh, $headers);
+        fputcsv($fh, $headers, ',', '"', '\\');
         foreach ($rows as $row) {
-            fputcsv($fh, array_values((array)$row));
+            fputcsv($fh, array_values((array)$row), ',', '"', '\\');
         }
         rewind($fh);
         $buf .= stream_get_contents($fh);
@@ -661,7 +661,7 @@ if ($action === 'natclassdownload' && $importid) {
         $ncd_fh, [
             'Client ID', 'Student Name', 'Unit Code', 'Qual Code', 'Start Date',
             'Study Year', 'Match Path', 'Category', 'Course Exists in Moodle', 'Student Enrolled',
-    ]);
+    ], ',', '"', '\\');
     foreach ($ncd_rs as $ncd_row) {
         fputcsv(
             $ncd_fh, [
@@ -675,7 +675,7 @@ if ($action === 'natclassdownload' && $importid) {
                 $ncd_row->category,
                 $ncd_row->course_exists ? 'Yes' : 'No',
                 $ncd_row->enrolled_match ? 'Yes' : 'No',
-        ]);
+        ], ',', '"', '\\');
     }
     $ncd_rs->close();
     rewind($ncd_fh);
@@ -4047,23 +4047,23 @@ if ($action === 'analyse' && $importid) {
     fputcsv(
         $fReviewRequired, ['username','idnumber','firstname','lastname','email','course_shortname','course_fullname',
                                    'category','unit_code','qualcode','qual_type','lookup_mode','delivery_type',
-                               'confidence','confidence_pct','score','score_flags','reason']);
-    fputcsv($fUnmatchedAdd,   ['username','idnumber','firstname','lastname','unit_code','qualcode','startdate','delivery_key','reason']);
+                               'confidence','confidence_pct','score','score_flags','reason'], ',', '"', '\\');
+    fputcsv($fUnmatchedAdd,   ['username','idnumber','firstname','lastname','unit_code','qualcode','startdate','delivery_key','reason'], ',', '"', '\\');
     $totalMoodleUpload   = 0;
     $totalReviewRequired = 0;
     $totalUnmatchedAdd   = 0;
 
-    fputcsv($fMissing,     ['username','idnumber','firstname','lastname','courseid','shortname','fullname','category','unit_code','qualcode','lookup_mode','delivery_type','confidence','reason']);
-    fputcsv($fExtra,       ['username','idnumber','firstname','lastname','courseid','shortname','fullname','category','unit_code','category_type','classification','archive_category','has_replacement','foe_deleted','confidence','recommendation','reason']);
-    fputcsv($fReview,      ['username','idnumber','firstname','lastname','courseid','shortname','fullname','category','reason']);
-    fputcsv($fPostImport,  ['username','idnumber','firstname','lastname','courseid','shortname','fullname','category','unit_code','enrol_date','reason']);
-    fputcsv($fRestore,     ['username','idnumber','firstname','lastname','courseid','shortname','fullname','category','unit_code','classification','confidence','reason']);
-    fputcsv($fSummary,     ['username','student','nat_units','units_covered','units_missing','extra_enrolments','post_import_enrolments','restore_restore','restore_pi_replaced','restore_legit_remove','restore_review','review_enrolments','confidence_score','confidence_label','confidence_detail']);
-    fputcsv($fAudit,       ['username','student','courseid','course','category','unit_code','unit_in_nat','enrolled','action']);
+    fputcsv($fMissing,     ['username','idnumber','firstname','lastname','courseid','shortname','fullname','category','unit_code','qualcode','lookup_mode','delivery_type','confidence','reason'], ',', '"', '\\');
+    fputcsv($fExtra,       ['username','idnumber','firstname','lastname','courseid','shortname','fullname','category','unit_code','category_type','classification','archive_category','has_replacement','foe_deleted','confidence','recommendation','reason'], ',', '"', '\\');
+    fputcsv($fReview,      ['username','idnumber','firstname','lastname','courseid','shortname','fullname','category','reason'], ',', '"', '\\');
+    fputcsv($fPostImport,  ['username','idnumber','firstname','lastname','courseid','shortname','fullname','category','unit_code','enrol_date','reason'], ',', '"', '\\');
+    fputcsv($fRestore,     ['username','idnumber','firstname','lastname','courseid','shortname','fullname','category','unit_code','classification','confidence','reason'], ',', '"', '\\');
+    fputcsv($fSummary,     ['username','student','nat_units','units_covered','units_missing','extra_enrolments','post_import_enrolments','restore_restore','restore_pi_replaced','restore_legit_remove','restore_review','review_enrolments','confidence_score','confidence_label','confidence_detail'], ',', '"', '\\');
+    fputcsv($fAudit,       ['username','student','courseid','course','category','unit_code','unit_in_nat','enrolled','action'], ',', '"', '\\');
 
-    fputcsv($fAmbiguous,   ['unit_code','course_id','shortname','fullname','category','visible','delivery_key','manual_enrolments','is_chosen_fallback']);
-    fputcsv($fCourseAudit, ['course_id','shortname','fullname','extracted_unit_code','extraction_source','codes_in_fullname','codes_in_fullname_list','flags']);
-    fputcsv($fDebug,       ['student_id','firstname','lastname','qualification','unit','mapped_qual_category','candidate_courses_found','current_candidates','archive_candidates','selected_course','selection_reason','semester_match','year_match','fallback_used','fallback_reason','existing_enrolment_found']);
+    fputcsv($fAmbiguous,   ['unit_code','course_id','shortname','fullname','category','visible','delivery_key','manual_enrolments','is_chosen_fallback'], ',', '"', '\\');
+    fputcsv($fCourseAudit, ['course_id','shortname','fullname','extracted_unit_code','extraction_source','codes_in_fullname','codes_in_fullname_list','flags'], ',', '"', '\\');
+    fputcsv($fDebug,       ['student_id','firstname','lastname','qualification','unit','mapped_qual_category','candidate_courses_found','current_candidates','archive_candidates','selected_course','selection_reason','semester_match','year_match','fallback_used','fallback_reason','existing_enrolment_found'], ',', '"', '\\');
 
     // Summary counters
     $totalMissing    = 0;
@@ -4309,7 +4309,7 @@ if ($action === 'analyse' && $importid) {
                     $_meta['lookup_mode']   ?? '',
                     $_meta['delivery_type'], $_meta['confidence'],
                     'NAT unit has no enrolment in any delivery — recommended preferred course shown',
-            ]);
+            ], ',', '"', '\\');
             $totalMissing++;
 
             // ── v5.9.170 Three-file routing by numeric confidence ─────────────
@@ -4354,7 +4354,7 @@ if ($action === 'analyse' && $importid) {
                         (int)($_meta['score']        ?? 0),
                         $_sc($_meta['score_flags']   ?? ''),
                         'NAT unit has no enrolment in any delivery - course found but not confirmed',
-                ]);
+                ], ',', '"', '\\');
                 $totalReviewRequired++;
             }
 
@@ -4384,7 +4384,7 @@ if ($action === 'analyse' && $importid) {
                     ($_dbgLm === 'historical_archive') ? 'Yes' : 'No',
                     ($_dbgLm === 'historical_archive') ? 'No semester match; only archive deliveries found for this unit' : '',
                     'No', // By construction: unit had zero active manual enrolment coverage
-            ]);
+            ], ',', '"', '\\');
         }
 
         // ── v5.9.167 Unmatched ADD (unresolved): write to unmatched_add.csv ──
@@ -4397,7 +4397,7 @@ if ($action === 'analyse' && $importid) {
                     $_urD7['sd']       ?? '',
                     $_urD7['dk']       ?? '',
                     $_urD7['reason']   ?? '',
-            ]);
+            ], ',', '"', '\\');
             $totalUnmatchedAdd++;
         }
 
@@ -4424,7 +4424,7 @@ if ($action === 'analyse' && $importid) {
                     'No',
                     $_urData['reason'] ?? '',
                     'No',
-            ]);
+            ], ',', '"', '\\');
         }
 
         // REMOVE rows — enriched with classification (historical/duplicate/resource/foe_deleted/unknown)
@@ -4445,7 +4445,7 @@ if ($action === 'analyse' && $importid) {
                     $_rcl['confidence']      ?? 'Low',
                     $_rcl['recommendation']  ?? 'REVIEW',
                     $_rcl['reason']          ?? 'Unit code not in NAT data (enrolment predates NAT import — may be genuine mismatch)',
-            ]);
+            ], ',', '"', '\\');
             $totalExtra++;
         }
 
@@ -4461,7 +4461,7 @@ if ($action === 'analyse' && $importid) {
                     $_cd ? (string)$_cd->catname   : '', $_uc,
                     $_enrTs ? date('Y-m-d H:i:s', $_enrTs) : '',
                     'Created after NAT import — legitimate admin/IMIS enrolment; do not remove',
-            ]);
+            ], ',', '"', '\\');
             $totalPostImport++;
         }
 
@@ -4474,7 +4474,7 @@ if ($action === 'analyse' && $importid) {
                     $_cd ? (string)$_cd->shortname : '', $_cd ? (string)$_cd->fullname : '',
                     $_cd ? (string)$_cd->catname   : '',
                     'Course has no unit code — verify manually (may be orientation, LLN, or other non-unit course)',
-            ]);
+            ], ',', '"', '\\');
             $totalReview++;
         }
 
@@ -4487,7 +4487,7 @@ if ($action === 'analyse' && $importid) {
                     $_cd ? (string)$_cd->shortname : '', $_cd ? (string)$_cd->fullname : '',
                     $_cd ? (string)$_cd->catname   : '', $_clData['unit_code'],
                     $_clData['class'], $_clData['confidence'], $_clData['reason'],
-            ]);
+            ], ',', '"', '\\');
             if ($_clData['class'] === 'RESTORE') { $totalRestore++; }
         }
 
@@ -4500,7 +4500,7 @@ if ($action === 'analyse' && $importid) {
                     $_un, $_name, $_cid,
                     $_cd ? (string)$_cd->fullname : '', $_cd ? (string)$_cd->catname : '',
                     $_uc, 'YES', 'YES', 'KEEP',
-            ]);
+            ], ',', '"', '\\');
             $totalKeep++;
         }
         // Audit — REMOVE
@@ -4512,7 +4512,7 @@ if ($action === 'analyse' && $importid) {
                     $_un, $_name, $_cid,
                     $_cd ? (string)$_cd->fullname : '', $_cd ? (string)$_cd->catname : '',
                     $_uc, 'NO', 'YES', 'REMOVE',
-            ]);
+            ], ',', '"', '\\');
         }
         // Audit — POST-IMPORT
         foreach ($postImportEnrolments[$_uid] ?? [] as $_cid => $_) {
@@ -4523,7 +4523,7 @@ if ($action === 'analyse' && $importid) {
                     $_un, $_name, $_cid,
                     $_cd ? (string)$_cd->fullname : '', $_cd ? (string)$_cd->catname : '',
                     $_uc, 'NO', 'YES', 'POST-IMPORT',
-            ]);
+            ], ',', '"', '\\');
         }
         // Audit — REVIEW
         foreach ($reviewEnrolments[$_uid] ?? [] as $_cid => $_) {
@@ -4533,7 +4533,7 @@ if ($action === 'analyse' && $importid) {
                     $_un, $_name, $_cid,
                     $_cd ? (string)$_cd->fullname : '', $_cd ? (string)$_cd->catname : '',
                     '', '?', 'YES', 'REVIEW',
-            ]);
+            ], ',', '"', '\\');
         }
         // Audit — ADD
         foreach ($addEnrolments[$_uid] ?? [] as $_cid => $_uc) {
@@ -4543,7 +4543,7 @@ if ($action === 'analyse' && $importid) {
                     $_un, $_name, $_cid,
                     $_cd ? (string)$_cd->fullname : '', $_cd ? (string)$_cd->catname : '',
                     $_uc, 'YES', 'NO', 'ADD',
-            ]);
+            ], ',', '"', '\\');
         }
         // Audit — Friday backup missing (with specific classification)
         foreach ($fridayBackupMissing[$_uid] ?? [] as $_cid => $_clData) {
@@ -4553,7 +4553,7 @@ if ($action === 'analyse' && $importid) {
                     $_un, $_name, $_cid,
                     $_cd ? (string)$_cd->fullname : '', $_cd ? (string)$_cd->catname : '',
                     $_clData['unit_code'], '?', 'NO', $_clData['class'],
-            ]);
+            ], ',', '"', '\\');
         }
 
         $_piCount       = count($postImportEnrolments[$_uid]  ?? []);
@@ -4573,7 +4573,7 @@ if ($action === 'analyse' && $importid) {
                 $_rstRv++;
             }
         }
-        fputcsv($fSummary, [$_un, $_name, $_natUnitCount, $_coveredCount, $_misCount, $_extCount, $_piCount, $_rstRestore, $_rstPiReplaced, $_rstLegit, $_rstRv, $_rvCount, $_confScore, $_confLabel, implode(' | ', $_confChecks)]);
+        fputcsv($fSummary, [$_un, $_name, $_natUnitCount, $_coveredCount, $_misCount, $_extCount, $_piCount, $_rstRestore, $_rstPiReplaced, $_rstLegit, $_rstRv, $_rvCount, $_confScore, $_confLabel, implode(' | ', $_confChecks)], ',', '"', '\\');
     }
 
     // ── Flush moodle_upload.csv — one row per student with dynamic course1/role1, course2/role2, etc. ──
@@ -4597,7 +4597,7 @@ if ($action === 'analyse' && $importid) {
         $_muHdr[] = 'role'        . $_ci;
         $_muHdr[] = 'enrolstatus' . $_ci;
     }
-    fputcsv($fMoodleUpload, $_muHdr);
+    fputcsv($fMoodleUpload, $_muHdr, ',', '"', '\\');
     // Write one consolidated row per student
     foreach ($moodleUploadBuffer as $_buf) {
         $_muRow = [$_buf['username'], $_buf['idnumber'], $_buf['firstname'], $_buf['lastname']];
@@ -4609,7 +4609,7 @@ if ($action === 'analyse' && $importid) {
         // Pad remaining course/role/enrolstatus triples with empty strings
         $_pad = ($_maxCourses - count($_buf['courses'])) * 3;
         for ($_pi = 0; $_pi < $_pad; $_pi++) { $_muRow[] = ''; }
-        fputcsv($fMoodleUpload, $_muRow);
+        fputcsv($fMoodleUpload, $_muRow, ',', '"', '\\');
     }
 
     // ── End-of-file stamp — last row of every human-read CSV (safe for parsers) ─
@@ -4617,7 +4617,7 @@ if ($action === 'analyse' && $importid) {
     // Row 2+ = data. Last row = stamp. moodle_upload.csv excluded.
     $_stampEof = ['# RECONCILER', $pluginRelease, $runTimestamp, $runShortToken];
     foreach ([$fMissing, $fExtra, $fReview, $fPostImport, $fRestore, $fSummary, $fAudit] as $_fh) {
-        fputcsv($_fh, $_stampEof);
+        fputcsv($_fh, $_stampEof, ',', '"', '\\');
     }
     fclose($fMissing);
     fclose($fExtra);
@@ -4647,10 +4647,10 @@ if ($action === 'analyse' && $importid) {
                     $_ambDk,
                     $_ambCnt,
                     ($_ambCid === $_chosenAmbCid) ? 'YES' : 'NO',
-            ]);
+            ], ',', '"', '\\');
         }
     }
-    fputcsv($fAmbiguous, $_stampEof);
+    fputcsv($fAmbiguous, $_stampEof, ',', '"', '\\');
     fclose($fAmbiguous);
 
     // ── Write course unit validation audit (all Moodle courses) ──────────────
@@ -4667,14 +4667,14 @@ if ($action === 'analyse' && $importid) {
                 $_caMeta['fullname_count'],
                 $_caMeta['fullname_list'],
                 $_caMeta['flags'],
-        ]);
+        ], ',', '"', '\\');
     }
-    fputcsv($fCourseAudit, $_stampEof);
+    fputcsv($fCourseAudit, $_stampEof, ',', '"', '\\');
     fclose($fCourseAudit);
     fclose($fDebug);
     fclose($fMoodleUpload);
-    fputcsv($fReviewRequired, $_stampEof);
-    fputcsv($fUnmatchedAdd, $_stampEof);
+    fputcsv($fReviewRequired, $_stampEof, ',', '"', '\\');
+    fputcsv($fUnmatchedAdd, $_stampEof, ',', '"', '\\');
     fclose($fReviewRequired);
     fclose($fUnmatchedAdd);
 

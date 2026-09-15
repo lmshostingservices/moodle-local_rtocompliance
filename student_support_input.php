@@ -137,7 +137,7 @@ if ($action === 'delete' && confirm_sesskey()) {
 $studentoptions = [];
 $studentrows = $DB->get_records_sql(
     "SELECT s.id, s.userid, s.firstname AS sfn, s.lastname AS sln,
-            u.firstname AS ufn, u.lastname AS uln
+            u.firstname AS ufn, u.lastname AS uln, u.username, u.email
        FROM {local_rtocompliance_students} s
        LEFT JOIN {user} u ON u.id = s.userid
    ORDER BY COALESCE(NULLIF(s.lastname, ''), u.lastname),
@@ -150,7 +150,15 @@ foreach ($studentrows as $row) {
     if ($name === '') {
         $name = 'Student #' . $row->id;
     }
-    $studentoptions[$row->id] = $name;
+    $identifiers = [];
+    if (!empty($row->username)) {
+        $identifiers[] = (string)$row->username;
+    }
+    if (!empty($row->email)) {
+        $identifiers[] = (string)$row->email;
+    }
+    $studentoptions[$row->id] = $name . (!empty($identifiers)
+        ? ' (' . implode(' · ', $identifiers) . ')' : '');
 }
 
 // Resolve the selected student record.
@@ -194,9 +202,11 @@ echo html_writer::start_div('info-card', ['style' => 'margin-top:1.5rem;']);
 echo html_writer::tag('h4', 'Select student');
 echo '<form method="get" action="' . (new moodle_url('/local/rtocompliance/student_support_input.php'))->out() . '" style="margin-top:0.5rem;display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">';
 echo '<label for="studentid" style="font-weight:600;">Student</label>';
+echo '<input type="search" id="student-search" placeholder="Search name, username or email…" aria-label="Search students"'
+    . ' style="min-width:260px;padding:6px 10px;border:1px solid #cbd5e1;border-radius:6px;">';
 echo html_writer::select(
     $studentoptions, 'studentid', $studentid, ['' => 'Choose a student…'],
-    ['id' => 'studentid', 'onchange' => 'this.form.submit();']);
+    ['id' => 'studentid', 'onchange' => 'this.form.submit();', 'style' => 'min-width:280px;']);
 echo '<noscript><button type="submit" class="btn btn-primary btn-sm">Go</button></noscript>';
 echo '</form>';
 if (!$selectedstudent) {
@@ -387,6 +397,24 @@ echo html_writer::end_div(); // compliance-container
 <script>
 (function () {
     'use strict';
+
+    // Keep the native Moodle-compatible selector, but make large student lists
+    // practical to navigate without changing the server-side selection flow.
+    var studentSearch = document.getElementById('student-search');
+    var studentSelect = document.getElementById('studentid');
+    if (studentSearch && studentSelect) {
+        studentSearch.addEventListener('input', function () {
+            var query = this.value.toLowerCase().trim();
+            Array.prototype.forEach.call(studentSelect.options, function (option) {
+                if (!option.value) {
+                    option.hidden = false;
+                    return;
+                }
+                option.hidden = query !== ''
+                    && option.textContent.toLowerCase().indexOf(query) === -1;
+            });
+        });
+    }
 
     // ---------------------------------------------------------------
     // AI Auto-Fill — calls /api/rto/ai-support-autofill (50 credits).

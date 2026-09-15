@@ -52,7 +52,14 @@ class before_footer_html_generation {
     public static function callback(\core\hook\output\before_footer_html_generation $hook): void {
         global $PAGE, $CFG, $DB, $USER;
 
-        if (empty($PAGE->url)) {
+        // PAGE-URL-GUARD (v6.3.32): this was written as empty($PAGE->url), which is
+        // ALWAYS TRUE. moodle_page declares __get() but no __isset(), and empty() asks
+        // __isset() first - so on every supported Moodle version PHP answered "not set"
+        // for a perfectly good url object and this callback returned immediately, every
+        // time. Verified on Moodle 4.4.12 and 5.2.2. $PAGE->has_set_url() is Moodle's own
+        // API for the question. (db/upgrade.php records the same guard being removed from
+        // render_sidebar() at v4.0.3 for the same reason; it crept back in here.)
+        if (!$PAGE->has_set_url()) {
             return;
         }
 
@@ -229,6 +236,51 @@ class before_footer_html_generation {
         // on pages that already received tables.js via render_nav_header().
         $tables_url = (new \moodle_url('/local/rtocompliance/js/tables.js'))->out();
         $hook->add_html('<script src="' . s($tables_url) . '"></script>');
+
+        // ── SAVED OPERATIONAL TABLE VIEWS ────────────────────────────────────
+        // The registry is deliberately the source of truth. Do not expose
+        // saved-view controls on an arbitrary plugin page: fields() contains
+        // only query names which the corresponding page can safely replay.
+        // The configuration is data attributes rather than an inline script,
+        // keeping this compatible with Moodle installations using a strict CSP.
+        $savedviewspage = pathinfo(basename($path), PATHINFO_FILENAME);
+        $savedviewsclass = '\\local_rtocompliance\\local\\saved_view_pages';
+        $savedviewsaccess = false;
+        if (class_exists($savedviewsclass) && method_exists($savedviewsclass, 'can_access')) {
+            $savedviewsaccess = $savedviewsclass::can_access($savedviewspage);
+        }
+        if ($savedviewsaccess && $savedviewsclass::supported($savedviewspage)) {
+            $registeredfields = $savedviewsclass::fields($savedviewspage);
+            $allowedfields = [];
+            if (is_array($registeredfields)) {
+                foreach ($registeredfields as $fieldkey => $fieldvalue) {
+                    // Registry implementations may use either ['status', ...]
+                    // or ['status' => 'Status']; only the name is sent.
+                    $field = is_int($fieldkey) ? $fieldvalue : $fieldkey;
+                    if (is_string($field) && preg_match('/^[A-Za-z][A-Za-z0-9_]{0,63}$/', $field)) {
+                        $allowedfields[] = $field;
+                    }
+                }
+            }
+            $allowedfields = array_values(array_unique($allowedfields));
+            $fieldsjson = json_encode($allowedfields,
+                JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+            if ($fieldsjson === false) {
+                $fieldsjson = '[]';
+            }
+            $savedviewsendpoint = (new \moodle_url('/local/rtocompliance/saved_views_ajax.php'))->out();
+            $savedviewsjs = (new \moodle_url('/local/rtocompliance/js/savedviews.js'))->out();
+            $savedviewscss = (new \moodle_url('/local/rtocompliance/styles/savedviews.css'))->out();
+            $hook->add_html(
+                '<link rel="stylesheet" href="' . s($savedviewscss) . '">' .
+                '<div id="rtoc-savedviews-config" hidden data-rtoc-savedviews-config="1"' .
+                ' data-page="' . s($savedviewspage) . '"' .
+                ' data-allowed-fields="' . s($fieldsjson) . '"' .
+                ' data-endpoint="' . s($savedviewsendpoint) . '"' .
+                ' data-sesskey="' . s(sesskey()) . '"></div>' .
+                '<script src="' . s($savedviewsjs) . '"></script>'
+            );
+        }
 
     }
 }

@@ -95,9 +95,9 @@
         <FIELD NAME="activitystartdate" TYPE="int" LENGTH="10" NOTNULL="false"/>
         <FIELD NAME="activityenddate" TYPE="int" LENGTH="10" NOTNULL="false"/>
         <FIELD NAME="scheduledhours" TYPE="int" LENGTH="5" NOTNULL="false" COMMENT="Scheduled hours for this unit"/>
-        <FIELD NAME="outcomeidentifier" TYPE="char" LENGTH="2" NOTNULL="true" DEFAULT="00" COMMENT="AVETMISS outcome code"/>
+        <FIELD NAME="outcomeidentifier" TYPE="char" LENGTH="2" NOTNULL="true" DEFAULT="70" COMMENT="AVETMISS outcome identifier - national. Defaulted to 70 (Continuing activity) at v6.3.35: the previous default 00 is not a code in AVETMISS 2.3 at all, and any insert omitting this column minted one. 70 is both valid and the correct meaning for an enrolment that has just been created."/>
         <FIELD NAME="manualoutcome" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="1=outcome was manually set by manager via edit form; auto-grading observer/cron MUST NOT overwrite"/>
-        <FIELD NAME="deliverymode" TYPE="char" LENGTH="3" NOTNULL="true" DEFAULT="10" COMMENT="10=Classroom, 20=Electronic, 30=Employment, 40=Other, 90=Not applicable"/>
+        <FIELD NAME="deliverymode" TYPE="char" LENGTH="3" NOTNULL="true" DEFAULT="" COMMENT="AVETMISS Release 8.0 delivery mode identifier: a three-character Y/N triplet - position 1 internal, 2 external, 3 workplace-based. YNN NYN NNY YYN YNY NYY YYY NNN. Default emptied at v6.3.35: the previous default 10 is a Release 7.0 code, and defaulting to any real value makes the schema assert how training was delivered. Empty means not recorded, which the code-list integrity report surfaces."/>
         <FIELD NAME="fundingsourcenat" TYPE="char" LENGTH="2" NOTNULL="true" DEFAULT="30" COMMENT="11=Cth recurrent, 13=Cth specific, 15=State recurrent, 20=Fee for service, 30=Domestic FFS"/>
         <FIELD NAME="fundingsourcestate" TYPE="char" LENGTH="3" NOTNULL="false" COMMENT="State-specific funding code"/>
         <FIELD NAME="trainingcontractid" TYPE="char" LENGTH="10" NOTNULL="false" COMMENT="Apprenticeship/traineeship contract ID"/>
@@ -2375,7 +2375,30 @@
       </INDEXES>
     </TABLE>
 
-    <TABLE NAME="local_rtocompliance_qualmap" COMMENT="Admin-defined explicit mapping from NAT qualification codes to Moodle category IDs used by the reconciler">
+    <TABLE NAME="local_rtocompliance_recognition" COMMENT="Whether a qualification/program code is nationally recognised training. THE single source of truth: courses.nationallyrecognised and avetmiss_programme.isvetprog are legacy inputs only. Gates NAT export, USI collection and USI verification.">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="qualificationcode" TYPE="char" LENGTH="20" NOTNULL="true" COMMENT="Qualification/program code e.g. TLI50822 - upper-cased on save"/>
+        <FIELD NAME="state" TYPE="char" LENGTH="16" NOTNULL="true" DEFAULT="unknown" COMMENT="unknown|recognised|not_recognised. DELIBERATELY THREE STATES, NOT A BOOLEAN: a boolean cannot distinguish -we know it is not accredited- from -nobody has said yet-, and defaulting the latter to false is what caused 1064 students to be chased for a USI they did not need. unknown blocks nothing and is reported, never assumed."/>
+        <FIELD NAME="source" TYPE="char" LENGTH="16" NOTNULL="true" DEFAULT="none" COMMENT="none|register|manual|legacy. Where the state came from. A manual override outranks a register result."/>
+        <FIELD NAME="registertitle" TYPE="char" LENGTH="255" NOTNULL="false" COMMENT="Title as published on the National Register at lookup time - display and audit only, never used for matching"/>
+        <FIELD NAME="registerchecked" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Unix time of the last training.gov.au lookup, successful or not"/>
+        <FIELD NAME="registerresult" TYPE="char" LENGTH="32" NOTNULL="false" COMMENT="found|notfound|error|never. NOT the same as state: a notfound leaves state unknown, because absence from a lookup is not proof a code is unaccredited"/>
+        <FIELD NAME="setby" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="user.id who set a manual override"/>
+        <FIELD NAME="settime" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Unix time the manual override was set"/>
+        <FIELD NAME="notes" TYPE="text" NOTNULL="false" COMMENT="Why an override was set - free text, shown in the classification report"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="qualificationcode_unique" TYPE="unique" FIELDS="qualificationcode"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="state" UNIQUE="false" FIELDS="state"/>
+      </INDEXES>
+    </TABLE>
+  <TABLE NAME="local_rtocompliance_qualmap" COMMENT="Admin-defined explicit mapping from NAT qualification codes to Moodle category IDs used by the reconciler">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="qualcode" TYPE="char" LENGTH="20" NOTNULL="true" COMMENT="NAT qualification code e.g. TLI50822 — upper-cased on save"/>

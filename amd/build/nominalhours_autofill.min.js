@@ -1,4 +1,4 @@
-define(['core/str'], function (Str) {
+define(['core/str'], function(Str) {
     'use strict';
 
     // AMD-STRINGS (v6.3.21): every user-facing string on this module comes from the language
@@ -24,11 +24,11 @@ define(['core/str'], function (Str) {
      * @return {Promise} resolved once the strings are in place
      */
     function loadStrings() {
-        var keys = Object.keys(S).map(function (k) {
+        var keys = Object.keys(S).map(function(k) {
             return {key: k, component: 'local_rtocompliance'};
         });
-        return Str.get_strings(keys).then(function (values) {
-            Object.keys(S).forEach(function (k, i) {
+        return Str.get_strings(keys).then(function(values) {
+            Object.keys(S).forEach(function(k, i) {
                 if (values[i]) {
                     S[k] = values[i];
                 }
@@ -51,7 +51,7 @@ define(['core/str'], function (Str) {
         if (typeof a !== 'object') {
             return String(template).replace(/\{\$a\}/g, a);
         }
-        return String(template).replace(/\{\$a->(\w+)\}/g, function (m, name) {
+        return String(template).replace(/\{\$a->(\w+)\}/g, function(m, name) {
             return a[name] !== undefined ? a[name] : m;
         });
     }
@@ -89,12 +89,12 @@ define(['core/str'], function (Str) {
 
         // The lookup button is only injected once its label has resolved, so no English
         // placeholder can ever be painted into the page.
-        loadStrings().then(function () {
+        loadStrings().then(function() {
             injectLookupButton(codeField, titleField, hoursField);
             return S;
         });
 
-        codeField.addEventListener('blur', function () {
+        codeField.addEventListener('blur', function() {
             var code = codeField.value.trim();
             if (code.length >= 4) {
                 // Cancel any pending debounce — blur fires the lookup immediately,
@@ -107,13 +107,13 @@ define(['core/str'], function (Str) {
             }
         });
 
-        codeField.addEventListener('input', function () {
+        codeField.addEventListener('input', function() {
             var code = codeField.value.trim();
             if (debounceTimer) {
                 clearTimeout(debounceTimer);
             }
             if (code.length >= 4) {
-                debounceTimer = setTimeout(function () {
+                debounceTimer = setTimeout(function() {
                     lookupNominalHours(code, titleField, hoursField);
                 }, 800);
             }
@@ -143,18 +143,18 @@ define(['core/str'], function (Str) {
             'vertical-align:middle',
         ].join(';');
 
-        btn.addEventListener('mouseenter', function () {
+        btn.addEventListener('mouseenter', function() {
             btn.style.background = '#1557b0';
         });
-        btn.addEventListener('mouseleave', function () {
+        btn.addEventListener('mouseleave', function() {
             btn.style.background = '#1a73e8';
         });
 
-        btn.addEventListener('click', function () {
+        btn.addEventListener('click', function() {
             var code = codeField.value.trim();
             if (!code) {
                 showLookupStatus(hoursField, 'Enter a code first (e.g. BSB50420 or BSBWHS411).', 'info');
-                setTimeout(function () { hideLookupStatus(); }, 4000);
+                setTimeout(function() { hideLookupStatus(); }, 4000);
                 return;
             }
             lookupNominalHours(code, titleField, hoursField);
@@ -189,7 +189,7 @@ define(['core/str'], function (Str) {
         xhr.open('GET', url, true);
         xhr.timeout = 15000;
 
-        xhr.onreadystatechange = function () {
+        xhr.onreadystatechange = function() {
             // Ignore callbacks from a superseded request.
             if (xhr !== currentXhr) { return; }
             if (xhr.readyState !== 4) {
@@ -217,29 +217,29 @@ define(['core/str'], function (Str) {
                         showLookupStatus(hoursField,
                             '\u2713 ' + fill(S.nominalhours_lookup_found,
                                 {hours: data.nominalHours, source: src}), 'success');
-                        setTimeout(function () { hideLookupStatus(); }, 5000);
+                        setTimeout(function() { hideLookupStatus(); }, 5000);
                     } else {
                         var titleMsg = data.unitTitle ? code + ' (' + data.unitTitle + ')' : code;
                         showLookupStatus(hoursField,
                             fill(S.nominalhours_lookup_none, titleMsg), 'warning');
-                        setTimeout(function () { hideLookupStatus(); }, 6000);
+                        setTimeout(function() { hideLookupStatus(); }, 6000);
                     }
                 } catch (e) {
                     hideLookupStatus();
                 }
             } else {
                 showLookupStatus(hoursField, S.nominalhours_lookup_failed, 'warning');
-                setTimeout(function () { hideLookupStatus(); }, 5000);
+                setTimeout(function() { hideLookupStatus(); }, 5000);
             }
         };
 
-        xhr.ontimeout = function () {
+        xhr.ontimeout = function() {
             if (btn) {
                 btn.disabled = false;
                 btn.textContent = S.nominalhours_lookup_btn;
             }
             showLookupStatus(hoursField, S.nominalhours_lookup_timeout, 'warning');
-            setTimeout(function () { hideLookupStatus(); }, 5000);
+            setTimeout(function() { hideLookupStatus(); }, 5000);
         };
 
         xhr.send();

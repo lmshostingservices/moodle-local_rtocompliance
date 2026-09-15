@@ -1,0 +1,104 @@
+/*
+ * Saved table views.  Kept separate from the large legacy stylesheet so the
+ * footer can load it only on pages registered as safe operational tables.
+ */
+[class*="path-local-rtocompliance"] .rtoc-savedviews {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .5rem;
+    margin: 0 0 .65rem;
+    padding: .65rem .75rem;
+    border: 1px solid #dbe3ef;
+    border-radius: .35rem;
+    background: #f8fafc;
+    color: #1f2937;
+    font-size: .875rem;
+}
+
+[class*="path-local-rtocompliance"] .rtoc-savedviews-label {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    margin: 0;
+    font-weight: 600;
+}
+
+[class*="path-local-rtocompliance"] .rtoc-savedviews-select,
+[class*="path-local-rtocompliance"] .rtoc-savedviews-name {
+    min-height: 2.15rem;
+    max-width: 18rem;
+    border: 1px solid #b9c5d4;
+    border-radius: .25rem;
+    background: #fff;
+    color: #1f2937;
+    padding: .3rem .5rem;
+}
+
+[class*="path-local-rtocompliance"] .rtoc-savedviews-name {
+    width: 11rem;
+}
+
+[class*="path-local-rtocompliance"] .rtoc-savedviews-button {
+    min-height: 2.15rem;
+    border: 1px solid #8292a7;
+    border-radius: .25rem;
+    background: #fff;
+    color: #1f2937;
+    cursor: pointer;
+    font-size: .875rem;
+    font-weight: 600;
+    padding: .3rem .7rem;
+}
+
+[class*="path-local-rtocompliance"] .rtoc-savedviews-button:hover:not(:disabled),
+[class*="path-local-rtocompliance"] .rtoc-savedviews-button:focus-visible {
+    border-color: #1d4ed8;
+    background: #eff6ff;
+    color: #1e3a8a;
+}
+
+[class*="path-local-rtocompliance"] .rtoc-savedviews-button:disabled {
+    cursor: not-allowed;
+    opacity: .55;
+}
+
+[class*="path-local-rtocompliance"] .rtoc-savedviews-apply {
+    border-color: #1d4ed8;
+    background: #1d4ed8;
+    color: #fff;
+}
+
+[class*="path-local-rtocompliance"] .rtoc-savedviews-apply:hover:not(:disabled),
+[class*="path-local-rtocompliance"] .rtoc-savedviews-apply:focus-visible {
+    background: #1e40af;
+    color: #fff;
+}
+
+[class*="path-local-rtocompliance"] .rtoc-savedviews-delete {
+    color: #991b1b;
+}
+
+[class*="path-local-rtocompliance"] .rtoc-savedviews-status {
+    flex: 1 1 100%;
+    min-height: 1.2em;
+    color: #475569;
+    font-size: .8125rem;
+}
+
+[class*="path-local-rtocompliance"] .rtoc-savedviews-status-error {
+    color: #991b1b;
+    font-weight: 600;
+}
+
+@media (max-width: 575.98px) {
+    [class*="path-local-rtocompliance"] .rtoc-savedviews-label {
+        flex: 1 1 100%;
+    }
+
+    [class*="path-local-rtocompliance"] .rtoc-savedviews-select,
+    [class*="path-local-rtocompliance"] .rtoc-savedviews-name {
+        max-width: none;
+        flex: 1 1 12rem;
+    }
+}

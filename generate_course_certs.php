@@ -570,7 +570,7 @@ $allcompleters = $DB->get_records_sql(
                     AND ccc.timecompleted > 0),
                 cc.timecompleted
             ) AS timecompleted,
-            u.firstname, u.lastname, u.email,
+            u.username, u.firstname, u.lastname, u.email,
             u.firstnamephonetic, u.lastnamephonetic, u.middlename, u.alternatename,
             u.suspended
      FROM {course_completions} cc
@@ -613,7 +613,7 @@ if (empty($allcompleters) && !empty($course->idnumber)) {
     $allcompleters  = $DB->get_records_sql(
         "SELECT s.userid,
                 e.activityenddate AS timecompleted,
-                u.firstname, u.lastname, u.email,
+                u.username, u.firstname, u.lastname, u.email,
                 u.firstnamephonetic, u.lastnamephonetic, u.middlename, u.alternatename,
                 u.suspended
            FROM {local_rtocompliance_enrolments} e
@@ -830,7 +830,13 @@ echo html_writer::tag(
 $studentopts  = html_writer::tag('option', '— All students —', array_filter(['value' => '0', 'selected' => $studentid === 0 ? 'selected' : null]));
 foreach ($allcompleters as $ac) {
     $sel = ($studentid === (int)$ac->userid) ? ['selected' => 'selected'] : [];
-    $studentopts .= html_writer::tag('option', fullname($ac) . ' (' . $ac->email . ')', array_merge(['value' => $ac->userid], $sel));
+    $studentopts .= html_writer::tag(
+        'option',
+        // v6.3.32: html_writer::tag() does NOT escape its contents, and a
+        // Moodle username can contain < > " when extendedusernamechars is on.
+        s(fullname($ac) . ' (' . $ac->username . ' · ' . $ac->email . ')'),
+        array_merge(['value' => $ac->userid], $sel)
+    );
 }
 echo html_writer::tag(
     'select', $studentopts, [
@@ -1357,7 +1363,17 @@ foreach ($completers as $comp) {
 
     echo html_writer::start_tag('tr', ['class' => $rowclass]);
     echo html_writer::tag('td', html_writer::tag('input', '', $checkboxattrs));
-    echo html_writer::tag('td', $namelink . $suspendBadge . $activateCb . html_writer::tag('small', ' ' . $comp->email, ['class' => 'text-muted']));
+    // v6.3.32: escaped before it reaches html_writer::tag(), which passes its
+    // contents through unchanged.
+    $studentidentifier = (string) $comp->username;
+    if (!empty($comp->email)) {
+        $studentidentifier .= ' · ' . $comp->email;
+    }
+    echo html_writer::tag(
+        'td',
+        $namelink . $suspendBadge . $activateCb
+            . html_writer::tag('small', ' ' . s($studentidentifier), ['class' => 'text-muted'])
+    );
     echo html_writer::tag('td', userdate($comp->timecompleted, '%d %b %Y'));
     echo html_writer::tag('td', $usiCell);
     echo html_writer::tag('td', implode(' + ', $labels));

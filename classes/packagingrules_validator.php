@@ -75,6 +75,8 @@ class packagingrules_validator {
         $url = rtrim($apiurl, '/') . '/api/tga/qualbuilder/' . urlencode(strtoupper(trim($qualcode))) . '?refresh=1';
 
         \core\session\manager::write_close();
+        // curl lives in lib/filelib.php and is NOT autoloaded.
+        require_once($CFG->libdir . '/filelib.php');
         $curl = new \curl();
         $curl->setopt(['CURLOPT_TIMEOUT' => 20]);
         $curl->setHeader(['X-API-Key: ' . $apikey, 'Content-Type: application/json']);

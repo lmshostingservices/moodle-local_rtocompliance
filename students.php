@@ -457,9 +457,9 @@ if ($action === 'export_dob_csv' && confirm_sesskey()) {
     header('Content-Disposition: attachment; filename="' . $filename . '"');
     $out = fopen('php://output', 'w');
     fprintf($out, "\xEF\xBB\xBF"); // UTF-8 BOM for Excel
-    fputcsv($out, ['Family name', 'Given name', 'Email', 'Client identifier', 'USI', 'Date of birth']);
+    fputcsv($out, ['Family name', 'Given name', 'Email', 'Client identifier', 'USI', 'Date of birth'], ',', '"', '\\');
     foreach ($rs as $r) {
-        fputcsv($out, [$r->lastname, $r->firstname, $r->email, (string) $r->clientid, (string) $r->usi, '']);
+        fputcsv($out, [$r->lastname, $r->firstname, $r->email, (string) $r->clientid, (string) $r->usi, ''], ',', '"', '\\');
     }
     $rs->close();
     fclose($out);
@@ -915,6 +915,7 @@ echo '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px
     . '<div style="font-size:14.5px;color:#334155;line-height:1.55;margin-bottom:8px;">Every row is one learner known to the RTO. Use the filters and search above to narrow the list, then use the Actions menu on a row to edit a profile, manage enrolments or view certificates. Here is what each column means:</div>'
     . '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px 22px;font-size:14.5px;color:#334155;line-height:1.5;">'
     . '<div><strong>Name</strong> &mdash; the learner shown surname-first; click it to open the full profile.</div>'
+    . '<div><strong>Username</strong> &mdash; the current username on the learner&rsquo;s Moodle account.</div>'
     . '<div><strong>Email</strong> &mdash; the email address on the Moodle account.</div>'
     . '<div><strong>USI</strong> &mdash; the Unique Student Identifier and its verification status against usi.gov.au.</div>'
     . '<div><strong>Residential State</strong> &mdash; the state or territory recorded for the learner.</div>'
@@ -971,7 +972,32 @@ $stats['withprofile']     = $DB->count_records_sql(
 );
 $stats['complete']        = $DB->count_records('local_rtocompliance_students', ['profilecomplete' => 1]);
 $stats['withusi']         = $DB->count_records_sql("SELECT COUNT(*) FROM {local_rtocompliance_students} WHERE usi IS NOT NULL AND usi != ''");
-$stats['missing_usi']     = max(0, $stats['withprofile'] - $stats['withusi']); // Version 5.9.368: clamp (withprofile excludes trainers, withusi doesn't → could go negative)
+// USI-ONLY-FOR-RECOGNISED (v6.3.36): counted directly rather than as
+// withprofile - withusi. The subtraction counted every profiled student without a
+// USI, including the ones enrolled solely in non-accredited short courses who do
+// not need one, so the tile overstated the real workload and the clamp above was
+// papering over the mismatch. Now it counts students who have no USI AND are
+// enrolled in at least one nationally recognised program - the actual list of
+// people somebody has to chase.
+$stats['missing_usi'] = $DB->count_records_sql(
+    "SELECT COUNT(DISTINCT s.userid)
+       FROM {local_rtocompliance_students} s
+       LEFT JOIN (SELECT DISTINCT userid FROM {local_rtocompliance_trainers}) rtoc_trainer
+              ON rtoc_trainer.userid = s.userid
+      WHERE rtoc_trainer.userid IS NULL
+        AND (s.usi IS NULL OR s.usi = '')
+        AND " . \local_rtocompliance\local\recognition::usi_required_sql('s'));
+
+// The students with no USI who do NOT need one - shown so the difference is
+// explained rather than looking like records went missing.
+$stats['usi_notrequired'] = $DB->count_records_sql(
+    "SELECT COUNT(DISTINCT s.userid)
+       FROM {local_rtocompliance_students} s
+       LEFT JOIN (SELECT DISTINCT userid FROM {local_rtocompliance_trainers}) rtoc_trainer
+              ON rtoc_trainer.userid = s.userid
+      WHERE rtoc_trainer.userid IS NULL
+        AND (s.usi IS NULL OR s.usi = '')
+        AND NOT " . \local_rtocompliance\local\recognition::usi_required_sql('s'));
 // DOB-MISSING-USI-FIX (v5.2.88): count of students who have a USI but are missing DOB
 // (verification cannot proceed without DOB).
 $stats['usi_missing_dob'] = $DB->count_records_sql(
@@ -1010,7 +1036,9 @@ $summaryStats = [
     ['label' => 'Students with AVETMISS Profile',                                        'value' => $stats['withprofile'],     'color' => 'purple', 'icon' => $iconDoc, 'tip' => 'Learners who have a national VET data profile started. AVETMISS is the student data every training organisation must report to government.'],
     ['label' => get_string('complete', 'local_rtocompliance') . ' Profiles',              'value' => $stats['complete'],        'color' => 'green',  'icon' => $iconCheck, 'tip' => 'Profiles with every mandatory reporting field filled in. Only these can go into your national data submission.'],
     ['label' => get_string('usi', 'local_rtocompliance') . ' Recorded',                   'value' => $stats['withusi'],         'color' => 'amber',  'icon' => $iconKey, 'tip' => 'Learners who have a USI on file. The USI is the national student ID number needed before a certificate can be issued.'],
-    ['label' => 'USI Missing',                                                             'value' => $stats['missing_usi'],     'color' => $stats['missing_usi'] > 0 ? 'rose' : 'green', 'icon' => $iconAlert, 'tip' => 'Learners with a profile but no USI yet. Collect their USI so results can be reported and certificates issued.'],
+    ['label' => 'Programs unclassified',                                                   'value' => \local_rtocompliance\local\recognition::count_by_state()[\local_rtocompliance\local\recognition::STATE_UNKNOWN], 'color' => 'amber', 'icon' => $iconAlert, 'tip' => 'Program codes nobody has classified yet. Their activity IS still reported in NAT files - nothing is held back - and their students are counted as needing a USI. Classifying them is what makes the USI count and the certificate type correct. Unclassified programs are also listed in AVETMISS Validation.'],
+    ['label' => 'USI not required',                                                        'value' => $stats['usi_notrequired'], 'color' => 'slate', 'icon' => $iconAlert, 'tip' => 'Learners with no USI who do not need one, because every program they are enrolled in has been explicitly classified as not nationally recognised. Deliberately excluded from the USI Missing count.'],
+    ['label' => 'USI Missing',                                                             'value' => $stats['missing_usi'],     'color' => $stats['missing_usi'] > 0 ? 'rose' : 'green', 'icon' => $iconAlert, 'tip' => 'Learners with no USI who need one. A student is excluded only when every program they are enrolled in has been explicitly classified as NOT nationally recognised - an unclassified program still counts, because failing to collect a required USI is a breach while collecting an unnecessary one is only wasted effort. See Reports > Program recognition.'],
     ['label' => 'USI Has No DOB (can\'t verify)',                                          'value' => $stats['usi_missing_dob'], 'color' => $stats['usi_missing_dob'] > 0 ? 'rose' : 'green', 'icon' => $iconAlert, 'tip' => 'Learners who have a USI but no date of birth, so it cannot be checked against usi.gov.au. Add their date of birth to verify.'],
     ['label' => 'Total Enrolments',                                                        'value' => $stats['enrolments'],      'color' => 'blue',   'icon' => $iconBook, 'tip' => 'Count of every enrolment record (one learner in one course). A single learner can have several.'],
     ['label' => 'Certificates Issued',                                                     'value' => $stats['certs_issued'],    'color' => 'green',  'icon' => $iconAward, 'tip' => 'Testamurs and statements already issued to learners.'],
@@ -1061,7 +1089,7 @@ $filterform .= '
         <div class="rtoc-filter-group rtoc-filter-search">
             <label for="search">' . get_string('searchstudent', 'local_rtocompliance') . '</label>
             <input type="text" name="search" id="search" class="form-control"
-                   placeholder="' . get_string('searchstudent', 'local_rtocompliance') . '"
+                   placeholder="' . get_string('searchstudent_identity_hint', 'local_rtocompliance') . '"
                    value="' . s($search) . '">
         </div>
         <div class="rtoc-filter-group rtoc-filter-action">
@@ -1333,7 +1361,7 @@ if ($stats['usi_pending_retry'] > 0) {
 // both the normal view (0 = active only) and the "Suspended accounts" filter (1).
 $suspendedfilter = ($filter === 'suspended') ? 1 : 0;
 
-$sql = "SELECT u.id, u.firstname, u.lastname, u.email,
+$sql = "SELECT u.id, u.firstname, u.lastname, u.username, u.email,
                u.firstnamephonetic, u.lastnamephonetic, u.middlename, u.alternatename,
                u.suspended,
                s.id as profileid, s.usi, s.usiverified, s.usiverifieddate, s.usiexempt, s.profilecomplete,
@@ -1370,25 +1398,36 @@ if (!empty($search)) {
     // so full-name searches return results (previously only single-field searches worked).
     $fullNameFwd = $DB->sql_concat('u.firstname', "' '", 'u.lastname');
     $fullNameRev = $DB->sql_concat('u.lastname',  "' '", 'u.firstname');
+    // Escape LIKE wildcards so a search for "%" or "_" remains a literal search
+    // term rather than broadening the existing name/email/USI search.
+    $searchlike = '%' . $DB->sql_like_escape($search) . '%';
     $searchsql  = $DB->sql_like('u.firstname',  ':search1', false, false);
     $searchsql .= ' OR ' . $DB->sql_like('u.lastname',   ':search2', false, false);
     $searchsql .= ' OR ' . $DB->sql_like('u.email',      ':search3', false, false);
     $searchsql .= ' OR ' . $DB->sql_like('s.usi',        ':search4', false, false);
     $searchsql .= ' OR ' . $DB->sql_like($fullNameFwd,   ':search5', false, false);
     $searchsql .= ' OR ' . $DB->sql_like($fullNameRev,   ':search6', false, false);
+    $searchsql .= ' OR ' . $DB->sql_like('u.username',  ':search7', false, false);
     $sql .= " AND ($searchsql)";
-    $params['search1'] = '%' . $search . '%';
-    $params['search2'] = '%' . $search . '%';
-    $params['search3'] = '%' . $search . '%';
-    $params['search4'] = '%' . $search . '%';
-    $params['search5'] = '%' . $search . '%';
-    $params['search6'] = '%' . $search . '%';
+    $params['search1'] = $searchlike;
+    $params['search2'] = $searchlike;
+    $params['search3'] = $searchlike;
+    $params['search4'] = $searchlike;
+    $params['search5'] = $searchlike;
+    $params['search6'] = $searchlike;
+    $params['search7'] = $searchlike;
 }
 
 if ($filter === 'incomplete') {
     $sql .= " AND (s.profilecomplete = 0 OR s.profilecomplete IS NULL)";
 } else if ($filter === 'nousi') {
+    // USI-ONLY-FOR-RECOGNISED (v6.3.36): a USI attaches to nationally recognised
+    // training, so a student enrolled only in non-accredited or not-yet-classified
+    // programs is no longer listed here. On one live site 1,064 of a 1,875-strong
+    // no-USI list were people who never needed one - 57% of the backlog was noise,
+    // and the real 811 were buried in it.
     $sql .= " AND (s.usi IS NULL OR s.usi = '')";
+    $sql .= " AND " . \local_rtocompliance\local\recognition::usi_required_sql('s');
 } else if ($filter === 'usiverified') {
     $sql .= " AND s.usiverified = 1";
 } else if ($filter === 'usiunverified') {
@@ -1513,6 +1552,7 @@ $table = new html_table();
 $table->head = [
     html_writer::checkbox('selectall', '1', false, '', ['id' => 'selectall-cb', 'title' => get_string('suitability_selectall', 'local_rtocompliance')]),
     $nameHeader,
+    html_writer::tag('span', 'Username', ['title' => 'Current username on the learner Moodle account']),
     html_writer::tag('span', get_string('email'), ['title' => 'Email address on the learner Moodle account']),
     html_writer::tag('span', get_string('usi', 'local_rtocompliance'), ['title' => 'Unique Student Identifier and its verification status against usi.gov.au']),
     html_writer::tag('span', get_string('residentialstate', 'local_rtocompliance'), ['title' => 'State or territory recorded as the learner residential address']),
@@ -1734,6 +1774,7 @@ foreach ($students as $student) {
     $table->data[] = [
         $checkbox,
         $namecell,
+        '<code class="rtoc-username">' . s((string)$student->username) . '</code>',
         $student->email,
         $usicell,
         $statename,

@@ -46,6 +46,7 @@ admin_externalpage_setup('local_rtocompliance_usi_pertenant');
 $systemcontext = context_system::instance();
 
 require_once(__DIR__ . '/classes/usi/usi_verification_service.php');
+require_once(__DIR__ . '/classes/usi/student_scope.php');
 
 // ── USI STUDENT DASHBOARD (v6.2.17) ──────────────────────────────────────────
 // A dedicated, filterable/searchable/paginated USI student table lives on this
@@ -66,6 +67,12 @@ $usicat    = optional_param('usicat', 0, PARAM_INT);
 // unusable. The Category list is now top-level only, with a Sub-category step between.
 $usisubcat = optional_param('usisubcat', 0, PARAM_INT);
 $usicourse = optional_param('usicourse', 0, PARAM_INT);
+// USI-COURSE-CLASSIFICATION: classify a student's population by recorded
+// course recognition and valid Qual Builder/course-map unit evidence. "All"
+// remains the backwards-compatible default and includes unclassified courses.
+$usiclass = \local_rtocompliance\usi\student_scope::normalise_classification(
+    optional_param('usiclass', 'all', PARAM_ALPHA)
+);
 // PERPAGE-SELECTOR (v6.3.0): let the admin choose how many students to show per page.
 // Anything outside the allowed set falls back to 50 so a hand-edited URL can never
 // ask the database for an unbounded result set.
@@ -85,6 +92,7 @@ $usisortcols = [
     'name'     => 'Name',
     'email'    => 'Email',
     'clientid' => 'Client ID',
+    'username' => 'Moodle username',
     'usi'      => 'USI',
     'dob'      => 'Date of birth',
     'status'   => 'USI status',
@@ -94,6 +102,12 @@ if (!isset($usisortcols[$usisort])) {
     $usisort = 'name';
 }
 switch ($usisort) {
+    // USERNAME-SORT (v6.3.32): the Moodle username column added alongside the
+    // username search needs a sort of its own, or it is the one column on the
+    // table whose header does nothing.
+    case 'username':
+        $usiorderby = "u.username $usidir, u.lastname ASC";
+        break;
     case 'email':
         $usiorderby = "u.email $usidir";
         break;
@@ -135,157 +149,16 @@ if (!in_array($usirule, ['all', 'post', 'pre', 'undated'], true)) {
 $usirulecutoff = make_timestamp(2015, 1, 1, 0, 0, 0);
 
 $usisvc = new \local_rtocompliance\usi\usi_verification_service();
+$usi_scope = new \local_rtocompliance\usi\student_scope($DB, $usirulecutoff);
 
 // Shared WHERE builder — the table view and every CSV export run the SAME
 // filter/search logic so an export always matches exactly what is on screen.
 $usi_build_where = function (string $filter, string $search, int $catid = 0, int $courseid = 0,
-                             string $usirule = 'all', int $subcatid = 0) use ($DB, $usirulecutoff) {
-    // Only rows that have a linked student profile (this is the USI page).
-    $where  = "u.deleted = 0";
-    $params = [];
-
-    // FILTER-AUDIT (v6.3.0): every status filter below now ALSO requires a USI to be
-    // present. Previously 'verified' / 'failed' / 'review' matched on the status code
-    // alone, so a student with no USI at all but a stale status code was counted in a
-    // USI status bucket. With this guard the buckets are mutually exclusive and add up:
-    //   students with a USI = verified + not yet verified + failed + manual review
-    //   all students        = students with a USI + no USI recorded
-    $hasusi = "s.usi IS NOT NULL AND s.usi <> ''";
-    switch ($filter) {
-        case 'verified':
-            $where .= " AND $hasusi AND s.usiverified = 1";
-            break;
-        case 'unverified':
-            // USI present but not yet verified (never attempted = 0, transient/pending = 3).
-            $where .= " AND $hasusi AND s.usiverified IN (0, 3)";
-            break;
-        case 'failed':
-            $where .= " AND $hasusi AND s.usiverified = 2";
-            break;
-        case 'review':
-            $where .= " AND $hasusi AND s.usiverified = 4";
-            break;
-        case 'missingdob':
-            $where .= " AND s.usi IS NOT NULL AND s.usi <> '' AND (s.dateofbirth IS NULL OR s.dateofbirth = 0)";
-            break;
-        case 'nousi':
-            $where .= " AND (s.usi IS NULL OR s.usi = '')";
-            break;
-        case 'withusi':
-            $where .= " AND s.usi IS NOT NULL AND s.usi <> ''";
-            break;
-        case 'all':
-        default:
-            // No extra clause — every student profile.
-            break;
-    }
-
-    // USI-RULE-DATE-FILTER (v6.3.1): the USI became mandatory for nationally recognised
-    // training on 1 January 2015. Split the population by WHEN the training activity
-    // happened, using the AVETMISS activity dates.
-    //
-    // A row counts as "on or after the rule" when either its start OR its end date falls
-    // on/after the cutoff — training that began in late 2014 and ran into 2015 is caught
-    // by the rule, so the end date has to be considered too.
-    if ($usirule !== 'all') {
-        $onafter = "(en.activitystartdate >= :ruleco1 OR en.activityenddate >= :ruleco2)";
-        $dated   = "((en.activitystartdate IS NOT NULL AND en.activitystartdate > 0)
-                     OR (en.activityenddate IS NOT NULL AND en.activityenddate > 0))";
-
-        if ($usirule === 'post') {
-            // USI REQUIRED: at least one training activity on or after 1 Jan 2015.
-            $where .= " AND EXISTS (
-                SELECT 1 FROM {local_rtocompliance_enrolments} en
-                  JOIN {local_rtocompliance_students} s2 ON s2.id = en.studentid
-                 WHERE s2.userid = u.id AND $onafter)";
-            $params['ruleco1'] = $usirulecutoff;
-            $params['ruleco2'] = $usirulecutoff;
-        } else if ($usirule === 'pre') {
-            // USI NOT REQUIRED: the student HAS dated training activity, and none of it
-            // falls on or after the cutoff. Students with no dated activity at all are
-            // deliberately excluded here — absence of a date is not evidence the training
-            // was historical, and quietly writing those off is how a genuinely reportable
-            // student stops being chased for a USI.
-            $where .= " AND EXISTS (
-                SELECT 1 FROM {local_rtocompliance_enrolments} en
-                  JOIN {local_rtocompliance_students} s2 ON s2.id = en.studentid
-                 WHERE s2.userid = u.id AND $dated)
-                AND NOT EXISTS (
-                SELECT 1 FROM {local_rtocompliance_enrolments} en
-                  JOIN {local_rtocompliance_students} s2 ON s2.id = en.studentid
-                 WHERE s2.userid = u.id AND $onafter)";
-            $params['ruleco1'] = $usirulecutoff;
-            $params['ruleco2'] = $usirulecutoff;
-        } else if ($usirule === 'undated') {
-            // Cannot be judged either way — no training activity carries a date, so the
-            // rule cannot be applied. Surfaced as its own option rather than hidden,
-            // because these are exactly the records that need a data fix.
-            $where .= " AND NOT EXISTS (
-                SELECT 1 FROM {local_rtocompliance_enrolments} en
-                  JOIN {local_rtocompliance_students} s2 ON s2.id = en.studentid
-                 WHERE s2.userid = u.id AND $dated)";
-        }
-    }
-
-    // USI-CAT-COURSE-FILTER (v6.2.32): scope by Moodle enrolment. A specific course wins;
-    // otherwise a category filters to that category AND all its descendant subcategories
-    // (matched on the category path). Students are "in" a course when they hold a
-    // user_enrolment on any enrol instance of that course.
-    // Precedence: a specific course beats a sub-category, which beats the top-level
-    // category. Each level still includes everything beneath it.
-    if ($courseid > 0) {
-        $where .= " AND u.id IN (
-            SELECT ue.userid
-              FROM {user_enrolments} ue
-              JOIN {enrol} e ON e.id = ue.enrolid
-             WHERE e.courseid = :ficourse)";
-        $params['ficourse'] = $courseid;
-    } else if ($subcatid > 0) {
-        $subcat = $DB->get_record('course_categories', ['id' => $subcatid], 'id, path');
-        if ($subcat) {
-            $where .= " AND u.id IN (
-                SELECT ue.userid
-                  FROM {user_enrolments} ue
-                  JOIN {enrol} e ON e.id = ue.enrolid
-                  JOIN {course} c ON c.id = e.courseid
-                  JOIN {course_categories} cc ON cc.id = c.category
-                 WHERE cc.id = :fisub OR " . $DB->sql_like('cc.path', ':fisubpath') . ")";
-            $params['fisub'] = $subcatid;
-            $params['fisubpath'] = $subcat->path . '/%';
-        }
-    } else if ($catid > 0) {
-        $cat = $DB->get_record('course_categories', ['id' => $catid], 'id, path');
-        if ($cat) {
-            $where .= " AND u.id IN (
-                SELECT ue.userid
-                  FROM {user_enrolments} ue
-                  JOIN {enrol} e ON e.id = ue.enrolid
-                  JOIN {course} c ON c.id = e.courseid
-                  JOIN {course_categories} cc ON cc.id = c.category
-                 WHERE cc.id = :ficat OR " . $DB->sql_like('cc.path', ':ficatpath') . ")";
-            $params['ficat'] = $catid;
-            $params['ficatpath'] = $cat->path . '/%';
-        }
-    }
-
-    if ($search !== '') {
-        $fullfwd = $DB->sql_concat('u.firstname', "' '", 'u.lastname');
-        $like  = $DB->sql_like('u.firstname', ':us1', false, false);
-        $like .= ' OR ' . $DB->sql_like('u.lastname',  ':us2', false, false);
-        $like .= ' OR ' . $DB->sql_like('u.email',     ':us3', false, false);
-        $like .= ' OR ' . $DB->sql_like('s.usi',       ':us4', false, false);
-        $like .= ' OR ' . $DB->sql_like('s.clientid',  ':us5', false, false);
-        $like .= ' OR ' . $DB->sql_like($fullfwd,      ':us6', false, false);
-        $where .= " AND ($like)";
-        $params['us1'] = '%' . $search . '%';
-        $params['us2'] = '%' . $search . '%';
-        $params['us3'] = '%' . $search . '%';
-        $params['us4'] = '%' . $search . '%';
-        $params['us5'] = '%' . $search . '%';
-        $params['us6'] = '%' . $search . '%';
-    }
-
-    return [$where, $params];
+                              string $usirule = 'all', int $subcatid = 0,
+                              string $classification = 'all') use ($usi_scope) {
+    return $usi_scope->build_where(
+        $filter, $search, $catid, $courseid, $usirule, $subcatid, $classification
+    );
 };
 
 // SCOPED-STATS (v6.3.0): the stat cards used to come from
@@ -301,8 +174,11 @@ $usi_build_where = function (string $filter, string $search, int $catid = 0, int
 // total while another status is selected. COUNT(CASE WHEN ...) is portable across
 // MySQL/MariaDB, PostgreSQL and SQL Server.
 $usi_scope_counts = function (string $search, int $catid, int $courseid, string $usirule = 'all',
-                              int $subcatid = 0) use ($DB, $usi_build_where) {
-    list($w, $p) = $usi_build_where('all', $search, $catid, $courseid, $usirule, $subcatid);
+                              int $subcatid = 0, string $classification = 'all')
+                              use ($DB, $usi_build_where) {
+    list($w, $p) = $usi_build_where(
+        'all', $search, $catid, $courseid, $usirule, $subcatid, $classification
+    );
     $sql = "SELECT
                 COUNT(1) AS total,
                 COUNT(CASE WHEN s.usi IS NOT NULL AND s.usi <> '' THEN 1 END) AS withusi,
@@ -480,19 +356,18 @@ if ($usiexport === 'csv' || $usiexport === 'nodob') {
     require_sesskey();
 
     if ($usiexport === 'nodob') {
-        list($ewhere, $eparams) = $usi_build_where('missingdob', $usisearch, $usicat, $usicourse, $usirule, $usisubcat);
+        list($ewhere, $eparams) = $usi_build_where(
+            'missingdob', $usisearch, $usicat, $usicourse, $usirule, $usisubcat, $usiclass
+        );
         $fnamebit = 'usi-missing-dob';
     } else {
-        list($ewhere, $eparams) = $usi_build_where($usifilter, $usisearch, $usicat, $usicourse, $usirule, $usisubcat);
+        list($ewhere, $eparams) = $usi_build_where(
+            $usifilter, $usisearch, $usicat, $usicourse, $usirule, $usisubcat, $usiclass
+        );
         $fnamebit = 'usi-' . $usifilter;
     }
 
-    $esql = "SELECT u.id AS userid, u.firstname, u.lastname, u.email,
-                    s.clientid, s.usi, s.usiverified, s.usiverifieddate, s.dateofbirth
-               FROM {user} u
-               JOIN {local_rtocompliance_students} s ON s.userid = u.id
-              WHERE $ewhere
-              ORDER BY $usiorderby";
+    $esql = $usi_scope->student_select_sql($ewhere, $usiorderby);
     $rows = $DB->get_recordset_sql($esql, $eparams);
 
     // Filename is derived from the RTO's own name rather than a hard-coded site
@@ -515,18 +390,25 @@ if ($usiexport === 'csv' || $usiexport === 'nodob') {
         // and must not be renamed or removed. The header is plain "Date of birth"
         // so the round trip is obvious; the importer still also accepts the older
         // "Date of birth (missing)" heading from previously downloaded files.
-        fputcsv($out, ['Family name', 'Given name', 'Email', 'Client identifier', 'USI', 'Date of birth']);
+        fputcsv($out, ['Family name', 'Given name', 'Email', 'Client identifier', 'USI', 'Date of birth'], ',', '"', '\\');
         foreach ($rows as $r) {
             fputcsv(
                 $out, [
                     $r->lastname, $r->firstname, $r->email,
                     (string) $r->clientid, (string) $r->usi, '',
-            ]);
+            ], ',', '"', '\\');
         }
     } else {
+        // USERNAME-COLUMN (v6.3.32): the username is searchable on this page, shown in
+        // the table and printed on the PDF, so an export that claims to be "exactly what
+        // is on screen" has to carry it too. Appended LAST rather than beside the name,
+        // so no existing column moves for a site that parses this file by position.
+        // The separate "missing DOB" download above is a round-trip template read back by
+        // the importer and its column set is deliberately NOT changed.
         fputcsv(
             $out, ['Family name', 'Given name', 'Email', 'Client identifier', 'USI',
-                       'Date of birth', 'USI verification status', 'Verified date']);
+                       'Date of birth', 'USI verification status', 'Verified date',
+                       'Moodle username'], ',', '"', '\\');
         foreach ($rows as $r) {
             $dob = (!empty($r->dateofbirth) && (int) $r->dateofbirth !== 0)
                 ? userdate((int) $r->dateofbirth, '%d/%m/%Y') : '';
@@ -537,7 +419,8 @@ if ($usiexport === 'csv' || $usiexport === 'nodob') {
                     $r->lastname, $r->firstname, $r->email,
                     (string) $r->clientid, (string) $r->usi, $dob,
                     $usi_status_label($r->usiverified, $r->usi), $vdate,
-            ]);
+                    (string) $r->username,
+            ], ',', '"', '\\');
         }
     }
     $rows->close();
@@ -554,22 +437,16 @@ if ($usiexport === 'pdf') {
     require_sesskey();
     require_once($CFG->libdir . '/pdflib.php');
 
-    list($pwhere, $pparams) = $usi_build_where($usifilter, $usisearch, $usicat, $usicourse, $usirule, $usisubcat);
-    $psql = "SELECT u.id AS userid, u.firstname, u.lastname, u.email,
-                    s.clientid, s.usi, s.usiverified, s.usiverifieddate, s.dateofbirth
-               FROM {user} u
-               JOIN {local_rtocompliance_students} s ON s.userid = u.id
-              WHERE $pwhere
-              ORDER BY $usiorderby";
+    list($pwhere, $pparams) = $usi_build_where(
+        $usifilter, $usisearch, $usicat, $usicourse, $usirule, $usisubcat, $usiclass
+    );
+    $psql = $usi_scope->student_select_sql($pwhere, $usiorderby);
 
     // Hard cap so a whole-of-site export can never exhaust PHP memory mid-render.
     // The cap is reported inside the PDF itself — never silently truncate a
     // compliance document.
     $pdfmax = 3000;
-    $ptotal = (int) $DB->count_records_sql(
-        "SELECT COUNT(u.id) FROM {user} u
-           JOIN {local_rtocompliance_students} s ON s.userid = u.id
-          WHERE $pwhere", $pparams);
+    $ptotal = (int) $DB->count_records_sql($usi_scope->student_count_sql($pwhere), $pparams);
     $prows = $DB->get_records_sql($psql, $pparams, 0, $pdfmax);
 
     // Human-readable description of the applied filters, printed under the title.
@@ -580,6 +457,10 @@ if ($usiexport === 'pdf') {
         'missingdob' => 'USI present, DOB missing', 'nousi' => 'No USI recorded',
     ];
     $scopebits = ['Status: ' . ($filterlabels[$usifilter] ?? $usifilter)];
+    $classlabels = \local_rtocompliance\usi\student_scope::classification_labels();
+    if ($usiclass !== 'all') {
+        $scopebits[] = 'Course type: ' . ($classlabels[$usiclass] ?? $usiclass);
+    }
     if ($usicourse > 0) {
         $cxr = $DB->get_record('course', ['id' => $usicourse], 'fullname');
         $scopebits[] = 'Course: ' . ($cxr ? format_string($cxr->fullname) : $usicourse);
@@ -636,9 +517,9 @@ if ($usiexport === 'pdf') {
 
     $tbl = '<table border="0.4" cellpadding="3" style="font-size:7.6pt;">'
         . '<thead><tr style="background-color:#f1f5f9;font-weight:bold;">'
-        . '<th width="17%">Name</th><th width="22%">Email</th><th width="9%">Client ID</th>'
-        . '<th width="12%">USI</th><th width="11%">Date of birth</th>'
-        . '<th width="17%">USI status</th><th width="12%">Verified date</th>'
+        . '<th width="16%">Name</th><th width="14%">Moodle username</th><th width="20%">Email</th>'
+        . '<th width="8%">Client ID</th><th width="11%">USI</th><th width="10%">Date of birth</th>'
+        . '<th width="13%">USI status</th><th width="8%">Verified date</th>'
         . '</tr></thead><tbody>';
     foreach ($prows as $r) {
         $dob = (!empty($r->dateofbirth) && (int) $r->dateofbirth !== 0)
@@ -647,6 +528,7 @@ if ($usiexport === 'pdf') {
             ? userdate((int) $r->usiverifieddate, '%d/%m/%Y') : '-';
         $tbl .= '<tr>'
             . '<td>' . htmlspecialchars(trim($r->lastname . ', ' . $r->firstname), ENT_QUOTES) . '</td>'
+            . '<td>' . htmlspecialchars((string) $r->username, ENT_QUOTES) . '</td>'
             . '<td>' . htmlspecialchars((string) $r->email, ENT_QUOTES) . '</td>'
             . '<td>' . htmlspecialchars((string) $r->clientid, ENT_QUOTES) . '</td>'
             . '<td>' . htmlspecialchars((string) $r->usi, ENT_QUOTES) . '</td>'
@@ -671,7 +553,18 @@ if ($usiexport === 'pdf') {
 if ($usiaction === 'uploaddob' && confirm_sesskey()) {
     require_capability('moodle/site:config', $systemcontext);
 
-    $redirurl = new moodle_url('/local/rtocompliance/usi_settings.php', ['usifilter' => 'missingdob']);
+    $redirurl = new moodle_url('/local/rtocompliance/usi_settings.php', [
+        'usifilter' => 'missingdob',
+        'usiclass' => $usiclass,
+        'usicat' => $usicat,
+        'usisubcat' => $usisubcat,
+        'usicourse' => $usicourse,
+        'usirule' => $usirule,
+        'usisearch' => $usisearch,
+        'usiperpage' => $usiperpage,
+        'usisort' => $usisort,
+        'usidir' => $usidir,
+    ]);
     $upload = $_FILES['dobcsv'] ?? null;
     if (!$upload || (int) ($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || empty($upload['tmp_name'])) {
         redirect(
@@ -1252,23 +1145,22 @@ echo '</div>';
 // ═══════════════════════════════════════════════════════════════════════════
 
 // ── Scoped counts (category / course / search aware) ─────────────────────────
-$scope = $usi_scope_counts($usisearch, $usicat, $usicourse, $usirule, $usisubcat);
+$scope = $usi_scope_counts($usisearch, $usicat, $usicourse, $usirule, $usisubcat, $usiclass);
 
 // Filtered result set + total, computed HERE rather than just before the table, because
 // the download row inside the filter card states how many rows the export will contain
 // and therefore needs the count before the table is rendered.
-list($twhere, $tparams) = $usi_build_where($usifilter, $usisearch, $usicat, $usicourse, $usirule, $usisubcat);
-$usitotal = (int) $DB->count_records_sql(
-    "SELECT COUNT(u.id)
-       FROM {user} u
-       JOIN {local_rtocompliance_students} s ON s.userid = u.id
-      WHERE $twhere", $tparams);
+list($twhere, $tparams) = $usi_build_where(
+    $usifilter, $usisearch, $usicat, $usicourse, $usirule, $usisubcat, $usiclass
+);
+$usitotal = (int) $DB->count_records_sql($usi_scope->student_count_sql($twhere), $tparams);
 // The DOB banner stays whole-of-site: it is a data-quality alert, not a view.
 $nmissingdob_all = (int) $DB->count_records_select(
     'local_rtocompliance_students',
     "usi IS NOT NULL AND usi <> '' AND (dateofbirth IS NULL OR dateofbirth = 0)");
 
-$usiscoped   = ($usicat > 0 || $usisubcat > 0 || $usicourse > 0 || $usisearch !== '' || $usirule !== 'all');
+$usiscoped   = ($usicat > 0 || $usisubcat > 0 || $usicourse > 0 || $usisearch !== ''
+    || $usirule !== 'all' || $usiclass !== 'all');
 $usihasfilter = ($usiscoped || $usifilter !== 'all');
 
 // Friendly names for the current scope (used in chips and the coverage note).
@@ -1287,7 +1179,8 @@ if ($usicourse > 0 && ($cx = $DB->get_record('course', ['id' => $usicourse], 'id
 
 // ── URL builder: keeps the whole view state (filter + scope + sort + paging) ──
 $usi_url = function (array $overrides = []) use ($usifilter, $usisearch, $usicat, $usicourse,
-                                                 $usiperpage, $usisort, $usidir, $usirule, $usisubcat) {
+                                                  $usiperpage, $usisort, $usidir, $usirule,
+                                                  $usisubcat, $usiclass) {
     $params = array_merge(
         [
             'usifilter'  => $usifilter,
@@ -1295,6 +1188,7 @@ $usi_url = function (array $overrides = []) use ($usifilter, $usisearch, $usicat
             'usicat'     => $usicat,
             'usisubcat'  => $usisubcat,
             'usicourse'  => $usicourse,
+            'usiclass'   => $usiclass,
             'usirule'    => $usirule,
             'usiperpage' => $usiperpage,
             'usisort'    => $usisort,
@@ -1303,6 +1197,7 @@ $usi_url = function (array $overrides = []) use ($usifilter, $usisearch, $usicat
     // Drop defaults so shared/bookmarked URLs stay readable.
     if (($params['usifilter'] ?? 'all') === 'all')   { unset($params['usifilter']); }
     if (($params['usirule'] ?? 'all') === 'all')     { unset($params['usirule']); }
+    if (($params['usiclass'] ?? 'all') === 'all')    { unset($params['usiclass']); }
     if (trim((string) ($params['usisearch'] ?? '')) === '') { unset($params['usisearch']); }
     if ((int) ($params['usicat'] ?? 0) === 0)        { unset($params['usicat']); }
     if ((int) ($params['usisubcat'] ?? 0) === 0)     { unset($params['usisubcat']); }
@@ -1383,6 +1278,11 @@ if ($usicoursename !== '') {
 } else if ($usicatname !== '') {
     echo ' — in <strong>' . $usicatname . '</strong> (including subcategories)';
 }
+if ($usiclass !== 'all') {
+    $coverageclasslabel = \local_rtocompliance\usi\student_scope::classification_labels()[$usiclass]
+        ?? $usiclass;
+    echo ' — course type <strong>' . s($coverageclasslabel) . '</strong>';
+}
 echo '.</div>';
 echo '</div>';
 
@@ -1409,9 +1309,9 @@ echo html_writer::link(
      'title' => 'Verify a dummy record to confirm the platform + usi.gov.au link is working (a "no match" result means it works)']);
 echo html_writer::link(
     $reverifyurl,
-        '<svg style="width:14px;height:14px;vertical-align:-2px;margin-right:5px" viewBox="0 0 24 24" fill="none"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Re-verify all students',
+        '<svg style="width:14px;height:14px;vertical-align:-2px;margin-right:5px" viewBox="0 0 24 24" fill="none"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Re-verify all students (global)',
         ['class' => 'btn btn-primary btn-sm',
-     'title' => 'Queue every student with a USI and date of birth for re-verification on the next scheduled USI run']);
+      'title' => 'GLOBAL action: queue every student with a USI and date of birth; current filters are not applied']);
 echo html_writer::link(
     $exportcururl, $svgdl . 'Export this view (CSV)',
         ['class' => 'btn btn-outline-secondary btn-sm',
@@ -1432,7 +1332,17 @@ echo '</div>';
 
 // ── Missing-DOB alert + round-trip CSV upload (whole-of-site count) ──────────
 if ($nmissingdob_all > 0) {
-    $uploaddoburl = (new moodle_url('/local/rtocompliance/usi_settings.php'))->out(false);
+    $uploaddoburl = (new moodle_url('/local/rtocompliance/usi_settings.php', [
+        'usiclass' => $usiclass,
+        'usicat' => $usicat,
+        'usisubcat' => $usisubcat,
+        'usicourse' => $usicourse,
+        'usirule' => $usirule,
+        'usisearch' => $usisearch,
+        'usiperpage' => $usiperpage,
+        'usisort' => $usisort,
+        'usidir' => $usidir,
+    ]))->out(false);
     echo '<div class="alert alert-warning" style="padding:12px 14px;font-size:13px;margin-bottom:16px;">';
     echo '<strong>' . $nmissingdob_all . ' student(s) have a USI but no date of birth</strong>'
         . ' — the USI Registry cannot verify them until a DOB is recorded.';
@@ -1545,17 +1455,46 @@ foreach ($usi_allcats as $cc) {
 }
 // Each course carries its category path so the Course dropdown can be narrowed to the
 // selected Category (and every subcategory below it) client-side, matching the
-// server-side scope exactly.
-$usi_coursemeta = $DB->get_records_sql(
-    "SELECT c.id, c.fullname, cc.path AS catpath
-       FROM {course} c
-       JOIN {course_categories} cc ON cc.id = c.category
-      WHERE c.id <> :siteid
-   ORDER BY c.fullname",
-    ['siteid' => SITEID]
-);
+// server-side scope exactly. The helper applies the selected course type here too:
+// classified dropdowns never suggest courses that cannot match the current view.
+$usi_coursemeta = $usi_scope->get_course_options($usiclass);
+$usiclasslabels = \local_rtocompliance\usi\student_scope::classification_labels();
+$usicoursecompatibility = $usi_scope->course_is_compatible($usicourse, $usiclass);
+
+// A bookmarked/hand-edited URL can name a course incompatible with the selected
+// type. Keep that option visible and selected, with an explicit warning, rather
+// than silently broadening the query to all compatible courses. The server
+// query remains an intersection and therefore returns no matches.
+if ($usicourse > 0 && !isset($usi_coursemeta[$usicourse])) {
+    $allcoursemeta = $usi_scope->get_course_options('all');
+    if (isset($allcoursemeta[$usicourse])) {
+        $selectedcourse = $allcoursemeta[$usicourse];
+        $selectedcourse->incompatible = 1;
+        $selectedcourse->compatible = 0;
+        $usi_coursemeta[$usicourse] = $selectedcourse;
+    }
+}
+foreach ($usi_coursemeta as $co) {
+    if (!isset($co->compatible)) {
+        $co->compatible = true;
+    }
+}
 
 echo '<div class="rtoc-usi-card rtoc-usi-toolbar">';
+echo '<div class="alert alert-info" style="font-size:12.5px;line-height:1.55;margin:-2px 0 14px;">'
+    . '<strong>Course type scope:</strong> this uses recorded course recognition or an explicit '
+    . 'mapped training-unit link, never course titles. Courses without either are '
+    . '<strong>Unclassified</strong>; <strong>All</strong> still includes them and CPD. '
+    . 'This display filter does not change automatic USI verification.</div>';
+if ($usicourse > 0 && $usiclass !== 'all' && $usicoursecompatibility !== true) {
+    $mismatchlabel = ($usicoursecompatibility === null)
+        ? 'This course no longer exists.'
+        : 'This course does not have the selected classification.';
+    echo '<div class="alert alert-warning" style="font-size:12.5px;line-height:1.5;margin:-2px 0 14px;">'
+        . '<strong>Selected course does not match this course type filter.</strong> '
+        . s($mismatchlabel) . ' The query keeps both filters, so no students are broadened into '
+        . 'the result. Choose a compatible course or select All courses.</div>';
+}
 echo '<form method="get" action="" id="rtoc-usi-filterform">';
 // Sort state travels with the search so filtering never silently resets the sort.
 echo '<input type="hidden" name="usisort" value="' . s($usisort) . '">';
@@ -1565,6 +1504,13 @@ echo '<div class="rtoc-usi-grid">';
 echo '<div><label for="usifilter">USI status</label><select name="usifilter" id="usifilter" class="form-control">';
 foreach ($filteropts as $k => $lbl) {
     echo '<option value="' . $k . '"' . ($usifilter === $k ? ' selected' : '') . '>' . s($lbl) . '</option>';
+}
+echo '</select></div>';
+
+echo '<div><label for="usiclass">Course type</label><select name="usiclass" id="usiclass" class="form-control">';
+foreach ($usiclasslabels as $k => $lbl) {
+    echo '<option value="' . s($k) . '"' . ($usiclass === $k ? ' selected' : '') . '>'
+        . s($lbl) . '</option>';
 }
 echo '</select></div>';
 
@@ -1588,8 +1534,14 @@ echo '</select></div>';
 echo '<div><label for="usicourse">Course</label><select name="usicourse" id="usicourse" class="form-control">';
 echo '<option value="0" data-catpath="">All courses</option>';
 foreach ($usi_coursemeta as $co) {
-    echo '<option value="' . (int) $co->id . '" data-catpath="' . s($co->catpath) . '"'
-        . ((int) $usicourse === (int) $co->id ? ' selected' : '') . '>' . format_string($co->fullname) . '</option>';
+    $incompatible = !empty($co->incompatible);
+    $label = format_string($co->fullname);
+    if ($incompatible) {
+        $label .= ' (does not match selected course type)';
+    }
+    echo '<option value="' . (int) $co->id . '" data-catpath="' . s($co->catpath)
+        . '" data-compatible="' . ($incompatible ? '0' : '1') . '"'
+        . ((int) $usicourse === (int) $co->id ? ' selected' : '') . '>' . $label . '</option>';
 }
 echo '</select></div>';
 
@@ -1612,9 +1564,11 @@ foreach ($usiruleopts as $k => $lbl) {
 }
 echo '</select></div>';
 
-echo '<div><label for="usisearch">Search</label>'
+echo '<div><label for="usisearch">Search name, Moodle username, email, USI or client ID</label>'
     . '<input type="text" name="usisearch" id="usisearch" class="form-control" '
-    . 'placeholder="Name, email, USI or client ID" value="' . s($usisearch) . '"></div>';
+    . 'placeholder="Name, username, email, USI or client ID" value="' . s($usisearch) . '">'
+    . '<small style="display:block;margin-top:4px;color:#64748b;">'
+    . 'Search includes the live Moodle username.</small></div>';
 
 echo '<div><label for="usiperpage">Show</label><select name="usiperpage" id="usiperpage" class="form-control">';
 foreach ($usiperpageopts as $pp) {
@@ -1681,6 +1635,11 @@ if ($usihasfilter) {
         echo '<a class="rtoc-usi-chip" href="' . s($usi_url(['usifilter' => 'all', 'usipage' => 0])->out(false)) . '">'
             . '<b>Status:</b> ' . s($filteropts[$usifilter] ?? $usifilter) . ' <span class="x">×</span></a>';
     }
+    if ($usiclass !== 'all') {
+        echo '<a class="rtoc-usi-chip" href="' . s($usi_url(['usiclass' => 'all', 'usipage' => 0])->out(false)) . '">'
+            . '<b>Course type:</b> ' . s($usiclasslabels[$usiclass] ?? $usiclass)
+            . ' <span class="x">×</span></a>';
+    }
     if ($usicat > 0) {
         // $usicatname already came through format_string(), which escapes '&' — do NOT
         // pass it through s() as well or an ampersand prints as a literal "&amp;".
@@ -1731,7 +1690,12 @@ echo html_writer::script(
     function snapshot(sel) {
         return Array.prototype.map.call(sel.options, function (o) {
             var p = String(o.getAttribute("data-catpath") || "").replace(/^\/+|\/+$/g, "");
-            return {value: o.value, text: o.text, path: "/" + p + "/"};
+            return {
+                value: o.value,
+                text: o.text,
+                path: "/" + p + "/",
+                compatible: String(o.getAttribute("data-compatible") || "1")
+            };
         });
     }
     var allSubs    = snapshot(sub);
@@ -1749,6 +1713,9 @@ echo html_writer::script(
         sel.appendChild(first);
         var shown = 0;
         for (var i = 1; i < items.length; i++) {
+            // Keep a selected incompatible option visible on initial render so
+            // a hand-edited/bookmarked URL is explained instead of broadened.
+            if (items[i].compatible === "0" && items[i].value !== want) { continue; }
             var el = document.createElement("option");
             el.value = items[i].value;
             el.text  = items[i].text;
@@ -1802,12 +1769,7 @@ if ($usipage > $usimaxpage) {
     $usipage = max(0, $usimaxpage);
 }
 
-$listsql = "SELECT u.id AS userid, u.firstname, u.lastname, u.email,
-                   s.clientid, s.usi, s.usiverified, s.usiverifieddate, s.dateofbirth
-              FROM {user} u
-              JOIN {local_rtocompliance_students} s ON s.userid = u.id
-             WHERE $twhere
-             ORDER BY $usiorderby";
+$listsql = $usi_scope->student_select_sql($twhere, $usiorderby);
 $rows = $DB->get_records_sql($listsql, $tparams, $usipage * $usiperpage, $usiperpage);
 
 // Status badge renderer.
@@ -1872,6 +1834,7 @@ if (empty($rows)) {
 
     echo '<div class="rtoc-usi-tablewrap"><table class="rtoc-usi-table"><thead><tr>';
     echo $sorthead('name', 'Name');
+    echo $sorthead('username', 'Moodle username');
     echo $sorthead('email', 'Email');
     echo $sorthead('clientid', 'Client ID');
     echo $sorthead('usi', 'USI');
@@ -1892,6 +1855,7 @@ if (empty($rows)) {
             ? '<span class="rtoc-usi-mono">' . s($r->usi) . '</span>' : '—';
         echo '<tr>';
         echo '<td><a href="' . s($studenturl->out(false)) . '">' . $name . '</a></td>';
+        echo '<td><span class="rtoc-usi-mono">' . s((string) $r->username) . '</span></td>';
         echo '<td>' . s($r->email) . '</td>';
         echo '<td>' . s((string) $r->clientid) . '</td>';
         echo '<td>' . $usidisp . '</td>';

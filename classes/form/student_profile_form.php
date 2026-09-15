@@ -30,6 +30,31 @@ require_once($CFG->libdir . '/formslib.php');
 use local_rtocompliance\avetmiss_codes;
 
 class student_profile_form extends \moodleform {
+    use code_select_trait;
+
+    /**
+     * The AVETMISS coded fields on this form, mapped to the getter that defines
+     * their legal values. Used by add_code_select() to build each menu and by
+     * validation() to refuse a value that is not in the standard.
+     *
+     * Keep this in step with the add_code_select() calls in definition().
+     */
+    const CODE_FIELDS = [
+        'sex'                 => ['get_sex_codes', '@'],
+        'statecode'           => ['get_state_codes', '@@'],
+        'countryofbirth'      => ['get_country_codes', '@@@@'],
+        'languageathome'      => ['get_language_codes', '@@@@'],
+        'englishproficiency'  => ['get_english_proficiency_codes', '@'],
+        'indigenousstatus'    => ['get_indigenous_status_codes', '@'],
+        'disabilityflag'      => ['get_disability_codes', null],
+        'highestschoollevel'  => ['get_school_level_codes', '@@'],
+        'atschoolflag'        => ['get_at_school_flag_codes', null],
+        'labourforcestatus'   => ['get_labour_force_status_codes', '@@'],
+        'studyreason'         => ['get_study_reason_codes', '@@'],
+        'prioreducationflag'  => ['get_prior_education_flag_codes', '@'],
+        'surveycontactstatus' => ['get_survey_contact_codes', null],
+    ];
+
     protected function definition() {
         global $CFG;
         $mform = $this->_form;
@@ -61,10 +86,7 @@ class student_profile_form extends \moodleform {
         ]);
         $mform->addHelpButton('dateofbirth', 'dateofbirth', 'local_rtocompliance');
 
-        $sexoptions = avetmiss_codes::get_sex_codes();
-        $mform->addElement('select', 'sex', get_string('sex', 'local_rtocompliance'), $sexoptions);
-        $mform->setDefault('sex', '@');
-        $mform->addHelpButton('sex', 'sex', 'local_rtocompliance');
+        $this->add_code_select('sex', get_string('sex', 'local_rtocompliance'));
 
         $mform->addElement('header', 'addressdetails', get_string('addressdetails', 'local_rtocompliance'));
         $mform->addHelpButton('addressdetails', 'addressdetails', 'local_rtocompliance');
@@ -94,40 +116,28 @@ class student_profile_form extends \moodleform {
         $mform->addRule('postcode', get_string('error_postcode_format', 'local_rtocompliance'), 'maxlength', 4, 'client');
         $mform->addHelpButton('postcode', 'residentialpostcode', 'local_rtocompliance');
 
-        $stateoptions = ['' => get_string('choosedots')] + avetmiss_codes::get_state_codes();
-        $mform->addElement('select', 'statecode', get_string('residentialstate', 'local_rtocompliance'), $stateoptions);
-        $mform->addHelpButton('statecode', 'residentialstate', 'local_rtocompliance');
+        $this->add_code_select('statecode', get_string('residentialstate', 'local_rtocompliance'), 'residentialstate');
 
         $mform->addElement('header', 'demographicdetails', get_string('demographicdetails', 'local_rtocompliance'));
         $mform->addHelpButton('demographicdetails', 'demographicdetails', 'local_rtocompliance');
 
-        $countryoptions = avetmiss_codes::get_country_codes();
-        $mform->addElement('select', 'countryofbirth', get_string('countryofbirth', 'local_rtocompliance'), $countryoptions);
+        $this->add_code_select('countryofbirth', get_string('countryofbirth', 'local_rtocompliance'));
+        // Australia on the CREATE path only; set_data() overrides this for an existing
+        // student, so it cannot reach a record that already holds a value.
         $mform->setDefault('countryofbirth', '1101');
-        $mform->addHelpButton('countryofbirth', 'countryofbirth', 'local_rtocompliance');
 
-        $languageoptions = avetmiss_codes::get_language_codes();
-        $mform->addElement('select', 'languageathome', get_string('languageathome', 'local_rtocompliance'), $languageoptions);
+        $this->add_code_select('languageathome', get_string('languageathome', 'local_rtocompliance'));
         $mform->setDefault('languageathome', '1201');
-        $mform->addHelpButton('languageathome', 'languageathome', 'local_rtocompliance');
 
-        $englishoptions = avetmiss_codes::get_english_proficiency_codes();
-        $mform->addElement('select', 'englishproficiency', get_string('englishproficiency', 'local_rtocompliance'), $englishoptions);
-        $mform->setDefault('englishproficiency', '@');
-        $mform->addHelpButton('englishproficiency', 'englishproficiency', 'local_rtocompliance');
+        $this->add_code_select('englishproficiency', get_string('englishproficiency', 'local_rtocompliance'));
 
-        $atsioptions = avetmiss_codes::get_indigenous_status_codes();
-        $mform->addElement('select', 'indigenousstatus', get_string('atsi', 'local_rtocompliance'), $atsioptions);
-        $mform->setDefault('indigenousstatus', '@');
-        $mform->addHelpButton('indigenousstatus', 'atsi', 'local_rtocompliance');
+        $this->add_code_select('indigenousstatus', get_string('atsi', 'local_rtocompliance'), 'atsi');
 
         $mform->addElement('header', 'disabilitydetails', get_string('disabilitydetails', 'local_rtocompliance'));
         $mform->addHelpButton('disabilitydetails', 'disabilitydetails', 'local_rtocompliance');
 
-        $disabilityoptions = avetmiss_codes::get_disability_codes();
-        $mform->addElement('select', 'disabilityflag', get_string('disability', 'local_rtocompliance'), $disabilityoptions);
+        $this->add_code_select('disabilityflag', get_string('disability', 'local_rtocompliance'), 'disability');
         $mform->setDefault('disabilityflag', 'N');
-        $mform->addHelpButton('disabilityflag', 'disability', 'local_rtocompliance');
 
         $disabilitytypes = avetmiss_codes::get_disability_type_codes();
         $typesgroup = [];
@@ -141,10 +151,7 @@ class student_profile_form extends \moodleform {
         $mform->addElement('header', 'educationdetails', get_string('educationdetails', 'local_rtocompliance'));
         $mform->addHelpButton('educationdetails', 'educationdetails', 'local_rtocompliance');
 
-        $schooloptions = avetmiss_codes::get_school_level_codes();
-        $mform->addElement('select', 'highestschoollevel', get_string('schoollevel', 'local_rtocompliance'), $schooloptions);
-        $mform->setDefault('highestschoollevel', '@@');
-        $mform->addHelpButton('highestschoollevel', 'schoollevel', 'local_rtocompliance');
+        $this->add_code_select('highestschoollevel', get_string('schoollevel', 'local_rtocompliance'), 'schoollevel');
 
         $years = ['' => get_string('choosedots'), '@@@@' => get_string('notstated', 'local_rtocompliance')];
         for ($y = date('Y'); $y >= 1950; $y--) {
@@ -153,20 +160,12 @@ class student_profile_form extends \moodleform {
         $mform->addElement('select', 'yearschoolcompleted', get_string('yearschoolcompleted', 'local_rtocompliance'), $years);
         $mform->addHelpButton('yearschoolcompleted', 'yearschoolcompleted', 'local_rtocompliance');
 
-        $atschooloptions = avetmiss_codes::get_at_school_flag_codes();
-        $mform->addElement('select', 'atschoolflag', get_string('atschoolflag', 'local_rtocompliance'), $atschooloptions);
+        $this->add_code_select('atschoolflag', get_string('atschoolflag', 'local_rtocompliance'));
         $mform->setDefault('atschoolflag', 'N');
-        $mform->addHelpButton('atschoolflag', 'atschoolflag', 'local_rtocompliance');
 
-        $labourforceoptions = avetmiss_codes::get_labour_force_status_codes();
-        $mform->addElement('select', 'labourforcestatus', get_string('labourforcestatus', 'local_rtocompliance'), $labourforceoptions);
-        $mform->setDefault('labourforcestatus', '@@');
-        $mform->addHelpButton('labourforcestatus', 'labourforcestatus', 'local_rtocompliance');
+        $this->add_code_select('labourforcestatus', get_string('labourforcestatus', 'local_rtocompliance'));
 
-        $studyreasonoptions = avetmiss_codes::get_study_reason_codes();
-        $mform->addElement('select', 'studyreason', get_string('studyreason', 'local_rtocompliance'), $studyreasonoptions);
-        $mform->setDefault('studyreason', '@@');
-        $mform->addHelpButton('studyreason', 'studyreason', 'local_rtocompliance');
+        $this->add_code_select('studyreason', get_string('studyreason', 'local_rtocompliance'));
 
         $prioroptions = ['' => get_string('none', 'local_rtocompliance')] + avetmiss_codes::get_prior_education_codes();
         $mform->addElement('select', 'priorachevement1', get_string('priorachievement', 'local_rtocompliance') . ' 1', $prioroptions);
@@ -174,18 +173,13 @@ class student_profile_form extends \moodleform {
         $mform->addElement('select', 'priorachevement3', get_string('priorachievement', 'local_rtocompliance') . ' 3', $prioroptions);
         $mform->addElement('select', 'priorachevement4', get_string('priorachievement', 'local_rtocompliance') . ' 4', $prioroptions);
 
-        $priorflagoptions = avetmiss_codes::get_prior_education_flag_codes();
-        $mform->addElement('select', 'prioreducationflag', get_string('prioreducationflag', 'local_rtocompliance'), $priorflagoptions);
-        $mform->setDefault('prioreducationflag', '@');
-        $mform->addHelpButton('prioreducationflag', 'prioreducationflag', 'local_rtocompliance');
+        $this->add_code_select('prioreducationflag', get_string('prioreducationflag', 'local_rtocompliance'));
 
         $mform->addElement('header', 'surveydetails', get_string('surveydetails', 'local_rtocompliance'));
         $mform->addHelpButton('surveydetails', 'surveydetails', 'local_rtocompliance');
 
-        $surveycontactoptions = avetmiss_codes::get_survey_contact_codes();
-        $mform->addElement('select', 'surveycontactstatus', get_string('surveycontactstatus', 'local_rtocompliance'), $surveycontactoptions);
+        $this->add_code_select('surveycontactstatus', get_string('surveycontactstatus', 'local_rtocompliance'));
         $mform->setDefault('surveycontactstatus', 'N');
-        $mform->addHelpButton('surveycontactstatus', 'surveycontactstatus', 'local_rtocompliance');
 
         $mform->addElement('text', 'surveycontactemail', get_string('surveycontactemail', 'local_rtocompliance'), ['size' => 50, 'maxlength' => 255]);
         $mform->setType('surveycontactemail', PARAM_EMAIL);
@@ -244,6 +238,13 @@ class student_profile_form extends \moodleform {
         global $CFG;
 
         $errors = parent::validation($data, $files);
+
+        // CODE-FIELD GATE (v6.3.33; shared with the enrolment form since v6.3.34):
+        // refuse any coded value that is not in the standard, so a bad code cannot enter
+        // the database at all - not from a browser fallback, not from a hand-built POST,
+        // not from a future defect in the option-building code. code_select_trait
+        // explains why a value UNCHANGED from the stored one is deliberately allowed.
+        $errors = array_merge($errors, $this->validate_code_fields($data));
 
         // PROFILE-GATE (v6.3.0): the fields the AVETMISS gate requires are validated
         // here, server-side, rather than with client-side 'required' rules — neither

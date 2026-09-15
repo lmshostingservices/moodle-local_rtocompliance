@@ -364,7 +364,7 @@ if ($action === 'export_csv') {
             'Replacement Of (Original Cert ID)',
             'Reissued At',
             'Notes',
-    ]);
+    ], ',', '"', '\\');
 
     foreach ($rows as $r) {
         fputcsv(
@@ -386,7 +386,7 @@ if ($action === 'export_csv') {
                 $r->replacement_of ?? '',
                 !empty($r->reissued_at) ? userdate($r->reissued_at, '%Y-%m-%d %H:%M') : '',
                 $r->notes,
-        ]);
+        ], ',', '"', '\\');
     }
     fclose($out);
 

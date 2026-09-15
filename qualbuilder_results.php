@@ -128,9 +128,9 @@ if (empty($qualbuilderid)) {
         header('Content-Type: text/csv; charset=utf-8');
         header('Content-Disposition: attachment; filename="unmapped_completions_' . date('Y-m-d') . '.csv"');
         $uout = fopen('php://output', 'w');
-        fputcsv($uout, ['Course ID', 'Course Shortname', 'Course Fullname', 'Category', 'Completions', 'Students Affected']);
+        fputcsv($uout, ['Course ID', 'Course Shortname', 'Course Fullname', 'Category', 'Completions', 'Students Affected'], ',', '"', '\\');
         foreach ($urows as $ur) {
-            fputcsv($uout, [$ur->courseid, $ur->shortname, $ur->fullname, $ur->category, $ur->completions, $ur->students]);
+            fputcsv($uout, [$ur->courseid, $ur->shortname, $ur->fullname, $ur->category, $ur->completions, $ur->students], ',', '"', '\\');
         }
         fclose($uout);
         exit;
@@ -240,8 +240,9 @@ if (empty($qualbuilderid)) {
                 . ' OR ' . $DB->sql_like("$sa.lastname", ":rs4$suffix", false, false)
                 . ' OR ' . $DB->sql_like("$ua.email", ":rs5$suffix", false, false)
                 . ' OR ' . $DB->sql_like("$sa.usi", ":rs6$suffix", false, false)
-                . ' OR ' . $DB->sql_like("$sa.clientid", ":rs7$suffix", false, false) . ')';
-            foreach (['rs1', 'rs2', 'rs3', 'rs4', 'rs5', 'rs6', 'rs7'] as $k) {
+                . ' OR ' . $DB->sql_like("$sa.clientid", ":rs7$suffix", false, false)
+                . ' OR ' . $DB->sql_like("$ua.username", ":rs8$suffix", false, false) . ')';
+            foreach (['rs1', 'rs2', 'rs3', 'rs4', 'rs5', 'rs6', 'rs7', 'rs8'] as $k) {
                 $p[$k . $suffix] = '%' . $DB->sql_like_escape($search) . '%';
             }
         }
@@ -313,7 +314,7 @@ if (empty($qualbuilderid)) {
                           s.dateofbirth, s.sex, s.statecode,
                           COALESCE(NULLIF(u.firstname, ''), s.firstname) AS dfirst,
                           COALESCE(NULLIF(u.lastname, ''), s.lastname)  AS dlast,
-                          u.email AS email,
+                          u.email AS email, u.username AS username,
                           $attexpr  AS unitsattempted,
                           $compexpr AS unitscompetent,
                           COUNT(DISTINCT e.programcode) AS programcount,
@@ -322,7 +323,7 @@ if (empty($qualbuilderid)) {
                      $rwheresql
                  GROUP BY s.id, s.userid, s.clientid, s.usi, s.usiverified, s.dateofbirth, s.sex, s.statecode,
                           COALESCE(NULLIF(u.firstname, ''), s.firstname),
-                          COALESCE(NULLIF(u.lastname, ''), s.lastname), u.email
+                          COALESCE(NULLIF(u.lastname, ''), s.lastname), u.email, u.username
                           $rhaving
                  ORDER BY dlast ASC, dfirst ASC";
         $csvrows = $DB->get_records_sql($csvsql, $rparams);
@@ -331,8 +332,8 @@ if (empty($qualbuilderid)) {
         header('Content-Disposition: attachment; filename="student_roster_' . date('Y-m-d') . '.csv"');
         $out = fopen('php://output', 'w');
         fputcsv(
-            $out, ['Student Name', 'Client ID', 'USI', 'USI Verified', 'Date of Birth', 'Sex',
-                       'State', 'Qualifications', 'Units Attempted', 'Units Competent', 'Progress %', 'Status', 'Last Activity']);
+            $out, ['Student Name', 'Username', 'Client ID', 'USI', 'USI Verified', 'Date of Birth', 'Sex',
+                       'State', 'Qualifications', 'Units Attempted', 'Units Competent', 'Progress %', 'Status', 'Last Activity'], ',', '"', '\\');
         foreach ($csvrows as $r) {
             $name = trim(trim((string)$r->dfirst) . ' ' . trim((string)$r->dlast));
             if ($name === '') {
@@ -350,6 +351,7 @@ if (empty($qualbuilderid)) {
             fputcsv(
                 $out, [
                     $name,
+                    (string)$r->username,
                     (string)$r->clientid,
                     (string)$r->usi,
                     // USI-VERIFIED-ACCURACY (v6.2.8): only usiverified===1 (STATUS_VERIFIED, confirmed
@@ -368,7 +370,7 @@ if (empty($qualbuilderid)) {
                     $pct . '%',
                     ($att > 0 && $att === $comp) ? 'All competent' : 'In progress',
                     $r->lastactivity ? date('d/m/Y', (int)$r->lastactivity) : '',
-            ]);
+            ], ',', '"', '\\');
         }
         fclose($out);
         exit;
@@ -405,7 +407,7 @@ if (empty($qualbuilderid)) {
                          s.dateofbirth, s.sex, s.statecode,
                          COALESCE(NULLIF(u.firstname, ''), s.firstname) AS dfirst,
                          COALESCE(NULLIF(u.lastname, ''), s.lastname)  AS dlast,
-                         u.email AS email,
+                         u.email AS email, u.username AS username,
                          $attexpr  AS unitsattempted,
                          $compexpr AS unitscompetent,
                          COUNT(DISTINCT e.programcode) AS programcount,
@@ -414,7 +416,7 @@ if (empty($qualbuilderid)) {
                     $rwheresql
                 GROUP BY s.id, s.userid, s.clientid, s.usi, s.usiverified, s.dateofbirth, s.sex, s.statecode,
                          COALESCE(NULLIF(u.firstname, ''), s.firstname),
-                         COALESCE(NULLIF(u.lastname, ''), s.lastname), u.email
+                         COALESCE(NULLIF(u.lastname, ''), s.lastname), u.email, u.username
                          $rhaving
                     $orderby";
     $rosterrows = $DB->get_records_sql($rostersql, $rparams, $page * $perpage, $perpage);
@@ -565,7 +567,7 @@ if (empty($qualbuilderid)) {
     // narrow screens) with the search on top and the actions in their own row.
     echo html_writer::start_div('rtoc-results-filterbar');
     echo '<form method="get" action="" class="rtoc-rf-form">';
-    echo '<input type="text" name="search" class="form-control rtoc-rf-search" placeholder="Search name, email, USI or client ID" value="' . s($search) . '">';
+    echo '<input type="text" name="search" class="form-control rtoc-rf-search" placeholder="Search name, username, email, USI or client ID" value="' . s($search) . '">';
     echo '<div class="rtoc-rf-grid">';
     // Qualification filter.
     echo '<select name="rqual" class="form-control" onchange="this.form.submit()">';
@@ -760,6 +762,7 @@ RFCASCADE;
 
             echo '<tr>';
             echo '<td><strong>' . s($name) . '</strong>'
+                . ($r->username ? '<br><small class="text-muted">Username ' . s($r->username) . '</small>' : '')
                 . ($r->clientid ? '<br><small class="text-muted">ID ' . s($r->clientid) . '</small>' : '')
                 . ($r->email ? '<br><small class="text-muted">' . s($r->email) . '</small>' : '') . '</td>';
             echo '<td>' . $usibadge . '</td>';
@@ -984,8 +987,17 @@ $mapTableExistsForResults = $DB->get_manager()->table_exists('local_rtocomplianc
 if ($mapTableExistsForResults && !empty($unitcodes)) {
     list($ucInsql, $ucInparams) = $DB->get_in_or_equal($unitcodes, SQL_PARAMS_NAMED, 'uc');
     $ucInparams['mapqcode'] = strtoupper(trim($product->qualificationcode));
+    // DUPCOL (v6.3.32): this grouped on (unitcode, source) but selected unitcode FIRST,
+    // and get_records_sql() keys the returned array on the first column and silently
+    // drops duplicates. A unit mapped from more than one source - the normal case, a
+    // Qual Builder link plus a manually added course - therefore lost every row but one,
+    // so the auto/qb/manual breakdown in the unit column headers could never be right,
+    // and every page load emitted "Did you remember to make the first column something
+    // unique in your call to get_records?". Found by loading the page, not by reading it.
+    // Same defect class as v6.3.30 item (21). The concatenated key is unique per group.
+    $mapKeyExpr = $DB->sql_concat('unitcode', "'|'", 'source');
     $mapRows = $DB->get_records_sql(
-        "SELECT unitcode, source, COUNT(*) AS cnt
+        "SELECT $mapKeyExpr AS mapkey, unitcode, source, COUNT(*) AS cnt
            FROM {local_rtocompliance_course_map}
           WHERE qualcode = :mapqcode
             AND unitcode $ucInsql
@@ -1035,7 +1047,7 @@ $outcomecodes = [
 // programcode auto-detection are not silently excluded from the results page.
 $sql = "SELECT DISTINCT s.id as studentid, s.userid, s.usi, s.usiverified,
                s.clientid, s.dateofbirth, s.statecode,
-               u.firstname, u.lastname, u.email,
+               u.firstname, u.lastname, u.email, u.username,
                u.firstnamephonetic, u.lastnamephonetic, u.middlename, u.alternatename
         FROM {local_rtocompliance_students} s
         JOIN {user} u ON u.id = s.userid
@@ -1067,11 +1079,14 @@ if (!empty($search)) {
     $sql .= " AND (" . $DB->sql_like('u.firstname', ':search1', false, false) .
             " OR " . $DB->sql_like('u.lastname', ':search2', false, false) .
             " OR " . $DB->sql_like('u.email', ':search3', false, false) .
-            " OR " . $DB->sql_like('s.usi', ':search4', false, false) . ")";
-    $params['search1'] = '%' . $search . '%';
-    $params['search2'] = '%' . $search . '%';
-    $params['search3'] = '%' . $search . '%';
-    $params['search4'] = '%' . $search . '%';
+            " OR " . $DB->sql_like('s.usi', ':search4', false, false) .
+            " OR " . $DB->sql_like('u.username', ':search5', false, false) . ")";
+    $searchlike = '%' . $DB->sql_like_escape($search) . '%';
+    $params['search1'] = $searchlike;
+    $params['search2'] = $searchlike;
+    $params['search3'] = $searchlike;
+    $params['search4'] = $searchlike;
+    $params['search5'] = $searchlike;
 }
 
 // RPL-CT-FIX (v5.9.331): Added '51' (RPL) and '60' (Credit Transfer) to all
@@ -1130,13 +1145,13 @@ if ($export === 'csv') {
     
     $output = fopen('php://output', 'w');
     
-    $headers = ['Student Name', 'Email', 'USI', 'USI Verified'];
+    $headers = ['Student Name', 'Username', 'Email', 'USI', 'USI Verified'];
     foreach ($units as $unit) {
         $headers[] = $unit->unitcode;
     }
     $headers[] = 'Completion %';
     $headers[] = 'Status';
-    fputcsv($output, $headers);
+    fputcsv($output, $headers, ',', '"', '\\');
     
     foreach ($allstudents as $student) {
         // FIX: Build a unitcode→enrolment map that handles the case where a student
@@ -1186,6 +1201,7 @@ if ($export === 'csv') {
         
         $row = [
             fullname($student),
+            (string)($student->username ?? ''),
             $student->email,
             $student->usi ?? '',
             // USI-VERIFIED-ACCURACY (v6.2.8): only STATUS_VERIFIED (1) is a real "Yes".
@@ -1215,7 +1231,7 @@ if ($export === 'csv') {
         $row[] = $percentage . '%';
         $row[] = ($completedunits >= $totalunits) ? 'Complete' : 'In Progress';
         
-        fputcsv($output, $row);
+        fputcsv($output, $row, ',', '"', '\\');
     }
     
     fclose($output);
@@ -1345,7 +1361,7 @@ echo '<form method="get" action="" class="form-inline" style="display: flex; fle
     </div>
     <div class="form-group">
         <input type="text" name="search" id="search" class="form-control" style="min-width: 200px;"
-               placeholder="Search by name, email, or USI" 
+               placeholder="Search by name, username, email, or USI"
                value="' . s($search) . '">
     </div>
     <button type="submit" class="btn btn-primary">Search</button>
@@ -1560,6 +1576,9 @@ if (empty($students)) {
         
         echo '<td style="position: sticky; left: 0; background: white; z-index: 5;">';
         echo '<strong>' . fullname($student) . '</strong><br>';
+        if (!empty($student->username)) {
+            echo '<small class="text-muted">Username ' . s($student->username) . '</small><br>';
+        }
         echo '<small class="text-muted">' . s($student->email) . '</small>';
         // Version 5.9.373: surface key AVETMISS identity fields inline so the RTO can
         // read client ID, DOB and state without leaving the grid.

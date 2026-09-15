@@ -38,7 +38,7 @@ require_capability('local/rtocompliance:manage', context_system::instance());
 // Userid is kept for single-student shortcut (called from student profile page).
 $userid       = optional_param('userid', 0, PARAM_INT);
 $declfilter   = optional_param('declfilter', 'all', PARAM_ALPHA); // all|notsent|pending|completed
-$search       = optional_param('search', '', PARAM_TEXT);
+$search       = trim((string) optional_param('search', '', PARAM_TEXT));
 $page         = max(0, optional_param('page', 0, PARAM_INT));
 $perpage      = 50;
 
@@ -130,7 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && confirm_sesskey()) {
     // Load only the selected users (validate they exist + not deleted/suspended)
     list($insql, $inparams) = $DB->get_in_or_equal($raw_ids, SQL_PARAMS_NAMED);
     $users = $DB->get_records_sql(
-        "SELECT u.id, u.firstname, u.lastname, u.email,
+        "SELECT u.id, u.firstname, u.lastname, u.username, u.email,
                 u.firstnamephonetic, u.lastnamephonetic, u.middlename, u.alternatename
            FROM {user} u
           WHERE u.id $insql AND u.deleted = 0 AND u.suspended = 0",
@@ -254,7 +254,11 @@ $declRecords = $DB->get_records_sql(
 );
 
 // Build student query (same exclusions as students.php)
-$sql = "SELECT u.id, u.firstname, u.lastname, u.email,
+// v6.3.32: u.username is selected here as well as searched. The listing SELECT was
+// left untouched when the username column was added to the table, so every rendered
+// row read an undefined $student->username - a PHP warning per student, and an empty
+// column. Only the POST branch's SELECT had been updated.
+$sql = "SELECT u.id, u.firstname, u.lastname, u.username, u.email,
                u.firstnamephonetic, u.lastnamephonetic, u.middlename, u.alternatename
           FROM {user} u
           LEFT JOIN (
@@ -305,10 +309,13 @@ if (!empty($search)) {
     $s1 = $DB->sql_like('u.firstname', ':s1', false, false);
     $s2 = $DB->sql_like('u.lastname',  ':s2', false, false);
     $s3 = $DB->sql_like('u.email',     ':s3', false, false);
-    $sql .= " AND ($s1 OR $s2 OR $s3)";
-    $params['s1'] = '%' . $search . '%';
-    $params['s2'] = '%' . $search . '%';
-    $params['s3'] = '%' . $search . '%';
+    $s4 = $DB->sql_like('u.username',  ':s4', false, false);
+    $sql .= " AND ($s1 OR $s2 OR $s3 OR $s4)";
+    $searchlike = '%' . $DB->sql_like_escape($search) . '%';
+    $params['s1'] = $searchlike;
+    $params['s2'] = $searchlike;
+    $params['s3'] = $searchlike;
+    $params['s4'] = $searchlike;
 }
 
 $countsql   = "SELECT COUNT(DISTINCT u.id) " . substr($sql, strpos($sql, 'FROM'));
@@ -317,12 +324,9 @@ $totalcount = $DB->count_records_sql($countsql, $params);
 $sql .= " ORDER BY u.lastname, u.firstname";
 $students = $DB->get_records_sql($sql, $params, $page * $perpage, $perpage);
 
-// Status summary counts (for filter bar badges)
-$allCount       = $DB->count_records_sql(
-    "SELECT COUNT(DISTINCT u.id) " . substr($sql, strpos($sql, 'FROM')),
-        // Re-use all params but without status filter — do a separate count query.
-        []
-);
+// Status summary counts (for filter bar badges). The current result count
+// already includes the live search term; the other badges remain the page's
+// existing unscoped status totals.
 $countNotSent   = $DB->count_records_sql(
     "SELECT COUNT(DISTINCT u.id)
        FROM {user} u
@@ -372,7 +376,10 @@ $filterBar .= '<div class="rtoc-filter-group rtoc-filter-search" style="margin-l
 $searchUrl = clone $baseUrl;
 $filterBar .= '<form method="get" action="' . $searchUrl->out(false) . '" style="display:flex;gap:0.4rem;align-items:center;">';
 $filterBar .= '<input type="hidden" name="declfilter" value="' . s($declfilter) . '">';
-$filterBar .= '<input type="text" name="search" class="form-control form-control-sm" placeholder="Search name or email" value="' . s($search) . '" style="width:200px;">';
+$filterBar .= '<label for="decl-student-search" class="sr-only">Search name, Moodle username or email</label>';
+$filterBar .= '<input type="text" id="decl-student-search" name="search" class="form-control form-control-sm" '
+    . 'placeholder="Search name, username or email" value="' . s($search) . '" style="width:220px;">';
+$filterBar .= '<small id="decl-student-search-help" class="text-muted">Moodle username included</small>';
 $filterBar .= '<button type="submit" class="btn btn-sm btn-secondary">Search</button>';
 if ($search) {
     $clearUrl = clone $baseUrl;
@@ -413,6 +420,7 @@ if (empty($students)) {
         . html_writer::checkbox('selectall-decl', '1', false, '', ['id' => 'selectall-decl', 'title' => 'Select all visible'])
         . '</th>';
     echo '<th>Name</th>';
+    echo '<th>Moodle username</th>';
     echo '<th>Email</th>';
     echo '<th>Declaration Status</th>';
     echo '<th>Date Sent</th>';
@@ -447,9 +455,11 @@ if (empty($students)) {
         $checkbox = html_writer::checkbox('userids[]', $student->id, false, '', $cbAttrs);
 
         $fullname  = htmlspecialchars(fullname($student));
+        $username   = htmlspecialchars((string) $student->username);
         echo '<tr>';
         echo '<td>' . $checkbox . '</td>';
         echo '<td>' . $fullname . '</td>';
+        echo '<td>' . $username . '</td>';
         echo '<td>' . htmlspecialchars($student->email) . '</td>';
         echo '<td>' . $statusBadge . '</td>';
         echo '<td>' . $sentDate . '</td>';

@@ -297,7 +297,7 @@ echo html_writer::start_tag(
 
 // Search
 echo '<div><label style="display:block;font-size:0.85rem;font-weight:600;margin-bottom:4px;">' . get_string('certificates_filter_search', 'local_rtocompliance') . '</label>';
-echo '<input type="text" name="search" value="' . s($search) . '" class="form-control form-control-sm" placeholder="Name, email, or CERT-..." style="width:100%;"></div>';
+echo '<input type="text" name="search" value="' . s($search) . '" class="form-control form-control-sm" placeholder="Name, username, email, or CERT-..." style="width:100%;"></div>';
 
 // Cert type
 echo '<div><label style="display:block;font-size:0.85rem;font-weight:600;margin-bottom:4px;">' . get_string('certificates_filter_certtype', 'local_rtocompliance') . '</label>';
@@ -381,11 +381,13 @@ if ($search !== '') {
     $where[] = '(' . $DB->sql_like('u.firstname', ':s1', false) . ' OR ' .
                $DB->sql_like('u.lastname',  ':s2', false) . ' OR ' .
                $DB->sql_like('u.email',     ':s3', false) . ' OR ' .
-               $DB->sql_like('c.certnumber', ':s4', false) . ')';
+               $DB->sql_like('c.certnumber', ':s4', false) . ' OR ' .
+               $DB->sql_like('u.username',   ':s5', false) . ')';
     $params['s1'] = $like;
     $params['s2'] = $like;
     $params['s3'] = $like;
     $params['s4'] = $like;
+    $params['s5'] = $like;
 }
 if ($certtype !== '' && isset($certtypes[$certtype])) {
     $where[] = 'c.certtype = :ctype';
@@ -431,13 +433,13 @@ if ($studentsTableExists) {
     $baseFrom = "FROM {local_rtocompliance_certs} c
                  JOIN {user} u ON u.id = c.userid
                  LEFT JOIN {local_rtocompliance_students} s ON s.userid = c.userid";
-    $selectCols = "c.*, u.firstname, u.lastname, u.email,
+    $selectCols = "c.*, u.firstname, u.lastname, u.email, u.username,
                    u.firstnamephonetic, u.lastnamephonetic, u.middlename, u.alternatename,
                    s.usi, s.usiverified, s.usiverifieddate, s.usiexempt";
 } else {
     $baseFrom = "FROM {local_rtocompliance_certs} c
                  JOIN {user} u ON u.id = c.userid";
-    $selectCols = "c.*, u.firstname, u.lastname, u.email,
+    $selectCols = "c.*, u.firstname, u.lastname, u.email, u.username,
                    u.firstnamephonetic, u.lastnamephonetic, u.middlename, u.alternatename";
 }
 
@@ -708,7 +710,7 @@ if (!$certs) {
     echo '<thead><tr>';
     echo '<th style="width:32px;" title="Select certificates for bulk actions"><input type="checkbox" id="rtoc-select-all" data-testid="checkbox-select-all" title="Select/deselect all on this page"></th>';
     echo '<th title="Unique certificate number used for tracking and verification">' . $sortLink('certnumber',        'Cert #') . '</th>';
-    echo '<th title="Name and email of the person the certificate belongs to">' . $sortLink('lastname',          'Student') . '</th>';
+    echo '<th title="Name, username and email of the person the certificate belongs to">' . $sortLink('lastname',          'Student') . '</th>';
     echo '<th title="Certificate type: Testamur, Statement of Attainment, Record of Results or Completion">' . $sortLink('certtype',          'Type') . '</th>';
     echo '<th title="National code and title the certificate is issued for">' . $sortLink('qualificationcode', 'Qualification') . '</th>';
     echo '<th title="Date the certificate was generated">' . $sortLink('issuedate',         'Issued') . '</th>';
@@ -747,7 +749,9 @@ if (!$certs) {
         echo '</td>';
 
         // Student
-        echo '<td>' . s(fullname($cert)) . '<br><span class="text-muted" style="font-size:0.8rem;">' . s($cert->email) . '</span></td>';
+        echo '<td>' . s(fullname($cert))
+            . (!empty($cert->username) ? '<br><span class="text-muted" style="font-size:0.8rem;">Username ' . s($cert->username) . '</span>' : '')
+            . '<br><span class="text-muted" style="font-size:0.8rem;">' . s($cert->email) . '</span></td>';
 
         // Type
         echo '<td>' . s($certtypes[$cert->certtype] ?? $cert->certtype) . '</td>';
@@ -811,6 +815,9 @@ if (!$certs) {
 
         echo html_writer::start_div($cardClass, ['style' => $isReplacedOriginal ? 'opacity:0.6;' : '']);
         echo html_writer::tag('h4', fullname($cert));
+        if (!empty($cert->username)) {
+            echo html_writer::tag('p', 'Username: ' . s($cert->username), ['class' => 'text-muted']);
+        }
         echo html_writer::tag('p', $certtypes[$cert->certtype] ?? $cert->certtype);
         echo html_writer::tag('p', html_writer::tag('span', $cert->certnumber, ['class' => 'certificate-number']));
 

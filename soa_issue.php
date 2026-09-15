@@ -99,11 +99,11 @@ foreach ($DB->get_records(
 
 // Students with at least one result row, surname-first.
 $soaStudents = $DB->get_records_sql(
-    "SELECT u.id AS userid, u.firstname, u.lastname, u.email
+    "SELECT u.id AS userid, u.username, u.firstname, u.lastname, u.email
        FROM {local_rtocompliance_students} s
        JOIN {user} u ON u.id = s.userid AND u.deleted = 0
        JOIN {local_rtocompliance_enrolments} e ON e.studentid = s.id
-   GROUP BY u.id, u.firstname, u.lastname, u.email
+   GROUP BY u.id, u.username, u.firstname, u.lastname, u.email
    ORDER BY u.lastname, u.firstname",
     [], 0, 10000
 );
@@ -234,14 +234,17 @@ foreach ($soaStudents as $st) {
             $cats[$soaQualMeta[$qc]['cat']] = true;
         }
     }
-    $label = trim($st->lastname) . ', ' . trim($st->firstname) . ' (' . $st->email . ')';
+    $label = trim($st->lastname) . ', ' . trim($st->firstname)
+        . ' (' . $st->username . ' · ' . $st->email . ')';
     $catpaths = $soaUserCatpaths[$uid] ?? [];
     $ucourses = $soaUserCourses[$uid] ?? [];
     $soaOptionsHtml .= '<option value="' . $uid . '"'
         . ' data-quals="' . s(implode(' ', $quals)) . '"'
         . ' data-cats="' . s(implode(' ', array_keys($cats))) . '"'
         . ' data-catpath="' . s(implode(' ', $catpaths)) . '"'
-        . ' data-courses="' . s(implode(' ', array_map('strval', $ucourses))) . '">'
+        . ' data-courses="' . s(implode(' ', array_map('strval', $ucourses))) . '"'
+        . ' data-username="' . s($st->username) . '"'
+        . ' data-email="' . s($st->email) . '">'
         . s($label) . '</option>';
 }
 
@@ -708,8 +711,8 @@ echo <<<'HTML'
   // ── Student picker ─────────────────────────────────────────────────────────
   // FIX-STUDENT-PICKER (v4.9.142): Rebuilt as a proper typeahead.
   //   • Surname first display ("Smith, John") — alphabetical by surname
-  //   • Live search across surname, firstname and email
-  //   • Two-line result rows — name bold/large, email muted below
+  //   • Live search across surname, firstname, username and email
+  //   • Two-line result rows — name bold/large, username/email muted below
   //   • Highlighted matching text in results
   //   • Keyboard navigation (↑ ↓ Enter Escape)
   //   • Result count shown at top of dropdown
@@ -725,7 +728,7 @@ echo <<<'HTML'
 
     var searchInput = document.createElement('input');
     searchInput.type = 'text';
-    searchInput.placeholder = 'Type surname, first name or email\u2026';
+    searchInput.placeholder = 'Type surname, first name, username or email\u2026';
     searchInput.autocomplete = 'off';
     searchInput.style.cssText = 'width:100%;padding:7px 32px 7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.9rem;box-sizing:border-box;background:#fff;';
     inputWrap.appendChild(searchInput);
@@ -744,18 +747,21 @@ echo <<<'HTML'
     dropdown.style.cssText = 'position:absolute;z-index:9999;background:#fff;border:1px solid #d1d5db;border-radius:6px;box-shadow:0 6px 20px rgba(0,0,0,0.12);max-height:300px;overflow-y:auto;width:100%;display:none;left:0;top:calc(100% + 3px);';
     wrap.appendChild(dropdown);
 
-    // Build option list from hidden native select (labels already "Surname, Firstname (email)")
+    // Build option list from hidden native select. The data attributes keep
+    // usernames/emails unambiguous even when a label contains punctuation.
     var opts = Array.from(userSel.options)
       .filter(function (o){ return o.value !== ''; })
       .map(function (o){
         var label = o.text;
+        var email = o.getAttribute('data-email') || '';
+        var username = o.getAttribute('data-username') || '';
         var emailMatch = label.match(/\(([^)]+)\)$/);
-        var email = emailMatch ? emailMatch[1] : '';
         var namePart = emailMatch ? label.slice(0, label.lastIndexOf('(')).trim() : label;
         var commaIdx = namePart.indexOf(',');
         var surname   = commaIdx > -1 ? namePart.slice(0, commaIdx).trim() : namePart;
         var firstname = commaIdx > -1 ? namePart.slice(commaIdx + 1).trim() : '';
-        return {val: o.value, label: label, surname: surname, firstname: firstname, email: email,
+        return {val: o.value, label: label, surname: surname, firstname: firstname,
+                username: username, email: email,
                 quals:   (o.getAttribute('data-quals')   || '').toUpperCase(),
                 cats:    (o.getAttribute('data-cats')    || ''),
                 catpath: (o.getAttribute('data-catpath') || ''),
@@ -878,7 +884,11 @@ echo <<<'HTML'
             '<strong style="color:#111827;">' + hi(o.surname, q2) + '</strong>' +
             (o.firstname ? '<span style="color:#4b5563;">, ' + hi(o.firstname, q2) + '</span>' : '') +
           '</div>' +
-          '<div style="font-size:0.76rem;color:#9ca3af;margin-top:2px;">' + hi(o.email, q2) + '</div>' +
+          '<div style="font-size:0.76rem;color:#9ca3af;margin-top:2px;">' +
+            (o.username ? hi(o.username, q2) : '') +
+            (o.username && o.email ? ' · ' : '') +
+            hi(o.email, q2) +
+          '</div>' +
           (o.quals ? '<div style="margin-top:3px;">' + o.quals.split(' ').filter(Boolean).slice(0,4).map(function (c){
               return '<span style="display:inline-block;background:#eef2ff;color:#3730a3;border:1px solid #e0e7ff;border-radius:4px;padding:0px 5px;font-size:0.68rem;margin:1px 2px 1px 0;">' + esc(c) + '</span>';
             }).join('') + '</div>' : '');
@@ -899,7 +909,9 @@ echo <<<'HTML'
     }
 
     function selectOpt(o) {
-      searchInput.value    = o.surname + ', ' + o.firstname + (o.email ? '  \u2014  ' + o.email : '');
+      searchInput.value    = o.surname + ', ' + o.firstname
+        + (o.username ? '  \u2014  ' + o.username : '')
+        + (o.email ? '  \u2014  ' + o.email : '');
       searchInput.readOnly = true;
       searchInput.style.background = '#f0f9ff';
       searchInput.style.borderColor = '#93c5fd';

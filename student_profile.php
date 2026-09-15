@@ -687,7 +687,8 @@ echo '<div class="rtoc-hero-main">';
 echo '<p class="rtoc-hero-name">' . s(fullname($user)) . '</p>';
 $clientid = trim((string)($student->clientid ?? ''));
 echo '<p class="rtoc-hero-sub">'
-    . 'Client ID: <strong>' . ($clientid !== '' ? s($clientid) : '&mdash;') . '</strong>'
+    . 'Moodle username: <strong>' . s((string)$user->username) . '</strong>'
+    . ' &nbsp;&bull;&nbsp; Client ID: <strong>' . ($clientid !== '' ? s($clientid) : '&mdash;') . '</strong>'
     . ($usi !== '' ? ' &nbsp;&bull;&nbsp; USI: <strong>' . s($usi) . '</strong>' : '')
     . ' &nbsp;&bull;&nbsp; ' . s($user->email)
     . '</p>';

@@ -121,8 +121,14 @@ class nat_generator_test extends \advanced_testcase {
             'subjectid' => 'BSBCMM511',
             'unitcode' => 'BSBCMM511',
             'unitname' => 'Communicate with influence',
-            'activitystartdate' => strtotime('2025-01-15'),
-            'activityenddate' => strtotime('2025-06-30'),
+            // v6.3.32: these were hard-coded to 2025 while setUp() builds the generator
+            // with date('Y'). From 1 Jan 2026 the seeded activity fell outside the
+            // collection year the generator reports on, so EVERY NAT file came back as an
+            // empty string and ~25 assertions in this class failed with
+            // "'' does not contain ...". The dates must track the collection year the
+            // generator is constructed with, or these tests rot again next January.
+            'activitystartdate' => strtotime(date('Y') . '-01-15'),
+            'activityenddate' => strtotime(date('Y') . '-06-30'),
             'scheduledhours' => 60,
             'outcomeidentifier' => '20',
             'deliverymode' => '10',

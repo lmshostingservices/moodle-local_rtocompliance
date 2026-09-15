@@ -58,7 +58,7 @@ class issue_certificate_form extends moodleform {
         // is sufficient for any RTO while keeping the page load practical. For sites with
         // > 10 000 users the cap should be replaced with a proper AJAX user-selector.
         $users = $DB->get_records_sql(
-            "SELECT u.id, u.firstname, u.lastname, u.email,
+            "SELECT u.id, u.username, u.firstname, u.lastname, u.email,
                     u.firstnamephonetic, u.lastnamephonetic, u.middlename, u.alternatename
              FROM {user} u
              WHERE u.deleted = 0 AND u.suspended = 0 AND u.id > 1
@@ -70,7 +70,9 @@ class issue_certificate_form extends moodleform {
 
         $useroptions = ['' => 'Select a student...'];
         foreach ($users as $user) {
-            $useroptions[$user->id] = fullname($user) . ' (' . $user->email . ')';
+            // Moodle's autocomplete element escapes option labels when rendering.
+            // Include the live username so name-only matches remain distinguishable.
+            $useroptions[$user->id] = fullname($user) . ' (' . $user->username . ' · ' . $user->email . ')';
         }
         $mform->addElement('autocomplete', 'userid', get_string('certificate_student', 'local_rtocompliance'), $useroptions);
         $mform->addRule('userid', null, 'required', null, 'client');

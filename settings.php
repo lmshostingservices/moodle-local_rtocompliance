@@ -229,6 +229,33 @@ if ($canviewfull) {
             'local/rtocompliance:issuecerts'
     ));
 
+    // CODE-LIST INTEGRITY (v6.3.33) — read-only report of student records holding a
+    // code the AVETMISS standard does not define, plus the codes whose MEANING changed
+    // when the country and language lists were replaced with SACC and ASCL. Registered
+    // as its own page rather than tucked under data_import so that it is findable: the
+    // records it lists cannot be reported to NCVER and nothing else in the plugin
+    // surfaces them.
+    $ADMIN->add(
+        'local_rtocompliance_category', new admin_externalpage(
+            'local_rtocompliance_codelist_audit',
+            get_string('codelist_report', 'local_rtocompliance'),
+            new moodle_url('/local/rtocompliance/codelist_audit.php'),
+            'local/rtocompliance:manage'
+    ));
+
+    // PROGRAM-RECOGNITION (v6.3.36) — which programs are nationally recognised.
+    // Registered as its own page because it gates three things at once (NAT export,
+    // USI collection, certificate type) and because the unclassified list is work
+    // somebody has to do: a code nobody has classified is silently excluded from
+    // lodgement, which is only safe if it is also visible.
+    $ADMIN->add(
+        'local_rtocompliance_category', new admin_externalpage(
+            'local_rtocompliance_program_recognition',
+            get_string('recognition_title', 'local_rtocompliance'),
+            new moodle_url('/local/rtocompliance/program_recognition.php'),
+            'local/rtocompliance:manage'
+    ));
+
     // BULK-COURSE-CERTS (v4.7.104) — generate all certificates for a course.
     // FIX-NAV-LINK (v5.0.5): removed hardcoded courseid=1 (site course). Landing on the
     // picker screen is the correct entry point — courseid=1 showed "no completions" and

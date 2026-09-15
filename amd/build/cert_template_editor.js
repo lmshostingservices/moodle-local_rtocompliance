@@ -22,7 +22,7 @@
  *
  * @module local_rtocompliance/cert_template_editor
  */
-define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-NAMED-DEFINE (v5.9.279): anonymous define() allowed Moodle combo-loader to overwrite the AMD slot
+define('local_rtocompliance/cert_template_editor', [], function() { // FIX-AMD-NAMED-DEFINE (v5.9.279): anonymous define() allowed Moodle combo-loader to overwrite the AMD slot
     'use strict';
 
     var BASE_SCALE = 3.0;   // px per mm at 100% zoom (A4 landscape = 891x630).
@@ -131,7 +131,7 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
         validateSesskey = data.sesskey || '';
 
         // Compute next field id.
-        (design.fields || []).forEach(function (f) {
+        (design.fields || []).forEach(function(f) {
             var n = parseInt(String(f.id || '').replace(/[^0-9]/g, ''), 10);
             if (!isNaN(n) && n >= nextId) {
                 nextId = n + 1;
@@ -168,8 +168,8 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
 
     // ALIGN-ON-PAGE (v6.2.58): wire the "Align on page" buttons in the properties panel.
     function wireAlignToolbar() {
-        Array.prototype.slice.call(document.querySelectorAll('.rtoc-align-btn')).forEach(function (b) {
-            b.addEventListener('click', function () {
+        Array.prototype.slice.call(document.querySelectorAll('.rtoc-align-btn')).forEach(function(b) {
+            b.addEventListener('click', function() {
                 if (!selectedId) { return; }
                 alignSelectedOnPage(b.getAttribute('data-align'));
             });
@@ -182,7 +182,7 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
         var btn = document.getElementById('rtoc-tmpl-wide');
         var grid = document.querySelector('.rtoc-tmpl-grid');
         if (!btn || !grid) { return; }
-        btn.addEventListener('click', function () {
+        btn.addEventListener('click', function() {
             // Manual toggle pins the panel state and disables the auto slide-over for the session.
             grid.setAttribute('data-manual-wide', '1');
             var collapsed = grid.classList.toggle('rtoc-inspector-collapsed');
@@ -198,22 +198,22 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
     function wireLivePreview() {
         var btn = document.getElementById('rtoc-tmpl-refresh-preview');
         if (btn) {
-            btn.addEventListener('click', function () { refreshLivePreview(); });
+            btn.addEventListener('click', function() { refreshLivePreview(); });
         }
         // FULLSCREEN-PREVIEW (v6.2.25): blow the live preview up to fill the viewport so the
         // whole issued PDF is readable at once (paired with the single-page PDF view mode).
         var fsBtn = document.getElementById('rtoc-tmpl-preview-fullscreen');
         var lp = document.getElementById('rtoc-tmpl-livepreview');
         if (fsBtn && lp) {
-            var setFs = function (on) {
+            var setFs = function(on) {
                 lp.classList.toggle('rtoc-fullscreen', on);
                 fsBtn.textContent = on ? 'Exit full screen' : 'Full screen';
                 document.body.style.overflow = on ? 'hidden' : '';
             };
-            fsBtn.addEventListener('click', function () {
+            fsBtn.addEventListener('click', function() {
                 setFs(!lp.classList.contains('rtoc-fullscreen'));
             });
-            document.addEventListener('keydown', function (ev) {
+            document.addEventListener('keydown', function(ev) {
                 if (ev.key === 'Escape' && lp.classList.contains('rtoc-fullscreen')) { setFs(false); }
             });
         }
@@ -246,19 +246,19 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
         try {
             var fd = new FormData(form);
             fetch(form.getAttribute('action'), { method: 'POST', body: fd, credentials: 'same-origin' })
-                .then(function (r) {
+                .then(function(r) {
                     if (!r.ok) { throw new Error('preview http ' + r.status); }
                     var ct = r.headers.get('content-type') || '';
                     if (ct.indexOf('pdf') === -1) { throw new Error('preview not pdf'); }
                     return r.blob();
                 })
-                .then(function (blob) {
+                .then(function(blob) {
                     if (lastPreviewBlobUrl) { try { URL.revokeObjectURL(lastPreviewBlobUrl); } catch (e) { /* ignore */ } }
                     lastPreviewBlobUrl = URL.createObjectURL(blob);
                     frame.setAttribute('src', lastPreviewBlobUrl
                         + '#toolbar=0&navpanes=0&scrollbar=0&statusbar=0&pagemode=none&view=FitH');
                 })
-                .catch(function () {
+                .catch(function() {
                     // Fallback: the classic POST-to-iframe (shows chrome but always works).
                     try { form.submit(); } catch (e) { /* ignore */ }
                 });
@@ -307,15 +307,15 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
         try { json = serializeDesignForSave(); } catch (e) { return; }
         body.append('design', json);
         window.fetch(validateUrl, { method: 'POST', body: body, credentials: 'same-origin' })
-            .then(function (r) { return r.json(); })
-            .then(function (res) {
+            .then(function(r) { return r.json(); })
+            .then(function(res) {
                 // Ignore a stale response if a newer revalidation has since fired.
                 if (seq !== revalidateSeq) { return; }
                 if (res && res.ok && typeof res.html === 'string') {
                     panel.innerHTML = res.html;
                 }
             })
-            .catch(function () { /* leave the last-rendered panel in place on error */ });
+            .catch(function() { /* leave the last-rendered panel in place on error */ });
     }
 
     function snapshotDesign() {
@@ -332,12 +332,12 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
     // cancelled with a clear message rather than corrupting the template).
     function serializeDesignForSave() {
         try {
-            return JSON.stringify(design, function (k, v) {
+            return JSON.stringify(design, function(k, v) {
                 return k === '_pendingfile' ? undefined : v;
             });
         } catch (e) {
             var seen = (typeof WeakSet !== 'undefined') ? new WeakSet() : null;
-            return JSON.stringify(design, function (k, v) {
+            return JSON.stringify(design, function(k, v) {
                 if (k === '_pendingfile' || typeof v === 'function') { return undefined; }
                 if (v && typeof v === 'object') {
                     if (v.nodeType) { return undefined; }        // DOM node
@@ -366,9 +366,9 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
 
     function restoreDesign(snap) {
         var pending = {};
-        (design.fields || []).forEach(function (f) { if (f._pendingfile) { pending[f.id] = f._pendingfile; } });
+        (design.fields || []).forEach(function(f) { if (f._pendingfile) { pending[f.id] = f._pendingfile; } });
         design = JSON.parse(snap);
-        (design.fields || []).forEach(function (f) { if (pending[f.id]) { f._pendingfile = pending[f.id]; } });
+        (design.fields || []).forEach(function(f) { if (pending[f.id]) { f._pendingfile = pending[f.id]; } });
         sizeCanvasToOrientation();
         renderAllFields();
         if (selectedId && findField(selectedId)) {
@@ -474,7 +474,7 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
 
     function renderAllFields() {
         // Sort fields by z (preserve order; lower index renders first).
-        Array.prototype.slice.call(canvas.querySelectorAll('.rtoc-tmpl-field, .rtoc-tmpl-guide')).forEach(function (n) {
+        Array.prototype.slice.call(canvas.querySelectorAll('.rtoc-tmpl-field, .rtoc-tmpl-guide')).forEach(function(n) {
             n.remove();
         });
         ensureMarginOverlay();
@@ -490,7 +490,7 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
         // RESIZE-HANDLES-8 (v6.2.30): corners + edges. Lines (zero-height rules) expose only
         // the horizontal handles; every other element gets all eight.
         var dirs = (field.kind === 'line') ? ['w', 'e'] : ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
-        dirs.forEach(function (d) {
+        dirs.forEach(function(d) {
             var h = document.createElement('div');
             h.className = 'rtoc-tmpl-handle rtoc-tmpl-handle-' + d;
             el.appendChild(h);
@@ -628,17 +628,17 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
                 headingFor(field, 'completiondate', 'COMPLETION DATE')
             ];
             var body5 = '';
-            rows5.forEach(function (r, i) {
+            rows5.forEach(function(r, i) {
                 var zeb = (i % 2 === 1) ? ' style="background:#f6f8fb;"' : '';
                 var tds = '';
-                r.forEach(function (cell, ci) {
+                r.forEach(function(cell, ci) {
                     var bold = (ci === 3) ? 'font-weight:bold;' : '';
                     tds += '<td style="text-align:' + aligns[ci] + ';' + bold + '">' + escapeHtml(cell) + '</td>';
                 });
                 body5 += '<tr' + zeb + '>' + tds + '</tr>';
             });
             var head5 = '';
-            heads5.forEach(function (h, ci) {
+            heads5.forEach(function(h, ci) {
                 head5 += '<th style="' + thStyle + 'text-align:' + aligns[ci] + ';font-size:0.82em;">' + escapeHtml(h) + '</th>';
             });
             var key = '<div class="rtoc-tmpl-ror-key" style="font-style:italic;color:#475569;'
@@ -682,7 +682,7 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
             ['BSBSUS211', 'Participate in sustainable work practices', '30 Sep 2024']
         ];
         var body = '';
-        sampleRows.forEach(function (r, i) {
+        sampleRows.forEach(function(r, i) {
             var zeb = (i % 2 === 1) ? ' style="background:#f6f8fb;"' : '';
             body += '<tr' + zeb + '><td>' + escapeHtml(r[0])
                  + '</td><td style="text-align:left;">' + escapeHtml(r[1])
@@ -739,7 +739,7 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
         if (!list || !list.length) { return; }
         if (document.querySelector('link[data-rtoc-fonts]')) { return; }
         try {
-            var fams = list.map(function (f) {
+            var fams = list.map(function(f) {
                 return 'family=' + encodeURIComponent(f).replace(/%20/g, '+');
             }).join('&');
             var link = document.createElement('link');
@@ -799,7 +799,7 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
             + 'font-family:' + fontFamily + ';'
             + 'font-size:' + sizePx + 'px;'
             + 'text-align:' + (alignMap[field.align] || 'left') + ';';
-        Array.prototype.slice.call(el.querySelectorAll('.rtoc-tmpl-field-inner')).forEach(function (n) { n.remove(); });
+        Array.prototype.slice.call(el.querySelectorAll('.rtoc-tmpl-field-inner')).forEach(function(n) { n.remove(); });
         var inner = document.createElement('div');
         inner.className = 'rtoc-tmpl-field-inner';
         inner.innerHTML = html;
@@ -809,7 +809,7 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
     // -- snap guides ---------------------------------------------------------
     function clearGuides() {
         Array.prototype.slice.call(canvas.querySelectorAll('.rtoc-tmpl-guide, .rtoc-tmpl-badge'))
-            .forEach(function (n) { n.remove(); });
+            .forEach(function(n) { n.remove(); });
     }
 
     // SMART-SNAP (v6.2.29): a snap/alignment line. colour distinguishes align (purple),
@@ -861,7 +861,7 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
         // Even horizontal distribution: equal gap to the nearest neighbour left & right
         // (only counting elements that share vertical extent, i.e. sit in the same row).
         var L = null, R = null;
-        (design.fields || []).forEach(function (o) {
+        (design.fields || []).forEach(function(o) {
             if (o.id === field.id) { return; }
             if (o.y_mm + o.h_mm < fy || o.y_mm > fy + h) { return; }
             if (o.x_mm + o.w_mm <= fx) {
@@ -881,7 +881,7 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
         // VERTICAL-DISTRIBUTION (v6.2.60): mirror of the above for stacked rows — equal gap to
         // the nearest neighbour above and below (only elements sharing horizontal extent).
         var T = null, B = null;
-        (design.fields || []).forEach(function (o) {
+        (design.fields || []).forEach(function(o) {
             if (o.id === field.id) { return; }
             if (o.x_mm + o.w_mm < fx || o.x_mm > fx + w) { return; }
             if (o.y_mm + o.h_mm <= fy) {
@@ -922,7 +922,7 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
         }
 
         // Other fields' left/centre/right (and top/mid/bottom) edges — alignment (purple).
-        (design.fields || []).forEach(function (o) {
+        (design.fields || []).forEach(function(o) {
             if (o.id === field.id) { return; }
             considerX(o.x_mm, '#9333ea'); considerX(o.x_mm + o.w_mm / 2, '#9333ea'); considerX(o.x_mm + o.w_mm, '#9333ea');
             considerY(o.y_mm, '#9333ea'); considerY(o.y_mm + o.h_mm / 2, '#9333ea'); considerY(o.y_mm + o.h_mm, '#9333ea');
@@ -939,10 +939,10 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
         // SNAP-EQUAL-SPACING (v6.2.59): snap the element's CENTRE to the midpoint between the
         // nearest neighbours that share its row (X) or column (Y) — dropping it into an evenly
         // spaced slot yields equal gaps on both sides. Teal, matching the distribution badges.
-        (function () {
+        (function() {
             var w = field.w_mm, h = field.h_mm, fx = newXMm, fy = newYMm;
             var L = null, R = null, T = null, B = null;
-            (design.fields || []).forEach(function (o) {
+            (design.fields || []).forEach(function(o) {
                 if (o.id === field.id) { return; }
                 var sharesRow = !(o.y_mm + o.h_mm < fy || o.y_mm > fy + h);
                 var sharesCol = !(o.x_mm + o.w_mm < fx || o.x_mm > fx + w);
@@ -972,7 +972,7 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
     // the safe margins and the page centre. Colour: purple = element/page align, grey = margin.
     function alignTargetsX(excludeId) {
         var t = [];
-        (design.fields || []).forEach(function (o) {
+        (design.fields || []).forEach(function(o) {
             if (o.id === excludeId) { return; }
             t.push({ pos: o.x_mm, c: '#9333ea' }, { pos: o.x_mm + o.w_mm / 2, c: '#9333ea' }, { pos: o.x_mm + o.w_mm, c: '#9333ea' });
         });
@@ -983,7 +983,7 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
     }
     function alignTargetsY(excludeId) {
         var t = [];
-        (design.fields || []).forEach(function (o) {
+        (design.fields || []).forEach(function(o) {
             if (o.id === excludeId) { return; }
             t.push({ pos: o.y_mm, c: '#9333ea' }, { pos: o.y_mm + o.h_mm / 2, c: '#9333ea' }, { pos: o.y_mm + o.h_mm, c: '#9333ea' });
         });
@@ -994,13 +994,13 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
     }
     function nearestTarget(val, targets, tol) {
         var best = null, bd = tol + 1;
-        targets.forEach(function (t) { var d = Math.abs(val - t.pos); if (d < bd) { bd = d; best = t; } });
+        targets.forEach(function(t) { var d = Math.abs(val - t.pos); if (d < bd) { bd = d; best = t; } });
         return best;
     }
     // MATCH-SIZE (v6.2.58): nearest other-field width/height to snap to while resizing.
     function nearestSize(val, dim, tol, excludeId) {
         var best = null, bd = tol + 1;
-        (design.fields || []).forEach(function (o) {
+        (design.fields || []).forEach(function(o) {
             if (o.id === excludeId) { return; }
             var d = Math.abs(val - o[dim]); if (d < bd && o[dim] > 0) { bd = d; best = o[dim]; }
         });
@@ -1031,7 +1031,7 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
     // -- drag / resize / select ----------------------------------------------
     function wireDrag(el, field) {
         var startX, startY, startLeft, startTop, dragging = false, moved = false;
-        el.addEventListener('mousedown', function (ev) {
+        el.addEventListener('mousedown', function(ev) {
             if (ev.target.classList.contains('rtoc-tmpl-handle')) { return; }
             ev.preventDefault();
             dragging = true; moved = false;
@@ -1072,7 +1072,7 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
         var startX, startY, startW, startH, startLeft, startTop, resizing = false, moved = false;
         var west = dir.indexOf('w') !== -1, east = dir.indexOf('e') !== -1;
         var north = dir.indexOf('n') !== -1, south = dir.indexOf('s') !== -1;
-        handle.addEventListener('mousedown', function (ev) {
+        handle.addEventListener('mousedown', function(ev) {
             ev.preventDefault();
             ev.stopPropagation();
             resizing = true; moved = false;
@@ -1152,21 +1152,21 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
     }
 
     function wireSelect(el, field) {
-        el.addEventListener('click', function (ev) {
+        el.addEventListener('click', function(ev) {
             ev.stopPropagation();
             select(field.id);
         });
     }
 
     function wireCanvasClickAway() {
-        canvas.addEventListener('click', function (ev) {
+        canvas.addEventListener('click', function(ev) {
             if (ev.target === canvas) { deselect(); }
         });
     }
 
     function select(id) {
         selectedId = id;
-        Array.prototype.slice.call(canvas.querySelectorAll('.rtoc-tmpl-field')).forEach(function (n) {
+        Array.prototype.slice.call(canvas.querySelectorAll('.rtoc-tmpl-field')).forEach(function(n) {
             n.classList.toggle('rtoc-tmpl-field-selected', n.dataset.id === id);
         });
         var field = findField(id);
@@ -1193,7 +1193,7 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
 
     function deselect() {
         selectedId = null;
-        Array.prototype.slice.call(canvas.querySelectorAll('.rtoc-tmpl-field')).forEach(function (n) {
+        Array.prototype.slice.call(canvas.querySelectorAll('.rtoc-tmpl-field')).forEach(function(n) {
             n.classList.remove('rtoc-tmpl-field-selected');
         });
         propsEmpty.style.display = '';
@@ -1282,7 +1282,7 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
         if (c3m) { c3m.value = (field.col3mode === 'result') ? 'result' : 'date'; }
         // CERT-TABLE-HEADINGS (v6.3.20) — per-template column heading overrides. Blank means
         // "use the site-wide wording", which is shown as the input's placeholder.
-        HEAD_SLOTS.forEach(function (slot) {
+        HEAD_SLOTS.forEach(function(slot) {
             var el = document.getElementById('p-head-' + slot);
             if (!el) { return; }
             el.value = field['head_' + slot] != null ? field['head_' + slot] : '';
@@ -1314,7 +1314,7 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
         // separate enrolment/completion date columns; the three-column layout has one date.
         var isFiveCol = (kind === 'ror_table' && field.col3mode === 'result');
         [['date', !isFiveCol], ['result', kind === 'ror_table'], ['enroldate', isFiveCol],
-            ['completiondate', isFiveCol]].forEach(function (pair) {
+            ['completiondate', isFiveCol]].forEach(function(pair) {
             var row = document.getElementById('p-head-' + pair[0] + '-row');
             if (row) { row.style.display = pair[1] ? '' : 'none'; }
         });
@@ -1341,13 +1341,13 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
             ['p-col3w', 'col3_w', parseFloat],
         ];
         // CERT-TABLE-HEADINGS (v6.3.20) — one text input per overridable column heading.
-        HEAD_SLOTS.forEach(function (slot) {
+        HEAD_SLOTS.forEach(function(slot) {
             bindings.push(['p-head-' + slot, 'head_' + slot, String]);
         });
-        bindings.forEach(function (b) {
+        bindings.forEach(function(b) {
             var el = document.getElementById(b[0]);
             if (!el) { return; }
-            el.addEventListener('input', function () {
+            el.addEventListener('input', function() {
                 if (!selectedId) { return; }
                 var field = findField(selectedId);
                 if (!field) { return; }
@@ -1356,7 +1356,7 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
                 // ROR-CAPACITY-HINT: refresh when h_mm or fontsize changes.
                 updateRorCapacityHint(field);
             });
-            el.addEventListener('change', function () {
+            el.addEventListener('change', function() {
                 // NO-MIN-FONT (v6.2.52): the forced 12pt minimum was removed. Only guard against
                 // a zero/negative size; any positive author-chosen size is kept as-is.
                 if (b[1] === 'fontsize' && selectedId) {
@@ -1387,12 +1387,12 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
         });
         var imgInput = document.getElementById('p-image');
         if (imgInput) {
-            imgInput.addEventListener('change', function (ev) {
+            imgInput.addEventListener('change', function(ev) {
                 if (!selectedId) { return; }
                 var field = findField(selectedId);
                 if (!field || !ev.target.files || !ev.target.files[0]) { return; }
                 var reader = new FileReader();
-                reader.onload = function (e) {
+                reader.onload = function(e) {
                     field.imageurl = e.target.result;
                     field._pendingfile = ev.target.files[0];
                     redrawField(field);
@@ -1403,7 +1403,7 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
         }
         var delBtn = document.getElementById('p-delete');
         if (delBtn) {
-            delBtn.addEventListener('click', function () {
+            delBtn.addEventListener('click', function() {
                 if (!selectedId) { return; }
                 deleteSelected();
             });
@@ -1424,9 +1424,9 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
             captureUndo();
         }
         var centreHBtn = document.getElementById('p-centre-h');
-        if (centreHBtn) { centreHBtn.addEventListener('click', function () { centreSelected('h'); }); }
+        if (centreHBtn) { centreHBtn.addEventListener('click', function() { centreSelected('h'); }); }
         var centreVBtn = document.getElementById('p-centre-v');
-        if (centreVBtn) { centreVBtn.addEventListener('click', function () { centreSelected('v'); }); }
+        if (centreVBtn) { centreVBtn.addEventListener('click', function() { centreSelected('v'); }); }
         // Z-order buttons (front / back / forward / backward).
         addZOrderButtons();
     }
@@ -1445,11 +1445,11 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
             '<button type="button" class="btn btn-sm btn-outline-secondary" id="p-zback" title="Send to back">&#x2B07;</button>' +
             '<button type="button" class="btn btn-sm btn-outline-secondary" id="p-duplicate" title="Duplicate (Ctrl+D)">Duplicate</button>';
         host.parentNode.insertBefore(wrap, host);
-        wrap.querySelector('#p-zfront').addEventListener('click', function () { reorderSelected('front'); });
-        wrap.querySelector('#p-zforward').addEventListener('click', function () { reorderSelected('forward'); });
-        wrap.querySelector('#p-zbackward').addEventListener('click', function () { reorderSelected('backward'); });
-        wrap.querySelector('#p-zback').addEventListener('click', function () { reorderSelected('back'); });
-        wrap.querySelector('#p-duplicate').addEventListener('click', function () { duplicateSelected(); });
+        wrap.querySelector('#p-zfront').addEventListener('click', function() { reorderSelected('front'); });
+        wrap.querySelector('#p-zforward').addEventListener('click', function() { reorderSelected('forward'); });
+        wrap.querySelector('#p-zbackward').addEventListener('click', function() { reorderSelected('backward'); });
+        wrap.querySelector('#p-zback').addEventListener('click', function() { reorderSelected('back'); });
+        wrap.querySelector('#p-duplicate').addEventListener('click', function() { duplicateSelected(); });
     }
 
     function reorderSelected(dir) {
@@ -1468,7 +1468,7 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
 
     function deleteSelected() {
         if (!selectedId) { return; }
-        design.fields = design.fields.filter(function (f) { return f.id !== selectedId; });
+        design.fields = design.fields.filter(function(f) { return f.id !== selectedId; });
         renderAllFields();
         deselect();
         captureUndo();
@@ -1478,7 +1478,7 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
         if (!selectedId) { return; }
         var src = findField(selectedId);
         if (!src) { return; }
-        var clone = JSON.parse(JSON.stringify(src, function (k, v) { return k === '_pendingfile' ? undefined : v; }));
+        var clone = JSON.parse(JSON.stringify(src, function(k, v) { return k === '_pendingfile' ? undefined : v; }));
         clone.id = 'f' + (nextId++);
         clone.x_mm = Math.min(pageW - clone.w_mm, clone.x_mm + 5);
         clone.y_mm = Math.min(pageH - clone.h_mm, clone.y_mm + 5);
@@ -1517,7 +1517,7 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
     // Y for click-to-add: just below the lowest existing field.
     function nextAutoYMm() {
         var maxBottom = 20;
-        (design.fields || []).forEach(function (f) {
+        (design.fields || []).forEach(function(f) {
             var b = (f.y_mm || 0) + (f.h_mm || 10);
             if (b > maxBottom) { maxBottom = b; }
         });
@@ -1564,9 +1564,9 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
         var field;
         if (add === 'dynamic') {
             var dk = ds.dynamickey;
-            if (design.fields.some(function (f) { return f.kind === 'dynamic' && f.dynamickey === dk; })) {
+            if (design.fields.some(function(f) { return f.kind === 'dynamic' && f.dynamickey === dk; })) {
                 // Already on canvas -- select it instead.
-                var existing = design.fields.filter(function (f) { return f.kind === 'dynamic' && f.dynamickey === dk; })[0];
+                var existing = design.fields.filter(function(f) { return f.kind === 'dynamic' && f.dynamickey === dk; })[0];
                 if (existing) { select(existing.id); }
                 return;
             }
@@ -1620,15 +1620,15 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
         );
 
         // Click-to-add.
-        chips.forEach(function (btn) {
-            btn.addEventListener('click', function () {
+        chips.forEach(function(btn) {
+            btn.addEventListener('click', function() {
                 spawnFieldFromChip(btn.dataset, null, null);
             });
         });
 
         // Drag from field row onto canvas.
-        chips.forEach(function (btn) {
-            btn.addEventListener('dragstart', function (ev) {
+        chips.forEach(function(btn) {
+            btn.addEventListener('dragstart', function(ev) {
                 ev.dataTransfer.effectAllowed = 'copy';
                 ev.dataTransfer.setData('text/plain', JSON.stringify({
                     add:        btn.dataset.add,
@@ -1639,17 +1639,17 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
         });
 
         // Canvas: accept drops from field rows.
-        canvas.addEventListener('dragover', function (ev) {
+        canvas.addEventListener('dragover', function(ev) {
             ev.preventDefault();
             ev.dataTransfer.dropEffect = 'copy';
             canvas.classList.add('rtoc-tmpl-canvas-dragover');
         });
-        canvas.addEventListener('dragleave', function (ev) {
+        canvas.addEventListener('dragleave', function(ev) {
             if (!canvas.contains(ev.relatedTarget)) {
                 canvas.classList.remove('rtoc-tmpl-canvas-dragover');
             }
         });
-        canvas.addEventListener('drop', function (ev) {
+        canvas.addEventListener('drop', function(ev) {
             ev.preventDefault();
             canvas.classList.remove('rtoc-tmpl-canvas-dragover');
             var raw;
@@ -1665,18 +1665,18 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
         // Search filter -- instant client-side filtering of field rows.
         var searchInput = document.getElementById('rtoc-palette-search');
         if (searchInput) {
-            searchInput.addEventListener('input', function () {
+            searchInput.addEventListener('input', function() {
                 var q = searchInput.value.toLowerCase().trim();
                 var rows    = Array.prototype.slice.call(document.querySelectorAll('#rtoc-field-list .rtoc-field-row'));
                 var headers = Array.prototype.slice.call(document.querySelectorAll('#rtoc-field-list .rtoc-field-group-header'));
 
-                rows.forEach(function (row) {
+                rows.forEach(function(row) {
                     var txt = (row.dataset.searchtext || '').toLowerCase();
                     row.style.display = (!q || txt.indexOf(q) !== -1) ? '' : 'none';
                 });
 
                 // Hide a section header when every row beneath it is hidden.
-                headers.forEach(function (hdr) {
+                headers.forEach(function(hdr) {
                     var sib = hdr.nextElementSibling;
                     var anyVisible = false;
                     while (sib && !sib.classList.contains('rtoc-field-group-header')) {
@@ -1725,7 +1725,7 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
             imageurl: '', imageitemid: 0,
             linewidth: 0.5,
         };
-        Object.keys(overrides || {}).forEach(function (k) { f[k] = overrides[k]; });
+        Object.keys(overrides || {}).forEach(function(k) { f[k] = overrides[k]; });
         return f;
     }
 
@@ -1733,10 +1733,10 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
     function wirePageControls() {
         var orientEl = document.getElementById('rtoc-tmpl-orient');
         if (orientEl) {
-            orientEl.addEventListener('change', function (ev) {
+            orientEl.addEventListener('change', function(ev) {
                 design.page.orientation = ev.target.value === 'P' ? 'P' : 'L';
                 sizeCanvasToOrientation();
-                design.fields.forEach(function (f) {
+                design.fields.forEach(function(f) {
                     if (f.x_mm + f.w_mm > pageW) { f.x_mm = Math.max(0, pageW - f.w_mm); }
                     if (f.y_mm + f.h_mm > pageH) { f.y_mm = Math.max(0, pageH - f.h_mm); }
                 });
@@ -1747,7 +1747,7 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
         }
         var colorEl = document.getElementById('rtoc-tmpl-bgcolor');
         if (colorEl) {
-            colorEl.addEventListener('input', function (ev) {
+            colorEl.addEventListener('input', function(ev) {
                 design.page.bg_color = ev.target.value;
                 canvas.style.backgroundColor = ev.target.value;
             });
@@ -1758,10 +1758,10 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
     function wireBgUpload() {
         var input = document.getElementById('rtoc-tmpl-bgupload');
         if (input) {
-            input.addEventListener('change', function (ev) {
+            input.addEventListener('change', function(ev) {
                 if (!ev.target.files || !ev.target.files[0]) { return; }
                 var reader = new FileReader();
-                reader.onload = function (e) {
+                reader.onload = function(e) {
                     design.page.bg_image_url = e.target.result;
                     applyGridStyle();
                     attachFileToFormForUpload(ev.target.files[0]);
@@ -1772,7 +1772,7 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
         }
         var clear = document.getElementById('rtoc-tmpl-bgclear');
         if (clear) {
-            clear.addEventListener('click', function () {
+            clear.addEventListener('click', function() {
                 design.page.bg_image_url = '';
                 design.page.bg_itemid = 0;
                 applyGridStyle();
@@ -1799,7 +1799,7 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
 
     function wireFormSubmit() {
         var form = document.getElementById('rtoc-tmpl-form');
-        form.addEventListener('submit', function (ev) {
+        form.addEventListener('submit', function(ev) {
             var el = document.getElementById('rtoc-tmpl-designjson');
             var json = '';
             try { json = serializeDesignForSave(); } catch (e) { json = ''; }
@@ -1829,7 +1829,7 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
     function wireToolbar() {
         var z = document.getElementById('rtoc-tmpl-zoom');
         if (z) {
-            z.addEventListener('change', function () {
+            z.addEventListener('change', function() {
                 zoom = parseFloat(z.value) / 100;
                 sizeCanvasToOrientation();
                 applyGridStyle();
@@ -1839,14 +1839,14 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
         }
         var g = document.getElementById('rtoc-tmpl-grid');
         if (g) {
-            g.addEventListener('change', function () {
+            g.addEventListener('change', function() {
                 showGrid = !!g.checked;
                 applyGridStyle();
             });
         }
         var s = document.getElementById('rtoc-tmpl-sample');
         if (s) {
-            s.addEventListener('change', function () {
+            s.addEventListener('change', function() {
                 showSample = !!s.checked;
                 renderAllFields();
                 if (selectedId) { select(selectedId); }
@@ -1860,7 +1860,7 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
 
     // -- keyboard ------------------------------------------------------------
     function wireKeyboard() {
-        document.addEventListener('keydown', function (ev) {
+        document.addEventListener('keydown', function(ev) {
             // Ignore if focused in form input/textarea/select.
             var t = ev.target;
             if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) {
@@ -1907,12 +1907,12 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
     function wireValidatorFixButtons() {
         var panel = document.getElementById('rtoc-tmpl-validation');
         if (!panel) { return; }
-        panel.addEventListener('click', function (ev) {
+        panel.addEventListener('click', function(ev) {
             var btn = ev.target.closest('[data-fix-key]');
             if (!btn) { return; }
             ev.preventDefault();
             var dk = btn.dataset.fixKey;
-            if (design.fields.some(function (f) { return f.kind === 'dynamic' && f.dynamickey === dk; })) {
+            if (design.fields.some(function(f) { return f.kind === 'dynamic' && f.dynamickey === dk; })) {
                 return;
             }
             var field = makeFieldFromStarter(dk);
@@ -1927,17 +1927,17 @@ define('local_rtocompliance/cert_template_editor', [], function () { // FIX-AMD-
     function clampPx(v, min, max) { return Math.max(min, Math.min(max, v)); }
     function snap(v) { return Math.round(v / SNAP_MM) * SNAP_MM; }
     function escapeHtml(s) {
-        return String(s).replace(/[&<>"']/g, function (c) {
+        return String(s).replace(/[&<>"']/g, function(c) {
             return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
         });
     }
     function escapeAttr(s) { return escapeHtml(s).replace(/"/g, '&quot;'); }
     function cssEsc(s) {
-        return String(s).replace(/[^a-zA-Z0-9_-]/g, function (c) { return '\\' + c; });
+        return String(s).replace(/[^a-zA-Z0-9_-]/g, function(c) { return '\\' + c; });
     }
     function formatPreviewDate(fmt) {
         var now = new Date();
-        var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+        var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
         var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
         var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
         return fmt

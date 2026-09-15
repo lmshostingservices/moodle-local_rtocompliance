@@ -254,6 +254,12 @@ class survey_analyzer {
         // Release session lock before long-running API call.
         \core\session\manager::write_close();
 
+        // curl is declared in lib/filelib.php and is NOT autoloaded - see the note
+        // in local/register_lookup.php. Required explicitly so this cannot die with
+        // 'Class "curl" not found' when called from a page that has not loaded it.
+        global $CFG;
+        require_once($CFG->libdir . '/filelib.php');
+
         $c = new \curl(['ignoresecurity' => true]);
         $c->setopt(
             [

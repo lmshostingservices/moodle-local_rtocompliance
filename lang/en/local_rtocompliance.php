@@ -26,6 +26,7 @@ defined('MOODLE_INTERNAL') || die();
 $string['pluginname'] = 'RTO Compliance';
 $string['privacy:metadata'] = 'The RTO Compliance plugin stores student AVETMISS data, trainer credentials, and issued certificates.';
 $string['privacy:metadata:core_files'] = 'The RTO Compliance plugin stores files uploaded as RPL evidence and credit-transfer source certificates against the relevant records.';
+$string['privacy:metadata:preference:savedviews'] = 'Private saved table views, including the view name, approved filter values, and display sort choice.';
 
 
 
@@ -464,6 +465,7 @@ $string['importprofiles'] = 'Import Profiles';
 $string['filterbystatus'] = 'Filter by Status';
 $string['filterbystate'] = 'Filter by State';
 $string['searchstudent'] = 'Search students...';
+$string['searchstudent_identity_hint'] = 'Name, Moodle username, email or USI';
 
 $string['unitcode'] = 'Unit Code';
 $string['unitname'] = 'Unit Name';
@@ -3445,7 +3447,7 @@ $string['org_seal_cert_types_desc'] = 'Tick every certificate type that should d
 
 // TASK-81 (v5.9.359): Repair Missing Qualification Codes page.
 $string['repair_programcodes_title'] = 'Repair Missing Qualification Codes';
-$string['repair_programcodes_desc'] = 'Some enrolment rows may be missing a qualification code (programcode) — for example, rows created by the semester-copy outcome fallback. This tool lists every active qualification that has affected rows and lets you bulk-apply the correct code with one click. Enrolments without a programcode are silently excluded from NAT exports.';
+$string['repair_programcodes_desc'] = 'Some enrolment rows may be missing a qualification code (programcode) — for example, rows created by the semester-copy outcome fallback. This tool lists every active qualification that has affected rows and lets you bulk-apply the correct code with one click. An enrolment with no programcode is DROPPED from NAT00030 (programs) and NAT00130 (program completions), but is still written into NAT00120 (subject activity) with a BLANK associated course identifier - so the activity is reported against no program at all.';
 $string['repair_programcodes_all_clean'] = 'No enrolments with missing qualification codes found.';
 $string['repair_programcodes_all_clean_desc'] = 'All VET enrolment rows already have a qualification code. No repair is needed.';
 $string['repair_programcodes_summary'] = '%d qualification(s) have a total of %d enrolment row(s) missing a qualification code.';
@@ -3639,3 +3641,64 @@ $string['validator_expyears'] = 'Years of Experience';
 $string['validator_specialisations'] = 'Specialisations';
 $string['validator_status'] = 'Status';
 $string['validator_notes'] = 'Notes';
+
+// v6.3.33 — AVETMISS code-list integrity.
+$string['code_unrecognised'] = 'Unrecognised code {$a} — not defined in the AVETMISS standard';
+$string['error_code_not_in_standard'] = 'The code "{$a}" is not defined in the AVETMISS standard for this field. Choose a value from the list.';
+$string['codelist_report'] = 'AVETMISS code-list integrity';
+$string['codelist_report_desc'] = 'Student records holding a code that the AVETMISS standard does not define for that field. These cannot be reported to NCVER and must be corrected.';
+$string['codelist_field'] = 'Field';
+$string['codelist_code'] = 'Stored code';
+$string['codelist_count'] = 'Students';
+$string['codelist_clean'] = 'Every coded field on every student record holds a value defined in the AVETMISS standard.';
+$string['codelist_affected'] = '{$a} student record(s) hold at least one code that the AVETMISS standard does not define. These records cannot be reported to NCVER as they stand.';
+$string['codelist_repair_hint'] = 'Nothing on this page changes any record. To repair, run cli/repair_codes.php — it performs a dry run unless --execute is given, handles only the cases whose intent is unambiguous, and writes every change to the plugin audit log.';
+$string['codelist_reinterpreted'] = 'Codes whose meaning changed at v6.3.33';
+$string['codelist_reinterpreted_desc'] = 'These stored codes are valid, both before and after the correction, but they no longer mean what the operator was shown when the record was saved. They will not be flagged by any validation, now or in future, because there is nothing wrong with the code itself — only with what it was believed to say. Reconciling them needs an external source: the audit log\'s olddata, or the NAT00080 file the record was imported from.';
+$string['codelist_was'] = 'Label shown when saved';
+$string['codelist_now'] = 'Actual AVETMISS meaning';
+
+// v6.3.35 — enrolment-level AVETMISS gaps.
+$string['codelist_enrolgaps'] = 'Enrolment fields the standard requires and the plugin will not guess';
+$string['codelist_enrolgaps_desc'] = 'Delivery mode identifier and Outcome identifier are required by AVETMISS and have no safe default. Where one is missing the NAT file leaves it blank rather than inventing a value — a blank is detectably wrong and gets corrected before lodgement, whereas a fabricated value is undetectably wrong and gets lodged. Records listed here need the real value recorded.';
+$string['codelist_problem'] = 'Problem';
+$string['codelist_enrolments'] = 'Enrolments';
+
+// PROGRAM RECOGNITION (v6.3.36) - is a program nationally recognised training.
+$string['recognition_title'] = 'Program recognition';
+$string['recognition_intro'] = 'Whether a program is nationally recognised training decides three things: whether its activity goes into your NAT files, whether its students need a Unique Student Identifier, and which certificate they receive. It is checked against the National Register rather than guessed at.';
+$string['recognition_intro2'] = 'Codes the register holds are marked recognised automatically. Codes it does not hold are left unclassified for you to decide - they are usually your own non-accredited short courses. An unclassified program is STILL REPORTED in NAT files - nothing is held back, because silently leaving delivered training out of a statutory return is worse than reporting it. Unclassified programs are listed in AVETMISS Validation so you see them before you lodge. Their students are counted as needing a USI, because failing to collect a required USI is a breach while collecting an unnecessary one only wastes time - so only your explicit "not nationally recognised" stops a USI chase.';
+$string['recognition_state_recognised'] = 'Nationally recognised';
+$string['recognition_state_not_recognised'] = 'Not nationally recognised';
+$string['recognition_state_unknown'] = 'Unclassified';
+$string['recognition_register_found'] = 'On the National Register';
+$string['recognition_register_notfound'] = 'Not on the National Register';
+$string['recognition_register_error'] = 'Could not be checked';
+$string['recognition_register_never'] = 'Not checked yet';
+$string['recognition_runlookup'] = 'Check all unclassified codes against the National Register';
+$string['recognition_runlookup_help'] = 'Safe to run any time. Only looks at unclassified codes, and never changes a decision you have made.';
+$string['recognition_lookupdone'] = 'Checked {$a->checked} code(s): {$a->recognised} found on the register and marked nationally recognised, {$a->notfound} not on the register and left for you to classify, {$a->errors} could not be checked. {$a->discovered} new code(s) were discovered.';
+$string['recognition_saved'] = 'Saved {$a}.';
+$string['recognition_savefailed'] = 'Could not save that classification.';
+$string['recognition_setmanually'] = 'set manually';
+$string['recognition_none'] = 'No qualification codes found yet. Run the register check to discover the codes this site uses.';
+$string['recognition_notes_placeholder'] = 'Why (optional)';
+$string['recognition_col_code'] = 'Program code';
+$string['recognition_col_state'] = 'Recognition';
+$string['recognition_col_register'] = 'National Register';
+$string['recognition_col_students'] = 'Students';
+$string['recognition_col_set'] = 'Set';
+
+// Progress panel (v6.4.2). The register is checked in small batches so the page can
+// show what is happening instead of sitting blank until it finishes or times out.
+$string['recognition_prog_starting'] = 'Working out how many codes need checking...';
+$string['recognition_prog_progress'] = 'Checked {$a->done} of {$a->total} codes.';
+$string['recognition_prog_done'] = 'Finished. Checked {$a->checked} code(s): {$a->recognised} on the National Register and now marked nationally recognised, {$a->notfound} not on it, {$a->errors} could not be checked. Codes not on the register and codes that could not be checked are LEFT UNCLASSIFIED for you to decide.';
+$string['recognition_prog_nothingtodo'] = 'Nothing to check - every code already has a state.';
+$string['recognition_prog_failed'] = 'The run stopped: {$a->error}';
+$string['recognition_prog_failed_resume'] = 'Everything checked before it stopped has been saved, so you can click the button again and it will carry on with the rest.';
+$string['recognition_prog_badresponse'] = 'the server did not return a valid answer (your session may have expired - reload the page and sign in again)';
+$string['recognition_prog_reload'] = 'Refresh the list';
+$string['recognition_notupgraded'] = 'Program recognition is not available yet because the plugin upgrade has not been completed on this site. Go to Site administration > Notifications and run the pending upgrade, then come back to this page.';
+$string['recognition_lookupmore'] = '{$a} code(s) still to check - click the button again to carry on. (The progress bar does this for you automatically when JavaScript is available.)';
+$string['privacy:metadata:recognition'] = 'Which programs are nationally recognised training, and who recorded each decision. Contains no student information.';

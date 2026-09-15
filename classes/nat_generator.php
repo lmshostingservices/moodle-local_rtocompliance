@@ -352,10 +352,29 @@ class nat_generator {
         return str_pad(substr($value, 0, $length), $length, $padchar, $type);
     }
 
-    /** Right-justify, zero-fill numeric field (digits only). */
+    /**
+     * Right-justify, zero-fill a numeric field (digits only).
+     *
+     * OVERFLOW (v6.3.35): this used substr($value, 0, $length), which keeps the LEFTMOST
+     * digits - so a legitimate $150,000 tuition fee in a five-character field was reported
+     * as $15,000, a tenth of the real amount, silently. Of the three possible answers for a
+     * value the field cannot hold, that was the worst: it is wrong by an order of
+     * magnitude and looks entirely plausible.
+     *
+     * It now clamps to the field's maximum (all nines). That is still not the true value -
+     * no five-character field can hold 150000 - but 99999 is visibly at the ceiling, which
+     * is what an overflow should look like, and it never understates. The condition is also
+     * recorded through debugging() so the site's logs name the record rather than leaving
+     * the operator to discover it in an NCVER validation report.
+     */
     private function padnum($value, $length) {
         $value = preg_replace('/[^0-9]/', '', (string)($value ?? ''));
-        return str_pad(substr($value, 0, $length), $length, '0', STR_PAD_LEFT);
+        if (strlen($value) > $length) {
+            debugging("local_rtocompliance: NAT numeric overflow - value '$value' exceeds the "
+                . "$length-character field and is reported as the field maximum.", DEBUG_DEVELOPER);
+            return str_repeat('9', $length);
+        }
+        return str_pad($value, $length, '0', STR_PAD_LEFT);
     }
 
     /**
@@ -461,13 +480,24 @@ class nat_generator {
         $record = '';
         $record .= $this->pad($rtocode, 10);                                        // Pos 1-10:   Training organisation identifier
         $record .= $this->pad($rtoname, 100);                                       // Pos 11-110: Training organisation name
-        $record .= $this->pad($address, 50);                                        // Pos 111-160: Postal address – street
-        $record .= $this->pad($suburb, 50);                                         // Pos 161-210: Postal address – suburb
-        $record .= $this->pad($state, 2);                                           // Pos 211-212: Postal address – state identifier
-        $record .= $this->pad($postcode, 4);                                        // Pos 213-216: Postal address – postcode
-        $record .= $this->pad('1101', 4);                                          // Pos 217-220: Postal address – country (1101 = Australia)
-        $record .= $this->pad(substr($website, 0, 40), 40);                        // Pos 221-260: Web address (truncated to 40)
-        $record .= $this->pad('', 8);                                              // Pos 261-268: Spare padding (national record = 268)
+        // POSITIONS 111-268 ARE UNUSED IN RELEASE 8.0 (v6.3.35).
+        //
+        // The Release 8.0 NAT00010 field table (p.22) has exactly two fields - Training
+        // organisation identifier 1(10) and Training organisation name 11(100) - and then
+        // a national record length of 268. Everything between is nothing.
+        //
+        // This block used to write six fields the Release 8.0 change list explicitly
+        // deletes: "Deleted Training organisation type identifier. Deleted Address first
+        // line. Deleted Address second line. Deleted Address location - suburb, locality
+        // or town. Deleted Postcode. Deleted State identifier." It also invented two
+        // fields that have never existed in NAT00010 in any release: a Country identifier
+        // hardcoded to '1101', and a Web address.
+        //
+        // The total came to 268 either way, so the state-only block at 269+ has always
+        // landed correctly and nothing downstream shifts. What changes is that the file
+        // stops asserting an address, a postcode, a state, a country and a website that
+        // the collection does not ask for and does not read.
+        $record .= str_repeat(' ', 158);                                            // Pos 111-268: not used in Release 8.0
         // State/optional fields (positions 269+):
         $record .= $this->pad($contactname, 60);                                    // Pos 269-328: Contact name
         $record .= $this->pad(preg_replace('/[^0-9+\s\-()]/', '', $phone), 20); // Pos 329-348: Telephone number
@@ -554,7 +584,13 @@ class nat_generator {
             $record  = '';
             $record .= $this->pad($rtocode, 10);   // Pos 1-10:   Training organisation identifier
             $record .= $this->pad('MAIN', 10);      // Pos 11-20:  Delivery location identifier
-            $record .= $this->pad(substr($rtoname, 0, 50), 50); // Pos 21-70:  Delivery location name (truncated to 50)
+            // FIELD WIDTH (v6.3.33): this padded the delivery location name to 50, not
+            // 100, so this branch emitted a 130-character NAT00020 record where the
+            // AVETMISS VET 8.0 Collection Specifications require 180 (p.23). Every
+            // field after it was therefore 50 bytes short of its specified position
+            // and the file would be rejected on load. The other two branches of this
+            // method already pad to 100; only the no-locations-table fallback was wrong.
+            $record .= $this->pad(substr($rtoname, 0, 100), 100); // Pos 21-120: Delivery location name (100)
             $record .= $this->pad($postcode, 4);   // Pos 71-74:   Postcode
             $record .= $this->pad($state ?: $this->defaultstate, 2);  // Pos 75-76:  State identifier
             $record .= $this->pad($suburb, 50);    // Pos 77-126:  Address – suburb/locality/town
@@ -589,17 +625,30 @@ class nat_generator {
         $rtocode = get_config('local_rtocompliance', 'rtocode');
 
         // GROUP BY programcode to guarantee one record per program.
-        // FIX: select MAX(fundingsourcenat), MAX(vetinschoolsflag), MAX(studyreason-equivalent)
+        // FIX: select MAX(fundingsourcenat) and MAX(vetflag) for program-level defaults;
         // for program-level defaults; use programcode (national qual code) as the identifier.
         $programs = $DB->get_records_sql(
             "SELECT programcode,
                     MAX(programname)       AS programname,
                     MAX(fundingsourcenat)  AS fundingsourcenat,
-                    MAX(vetinschoolsflag)  AS vetinschoolsflag
+                    MAX(vetflag)           AS vetflag
              FROM {local_rtocompliance_enrolments}
              WHERE programcode IS NOT NULL AND programcode != ''
+               -- REPORTING PERIOD (v6.3.35): this query had no period predicate at all,
+               -- so it emitted a record for every program that had ever existed. The
+               -- specification (p.25) requires each Program identifier in NAT00030 to have
+               -- at least one corresponding NAT00120 or NAT00130 record - and those files
+               -- ARE period-filtered, so every program without activity this period went
+               -- out as an orphan and failed referential integrity on load. On one live
+               -- site that was 12 of 15 programs. The predicate matches NAT00120's exactly
+               -- (started on or before period end, and either still open or ended on or
+               -- after period start) so the two files cannot disagree about what is in
+               -- scope.
+               AND (activitystartdate IS NULL OR activitystartdate <= :periodend)
+               AND (activityenddate IS NULL OR activityenddate = 0 OR activityenddate >= :periodstart)
              GROUP BY programcode
-             ORDER BY programcode"
+             ORDER BY programcode",
+            ['periodend' => $this->periodend, 'periodstart' => $this->periodstart]
         );
 
         foreach ($programs as $program) {
@@ -621,15 +670,48 @@ class nat_generator {
                 [$program->programcode]
             );
 
+            // RELEASE 8.0 LAYOUT (v6.3.34). This record was built to the Release 7.0
+            // "Course" file: it opened with the Training organisation identifier and
+            // carried Type of attendance, Funding source - national and Study reason,
+            // none of which exist in the Release 8.0 Program file. EVERY FIELD WAS
+            // THEREFORE DISPLACED - the program code sat at 11-20 where the name
+            // belongs, the name at 21-120, and Nominal hours at 122-125 instead of
+            // 111-114 - so NCVER would read the whole file as malformed.
+            //
+            // Release 8.0, Program (NAT00030) file, p.25:
+            //     Program identifier  1    10
+            //     Program name       11   100
+            //     Nominal hours     111     4
+            //     Record length for national data collection: 130
+            //
+            // The field table accounts for only 114 of those 130 characters. The
+            // remaining 16 are confirmed against a real NAT00030 accepted from this
+            // client's previous student management system: 15 '@' fill followed by a
+            // single Y/N flag. Every one of its 17 records has that shape, so it is
+            // reproduced here rather than guessed at.
             $record = '';
-            $record .= $this->pad($rtocode, 10);                                // Pos 1-10:   Training organisation identifier
-            $record .= $this->pad($courseid, 10);                               // Pos 11-20:  Course identifier (national qual code)
-            $record .= $this->pad($program->programname, 100);                  // Pos 21-120: Course name
-            $record .= $this->pad('@@', 1);                                    // Pos 121:    Type of attendance (@@=not stated; no DB column)
-            $record .= $this->padnum($totalhours ?: 0, 4);                      // Pos 122-125: Nominal hours
-            $record .= $this->pad($program->fundingsourcenat ?: '@@', 2);      // Pos 126-127: Funding source – national
-            $record .= $this->pad($program->vetinschoolsflag ?: 'N', 1);       // Pos 128:    VET in schools flag
-            $record .= $this->pad('@@', 2);                                    // Pos 129-130: Study reason (@@=not stated; programme-level default)
+            $record .= $this->pad($courseid, 10);                               // Pos 1-10:   Program identifier
+            $record .= $this->pad($program->programname, 100);                  // Pos 11-110: Program name
+            $record .= $this->padnum($totalhours ?: 0, 4);                      // Pos 111-114: Nominal hours
+            // Pos 115-130 (v6.3.34, corrected): the Release 8.0 change list for this file
+            // says, verbatim: "Deleted Program recognition identifier. Deleted Program
+            // level of education identifier. Deleted Program field of education
+            // identifier. Deleted ANZSCO identifier. Deleted VET flag." Those five
+            // occupied exactly 2+3+4+6+1 = 16 characters, and the record length was left
+            // at 130 when they went. They still exist in the NAT00030A supplement file
+            // (p.46), which is where the 16 bytes come from.
+            //
+            // So there is NO VET flag in Release 8.0 NAT00030 and nothing belongs in
+            // these bytes. An earlier draft of this release put enrolments.vetflag at
+            // position 130 because a NAT00030 exported from this client's previous
+            // system has a Y/N there - but that file is Release 7.0 shaped, and the old
+            // system is exactly what is not trusted. The specification is the authority;
+            // a file produced by another vendor is not.
+            //
+            // Filled with spaces rather than '@': '@' asserts "not stated" about a field,
+            // and these fields do not exist in this file. If NCVER's validator ever
+            // objects, '@' fill is a one-line change here and nowhere else.
+            $record .= str_repeat(' ', 16);                                     // Pos 115-130: deleted in Release 8.0
 
             $output .= $record . "\r\n";
         }
@@ -660,6 +742,23 @@ class nat_generator {
                     MIN(unitname)       AS unitname,
                     MIN(subjectid)      AS subjectid,
                     MAX(scheduledhours) AS scheduledhours,
+                    -- VET FLAG AGGREGATE: MAX() IS CORRECT, AND I CHANGED IT TO MIN()
+                    -- BEFORE CHECKING (v6.3.35). The reasoning for MIN was that MAX
+                    -- biases toward 'Y' and so is not conservative about asserting
+                    -- accreditation. That reasoning is wrong for this column.
+                    --
+                    -- enrolments.vetflag is only ever written 'N' by
+                    -- skipped_programcodes.php, and only on rows whose programcode is
+                    -- blank - it is an exclude-this-row marker, not a statement that the
+                    -- UNIT is non-vocational. A unit that also appears under a real
+                    -- program code is on the National Register and its subject VET flag
+                    -- is 'Y'. MIN() would let one blank-programcode marker row flip a
+                    -- genuine unit to 'N'.
+                    --
+                    -- The specification also permits this field to be blank where the
+                    -- Subject identifier and name match the National Register (p.26, and
+                    -- the corrected rule noted in the change history), so a missing value
+                    -- is not evidence of non-recognition either.
                     MAX(vetflag)        AS vetflag
              FROM {local_rtocompliance_enrolments}
              WHERE unitcode IS NOT NULL AND unitcode != ''
@@ -677,6 +776,10 @@ class nat_generator {
             //  - VET flag now reads from enrolments.vetflag (MAX per unit) instead of hardcoding Y.
             //  - Field of Education remains blank (no ASCED column in DB); blank is accepted by NCVER
             //    when the subject is from the national TGA (which is the case for all VET units).
+            // The fallback stays 'Y' deliberately: the specification permits this field to
+            // be blank for a unit whose code and name match the National Register, so a
+            // missing value is not evidence of non-recognition. It is only reported 'N'
+            // when an enrolment actually says so.
             $vetflag = (!empty($unit->vetflag) && in_array($unit->vetflag, ['Y','N'], true))
                        ? $unit->vetflag : 'Y';
 
@@ -1113,7 +1216,20 @@ class nat_generator {
             $enddate = ($coerced_continuing || empty($enrol->activityenddate))
                 ? $this->periodend : $enrol->activityenddate;
             $record .= $this->formatdate($enddate);                                     // Pos 61-68:  Activity end date (DDMMYYYY)
-            $record .= $this->pad($enrol->deliverymode ?: '10', 3);                    // Pos 69-71:  Delivery mode identifier
+            // RELEASE 8.0 DELIVERY MODE (v6.3.34): this wrote the stored value straight
+            // out, and the stored values are Release 7.0 numeric codes (10/20/30/40/90).
+            // Release 8.0 made this a three-character field of Y/N flags - position 1
+            // internal, 2 external, 3 workplace-based - so "10 " went into a field that
+            // has to read YNN. Confirmed in NCVER's data element definitions (edition
+            // 2.3) and in Queensland's AVETMISS 8.0 reporting requirements.
+            //
+            // The mapping happens HERE, on output, and NOTHING STORED IS CHANGED. A site
+            // whose enrolments all hold '10' keeps holding '10'; the file it produces
+            // becomes correct. A value that is already a Y/N triplet passes through
+            // untouched, so new enrolments recorded through the Release 8.0 menu are
+            // unaffected.
+            $record .= $this->pad(avetmiss_codes::to_release8_delivery_mode($enrol->deliverymode), 3);
+                                                                                // Pos 69-71:  Delivery mode identifier
             $record .= $this->pad($enrol->outcomeidentifier ?: '70', 2);               // Pos 72-73:  Outcome identifier – national
             $record .= $this->pad($enrol->fundingsourcenat ?: '30', 2);                // Pos 74-75:  Funding source – national
             $record .= $this->pad($enrol->commencingprogramid ?: '3', 1);              // Pos 76:     Commencing program identifier
@@ -1228,6 +1344,27 @@ class nat_generator {
              JOIN {local_rtocompliance_students} s ON s.id = e.studentid
              WHERE e.programoutcome IN ('01','02')
                AND e.programcode IS NOT NULL AND e.programcode != ''
+               -- NON-VET EXCLUSION: CONSIDERED AND DELIBERATELY NOT IMPLEMENTED (v6.3.35).
+               --
+               -- The specification rule reads, verbatim: 'Program identifier with a VET
+               -- flag of 'N' (No - The intention of the program of study is not
+               -- vocational) IN THE PROGRAM (NAT00030A) FILE must not appear in the
+               -- Program completed (NAT00130) file.'
+               --
+               -- The qualifying clause is the whole rule. That VET flag is a field of
+               -- NAT00030A, the supplement file for locally recognised training, at
+               -- position 130 (p.46). This plugin does not generate NAT00030A and has no
+               -- program-level recognition flag at all, so there is no program carrying
+               -- that flag and nothing for the rule to exclude.
+               --
+               -- A first attempt here filtered on enrolments.vetflag instead. That is a
+               -- DIFFERENT data element - the SUBJECT VET flag, NAT00060 position 119
+               -- (p.26) - and using it suppressed an entire legitimate in-period
+               -- qualification because one of its units carried 'N'. Caught by measuring
+               -- the generated file, not by reading the code.
+               --
+               -- When a program-level recognition flag exists, this is where the rule
+               -- belongs. Until then, implementing it means inventing the input.
                AND e.activityenddate >= :periodstart AND e.activityenddate <= :periodend
                AND NOT EXISTS (
                    SELECT 1 FROM {local_rtocompliance_enrolments} e2
@@ -1270,12 +1407,19 @@ class nat_generator {
             // Falls back to 'N' (not yet issued) if no matching cert record exists.
             $issuedflag = 'N';
             if ($certs_table_exists) {
+                // COLUMN NAMES (v6.3.33): this query named studentid and programcode.
+                // local_rtocompliance_certs has neither - its columns are userid and
+                // qualificationcode - so every call threw dml_read_exception and
+                // NAT00130 could not be generated at all on a site with the certs
+                // table present. studentid on an enrolments row is the local student
+                // record id, NOT the Moodle user id the certs table keys on, so the
+                // already-selected s.userid alias is what must be passed.
                 $certissued = $DB->record_exists_sql(
                     "SELECT 1 FROM {local_rtocompliance_certs}
-                      WHERE studentid = :studentid
-                        AND programcode = :programcode
+                      WHERE userid = :userid
+                        AND qualificationcode = :qualificationcode
                         AND status IN ('issued','active')",
-                    ['studentid' => $comp->studentid, 'programcode' => $comp->programcode]
+                    ['userid' => $comp->studentuserid, 'qualificationcode' => $comp->programcode]
                 );
                 $issuedflag = $certissued ? 'Y' : 'N';
             }
@@ -1289,13 +1433,13 @@ class nat_generator {
                 // fails on Oracle/MSSQL (both Moodle-supported). Use get_records_sql with
                 // a limit parameter (0,1) and take the first row instead.
                 $certrows = $DB->get_records_sql(
-                    "SELECT certnumber, timecreated
+                    "SELECT id, certnumber, timecreated
                        FROM {local_rtocompliance_certs}
-                      WHERE studentid = :studentid
-                        AND programcode = :programcode
+                      WHERE userid = :userid
+                        AND qualificationcode = :qualificationcode
                         AND status IN ('issued','active')
                       ORDER BY timecreated DESC",
-                    ['studentid' => $comp->studentid, 'programcode' => $comp->programcode],
+                    ['userid' => $comp->studentuserid, 'qualificationcode' => $comp->programcode],
                     0, 1
                 );
                 $certrow = $certrows ? reset($certrows) : null;

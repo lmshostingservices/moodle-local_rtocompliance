@@ -399,6 +399,47 @@ final class knowledge {
                 }
             }
 
+            // Program recognition state, wherever it is the thing on screen. Without
+            // this the assistant can explain what classification means but cannot
+            // answer "how many of mine are unclassified?", which is the actual
+            // question somebody standing on that page is asking.
+            if (in_array($script, ['program_recognition.php', 'nat_validate.php',
+                    'natexport.php'], true)
+                    && \local_rtocompliance\local\recognition::table_ready()) {
+                $c = \local_rtocompliance\local\recognition::count_by_state();
+                $unknown = (int) $c[\local_rtocompliance\local\recognition::STATE_UNKNOWN];
+                $facts[] = 'Program recognition on this site: '
+                    . (int) $c[\local_rtocompliance\local\recognition::STATE_RECOGNISED]
+                    . ' nationally recognised, '
+                    . (int) $c[\local_rtocompliance\local\recognition::STATE_NOT_RECOGNISED]
+                    . ' explicitly not nationally recognised, '
+                    . $unknown . ' unclassified.';
+                if ($unknown > 0) {
+                    // Only the unclassified codes that actually carry activity are
+                    // worth naming - an unclassified code with no enrolments is not
+                    // costing anybody anything.
+                    $withactivity = (int) $DB->get_field_sql(
+                        "SELECT COUNT(DISTINCT r.qualificationcode)
+                           FROM {local_rtocompliance_recognition} r
+                           JOIN {local_rtocompliance_enrolments} e
+                             ON UPPER(TRIM(e.programcode)) = r.qualificationcode
+                          WHERE r.state = :unknown",
+                        ['unknown' => \local_rtocompliance\local\recognition::STATE_UNKNOWN]);
+                    $facts[] = $withactivity . ' of the unclassified codes have student '
+                        . 'activity against them. Their activity IS still reported in NAT '
+                        . 'files - nothing is held back - and they are listed as warnings '
+                        . 'in AVETMISS Validation.';
+                }
+                $noprogram = (int) $DB->count_records_select(
+                    'local_rtocompliance_enrolments',
+                    "programcode IS NULL OR TRIM(programcode) = ''");
+                if ($noprogram > 0) {
+                    $facts[] = $noprogram . ' enrolment(s) on this site have NO program code '
+                        . 'at all, so they cannot be classified and are lodged in NAT00120 '
+                        . 'against no program. Repair program codes on the Students page.';
+                }
+            }
+
             if ($userid > 0) {
                 // Not IGNORE_MULTIPLE: with more than one student row that silently picks one,
                 // so the assistant could report "verified, can be issued" while the generation

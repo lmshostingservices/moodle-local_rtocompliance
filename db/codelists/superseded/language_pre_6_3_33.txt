@@ -1,0 +1,179 @@
+# The language list shipped up to and including v6.3.32, kept ONLY so that
+# codelist_audit.php can report which stored codes CHANGED MEANING at v6.3.33.
+# It is not a standard and must never be used as a source of valid codes.
+0001	Inadequately described
+1101	Afrikaans
+1102	Dutch
+1103	Frisian
+1199	Germanic Languages, nec
+1201	English
+1301	German
+1302	Luxembourgish
+1303	Swiss German
+1401	Yiddish
+1501	Danish
+1502	Icelandic
+1503	Norwegian
+1504	Swedish
+2101	French
+2201	Catalan
+2301	Italian
+2302	Sardinian
+2401	Portuguese
+2501	Romanian
+2901	Spanish
+3101	Greek
+3201	Belarusian
+3202	Russian
+3203	Ukrainian
+3301	Bulgarian
+3302	Macedonian
+3303	Serbian
+3304	Slovene
+3305	Bosnian
+3306	Croatian
+3401	Czech
+3402	Polish
+3403	Slovak
+3404	Sorbian
+3501	Latvian
+3502	Lithuanian
+3601	Estonian
+3602	Finnish
+3603	Hungarian
+3701	Albanian
+3801	Armenian
+3901	Romani
+4101	Arabic
+4102	Assyrian Neo-Aramaic
+4103	Chaldean Neo-Aramaic
+4104	Hebrew
+4105	Mandaic
+4106	Maltese
+4201	Iranic Languages
+4202	Dari
+4203	Kurdish
+4204	Persian (excluding Dari)
+4205	Pashto
+4301	Turkish
+4302	Turkmen
+4303	Azeri
+4304	Kazakh
+4305	Uighur
+4306	Uzbek
+5101	Burmese
+5102	Karen
+5103	Lao
+5104	Thai
+5201	Khmer
+5202	Mon
+5203	Vietnamese
+5301	Bisaya
+5302	Cebuano
+5303	Hiligaynon
+5304	Ilocano
+5305	Tagalog
+5306	Waray
+5307	Filipino
+5401	Bahasa Indonesia
+5402	Bahasa Malaysia
+5403	Javanese
+5404	Madurese
+5405	Sundanese
+5406	Tetum
+5501	Hmong
+5502	Mien
+6101	Cantonese
+6102	Hakka
+6103	Mandarin
+6104	Hokkien
+6105	Teochew
+6106	Shanghainese
+6107	Wu
+6199	Chinese, nec
+6201	Japanese
+6301	Korean
+7101	Assamese
+7102	Bengali
+7103	Bihari
+7104	Gujarati
+7105	Hindi
+7106	Konkani
+7107	Marathi
+7108	Nepali
+7109	Oriya
+7110	Punjabi
+7111	Sindhi
+7112	Urdu
+7113	Kashmiri
+7114	Sinhalese
+7199	Indo-Aryan, nec
+7201	Kannada
+7202	Malayalam
+7203	Tamil
+7204	Telugu
+7205	Tulu
+7299	Dravidian, nec
+8101	Somali
+8102	Oromo
+8103	Amharic
+8104	Tigrinya
+8105	Tigre
+8201	Swahili
+8202	Shona
+8203	Kirundi
+8204	Kinyarwanda
+8205	Acholi
+8206	Luganda
+8207	Dinka
+8208	Luo
+8209	Ndebele
+8210	Sotho, Southern
+8211	Tswana
+8212	Xhosa
+8213	Zulu
+8301	Akan
+8302	Ewe
+8303	Ga
+8304	Hausa
+8305	Igbo
+8306	Temne
+8307	Yoruba
+8308	Wolof
+8401	Nuer
+8402	Sudanese Arabic
+9101	Fijian
+9102	Gilbertese
+9103	Nauruan
+9104	Rotuman
+9105	Tongan
+9106	Cook Islands Maori
+9107	Hawaiian
+9108	Maori (New Zealand)
+9109	Niuean
+9110	Samoan
+9111	Tahitian
+9112	Tokelauan
+9113	Tuvaluan
+9199	Oceanian Pidgins and Creoles, nec
+9201	Tok Pisin
+9202	Solomon Islands Pijin
+9203	Bislama
+9301	Drehu
+9302	Ajië
+9399	New Caledonian Languages, nec
+9401	Australian Indigenous Languages, nec
+9402	Arrernte
+9403	Burarra
+9404	Djambarrpuyngu
+9405	Kriol
+9406	Murrinh-Patha
+9407	Pitjantjatjara
+9408	Tiwi
+9409	Warlpiri
+9410	Torres Strait Creole
+9411	Yolngu Matha
+9501	Auslan
+9502	Signed Languages
+9601	Esperanto
+9999	Not stated

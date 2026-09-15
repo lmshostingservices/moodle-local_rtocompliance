@@ -811,7 +811,7 @@ if ($effectiveLinkedUnitCount > 0) {
 
     // FIX-SUSPENDED-CERTS (v5.2.72): Removed u.suspended = 0. u.suspended added to SELECT/GROUP BY.
     $allcompleters = $DB->get_records_sql(
-        "SELECT u.id, u.firstname, u.lastname, u.email,
+        "SELECT u.id, u.username, u.firstname, u.lastname, u.email,
                 u.firstnamephonetic, u.lastnamephonetic, u.middlename, u.alternatename,
                 u.suspended,
                 MIN(cc.timecompleted) AS timecompleted
@@ -822,7 +822,7 @@ if ($effectiveLinkedUnitCount > 0) {
             AND cc.timecompleted IS NOT NULL
             AND cc.timecompleted > 0
             AND u.deleted = 0
-          GROUP BY u.id, u.firstname, u.lastname, u.email,
+          GROUP BY u.id, u.username, u.firstname, u.lastname, u.email,
                    u.firstnamephonetic, u.lastnamephonetic, u.middlename, u.alternatename, u.suspended
          HAVING COUNT(DISTINCT unitcourses.quid) >= :numcourses
           ORDER BY u.lastname, u.firstname",
@@ -840,7 +840,7 @@ if ($numunits > 0
 ) {
     // FIX-SUSPENDED-CERTS (v5.2.72): Removed u.suspended = 0. u.suspended added to SELECT/GROUP BY.
     $outcomecompleters = $DB->get_records_sql(
-        "SELECT u.id, u.firstname, u.lastname, u.email,
+        "SELECT u.id, u.username, u.firstname, u.lastname, u.email,
                 u.firstnamephonetic, u.lastnamephonetic, u.middlename, u.alternatename,
                 u.suspended,
                 MAX(COALESCE(e.activityenddate, e.timecreated)) AS timecompleted
@@ -852,7 +852,7 @@ if ($numunits > 0
               AND qu.qualbuilderid = :qbid
               AND qu.selected = 1
               AND qu.status = 'active'
-         GROUP BY s.id, u.id, u.firstname, u.lastname, u.email,
+         GROUP BY s.id, u.id, u.username, u.firstname, u.lastname, u.email,
                   u.firstnamephonetic, u.lastnamephonetic, u.middlename, u.alternatename, u.suspended
          HAVING COUNT(DISTINCT qu.id) >= :numunits
          ORDER BY u.lastname, u.firstname",
@@ -996,9 +996,16 @@ echo '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px
     . 'USI verified with the USI Registry cannot be ticked, because the certificate would be refused. '
     . 'Use the <strong>Add / verify USI</strong> link on the row to fix it.</div></div>';
 
+echo '<div style="margin:0 0 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+    . '<label for="gq-student-search" style="font-size:0.85rem;font-weight:600;margin:0;">Find student</label>'
+    . '<input type="search" id="gq-student-search" placeholder="Search name, username or email…"'
+    . ' aria-label="Search eligible students" style="min-width:280px;padding:6px 10px;border:1px solid #cbd5e1;border-radius:6px;">'
+    . '<span id="gq-student-count" style="font-size:0.8rem;color:#64748b;"></span>'
+    . '</div>';
+
 // Students table
 echo html_writer::start_div('', ['style' => 'overflow-x:auto;']);
-echo '<table class="generaltable" style="width:100%;">';
+echo '<table id="gq-student-table" class="generaltable" style="width:100%;">';
 echo '<thead><tr style="background:#f1f5f9;">';
 echo '<th style="width:36px;padding:10px 8px;" title="Select students to generate certificates for">'
     . '<input type="checkbox" id="gq-selectall" title="Select/deselect all eligible students"'
@@ -1006,6 +1013,7 @@ echo '<th style="width:36px;padding:10px 8px;" title="Select students to generat
     . ($gqEligible > 0 ? ' checked' : ' disabled') . '>'
     . '</th>';
 echo '<th style="padding:10px 8px;" title="Student name and account status">Student</th>';
+echo '<th style="padding:10px 8px;" title="Moodle username">Username</th>';
 echo '<th style="padding:10px 8px;" title="Student email address">Email</th>';
 echo '<th style="padding:10px 8px;" title="Date the student finished all required units">All Units Completed</th>';
 // USI-PREFLIGHT (v6.3.13)
@@ -1069,7 +1077,8 @@ foreach ($allcompleters as $student) {
     if (!$canIssue && !$isSuspended) {
         $rowtint = 'background:#fffbeb;';
     }
-    echo '<tr style="' . $rowstyle . $rowtint . ($canIssue ? '' : 'opacity:0.85;') . '">';
+    $studentsearch = fullname($student) . ' ' . $student->username . ' ' . $student->email;
+    echo '<tr data-student-search="' . s($studentsearch) . '" style="' . $rowstyle . $rowtint . ($canIssue ? '' : 'opacity:0.85;') . '">';
     echo '<td style="padding:8px;">'
         . '<input type="checkbox" name="userids[]" value="' . $student->id . '" class="gq-cbx"'
         . ($canIssue ? ($hasBoth ? '' : ' checked') : ' disabled')
@@ -1078,6 +1087,7 @@ foreach ($allcompleters as $student) {
             : 'Cannot be issued — ' . s($usiStatus['reason'] ?? 'no verified USI')) . '">'
         . '</td>';
     echo '<td style="padding:8px;font-weight:500;">' . htmlspecialchars(fullname($student)) . $suspendBadge . $activateCb . '</td>';
+    echo '<td style="padding:8px;color:#374151;">' . s($student->username) . '</td>';
     echo '<td style="padding:8px;color:#6b7280;">' . htmlspecialchars($student->email) . '</td>';
     echo '<td style="padding:8px;color:#374151;">' . userdate($student->timecompleted, '%d %b %Y') . '</td>';
     echo '<td style="padding:8px;">' . $usiCell . '</td>';
@@ -1087,6 +1097,28 @@ foreach ($allcompleters as $student) {
 
 echo '</tbody></table>';
 echo html_writer::end_div(); // overflow-x:auto
+echo '<script>
+(function () {
+    var input = document.getElementById("gq-student-search");
+    var table = document.getElementById("gq-student-table");
+    var count = document.getElementById("gq-student-count");
+    if (!input || !table) { return; }
+    var rows = Array.prototype.slice.call(table.querySelectorAll("tbody tr[data-student-search]"));
+    function filterRows() {
+        var query = input.value.toLowerCase().trim();
+        var shown = 0;
+        rows.forEach(function (row) {
+            var matches = !query
+                || (row.getAttribute("data-student-search") || "").toLowerCase().indexOf(query) !== -1;
+            row.style.display = matches ? "" : "none";
+            if (matches) { shown++; }
+        });
+        if (count) { count.textContent = shown + " of " + rows.length + " students shown"; }
+    }
+    input.addEventListener("input", filterRows);
+    filterRows();
+}());
+</script>';
 
 // Submit buttons
 echo html_writer::start_div('', ['style' => 'margin-top:20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;']);

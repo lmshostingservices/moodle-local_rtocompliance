@@ -181,10 +181,27 @@ class cert_template_renderer {
             'record'     => ['nrt_logo'],
             'completion' => ['nrt_logo'],
             'attendance' => ['nrt_logo'],
-            'testamur'   => ['student.usi'],
-            'statement'  => ['student.usi'],
+            'testamur'   => ['soa_intro_statement', 'soa_attained_statement'],
+            'statement'  => ['attained_statement', 'certify_statement'],
         ];
         $blocked = $forbiddenkeys[$rendercerttype] ?? [];
+
+        // NO-USI-ON-CERTIFICATION (v6.3.36): the USI is blocked on EVERY certificate
+        // type, not just testamur and statement. It is appended here rather than
+        // listed per type so that a type added later cannot be forgotten.
+        $blocked[] = 'student.usi';
+
+        // The four entries above were forbidden at approval time
+        // (cert_template::get_dynamic_keys() 'forbidden_for') but were NOT in this
+        // list, so a pinned, overridden or legacy design carrying one reached the
+        // PDF - which is precisely what this backstop exists to stop. They put
+        // statement-of-attainment wording on a testamur and testamur wording on a
+        // statement of attainment. Verified against the registry: with these added,
+        // every 'forbidden_for' the registry declares is now also blocked here,
+        // except 'student.detailstable', which is deliberately NOT blocked because
+        // it carries the required student name and qualification - its USI column
+        // was removed instead (see render_student_details_table).
+        
 
         // Render each field in document order.
         foreach (($design['fields'] ?? []) as $field) {
@@ -233,8 +250,12 @@ class cert_template_renderer {
         $name    = trim((string) ($payload['student.fullname'] ?? ''));
         $certno  = trim((string) ($payload['cert.number'] ?? ''));
         $qual    = trim((string) ($payload['qualification.code'] ?? ''));
-        $usi     = trim((string) ($payload['student.usi'] ?? ''));
-        $usiok   = !in_array($certtype, ['testamur', 'statement'], true);
+        // NO-USI-ON-CERTIFICATION (v6.3.36): was suppressed for testamur and
+        // statement only. The USI does not go on any certification document, so the
+        // strip never carries it. Kept as a named constant rather than deleting the
+        // branch, so the intent is visible to the next reader.
+        $usi     = '';
+        $usiok   = false;
 
         $bits = [];
         if ($name !== '')                  { $bits[] = $name; }
@@ -901,8 +922,19 @@ class cert_template_renderer {
             self::paint_page_background($pdf, $page, $bg_to_paint, $pagew, $pageh);
             $keyY = min($y, self::CONTINUATION_TOP_MM);
         }
-        $keytext = 'Result key:   C = Competent      NYC = Not Yet Competent      '
-                 . 'CT = Credit Transfer      RPL = Recognition of Prior Learning';
+        // RESULT-KEY-DERIVED (v6.3.36): the legend was a hardcoded string naming four
+        // codes - C, NYC, CT, RPL - while this column can print eleven. W, CE, NA, S
+        // and the bare numbers 41, 85 and 00 all appeared on the document with no
+        // entry, which on a formal record is worse than omitting the key, because a
+        // key that lists four of eleven reads as complete. It is now built from the
+        // codes this document actually contains, using the same maps that fill the
+        // column, so the two cannot drift apart again.
+        $keytext = self::build_result_key($rows);
+        if ($keytext === '') {
+            // Nothing recognisable to explain - draw no band rather than an empty one.
+            $pdf->setCellPaddings(0, 0, 0, 0);
+            return;
+        }
         $pdf->setCellPaddings(1.4, 1.0, 1.4, 1.0);
         $pdf->SetFont($font, 'I', $keyfs);
         $pdf->SetTextColor(71, 85, 105);          // slate-600.
@@ -937,19 +969,41 @@ class cert_template_renderer {
         }
         $qual = trim($qcode . ' ' . $qname);
 
-        // Columns: name 34% | USI 26% | qualification 40%.
-        $c1w = $w * 0.34;
-        $c2w = $w * 0.26;
-        $c3w = $w - $c1w - $c2w;
-        $colx = [$x, $x + $c1w, $x + $c1w + $c2w];
-        $colw = [$c1w, $c2w, $c3w];
+        // NO-USI-ON-CERTIFICATION (v6.3.36): THE USI COLUMN IS GONE, ON EVERY
+        // CERTIFICATE TYPE.
+        //
+        // This table used to be STUDENT NAME | USI | QUALIFICATION, and it was the
+        // route by which a USI reached a printed document. The standalone
+        // 'student.usi' field was already forbidden on a testamur and a statement of
+        // attainment, but this table is a DIFFERENT field ('student.detailstable'),
+        // so the render-time block list did not catch it - proven by rendering a
+        // testamur carrying this field and finding the USI on the page under a
+        // column headed USI.
+        //
+        // The fix is not to block this field: it also carries the student name and
+        // the qualification, both of which are required, so blocking it would strip
+        // required information from the document. The USI column is removed instead,
+        // which closes the hole for every certificate type at once and cannot be
+        // re-opened by a template edit, because there is no longer a column to
+        // configure.
+        //
+        // $usi is deliberately still read above and deliberately not used: the
+        // payload key stays intact for the on-screen verification pages, which are
+        // not certification documents.
+        unset($usi);
+
+        // Columns: name 40% | qualification 60%.
+        $c1w = $w * 0.40;
+        $c2w = $w - $c1w;
+        $colx = [$x, $x + $c1w];
+        $colw = [$c1w, $c2w];
         // CERT-TABLE-HEADINGS (v6.3.20): overridable per template field, then site-wide.
         $head = [
             self::table_heading($field, $payload, 'student', 'STUDENT NAME'),
-            self::table_heading($field, $payload, 'usi',     'USI'),
             self::table_heading($field, $payload, 'qual',    'QUALIFICATION'),
         ];
-        $vals = [$name, $usi, $qual];
+        $vals = [$name, $qual];
+        $ncols = count($vals);
 
         $font   = self::sanitise_font($field['font'] ?? 'helvetica');
         // NO-MIN-FONT (v6.2.52): honour the author's chosen size — no forced 12pt floor.
@@ -968,7 +1022,6 @@ class cert_template_renderer {
         // the widest and is free to wrap onto a second line.
         $fitcells = [
             ['text' => $name, 'w' => $c1w, 'bold' => true],
-            ['text' => $usi,  'w' => $c2w, 'bold' => true],
         ];
         $bodyfs = self::fit_font_to_columns($pdf, $font, $basefs, $fitcells, $padx);
 
@@ -986,7 +1039,7 @@ class cert_template_renderer {
         $pdf->SetTextColor(255, 255, 255);
         $pdf->SetDrawColor($border[0], $border[1], $border[2]);
         $pdf->SetLineWidth(0.2);
-        for ($i = 0; $i < 3; $i++) {
+        for ($i = 0; $i < $ncols; $i++) {
             $pdf->MultiCell(
                 $colw[$i], $headH, $head[$i], 1, 'C', true, 0,
                 $colx[$i], $y, true, 0, false, true, $headH, 'M', false);
@@ -1005,9 +1058,9 @@ class cert_template_renderer {
         $pdf->SetTextColor($bodytx[0], $bodytx[1], $bodytx[2]);
         $pdf->SetDrawColor($border[0], $border[1], $border[2]);
         $pdf->SetLineWidth(0.15);
-        // Student name + USI slightly emphasised. Values CENTRED under their headings (v6.2.62).
-        for ($i = 0; $i < 3; $i++) {
-            $pdf->SetFont($font, ($i < 2 ? 'B' : ''), $bodyfs);
+        // Student name emphasised. Values CENTRED under their headings (v6.2.62).
+        for ($i = 0; $i < $ncols; $i++) {
+            $pdf->SetFont($font, ($i === 0 ? 'B' : ''), $bodyfs);
             $pdf->MultiCell(
                 $colw[$i], $rowH, $vals[$i], 1, 'C', false, 0,
                 $colx[$i], $dataY, true, 0, false, true, $rowH, 'M', false);
@@ -1182,6 +1235,101 @@ class cert_template_renderer {
         $ts = strtotime($raw);
         return ($ts === false) ? 0 : (int) $ts;
     }
+
+    /**
+     * AVETMISS outcome identifier -> the long label printed in a RESULT cell.
+     *
+     * Single source. Before v6.3.36 this lived as a local array inside
+     * resolve_payload() while the result-key legend under the table carried its own
+     * hardcoded string, and the two drifted: the legend explained four codes
+     * (C / NYC / CT / RPL) while the column could print eleven. A key that looks
+     * complete and is not is worse on a formal document than no key at all.
+     *
+     * @return array<string, string>
+     */
+    private static function outcome_labels(): array {
+        return [
+            // The twelve current codes (DED 2.3 p107).
+            '20' => 'Competent',                   '30' => 'Not Yet Competent',
+            '40' => 'Withdrawn',
+            '41' => 'Incomplete - RTO Closure',
+            '51' => 'RPL Granted',                 '52' => 'RPL Not Granted',
+            '60' => 'Credit Transfer',
+            '61' => 'Superseded Subject',
+            '70' => 'Continuing Enrolment',
+            '81' => 'Non-assessable Satisfactory', '82' => 'Non-assessable Unsatisfactory',
+            '85' => 'Not Yet Started',
+            // Superseded codes, labelled so historical records still render.
+            '90' => 'Result Not Available (pre-2018 code)',
+            '53' => 'RCC Granted (pre-2012 code)',
+            '54' => 'RCC Not Granted (pre-2012 code)',
+            '10' => 'Withdrawn (pre-2002 code)',
+            '00' => 'Outcome Not Recorded',
+        ];
+    }
+
+    /**
+     * AVETMISS outcome identifier -> the short transcript code printed in RESULT.
+     *
+     * @return array<string, string>
+     */
+    private static function outcome_short_codes(): array {
+        return [
+            '20' => 'C',      '30' => 'NYC',    '40' => 'W',
+            '41' => 'INC',    // (proposed) Incomplete - RTO closure
+            '51' => 'RPL',
+            '52' => 'RPL-NG', // (proposed) RPL not granted - MUST differ from 51
+            '60' => 'CT',
+            '61' => 'SS',     // (proposed) Superseded subject - was wrongly 'CT'
+            '70' => 'CE',
+            '81' => 'NA-S',   // (proposed) non-assessable satisfactory
+            '82' => 'NA-U',   // (proposed) non-assessable unsatisfactory - MUST differ from 81
+            '85' => 'NYS',    // (proposed) Not yet started
+            // Superseded codes, so a historical record still prints something.
+            '90' => 'RNA',    // (proposed) result not available - pre-2018 code
+            '53' => 'RCC',    // (proposed) pre-2012 code
+            '54' => 'RCC-NG', // (proposed) pre-2012 code
+            '10' => 'W',      // pre-2002 withdrawn, same meaning as 40
+            '00' => 'NR',     // (proposed) never a real code - outcome not recorded
+        ];
+    }
+
+    /**
+     * The result key for one document, built from the codes it actually prints.
+     *
+     * Derived rather than hardcoded, so it can never again explain fewer codes than
+     * the column contains, and so adding a code to the maps above updates the legend
+     * with no second edit.
+     *
+     * @param array $rows Rendered unit rows, each with a 'result' short code.
+     * @return string Empty when nothing needs explaining.
+     */
+    private static function build_result_key(array $rows): string {
+        $short = self::outcome_short_codes();
+        $labels = self::outcome_labels();
+
+        // short code -> long label, for the codes present in THIS document.
+        $present = [];
+        foreach ($rows as $r) {
+            $code = trim((string)($r['result'] ?? ''));
+            if ($code === '' || isset($present[$code])) {
+                continue;
+            }
+            $outcome = array_search($code, $short, true);
+            if ($outcome !== false && isset($labels[$outcome])) {
+                $present[$code] = $labels[$outcome];
+            }
+        }
+        if (!$present) {
+            return '';
+        }
+        $parts = [];
+        foreach ($present as $code => $label) {
+            $parts[] = $code . ' = ' . $label;
+        }
+        return 'Result key:   ' . implode('      ', $parts);
+    }
+
 
     /**
      * Build the dynamic-data payload used to resolve fields at render
@@ -1420,25 +1568,55 @@ class cert_template_renderer {
         // OUTCOME-LABEL-FIX (v5.9.334): '60' was incorrectly labelled 'RCC Granted'.
         // 'RCC' (Recognition of Current Competency) is a discontinued pre-2010 term;
         // AVETMISS 8 code 60 = Credit Transfer. Fixed to 'Credit Transfer'.
-        // Also added '61' (Credit Transfer Not Granted) for completeness.
-        $_outcomeLabels = [
-            '20' => 'Competent',                   '30' => 'Not Yet Competent',
-            '40' => 'Withdrawn',                   '51' => 'RPL Granted',
-            '52' => 'RPL Not Granted',             '60' => 'Credit Transfer',
-            '61' => 'Credit Transfer Not Granted', '70' => 'Continuing Enrolment',
-            '81' => 'Non-assessable Satisfactory', '82' => 'Non-assessable Unsatisfactory',
-            '90' => 'Superseded',
-        ];
+        //
+        // OUTCOME-LABEL-FIX-2 (v6.3.36): FIVE of the twelve current codes rendered
+        // wrongly on an ASQA-facing document. Found by SEEDING every code into a
+        // certificate and calling this method, not by reading it - the previous
+        // reading of this same block found only three of the five.
+        //
+        // The authority is NCVER's AVETMISS Data element definitions Edition 2.3
+        // page 107, CLASSIFICATION SCHEME - Outcome identifier - national. Twelve
+        // codes: 20 30 40 41 51 52 60 61 70 81 82 85.
+        //
+        //  - '41' and '85' WERE ABSENT, so the bare number printed on the document
+        //    with no label. Both have been valid codes since 1 January 2018.
+        //  - '61' was labelled 'Credit Transfer Not Granted'. There is no such
+        //    AVETMISS outcome. 61 is SUPERSEDED SUBJECT. The v5.9.334 note above
+        //    says 61 was added "for completeness" - it was added with an invented
+        //    meaning, and 61 and 90 had their meanings swapped between them.
+        //  - '90' is retained but labelled as the superseded code it is. It was
+        //    deleted from the standard on 1 January 2018 and NEVER meant
+        //    'Superseded' - that is 61. A dead code must still render on a
+        //    historical record, so it is labelled, not removed.
+        //  - '00', '10', '53' and '54' are likewise labelled-as-legacy rather than
+        //    dropped, for the same reason: these documents reprint old records.
+        $_outcomeLabels = self::outcome_labels();
 
         // RESULT-CODE-MAP (v6.2.51): the Record of Results RESULT column prints the
         // short nationally-recognised transcript code (C / NYC / CT / RPL …) rather
         // than the long outcome label, per the ASQA sample Record of Results. Keyed by
         // AVETMISS outcome identifier. A code legend is printed beneath the table.
-        $_outcomeCodes = [
-            '20' => 'C',    '30' => 'NYC',  '40' => 'W',    '51' => 'RPL',
-            '52' => 'RPL',  '60' => 'CT',   '61' => 'CT',   '70' => 'CE',
-            '81' => 'NA',   '82' => 'NA',   '90' => 'S',
-        ];
+        // RESULT-CODE-FIX (v6.3.36): TWO SHORT CODES WERE SHARED WITH THEIR OWN
+        // OPPOSITE, which is worse than a wrong label because the short code is
+        // what an auditor reads off the RESULT column:
+        //   '52' printed 'RPL', identical to '51'. A REFUSED recognition of prior
+        //        learning was indistinguishable from a GRANTED one.
+        //   '82' printed 'NA', identical to '81'. A non-assessable activity the
+        //        client did NOT satisfactorily complete was indistinguishable from
+        //        one they did.
+        //   '61' printed 'CT', identical to '60', because of the label error above.
+        //   '41' and '85' had no entry, so the bare number printed.
+        //
+        // THE ABBREVIATIONS BELOW MARKED (proposed) ARE NOT FROM ANY STANDARD.
+        // The ASQA sample Record of Results establishes C / NYC / CT / RPL and no
+        // more; AVETMISS itself defines no transcript abbreviations at all. Rather
+        // than print an invented code silently, each is flagged here for Jamie to
+        // confirm or replace - he has the audit experience, this file does not.
+        // Whatever is chosen, the constraint that matters is that NO TWO CODES WITH
+        // OPPOSITE MEANINGS MAY SHARE AN ABBREVIATION. The legend printed beneath
+        // the table carries the long label from $_outcomeLabels, so the abbreviation
+        // never has to stand alone.
+        $_outcomeCodes = self::outcome_short_codes();
         // Helper: map a stored outcome to its transcript code. Accepts an already-short
         // code (e.g. a legacy row storing "C"/"NYC" directly) or an AVETMISS number.
         $_toResultCode = function ($outcome) use ($_outcomeCodes): string {

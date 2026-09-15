@@ -108,6 +108,9 @@ class webhook_adapter implements adapter_interface {
 
         try {
             \core\session\manager::write_close();
+            // curl lives in lib/filelib.php and is NOT autoloaded.
+            global $CFG;
+            require_once($CFG->libdir . '/filelib.php');
             $curl = new \curl();
             $curl->setopt(['CURLOPT_TIMEOUT' => self::TIMEOUT_SECONDS, 'CURLOPT_CONNECTTIMEOUT' => self::TIMEOUT_SECONDS, 'CURLOPT_SSL_VERIFYPEER' => true, 'CURLOPT_SSL_VERIFYHOST' => 2, 'CURLOPT_FOLLOWLOCATION' => false]);
             $curl->setHeader($headers);

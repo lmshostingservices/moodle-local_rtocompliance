@@ -713,12 +713,12 @@ $newToken = bin2hex(random_bytes(16));
 $fLost = fopen(_ra_csvpath($newToken, 'lost'), 'w');
 fputcsv(
     $fLost, ['username','client_id','firstname','lastname',
-    'course_shortname','course_fullname','category','enrolled_on','enrol_method','moodle_matched']);
+    'course_shortname','course_fullname','category','enrolled_on','enrol_method','moodle_matched'], ',', '"', '\\');
 foreach ($rptLost as $r) {
     fputcsv(
         $fLost, [$r['username'],$r['client_id'],$r['firstname'],$r['lastname'],
             $r['course_shortname'],$r['course_fullname'],$r['category'],$r['enrolled_on'],
-        $r['enrol_method'],$r['moodle_matched']]);
+        $r['enrol_method'],$r['moodle_matched']], ',', '"', '\\');
 }
 fclose($fLost);
 
@@ -726,12 +726,12 @@ fclose($fLost);
 $fNew = fopen(_ra_csvpath($newToken, 'new'), 'w');
 fputcsv(
     $fNew, ['username','client_id','firstname','lastname',
-    'course_shortname','course_fullname','category','enrolled_on','enrol_method','unit_code']);
+    'course_shortname','course_fullname','category','enrolled_on','enrol_method','unit_code'], ',', '"', '\\');
 foreach ($rptNew as $r) {
     fputcsv(
         $fNew, [$r['username'],$r['client_id'],$r['firstname'],$r['lastname'],
             $r['course_shortname'],$r['course_fullname'],$r['category'],$r['enrolled_on'],
-        $r['enrol_method'],$r['unit_code']]);
+        $r['enrol_method'],$r['unit_code']], ',', '"', '\\');
 }
 fclose($fNew);
 
@@ -741,14 +741,14 @@ fputcsv(
     $fRec, ['username','client_id','firstname','lastname',
         'course_shortname','course_fullname','category','enrolled_on','enrol_method',
         'unit_code','classification','reason','created_at','deleted_at','deleted_by',
-    'history_status']);
+    'history_status'], ',', '"', '\\');
 foreach ($rptRecovery as $r) {
     fputcsv(
         $fRec, [$r['username'],$r['client_id'],$r['firstname'],$r['lastname'],
             $r['course_shortname'],$r['course_fullname'],$r['category'],$r['enrolled_on'],
             $r['enrol_method'],$r['unit_code'],$r['classification'],$r['reason'],
             $r['created_at'] ?? '', $r['deleted_at'] ?? '', $r['deleted_by'] ?? '',
-        $r['history_status'] ?? '']);
+        $r['history_status'] ?? ''], ',', '"', '\\');
 }
 fclose($fRec);
 

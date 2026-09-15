@@ -81,7 +81,36 @@ function local_rtocompliance_extend_settings_navigation($settingsnav, $context) 
     // URL-derived 'path-local-rtocompliance-*'. All styles.css rules are scoped to
     // [class*="path-local-rtocompliance"], so without this explicit add_body_class() call
     // the entire stylesheet is silently ignored on admin pages (selectors never match).
-    if (!empty($PAGE->url) && strpos($PAGE->url->get_path(), '/local/rtocompliance/') !== false) {
+    // See the PAGE-URL-GUARD note in classes/hook/before_footer_html_generation.php:
+    // empty($PAGE->url) is always true because moodle_page has no __isset().
+    //
+    // v6.3.32: DELIBERATELY LEFT INERT - do not "fix" this without reading the note.
+    //
+    // The guard above used to be empty($PAGE->url), which is always true (see the
+    // PAGE-URL-GUARD note in classes/hook/before_footer_html_generation.php), so this
+    // line has never run and the body class has never been added here. Correcting the
+    // guard made it run, and measurement showed the class then appeared on
+    // students.php, certificates.php, trainers.php, usi_settings.php, alerts.php,
+    // qualbuilder.php and index.php, where it is absent today.
+    //
+    // That is NOT a safe change to make in passing. Effectively the whole of
+    // styles.css is scoped to [class*="path-local-rtocompliance"] - about 1600 of its
+    // rules - so adding the class applies ~1600 currently-dormant rules to every admin
+    // page at once: the nav header, cards, tables and buttons. styles.css says so
+    // itself at the top of section 0, and ships unscoped "safety net" rules precisely
+    // because the scoped ones do not match on admin_externalpage_setup() pages.
+    //
+    // Restoring the class is probably right, and it is what the comment below always
+    // intended - but it is a whole-of-UI visual change that has to be looked at on a
+    // real site, page by page, and it has nothing to do with username search. It is
+    // raised as its own item rather than smuggled into this release. Until then this
+    // matches v6.3.31 behaviour exactly: the class comes only from the 33 pages that
+    // call add_body_class() themselves, at the top of the file, before the header.
+    //
+    // If it is enabled later, the STATE_BEFORE_HEADER check must stay: Moodle builds
+    // the settings navigation during rendering on some layouts, and add_body_class()
+    // throws a coding exception once output has started.
+    if (false) {
         $PAGE->add_body_class('path-local-rtocompliance');
     }
 
@@ -7958,11 +7987,11 @@ function local_rtocompliance_auto_send_suitability(int $userid, int $tasid): voi
 function local_rtocompliance_render_sidebar(): string {
     global $PAGE, $CFG;
 
-    $currentpath = (!empty($PAGE->url)) ? $PAGE->url->get_path() : '';
+    $currentpath = $PAGE->has_set_url() ? $PAGE->url->get_path() : '';
     // Version 5.9.341: also capture the ?section= param so the four plugin_settings.php
     // items (which share one path and differ only by section) highlight correctly
     // instead of all matching — or none matching — via a path-only substring test.
-    $currentsection = (!empty($PAGE->url)) ? (string)($PAGE->url->get_param('section') ?? '') : '';
+    $currentsection = $PAGE->has_set_url() ? (string)($PAGE->url->get_param('section') ?? '') : '';
 
     // ── Inline SVG helper ──────────────────────────────────────────────────
     $icons = [
@@ -8089,6 +8118,18 @@ function local_rtocompliance_render_sidebar(): string {
             'label' => '6. Data & Reporting',
             'items' => [
                 ['/local/rtocompliance/data_import.php', 'Data Import',                     'upload'],
+                // PROGRAM-RECOGNITION (v6.3.36): sits between import and validation
+                // because that is the order of the work - bring the data in, establish
+                // which programs are nationally recognised, then validate and export.
+                // A code nobody has classified is still reported - nothing is held
+                // back - but it drives the USI count and the certificate type, and
+                // raises a warning in AVETMISS Validation, so this has to be findable
+                // rather than buried in Site administration.
+                ['/local/rtocompliance/program_recognition.php', 'Program Recognition',     'award'],
+                // CODELIST-AUDIT (v6.3.33): was registered in settings.php only and
+                // never added here, so the one report that lists records which cannot
+                // be lodged was reachable only through Site administration.
+                ['/local/rtocompliance/codelist_audit.php', 'AVETMISS Code-list Integrity', 'file-check'],
                 ['/local/rtocompliance/nat_validate.php', 'AVETMISS Validation',            'check-sq'],
                 ['/local/rtocompliance/natexport.php',   'AVETMISS Export',                 'download'],
                 ['/local/rtocompliance/reconcile.php',   'NAT Reconciliation',              'search'],

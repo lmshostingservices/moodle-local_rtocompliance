@@ -71,14 +71,27 @@ class before_standard_head_html_generation {
             local_rtocompliance_profile_gate_check();
         }
 
-        if (empty($PAGE->url)) {
+        // PAGE-URL-GUARD (v6.3.32): this was written as empty($PAGE->url), which is
+        // ALWAYS TRUE. moodle_page declares __get() but no __isset(), and empty() asks
+        // __isset() first - so on every supported Moodle version PHP answered "not set"
+        // for a perfectly good url object and this callback returned immediately, every
+        // time. Verified on Moodle 4.4.12 and 5.2.2. $PAGE->has_set_url() is Moodle's own
+        // API for the question. (db/upgrade.php records the same guard being removed from
+        // render_sidebar() at v4.0.3 for the same reason; it crept back in here.)
+        if (!$PAGE->has_set_url()) {
             return;
         }
 
-        // Add the body class on any RTOC page so [class*="path-local-rtocompliance"]
-        // CSS selectors match correctly.
-        if (strpos($PAGE->url->get_path(), '/local/rtocompliance/') !== false) {
-            $PAGE->add_body_class('path-local-rtocompliance');
-        }
+        // v6.3.32: an add_body_class() call used to sit here, to make the
+        // [class*="path-local-rtocompliance"] selectors in styles.css match. It could
+        // never have worked. This hook fires from inside standard_head_html(), i.e.
+        // during header rendering, and moodle_page::add_body_class() throws a coding
+        // exception once output has started - so the moment the url guard above was
+        // corrected, every plugin page became "Coding error detected: Cannot call
+        // moodle_page::add_body_class after output has been started". It is removed
+        // rather than re-guarded because there is no point in the request where this
+        // hook could legally add a body class. Nothing is lost: each of the 33 pages
+        // that needs the class already calls add_body_class() itself at the top of the
+        // file, before the header, which is why the stylesheet has always worked.
     }
 }

@@ -254,8 +254,15 @@ class cert_template {
         // Sheet exactly. Critical changes from v4.2.40-v4.2.42:
         //   - student.usi REMOVED from testamur + statement (USI must NOT
         //     appear on those documents; it is recorded internally only).
-        //   - student.usi remains REQUIRED for record (the unofficial
-        //     transcript/record-of-results which DOES include the USI).
+        //   - NO-USI-ON-CERTIFICATION (v6.3.36): student.usi is now forbidden on
+        //     EVERY certificate type. The earlier note here said it 'remains
+        //     REQUIRED for record (the unofficial document)'. That reasoning was
+        //     wrong: a Record of Results is certification documentation, ASQA
+        //     lists it alongside the testamur, and the USI does not belong on any
+        //     of them.
+        //   - student.detailstable is NOT forbidden anywhere: it carries the
+        //     required student name and qualification. Its USI column was removed
+        //     in render_student_details_table() instead.
         //   - nrt_logo REQUIRED for testamur + statement (was not even
         //     in the catalogue before).
         //   - aqf_logo, state_training_authority_logo, authenticity_measure,
@@ -268,13 +275,13 @@ class cert_template {
         return [
             // ── Student ─────────────────────────────────────────────────
             'student.fullname'                       => ['label' => 'Student full name',                       'group' => 'Student',       'required_for' => ['testamur', 'statement', 'record', 'completion'], 'sample' => 'Jane Citizen'],
-            'student.usi'                            => ['label' => 'Unique Student Identifier (USI)',         'group' => 'Student',       'required_for' => [],                                                'sample' => 'AB12CD34EF', 'forbidden_for' => ['testamur', 'statement']],
+            'student.usi'                            => ['label' => 'Unique Student Identifier (USI)',         'group' => 'Student',       'required_for' => [],                                                'sample' => 'AB12CD34EF', 'forbidden_for' => ['testamur', 'statement', 'record', 'completion', 'attendance']],
             'student.dob'                            => ['label' => 'Date of birth',                           'group' => 'Student',       'required_for' => [],                                                'sample' => '01/01/1990'],
             // STUDENT-DETAILS-TABLE (v6.2.51): one formatted table — STUDENT NAME | USI |
             // QUALIFICATION — for the Record of Results header. Placing it satisfies the
             // ASQA student-name + qualification-code + qualification-name requirements
             // (the three values live inside the table), so the separate fields aren't needed.
-            'student.detailstable'                   => ['label' => 'Student details table (Name / USI / Qualification)', 'group' => 'Student', 'required_for' => [],                                    'sample' => '[Student details table]', 'forbidden_for' => ['testamur', 'statement']],
+            'student.detailstable'                   => ['label' => 'Student details table (Name / Qualification)', 'group' => 'Student', 'required_for' => [],                                    'sample' => '[Student details table]', 'forbidden_for' => []],
 
             // ── Qualification / Course ──────────────────────────────────
             // ASQA-RECORD-COMPLIANCE (v5.2.54): 'statement' removed from required_for on

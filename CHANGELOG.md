@@ -1,3 +1,712 @@
+## [v6.4.7] - 2026-09-15
+
+The 6.4.6 blocker was in 6.4.6's own release note. No functional change.
+
+### Fixed
+
+- **`version.php` is a `.php` file, so the pipeline scans it** - and the note describing
+  6.4.6's parameter-type fixes quoted the very type names the security check looks for,
+  plus a no-space function example and a callable-dispatcher name. Three hits, all of
+  them prose inside that file, no code involved. The phrases are reworded to describe
+  the fixes without quoting the tokens.
+
+  **The underlying mistake is worth recording:** when replicating the pipeline's checks
+  locally to confirm 6.4.6 was clean, `version.php` was excluded from every search,
+  on the reasoning that it is a changelog rather than logic. The pipeline makes no such
+  distinction, so that verification could not have caught what the pipeline caught.
+- **The safe-object-decode annotation in `classes/task/process_enrolment_task.php`** sat
+  on the lines *above* the call rather than on the same line - the same placement error
+  made with the saved-view JSON annotation in 6.4.6. The pipeline's same-line convention
+  is now followed in both places. The two explanatory comments in that file which *named*
+  the decode function were reworded for the same reason as the `version.php` prose: a
+  comment mentioning a flagged function reads to the scanner exactly like a call to it.
+
+### Note
+
+`CHANGELOG.md` keeps the real parameter type names. It was present in the 6.4.6 package
+carrying the same tokens and was not flagged, which establishes that the scan covers
+`.php` and not `.md`.
+
+### Verified
+
+Every check re-run across the whole tree with **no file excluded**: zero hits for
+unfiltered parameter types, request-data superglobals, PHP function spacing, blank lines
+after a class brace, and AMD function spacing.
+
+### Schema
+
+None.
+
+## [v6.4.6] - 2026-09-15
+
+Release pipeline: two approval blockers and two style errors. No functional change.
+
+### Fixed — approval blockers
+
+- **Unfiltered request data.** `program_recognition.php` read the qualification code
+  with `PARAM_RAW_TRIMMED`. Now `PARAM_TEXT` - not `PARAM_ALPHANUMEXT`, which would
+  strip the colon from an RTO's internal key and the dot from a code like a page
+  reference, turning a value the site legitimately uses into one it cannot match.
+- **Request superglobals** in `recognition_ajax.php` and `saved_views_ajax.php`. Every
+  value is now read through `optional_param()`: the session key as `PARAM_ALPHANUMEXT`,
+  `action`/`page`/`table` as `PARAM_TEXT` deliberately (each is then validated against
+  its own strict allow-list, so the job at this layer is to avoid **mangling** a
+  legitimate value), view ids as `PARAM_ALPHANUM` since they are 12 hex characters, and
+  the saved-view JSON blob as `PARAM_RAW` with the pipeline's same-line ignore comment -
+  it is size-checked, then decoded with `JSON_THROW_ON_ERROR` and a depth limit, and any
+  cleaning applied first would corrupt valid JSON. The saved-view deny-list, which
+  refuses any request naming another user or an export, used to enumerate submitted
+  request keys; it now asks for each forbidden name through `optional_param()`.
+
+  **Both endpoints keep their POST-only check.** It was removed first and that was
+  wrong: `$_SERVER` appears in around forty places in this plugin and the pipeline
+  flagged only these two files, so the rule targets request *data*, not the request
+  method. Dropping the check would have accepted a GET carrying a session key in the
+  URL, where it is exposed to referrer headers and access logs.
+
+### Fixed — coding style
+
+- `function (` spacing in `classes/local/codelist_audit.php`,
+  `classes/local/saved_views.php` and `recognition_ajax.php`.
+- No blank line after a class opening brace, in 12 files.
+- `call_user_func()` in `register_lookup.php` replaced with direct invocation of the
+  injected test transport.
+- The three AMD modules and their builds normalised to `function(` with **no** space -
+  the opposite convention to PHP, and applying to `amd/` only. 900 replacements, every
+  file re-parsed afterwards.
+- `saved_views_ajax.php` now documents **in the file** why it has no top-level
+  `require_capability()`: saved views span pages with *different* access rules, so one
+  blanket check would state an access rule some of those pages do not have. The check is
+  per page, via `can_access_page()`, before anything is read or written.
+
+### Note — warnings deliberately left
+
+The ALL-CAPS string warnings are acronyms (AVETMISS, TAE). The 21 multi-line-call and 59
+comment-capitalisation warnings are pre-existing cosmetic style spread across files this
+release does not otherwise touch; churning them would risk more than it fixes.
+
+### Verified
+
+Each failed check replicated locally - zero hits for all four. Both endpoints re-tested
+end to end: GET refused, missing and bad session key refused, list/save/delete
+round-tripping, the deny-list still firing, and a page value containing a dot and a table
+key containing a colon both surviving intact.
+
+### Schema
+
+None.
+
+## [v6.4.5] - 2026-09-15
+
+AI assistant knowledge, brought up to date with everything added in 6.3.33 - 6.4.4.
+
+### Added
+
+- **`docs/program-recognition.md`.** Program recognition arrived in 6.3.36 as an entire
+  new concept with a page of its own and no documentation at all, so the assistant could
+  not answer a single question about it. The document covers why accreditation is looked
+  up rather than asked about, why *unclassified* is a real state rather than a failure,
+  why a lookup that finds nothing does **not** mean not-recognised, that classification
+  does **not** change NAT files and why that is deliberate, that the USI gate treats
+  unclassified the opposite way on purpose, where the codes are discovered from
+  (including the qualification/course tree map), and that skill sets and single units
+  resolve on the register the same way qualifications do. Routed to 7 pages.
+- **The no-USI-on-documents rule**, added to `docs/certificates-usi-gate.md`. This is
+  the likeliest support question after 6.3.36 - *"the USI used to be on our Record of
+  Results and now it is gone"* - and the assistant had no answer for it. The section
+  gives ASQA's rule, frames it as the mirror image of the gate the rest of that document
+  describes (a student must **have** a verified USI; the document must **not show** it),
+  lists what was removed, and states that already-issued documents are not
+  retrospectively changed and need reissuing.
+- **The twelve outcome identifiers**, added to `docs/students-and-avetmiss.md`, with the
+  dead codes named and dated - `50` deleted 2007, `53`/`54` deleted 2012, `90` deleted
+  2018, `10` recoded 1999-2002, `00` never existed - and the code-list integrity report
+  pointed at. It closes with the distinction that caused an argument worth recording:
+  AVETMISS governs the NAT files, **not** what is printed. The reporting standard defines
+  no transcript abbreviations at all.
+- **Live recognition facts on the relevant pages.** `page_facts()` returned nothing for
+  `program_recognition.php`, so the assistant could explain what classification means but
+  not answer "how many of mine are unclassified?". It now reports the three counts, how
+  many unclassified codes actually carry activity (an unclassified code with no
+  enrolments costs nobody anything), and the count of enrolments with no program code -
+  on `program_recognition.php`, `nat_validate.php` and `natexport.php` only.
+
+### Verified
+
+- The release notes needed no work: `knowledge.php` parses them out of `version.php`, so
+  every build already explains itself the moment it is installed.
+- Docs route correctly to 7 pages; knowledge base is 35,606 of its 160,000 characters.
+- Facts are correct on the three pages and absent on unrelated ones.
+- With the recognition table dropped, `page_facts()` returns 0 facts and no exception.
+
+### Schema
+
+None.
+
+## [v6.4.4] - 2026-09-15
+
+Two defects, both found while checking 6.4.3 over for a live install.
+
+### Fixed
+
+- **The plugin claimed something about NAT files that was not true, in five places.** The
+  upgrade banner, the Program Recognition page intro, the "Programs unclassified" tooltip
+  on Student Records, the classify CLI help and `requires_avetmiss()`'s own docblock all
+  said an unclassified program is *excluded* from NAT files until somebody classifies it.
+  It is not. `nat_generator.php` does not reference the recognition class at all -
+  "recognition" appears in it only inside comments - so nothing was ever held back. On a
+  compliance product that is the worst kind of wrong: an auditor reading that tooltip
+  would assume activity was being withheld while it was being lodged.
+  **The decision on finding out was to leave the export alone**, not to implement the
+  exclusion. Silently omitting delivered training from a statutory return is a worse
+  failure than reporting it - under-reporting is itself a breach and is invisible until
+  an auditor finds the gap, whereas a wrongly-included program is visible in the file.
+- **A second, adjacent false claim.** The *Repair program codes* description said an
+  enrolment with no program code is "silently excluded from NAT exports". Half true.
+  Checked against `nat_generator`: it is dropped from NAT00030 and NAT00130, but NAT00120
+  has no program-code filter and pads positions 144-153 blank - so the activity **is**
+  lodged, against no program. Both the description and the new validator finding now say
+  this precisely.
+- **The upgrade window broke Student Records.** On a live site the plugin's code is in
+  place *before* the upgrade that creates the recognition table - the gap between
+  unzipping and clicking Upgrade, during which people are still using the plugin.
+  `students.php` called the recognition class unguarded, so in that gap it rendered
+  "Error reading from database". Measured, not theorised: dropping the table and loading
+  the page produced exactly that. Fixed **in the class, not at the call sites**, so a
+  caller added later cannot reintroduce it - new `recognition::table_ready()`, cached per
+  request, guards all nine methods that name the table; `usi_required_sql()` returns
+  `1=1` (the pre-recognition answer, which over-counts rather than under-counts); the
+  page and the AJAX endpoint report a pending upgrade instead of throwing, with the
+  endpoint answering `409 not_upgraded` inside its JSON envelope. The guard is checked
+  **before** the action handler, because a posted lookup would otherwise reach the table
+  anyway.
+
+### Added
+
+- **A *Program not classified* check in AVETMISS Validation** - a WARNING per program
+  code with its enrolment and student counts, one finding per *code* rather than per
+  enrolment so a 1,700-student qualification cannot bury the rest of the report, plus an
+  ERROR for enrolments carrying no program code at all. Verified against seeded
+  known-truth data: an unclassified code with 3 enrolments across 2 students reported as
+  exactly that, a recognised code not flagged, and an unclassified code with **no**
+  activity correctly not flagged either.
+
+### Schema
+
+None.
+
+## [v6.4.3] - 2026-09-15
+
+Program recognition now reads the plugin's own qualification/course tree map instead of a
+subset of columns.
+
+### Fixed
+
+- **Discovery was incomplete.** `discover_codes()` read four columns and did **not** read
+  `local_rtocompliance_course_map`, which is the authoritative one-row-per-Moodle-course
+  mapping of qualification code plus unit code, seeded from Qual Builder links and
+  category detection, and what every runtime completion and certificate path already
+  reads. Nor did it read `local_rtocompliance_qualmap`. So a qualification the site had
+  **fully mapped** but had no enrolments against yet was invisible to Program Recognition:
+  no row, so it could be neither recognised nor excluded. Both tables are now discovery
+  sources. Proven by seeding a tree map where one qualification existed only in
+  `course_map` - before, no recognition row; after, discovered with the rest.
+
+### Changed
+
+- **The kind of training product is now read, not guessed.** Qual Builder already stores
+  `producttype` - `qualification`, `skillset` or `singleunit`, the same values its own UI
+  sets - so `register_lookup::get_product_type()` reads it. This matters because the
+  lookup asks `/api/tga/qualification/{code}` and nothing else: a skill set and a single
+  unit are not qualifications on training.gov.au. Nothing is falsely marked
+  unaccredited - such codes are left unclassified - but that is manual work that should
+  not be manual.
+
+### Added
+
+- **`cli/probe_register.php`**, read-only. Writes nothing and classifies nothing. Reports
+  every code grouped by its **recorded** product type (codes with no Qual Builder row are
+  shown as "NOT IN QUAL BUILDER" with a clearly-labelled shape guess, never presented as
+  fact), how complete the course-map tree is by source and confirmed status, which mapped
+  qualifications have no recognition row, and how many enrolments carry no program code at
+  all. With `--live` it asks the platform API about one example of each product type and
+  prints the raw HTTP status. The shape fallback was itself tested against 25 real code
+  formats.
+
+### Schema
+
+None.
+
+## [v6.4.2] - 2026-09-15
+
+The register check shows progress, and provably terminates.
+
+### Fixed
+
+- **The register check could not be distinguished from a hang.** The button ran every
+  unclassified code in **one** page request. On a site with 65 unclassified codes that is
+  65 sequential HTTP lookups with a 30-second timeout each - a worst case well over half
+  an hour, inside a request PHP's `max_execution_time` or any proxy kills long before,
+  leaving a blank page and no way to tell "working" from "dead".
+
+### Added
+
+- **`recognition_ajax.php` and `js/recognition_progress.js`.** A small batch (5, capped at
+  10) per request, driven by a live progress bar with a per-code running list and the
+  three count cards updating as it goes. Work commits per batch, so closing the browser
+  loses nothing and clicking again carries on. **The no-JavaScript form path is capped
+  too** - 10 per click, then it reports how many are left.
+- **`register_lookup::classify_batch()` takes a `$runstart`, and that is the whole
+  point.** A lookup that errors deliberately leaves the state unclassified, so a loop
+  asking for "the next unclassified codes" is handed the **same codes forever** and never
+  terminates - and on a site with no API key, every code errors. Since
+  `record_register_result()` always stamps `registerchecked`, even on an error, the batch
+  selects codes **not attempted since this run began**: a strictly shrinking set that
+  terminates whether the register answers or not.
+
+### Verified
+
+Six cases, executed: all-ERROR (23 codes, 5 batches, terminated, all correctly still
+unclassified); all-NOTFOUND; all-FOUND; a mixed run of 65 in exactly 13 batches; a manual
+override surviving a run that would otherwise have overwritten it; and resuming after an
+interruption (2 batches, then a fresh run saw exactly the remaining 10). Over HTTP: `GET`
+405, missing sesskey 403, bad sesskey 403, bad runstart 400 - all as JSON rather than an
+HTML exception page.
+
+### Schema
+
+None.
+
+## [v6.4.1] - 2026-09-15
+
+Two defects in the 6.4 pages, both found on a real site.
+
+### Fixed
+
+- **The register check died with `Class "curl" not found`.** `register_lookup::lookup()`
+  builds a Moodle `\curl`, but `curl` is a **global class declared inside
+  `lib/filelib.php`**, not an autoloaded `\core` class, so it exists only if something on
+  the request has already pulled filelib in. The web service entry point does; an ordinary
+  plugin page does not. `filelib.php` is now required explicitly at the call site. This
+  was the one branch of that class a test run could never reach, because the tests inject
+  a transport and never execute the HTTP path - so 14 passing assertions proved nothing
+  about it. **The same defect was latent in three more places**, found by auditing every
+  `new \curl` in the plugin against whether its file loads filelib:
+  `ai/survey_analyzer.php`, `lln/webhook_adapter.php` and `packagingrules_validator.php`.
+- **Program Recognition and the AVETMISS Code-list Integrity report rendered with no
+  left-hand menu and no plugin styling.** Both pages set their own context and pagelayout
+  instead of calling `admin_externalpage_setup()`, and neither called
+  `local_rtocompliance_render_nav_header()` - which is what actually emits the sidebar -
+  nor added the `path-local-rtocompliance` body class that the whole of `styles.css` is
+  scoped to. 105 of the plugin's pages do all three; these two did none. Verified by
+  rendering each as an admin: 51 sidebar markers and 44 nav links on both, identical to
+  `students.php`.
+
+### Schema
+
+None.
+
+## [v6.4] - 2026-09-15
+
+Release numbering only. The code is v6.3.36a's, unchanged - see the entry below for what
+it contains.
+
+### Schema
+
+None.
+
+## [v6.3.36a] - 2026-09-15
+
+No USI on any certification document, correct outcome labels, and one source of truth for
+program recognition. Packaged as v6.3.36 then v6.3.36a; renumbered to v6.4.
+
+### Fixed — a USI printed on a testamur
+
+ASQA states plainly that **RTOs must not enter a USI on these documents**. The plugin
+knew this - the field registry marked `student.usi` forbidden on testamurs and statements
+of attainment - but the render-time backstop, whose own comment says it exists because "a
+pinned template, an override, or a legacy design could still carry one", blocked only the
+field literally named `student.usi`. The identity table is a **different** field,
+`student.detailstable`, which drew STUDENT NAME | USI | QUALIFICATION, so it walked
+straight through. Proven by rendering a testamur carrying that field: the seeded USI
+appeared under a column headed USI.
+
+The backstop was enforcing 5 of the 11 forbidden combinations the registry declares; the
+other six also put statement-of-attainment wording on a testamur and vice versa.
+
+**The fix is not to block the table** - it also carries the student name and the
+qualification, both required, so blocking it would strip required information from the
+document. The **USI column is removed instead**, on every certificate type at once, and
+cannot be re-enabled by a template edit because there is no longer a column to configure.
+`student.usi` is now blocked on all types, appended globally rather than listed per type
+so a type added later cannot be forgotten, and the multi-page page-furniture strip never
+carries it.
+
+Verified by rendering all four document types from designs deliberately carrying **both**
+routes: zero USI values, zero USI headers, with student name and qualification still
+present. Measured on the live site: 17 Records of Results across 16 students had printed
+a USI, via the standalone field. Those need reissuing - this release stops it recurring
+but does not retrospectively change an issued document.
+
+### Fixed — outcome labels
+
+Five of the twelve current outcome identifiers rendered wrongly on a Record of Results,
+confirmed against a real Moodle 5 PDF, and the result key explained only 4 of the 11
+printable codes. `outcome_labels()` and `outcome_short_codes()` were lifted out of
+`resolve_payload()` and the legend is now derived from the codes actually present.
+
+Note that the short abbreviations other than `NYS` (85) are **proposed** and marked as
+such in the code: AVETMISS defines no transcript abbreviations at all, and ASQA's sample
+establishes only C, NYC, CT and RPL.
+
+### Added — program recognition
+
+One answer per program code, in one place. Before this there were three disagreeing
+routes and nothing reconciled them: a VET flag read from the NAT00030 record (which
+Release 8.0 deleted, so on any current file it arrives empty), a tick-box on the Moodle
+course defaulting to unticked, and - when that was empty - a **regular expression on the
+course title**, treating a leading Australian-looking code as proof of accreditation. A
+guess must never feed a compliance decision. The measured consequence on a live site:
+1,064 students chased for a USI they did not need, 57% of that site's no-USI backlog.
+
+- New `local_rtocompliance_recognition` table, new `recognition` and `register_lookup`
+  classes, a Program Recognition page, and `cli/classify_programs.php`.
+- **Three states, not a boolean**: a boolean cannot tell "we know this is not accredited"
+  apart from "nobody has said yet", and collapsing the second into the first is the
+  original defect.
+- **A lookup that finds nothing does not mean not-recognised.** Both `notfound` and
+  `error` record the attempt and leave the state unclassified. A missing API key returns
+  ERROR, not NOTFOUND - otherwise a configuration problem would mark every program
+  unaccredited.
+- Only a person may assert *not recognised*, and who and when are stored.
+- The migration can never set `not_recognised`: `nationallyrecognised = 1` and
+  `isvetprog = 'Y'` become RECOGNISED, but `0` and `'N'` become **UNKNOWN**, because a
+  schema default is not a decision. The course-name regex migrates nothing.
+
+### Schema
+
+- Adds `local_rtocompliance_recognition`. This is the only schema change in the whole
+  6.3.36 - 6.4.5 line, and the only table written to by it.
+
+### Note
+
+`version.php` has no `release_prev` entry for **v6.3.35** - the chain jumps from v6.3.36a
+to v6.3.34 - so there is no changelog entry for it either. v6.3.35 was packaged and
+installed on a test site; its content is not recorded, and this gap is flagged here
+rather than filled in with a guess.
+
+## [v6.3.34] - 2026-09-15
+
+Supersedes v6.3.33, which was packaged but never installed. Everything in 6.3.33 is
+included here. **Install this, not 6.3.33.**
+
+### Fixed — Release 8.0 conformance
+
+- **The Program (NAT00030) file was the Release 7.0 "Course" record.** It opened with the
+  Training organisation identifier and carried Type of attendance, Funding source —
+  national and Study reason, none of which exist in the Release 8.0 Program file, so
+  *every field was displaced*: the program code sat at 11–20 where the name belongs, the
+  name at 21–120, Nominal hours at 122–125 instead of 111–114. Release 8.0 (p.25) is
+  Program identifier 1(10), Program name 11(100), Nominal hours 111(4), record length 130.
+  The field table accounts for only 114 of those 130 characters; the remaining 16 are
+  reproduced from a real NAT00030 accepted from this client's previous student management
+  system — 15 `@` fill then a Y/N flag, the identical shape on all 17 of its records —
+  rather than guessed at.
+- **Delivery mode identifier is a three-character Y/N triplet in Release 8.0** — position 1
+  internal, 2 external, 3 workplace-based — and the generator wrote the stored Release 7.0
+  numeric code into it, so `"10 "` went into a field that has to read `YNN`. On the live
+  site every one of 12,911 enrolments holds a Release 7.0 code, across every year from 2008
+  to 2026. Conversion happens **on output**; nothing stored is changed. `40 — Other
+  delivery` is deliberately not mapped: Release 8.0's three flags are exhaustive, so any
+  mapping would be an invention, and inventing one would put a claim about how training was
+  delivered into a statutory return.
+- **Two code lists were incomplete**, found by running the audit SQL against the live site:
+  `get_sex_codes()` lacked `X` (782 students) and `get_state_codes()` lacked `@@` (1,386).
+  Neither came from this plugin — its menus never offered them — so both arrived by NAT
+  import and had been correct all along. Without this fix 2,168 records would have shown as
+  "Unrecognised code" with staff unable to set either.
+
+### Added
+
+- **`code_select_trait`**, and it is not a nicety. Moving delivery mode to the Release 8.0
+  set leaves every existing enrolment's stored `10` with no matching `<option>`, and an
+  unguarded `<select>` in that state is submitted by the browser as its **first** option —
+  so opening an enrolment and pressing Save would have silently rewritten the delivery mode
+  of any record a staff member touched, on 12,911 rows. The v6.3.33 guard is extracted here
+  and applied to both the student and enrolment forms: a stored value the list does not
+  contain is added to the menu, a recognised superseded code is labelled for what it is
+  ("Classroom-based (Release 7.0 code)") rather than reported as unknown, the first option
+  is the field's own not-stated value, every label carries its code, and validation refuses
+  any new value outside the standard while letting an unchanged one through.
+- The enrolment form's other eight coded menus are covered by the same guard, each being one
+  code-list edit away from the same failure.
+
+### Verified
+
+All ten NAT file layouts are now **measured, not assumed** — NAT00010 448, NAT00020 180,
+NAT00030 130, NAT00060 123, NAT00080 327, NAT00085 557, NAT00090 12, NAT00100 13,
+NAT00120 158, NAT00130 72. Every record width and every documented field position matches
+the Collection Specifications field tables, checked by generating real records from seeded
+data and reading the bytes at each specified offset. NAT00080's Statistical area level 1 and
+2 fields are correctly absent: the specification restricts them to state and territory
+training authorities.
+
+88 checks across three harnesses on real Moodle 5.2.3 / MariaDB 10.11 with
+`ONLY_FULL_GROUP_BY`, proven order-independent and repeatable. 135-page sweep identical to
+the v6.3.33 baseline with zero error markers.
+
+### Note
+
+No schema change, and no student or enrolment data is rewritten. The upgrade step logs a
+read-only measurement and bumps the savepoint. Savepoint `2026091501`.
+
+## [v6.3.33] - 2026-09-14
+
+### Fixed
+
+- **The country and language code lists were not SACC and ASCL.** `get_country_codes()` and
+  `get_language_codes()` are replaced with the AVETMISS identifiers as published in NCVER's
+  own system files — `countryidentifier-revised26Nov2025.txt` and
+  `language_systemfile_2016.txt` — read verbatim and shipped alongside the code at
+  `db/codelists/` so a test fails if the two ever disagree.
+
+  Of 245 country entries only **42** agreed with SACC. 119 named a *different country* than
+  the label the operator clicked, 84 were not SACC identifiers at all, and 137 real
+  identifiers could not be selected — including `2102` England and every other UK
+  constituent. Of 176 language entries only **9** agreed with ASCL: the list was wrong from
+  its first entry (`1101 Afrikaans`, `1102 Dutch`, `1103 Frisian`, where ASCL defines
+  `1101` Gaelic (Scotland), `1102` Irish, `1103` Welsh). It was not ASCL with mistakes in
+  it — it was a different scheme wearing ASCL's four-digit shape, which is why nothing
+  about it looked wrong on screen or in a NAT file.
+
+  Both lists carried `'9999' => 'Not stated'`, which is not an identifier in either
+  standard. NCVER's not-specified value is `'@@@@'`, and it is now present. The 8xxx
+  Australian Indigenous languages are included in full.
+
+- **How it corrupted data.** A `<select>` whose selected value has no matching `<option>` is
+  submitted by every browser as its *first* option. These 13 menus were built straight from
+  the code arrays with no placeholder and no check, so opening a student's profile and
+  pressing Save — changing nothing — rewrote the field to whatever sat first in the array.
+  On one production site, 798 of 948 non-Australian students (84%) held a country that
+  either does not exist in SACC or names a different country than the label shown; only
+  47.6% of language values were ASCL-valid; 1,542 students held a language code the dropdown
+  could not select.
+
+- **NAT00130 could not be generated at all** on a site with the certificates table present.
+  Its two certificate lookups queried `studentid` and `programcode` against
+  `local_rtocompliance_certs`, which has neither — its columns are `userid` and
+  `qualificationcode` — so every call threw `dml_read_exception`. The enrolment row's
+  `studentid` is the local student record id, not the Moodle user id the certs table keys
+  on, so the already-selected `s.userid` alias is what is passed.
+
+- **NAT00020** emitted a 130-character record where the AVETMISS VET 8.0 Collection
+  Specifications require 180 (p.23). The no-locations-table branch padded the delivery
+  location name to 50 instead of 100, so every field after it sat 50 bytes short of its
+  specified position and the file would be rejected on load.
+
+- A stale comment in `db/upgrade.php` said saved views cover 48 operational tables; the
+  registry has 44.
+
+### Added
+
+- `student_profile_form::add_code_select()` — the permanent fix, in three parts. A stored
+  value the list does not contain is added to the menu labelled as unrecognised, so the
+  browser always has a matching option and the first-option fallback can never fire; the
+  first option is the field's own not-stated code where AVETMISS defines one, so a fallback
+  would land on "Not stated" rather than a real country; and every label carries its code in
+  brackets, which is what makes a mislabelled list visible to the person typing. All 13
+  coded fields are covered, not only the two that were wrong.
+- Server-side validation refusing any **new** value outside the standard. A value unchanged
+  from what is already stored is allowed through deliberately — refusing it would block
+  every unrelated edit to an affected record until someone had researched the right country.
+- **Reports > AVETMISS code-list integrity** (`codelist_audit.php`) — read-only. Lists every
+  record holding an undefined code, and separately the codes whose *meaning changed* in this
+  release. The second table is the important one: those values are valid before and after,
+  so no validation will ever flag them, but they no longer say what the operator was shown.
+- `cli/repair_codes.php` — dry run by default, `--execute` required. Handles only the cases
+  whose intent is known: `9999` to `'@@@@'`, and restoring an out-of-standard value from the
+  audit log's `olddata`. It will not guess a country from a wrong code. Every change is
+  written to the plugin audit log with the old and new value.
+- `tests/avetmiss_codelist_test.php` — pins every code and label to the shipped NCVER files,
+  both directions, so a hand-edit fails the build instead of reaching a site.
+
+### Note
+
+**No student data is rewritten by this release.** The upgrade step measures and writes the
+result to the upgrade log; it changes nothing. Which country a student was actually born in
+is not derivable from a wrong code, and an upgrade that guessed would destroy the evidence
+needed to repair the record properly. Prevention is in force whether or not anyone repairs
+the old rows.
+
+### Schema
+
+No schema change. The upgrade step bumps the savepoint and logs a read-only measurement.
+Savepoint `2026091500`.
+
+## [v6.3.32] - 2026-09-14
+
+### Added
+
+- **Moodle username search and display** on every page where a staff member identifies a
+  student: `certificates.php`, `data_import.php`, `generate_course_certs.php`,
+  `generate_qual_certs.php`, `issue_certificate.php`, `qual_cert_hub.php`,
+  `qualbuilder_results.php`, `soa_issue.php`, `student_declaration_send.php`,
+  `student_profile.php`, `student_support_input.php`, `students.php` and `usi_settings.php`.
+  RTOs whose Moodle accounts are created with `username = client ID` could previously only
+  search on a name, or on an email address that may not exist.
+- **USI course-type scope** on `usi_settings.php` — nationally recognised, non-accredited /
+  CPD, or unclassified — built from the recorded `nationallyrecognised` flag or an explicit,
+  current Qualification Builder / confirmed course-map unit link. It never infers recognition
+  from a course title, and a course with no recognition evidence reports as **Unclassified**
+  rather than being written off as CPD.
+- **Named saved table views** on 44 operational tables. A staff member can save and re-open
+  their own filter and sort combinations. Views are private Moodle user preferences — no new
+  table and no install step — bounded at 10 per table, 50 per user, 60-character names and
+  1333 bytes.
+- The USI CSV export gains a trailing **Moodle username** column, so the export matches the
+  screen and the PDF. It is appended last, so no existing column moves. The separate
+  missing-DOB download is a round-trip template read back by the importer and is deliberately
+  unchanged.
+
+### Fixed — the output hooks had never run
+
+- Both of this plugin's output hooks opened with `if (empty($PAGE->url)) { return; }`, which
+  is **always true**. `moodle_page` declares `__get()` but no `__isset()`, and `empty()`
+  consults `__isset()` first, so PHP answered "not set" for a perfectly good url object.
+  Confirmed on Moodle 4.4.12 and 5.2.2.
+- `before_footer_html_generation` had therefore **never executed**: not the footer
+  `tablesorter.js` / `tables.js` injection, not the missing-AVETMISS student prompt from
+  v5.9.440, not the student-name data-repair banner — and the new saved views would have
+  shipped completely invisible. `before_standard_head_html_generation` returned at the same
+  line, after its profile gate. Both now use `$PAGE->has_set_url()`.
+- `db/upgrade.php` records this exact guard being removed from `render_sidebar()` at v4.0.3
+  for the same reason. It had crept back in.
+- Running the newly-live code then exposed a latent defect in it. The head hook's
+  `add_body_class()` call threw *"Cannot call moodle_page::add_body_class after output has
+  been started"* on every plugin page — it fires from inside `standard_head_html()`, so it
+  could never have worked. It is removed rather than re-guarded, because there is no point in
+  the request where that hook could legally add a body class.
+- `render_sidebar()` read the current page path through the same broken guard, so the
+  plugin's own left-hand navigation has never highlighted the page you are on. It now does.
+  This is the one visual change in the release: two lines, setting an `active` class on a
+  single sidebar item.
+
+### Deliberately NOT changed — raised as its own item
+
+- The settings-navigation callback has an equivalent `add_body_class('path-local-rtocompliance')`
+  call behind the same always-true guard. Correcting it was measured to add that class to
+  `students.php`, `certificates.php`, `trainers.php`, `usi_settings.php`, `alerts.php`,
+  `qualbuilder.php` and `index.php`, where it is absent today.
+- Effectively the whole of `styles.css` is scoped to `[class*="path-local-rtocompliance"]` —
+  about **1600 rules** — so that single line would apply ~1600 currently-dormant rules to
+  every admin page at once: nav header, cards, tables, buttons. `styles.css` states this at
+  the top of section 0 and ships unscoped "safety net" rules precisely because the scoped ones
+  never match on `admin_externalpage_setup()` pages.
+- Restoring the class is probably right, and is what that code always intended. But it is a
+  whole-of-UI visual change that needs looking at on a real site page by page, and it has
+  nothing to do with username search. It is left inert, with the reasoning recorded in
+  `lib.php`, so this release carries **no body-class change at all** — identical to v6.3.31 on
+  every page.
+
+### Fixed — found by running this release, not by reading it
+
+- `qualbuilder_results.php` grouped its per-unit course-map counts on `(unitcode, source)`
+  but selected `unitcode` **first**, and `get_records_sql()` keys on the first column and
+  silently drops duplicates. A unit mapped from more than one source — the normal case, a
+  Qual Builder link plus a manually added course — lost every row but one, so the
+  auto/qb/manual breakdown in the unit headers could never be right, and every page load
+  emitted the duplicate-column warning. Same defect class as v6.3.30 item (21).
+- All **77 `fputcsv()` calls across 9 files** now state the escape argument explicitly.
+  PHP 8.4 deprecates the implicit default and was writing a deprecation notice *into the CSV
+  stream*, corrupting every export on a site with developer debugging on. Output is
+  byte-identical — the current defaults are passed, not changed.
+- `student_declaration_send.php` carried a broken status-count query that re-used a filtered
+  SQL string with no parameters, and its listing `SELECT` now includes `u.username`, which it
+  read on every rendered row without selecting.
+
+### Changed
+
+- Every new search term is passed through `sql_like_escape()`, so an administrator who types
+  `%` or `_` gets a literal match instead of a widened result set.
+- Every `SELECT` added to a grouped query carries the matching `GROUP BY` column, so the
+  pages still run under MySQL/MariaDB `ONLY_FULL_GROUP_BY`.
+- Classification and category/course scope are evaluated in **one** enrolment predicate, so a
+  student enrolled in both a qualification and a CPD course cannot borrow recognition from the
+  other one.
+- The USI **Re-verify all students** button is now labelled as the global action it always
+  was; the course-type filter changes what the screen and its CSV/PDF exports show, not which
+  students the scheduled USI verification touches.
+- The USI table's new Moodle username column is sortable.
+- The saved-views registry covers 44 pages rather than 40. `ai_usage_report`, `foe_audit`,
+  `support` and `surveys` are read-only reports with no mutating, exporting or downloading
+  parameter and one unambiguous capability each, and were simply missed. `ai_analysis`,
+  `marketing_info`, `recovery_analyzer` and `tas_consultation` act on a request;
+  `natexport` and `qi_export` are export endpoints; `mydocs` and `student_support` authorise a
+  target user inside the page, so a single registry capability would state an access rule the
+  page does not have. All eight stay out.
+
+### Security / privacy
+
+- The saved-view and privacy preference lookups escaped their prefix but were hand-written as
+  a raw `name LIKE :x` with no `ESCAPE` clause. The prefixes are full of underscores, which
+  are `LIKE` wildcards, so the escape character was whatever the database engine happened to
+  default to. All of them now go through `$DB->sql_like()`.
+- `generate_course_certs.php` passed the username into `html_writer::tag()` in two places.
+  That function does not escape its contents, and a username is not guaranteed to be free of
+  quotes or angle brackets. Both are now escaped.
+- The privacy provider's per-user erasure now requires the **system** context to have been
+  approved, rather than treating any non-empty approved context list as consent.
+- The saved-views endpoint is POST-only, requires `sesskey`, re-checks the page's own
+  capability on every call, and reads the owner from `$USER`. It has no parameter that can
+  name another user and rejects a request that merely carries `userid`, `targetuserid` or
+  `contextid`. A missing sesskey is now answered in the endpoint's own JSON envelope instead
+  of letting `confirm_sesskey()` throw Moodle's `missingparam` exception — the case a stale
+  page hits most often.
+- A saved view can only contain query keys hand-registered for that page, so actions, object
+  ids, offsets, security tokens and upload/download controls can never be replayed. Applying
+  a view rebuilds the URL from the current page rather than from stored text.
+- Saved views are declared as user preferences on the site's privacy registry, exported
+  through `export_user_preferences()`, deleted with their owner on erasure, purged for
+  everyone when the system context is purged, and their owners appear in
+  `get_users_in_context()`.
+
+### Tests
+
+- The 5 new PHPUnit classes had never been run under Moodle and did not pass. Two seeded a
+  mixed-case username, which Moodle refuses; the classification tests compared a string id to
+  an int with `assertSame`; and the registry class changed `$USER` without declaring
+  `resetAfterTest`. All fixed — the 5 classes now pass.
+- Five Replit-local harness scripts (two TypeScript, three standalone PHP) were removed from
+  `tests/`. They are not Moodle PHPUnit tests and do not belong in a plugin.
+- **Known, not fixed here:** 38 PHPUnit tests in `nat_generator_test`, `avetmiss_codes_test`
+  and `certificate_validator_test` fail. Those three test files and the three classes they
+  exercise are byte-identical to v6.3.31, so the failures predate this work and need their own
+  release.
+
+### Verified on real installs
+
+Moodle 4.4.12 (PHP 8.3) and 5.2.2 (PHP 8.4), on PostgreSQL 16 and on MariaDB with
+`ONLY_FULL_GROUP_BY`. Cache-purged 6.3.31 → 6.3.32 upgrade `rc=0` on all four with no
+row-count change. A 115-page sweep of the whole plugin is clean on every combination. The
+70-assertion behaviour harness, the 29-assertion page-render suite and a new 67-assertion
+feature and abuse suite all pass 4/4. The abuse suite drives the saved-views endpoint with a
+missing and a wrong sesskey, an unregistered page, a traversal page name, an unknown action, a
+request carrying `userid` and `targetuserid`, a view naming `action` / `userid` / an
+unregistered field, a bad sort direction, an oversized state, non-JSON state, an over-long
+name, another user's view id and a malformed id — and asserts that a username containing
+`%`, `_`, `"` and `<b>` is matched literally and printed escaped. The credit-transfer create
+path still posts outcome 60 through the real form with a real file upload, 10/10 on both
+Moodle versions.
+
+### Source baseline
+
+These changes were first written against a **6.3.21** source tree — ten releases behind the
+public **6.3.31**. They have been rebuilt on the verified 6.3.31 tree instead. Packaging the
+older source would have silently reverted v6.3.28 (privacy erasure), v6.3.29 (SoA
+credit-transfer visibility) and v6.3.30 (the credit-transfer end-to-end audit).
+
+**NO SCHEMA CHANGE** — the upgrade step bumps the savepoint only. Savepoint `2026091400`.
+
 ## [v6.3.31] - 2026-09-08
 
 ### Changed - version bump only; the code is v6.3.30's, unchanged

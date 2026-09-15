@@ -30,6 +30,44 @@ require_once($CFG->libdir . '/formslib.php');
 use local_rtocompliance\avetmiss_codes;
 
 class enrolment_form extends \moodleform {
+    use code_select_trait;
+
+    /**
+     * The AVETMISS coded fields on this form: getter, not-stated code, legacy getter.
+     *
+     * ADDED v6.3.34, and not optional. Changing the delivery mode set from the Release 7.0
+     * numeric codes to the Release 8.0 Y/N triplets means every existing enrolment's stored
+     * '10' suddenly has no matching <option> - and an unguarded <select> in that state is
+     * submitted by the browser as its FIRST option, so opening an enrolment and pressing
+     * Save would have silently rewritten its delivery mode. That is precisely the defect
+     * v6.3.33 fixed on the student profile, and the code-list change would have recreated it
+     * here on 12,911 rows. The guard makes the change safe; without it the change would have
+     * been the most destructive thing in this release.
+     *
+     * The other eight menus are covered for the same reason: each is one code-list edit away
+     * from the same failure.
+     */
+    const CODE_FIELDS = [
+        'outcomeidentifier'   => ['get_outcome_identifiers', null],
+        'deliverymode'        => ['get_delivery_mode_nat_codes', null, 'get_delivery_mode_legacy_codes'],
+        'fundingsourcenat'    => ['get_funding_source_national_codes', null],
+        'feecharged'          => ['get_fee_charged_codes', null],
+        'concessionstatus'    => ['get_concession_status_codes', ''],
+        'vetflag'             => ['get_vet_flag_codes', null],
+        'vetinschoolsflag'    => ['get_at_school_flag_codes', null],
+        'commencingprogramid' => ['get_commencing_program_codes', null],
+    ];
+
+    /**
+     * This form edits an enrolment, not a student, so the trait is pointed at the right
+     * record - otherwise stored_code_value() would always return null and the guard would
+     * silently do nothing.
+     *
+     * @return \stdClass|null
+     */
+    protected function get_edited_record() {
+        return $this->_customdata['enrolment'] ?? null;
+    }
     protected function definition() {
         global $DB;
         $mform = $this->_form;
@@ -182,24 +220,21 @@ class enrolment_form extends \moodleform {
         $mform->setType('scheduledhours', PARAM_INT);
         $mform->addHelpButton('scheduledhours', 'scheduledhours', 'local_rtocompliance');
 
-        $outcomes = avetmiss_codes::get_outcome_identifiers();
-        $mform->addElement('select', 'outcomeidentifier', get_string('outcome', 'local_rtocompliance'), $outcomes);
+        $this->add_code_select('outcomeidentifier', get_string('outcome', 'local_rtocompliance'));
         // BUG-SR-OUTCOME FIX: '00' is not a valid AVETMISS outcome code — use '70' (Continuing Enrolment).
         $mform->setDefault('outcomeidentifier', '70');
-        $mform->addHelpButton('outcomeidentifier', 'outcomeidentifier', 'local_rtocompliance');
 
-        $deliverymodes = avetmiss_codes::get_delivery_mode_nat_codes();
-        $mform->addElement('select', 'deliverymode', get_string('deliverymode', 'local_rtocompliance'), $deliverymodes);
-        $mform->setDefault('deliverymode', '10');
-        $mform->addHelpButton('deliverymode', 'deliverymode', 'local_rtocompliance');
+        $this->add_code_select('deliverymode', get_string('deliverymode', 'local_rtocompliance'));
+        // 'YNN' (internal only) is the Release 8.0 equivalent of the '10' that used to be
+        // defaulted here. It is a DEFAULT, not a recorded fact.
+        $mform->setDefault('deliverymode', 'YNN');
 
         $mform->addElement('header', 'fundingdetails', get_string('fundingsource', 'local_rtocompliance'));
         $mform->addHelpButton('fundingdetails', 'funding_header', 'local_rtocompliance');
 
-        $fundingsources = avetmiss_codes::get_funding_source_national_codes();
-        $mform->addElement('select', 'fundingsourcenat', get_string('fundingsource', 'local_rtocompliance') . ' (National)', $fundingsources);
+        $this->add_code_select('fundingsourcenat',
+            get_string('fundingsource', 'local_rtocompliance') . ' (National)', 'fundingsourcenat');
         $mform->setDefault('fundingsourcenat', '30');
-        $mform->addHelpButton('fundingsourcenat', 'fundingsourcenat', 'local_rtocompliance');
 
         $mform->addElement('text', 'fundingsourcestate', get_string('fundingsource', 'local_rtocompliance') . ' (State)');
         $mform->setType('fundingsourcestate', PARAM_ALPHANUMEXT);
@@ -209,8 +244,7 @@ class enrolment_form extends \moodleform {
         $mform->setType('tuitionfee', PARAM_FLOAT);
         $mform->addHelpButton('tuitionfee', 'tuitionfee', 'local_rtocompliance');
 
-        $feeoptions = avetmiss_codes::get_fee_charged_codes();
-        $mform->addElement('select', 'feecharged', get_string('feecharged', 'local_rtocompliance'), $feeoptions);
+        $this->add_code_select('feecharged', get_string('feecharged', 'local_rtocompliance'), false);
         $mform->setDefault('feecharged', 'Y');
         $mform->addHelpButton('feecharged', 'feecharged', 'local_rtocompliance');
 
@@ -223,8 +257,7 @@ class enrolment_form extends \moodleform {
         // for QLD DTET, NSW Smart & Skilled, VIC Skills First, SA Skills
         // for All, WA DTWD, TAS Skills Tasmania, NT DITT, and ACT Skills Canberra.
 
-        $concessioncodes = avetmiss_codes::get_concession_status_codes();
-        $mform->addElement('select', 'concessionstatus', get_string('concessionstatus', 'local_rtocompliance'), $concessioncodes);
+        $this->add_code_select('concessionstatus', get_string('concessionstatus', 'local_rtocompliance'), false);
         $mform->setType('concessionstatus', PARAM_ALPHA);
         $mform->addHelpButton('concessionstatus', 'concessionstatus', 'local_rtocompliance');
 
@@ -364,18 +397,15 @@ class enrolment_form extends \moodleform {
         $mform->addElement('header', 'vetoptions', get_string('vetoptions', 'local_rtocompliance'));
         $mform->addHelpButton('vetoptions', 'vetoptions_header', 'local_rtocompliance');
 
-        $vetoptions = avetmiss_codes::get_vet_flag_codes();
-        $mform->addElement('select', 'vetflag', get_string('vetflag', 'local_rtocompliance'), $vetoptions);
+        $this->add_code_select('vetflag', get_string('vetflag', 'local_rtocompliance'), false);
         $mform->setDefault('vetflag', 'Y');
         $mform->addHelpButton('vetflag', 'vetflag', 'local_rtocompliance');
 
-        $vetisOptions = avetmiss_codes::get_at_school_flag_codes();
-        $mform->addElement('select', 'vetinschoolsflag', get_string('vetinschoolsflag', 'local_rtocompliance'), $vetisOptions);
+        $this->add_code_select('vetinschoolsflag', get_string('vetinschoolsflag', 'local_rtocompliance'), false);
         $mform->setDefault('vetinschoolsflag', 'N');
         $mform->addHelpButton('vetinschoolsflag', 'vetinschoolsflag', 'local_rtocompliance');
 
-        $commencingOptions = avetmiss_codes::get_commencing_program_codes();
-        $mform->addElement('select', 'commencingprogramid', get_string('commencingprogramid', 'local_rtocompliance'), $commencingOptions);
+        $this->add_code_select('commencingprogramid', get_string('commencingprogramid', 'local_rtocompliance'), false);
         $mform->setDefault('commencingprogramid', '3');
         $mform->addHelpButton('commencingprogramid', 'commencingprogramid', 'local_rtocompliance');
 
@@ -406,6 +436,10 @@ class enrolment_form extends \moodleform {
 
     public function validation($data, $files) {
         $errors = parent::validation($data, $files);
+
+        // CODE-FIELD GATE (v6.3.34): no NEW value outside the standard may be saved. An
+        // unchanged existing value passes - see code_select_trait.
+        $errors = array_merge($errors, $this->validate_code_fields($data));
 
         if (empty($data['courseid'])) {
             $errors['courseid'] = get_string('required');

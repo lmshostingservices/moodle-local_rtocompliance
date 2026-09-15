@@ -94,8 +94,15 @@ class avetmiss_codes_test extends \advanced_testcase {
         $this->assertArrayHasKey('1201', $languages);
         $this->assertEquals('English', $languages['1201']);
         
+        // CORRECTED AT v6.3.33: this asserted 4302 => 'Mandarin', which is what the old
+        // (non-ASCL) list said. ASCL 4302 is Azeri; Mandarin is 7104. The assertion was
+        // encoding the defect, so it passed for as long as the list was wrong and would
+        // have argued for changing the code back. Both are pinned now.
+        $this->assertArrayHasKey('7104', $languages);
+        $this->assertEquals('Mandarin', $languages['7104']);
+
         $this->assertArrayHasKey('4302', $languages);
-        $this->assertEquals('Mandarin', $languages['4302']);
+        $this->assertEquals('Azeri', $languages['4302']);
         
         $this->assertArrayHasKey('5102', $languages);
         $this->assertEquals('Hindi', $languages['5102']);

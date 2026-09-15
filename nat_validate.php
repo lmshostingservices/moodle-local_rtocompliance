@@ -367,6 +367,73 @@ if ($DB->get_manager()->table_exists($enrolmenttable)) {
     }
 }
 
+// ─── Program recognition (v6.4.4) ─────────────────────────────────────────────
+//
+// WHY THIS IS HERE AND NOT IN THE EXPORT.
+//
+// A program nobody has classified is a program we cannot say is nationally
+// recognised training. There were two ways to handle that, and the wrong one is
+// tempting: hold its activity OUT of the NAT file. That would be a SILENT
+// under-report of delivered training, which is itself a breach and is invisible
+// until an auditor finds the gap. So nothing is held back - the export reports
+// everything it always did - and the unclassified programs are raised HERE, at
+// the one moment somebody is looking at the data before lodging it.
+//
+// One finding per program code, not per enrolment: 1,700 rows saying the same
+// thing about one qualification would bury the rest of the report.
+if (class_exists('\local_rtocompliance\local\recognition')
+        && \local_rtocompliance\local\recognition::table_ready()) {
+    try {
+        $unclassified = $DB->get_records_sql(
+            "SELECT r.qualificationcode AS code,
+                    COUNT(e.id)                AS enrolments,
+                    COUNT(DISTINCT e.studentid) AS students
+               FROM {local_rtocompliance_recognition} r
+               JOIN {local_rtocompliance_enrolments} e
+                 ON UPPER(TRIM(e.programcode)) = r.qualificationcode
+              WHERE r.state = :unknown
+           GROUP BY r.qualificationcode
+           ORDER BY COUNT(DISTINCT e.studentid) DESC, r.qualificationcode",
+            ['unknown' => \local_rtocompliance\local\recognition::STATE_UNKNOWN]);
+
+        foreach ($unclassified as $row) {
+            $add('WARNING', 'Program not classified', $row->code, 'programcode',
+                'Nobody has recorded whether this program is nationally recognised '
+                . 'training (' . (int)$row->enrolments . ' enrolment(s), '
+                . (int)$row->students . ' student(s)). Its activity IS still included '
+                . 'in the NAT file - nothing is held back - but if it is not '
+                . 'nationally recognised it does not belong in the collection at all, '
+                . 'and its students may be being chased for a USI they do not need. '
+                . 'Classify it in Program Recognition.');
+        }
+
+        // Enrolments whose program code is blank never reach the check above,
+        // because there is no code to join on. They are counted per enrolment as
+        // ERRORs elsewhere in this report; this is the one-line summary.
+        $noprogram = (int)$DB->count_records_select('local_rtocompliance_enrolments',
+            "programcode IS NULL OR TRIM(programcode) = ''");
+        if ($noprogram > 0) {
+            $nostudents = (int)$DB->get_field_sql(
+                "SELECT COUNT(DISTINCT studentid) FROM {local_rtocompliance_enrolments}
+                  WHERE programcode IS NULL OR TRIM(programcode) = ''");
+            $add('ERROR', 'Program not classified', 'ALL', 'programcode',
+                $noprogram . ' enrolment(s) covering ' . $nostudents . ' student(s) '
+                . 'have NO program code at all. Verified against nat_generator: these '
+                . 'are DROPPED from NAT00030 (programs) and NAT00130 (program '
+                . 'completions), but are still written into NAT00120 (subject '
+                . 'activity) with a BLANK associated course identifier - so the '
+                . 'activity is lodged against no program. They also cannot be '
+                . 'classified, and their students are counted as needing a USI by '
+                . 'default. Fix them with Repair program codes on the Students page.');
+        }
+    } catch (\Throwable $e) {
+        // table_ready() above already covers the not-yet-upgraded case, so anything
+        // reaching here is a real fault worth surfacing - but not worth aborting the
+        // rest of the report for.
+        $dataerror .= 'Program recognition check failed: ' . $e->getMessage() . ' ';
+    }
+}
+
 // ─── Tally ────────────────────────────────────────────────────────────────────
 $errorcount   = 0;
 $warningcount = 0;
@@ -403,9 +470,9 @@ if ($export === 'csv') {
     header('Content-Disposition: attachment; filename="nat_validation_' . date('Ymd_His') . '.csv"');
     header('Cache-Control: no-cache, must-revalidate');
     $fh = fopen('php://output', 'w');
-    fputcsv($fh, ['Severity', 'Category', 'Client ID / Unit', 'Field', 'Message']);
+    fputcsv($fh, ['Severity', 'Category', 'Client ID / Unit', 'Field', 'Message'], ',', '"', '\\');
     foreach ($findings as $f) {
-        fputcsv($fh, [$f['severity'], $f['category'], $f['ref'], $f['field'], $f['message']]);
+        fputcsv($fh, [$f['severity'], $f['category'], $f['ref'], $f['field'], $f['message']], ',', '"', '\\');
     }
     fclose($fh);
     exit;

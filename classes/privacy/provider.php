@@ -53,11 +53,13 @@ use core_privacy\local\request\approved_userlist;
 use core_privacy\local\request\contextlist;
 use core_privacy\local\request\userlist;
 use core_privacy\local\request\writer;
+use local_rtocompliance\local\saved_views;
 
 class provider implements
     \core_privacy\local\metadata\provider,
     \core_privacy\local\request\plugin\provider,
-    \core_privacy\local\request\core_userlist_provider {
+    \core_privacy\local\request\core_userlist_provider,
+    \core_privacy\local\request\user_preference_provider {
 
     /**
      * Tables where the person IS the record. Deleted on erasure.
@@ -116,6 +118,11 @@ class provider implements
             'local_rtocompliance_tas' => ['createdby'],
             'local_rtocompliance_tas_consult' => ['createdby'],
             'local_rtocompliance_qualbuilder' => ['createdby'],
+            // PROGRAM-RECOGNITION (v6.3.36): setby records WHO decided that a program
+            // is or is not nationally recognised. The decision is an audit trail an
+            // ASQA auditor may ask about, so it is authorship, not subject data - the
+            // table holds no student information at all.
+            'local_rtocompliance_recognition' => ['setby'],
             'local_rtocompliance_certtmpl' => ['createdby', 'approvedby'],
         ];
     }
@@ -250,7 +257,59 @@ class provider implements
         // certificates are stored as files against rpl records.
         $collection->add_subsystem_link('core_files', [], 'privacy:metadata:core_files');
 
+        // SAVED-VIEWS (v6.3.32): a saved table view is a private user
+        // preference, not a plugin table. The per-view and per-namespace
+        // preference names carry a hash, so there is no single fixed name to
+        // declare; the two families are declared here and the concrete rows
+        // are enumerated at export and erasure time.
+        $collection->add_user_preference(
+            saved_views::VIEW_PREFERENCE_PREFIX . '*',
+            'privacy:metadata:preference:savedviews'
+        );
+        $collection->add_user_preference(
+            saved_views::MANIFEST_PREFERENCE_PREFIX . '*',
+            'privacy:metadata:preference:savedviews'
+        );
+
         return $collection;
+    }
+
+    /**
+     * Every LIKE below matches a preference-name prefix that is full of
+     * underscores - LIKE wildcards. sql_like() is used rather than a raw
+     * "name LIKE :x" so the driver emits its own ESCAPE clause and the
+     * escaped prefix cannot silently match unrelated preferences.
+     *
+     * @return array{0:string,1:array} SQL fragment and parameters.
+     */
+    protected static function saved_view_preference_like(): array {
+        global $DB;
+        $like = $DB->sql_like('name', ':savedviewprefix')
+            . ' OR ' . $DB->sql_like('name', ':savedmanifestprefix');
+        return [$like, [
+            'savedviewprefix' => $DB->sql_like_escape(saved_views::VIEW_PREFERENCE_PREFIX) . '%',
+            'savedmanifestprefix' => $DB->sql_like_escape(saved_views::MANIFEST_PREFERENCE_PREFIX) . '%',
+        ]];
+    }
+
+    /**
+     * Export this user\'s saved table-view preferences.
+     *
+     * @param int $userid
+     */
+    public static function export_user_preferences(int $userid) {
+        foreach (saved_views::user_preference_names($userid) as $name) {
+            $value = get_user_preferences($name, null, $userid);
+            if ($value === null) {
+                continue;
+            }
+            writer::export_user_preference(
+                'local_rtocompliance',
+                $name,
+                $value,
+                get_string('privacy:metadata:preference:savedviews', 'local_rtocompliance')
+            );
+        }
     }
 
     /**
@@ -329,6 +388,13 @@ class provider implements
                     []);
             }
         }
+        // SAVED-VIEWS (v6.3.32): a staff member whose only plugin data is a
+        // saved table view still has data here and must appear in the list.
+        list($savedlike, $savedparams) = self::saved_view_preference_like();
+        $userlist->add_from_sql(
+            'userid',
+            "SELECT DISTINCT userid FROM {user_preferences} WHERE $savedlike",
+            $savedparams);
     }
 
     /**
@@ -459,6 +525,10 @@ class provider implements
                 $DB->delete_records($table);
             }
         }
+        // SAVED-VIEWS (v6.3.32): these live in {user_preferences} at system
+        // level, so purging the system context purges everyone\'s.
+        list($savedlike, $savedparams) = self::saved_view_preference_like();
+        $DB->delete_records_select('user_preferences', $savedlike, $savedparams);
     }
 
     /**
@@ -468,6 +538,20 @@ class provider implements
      */
     public static function delete_data_for_user(approved_contextlist $contextlist) {
         if (empty($contextlist->count())) {
+            return;
+        }
+        // CONTEXT GATE (v6.3.32): every table this provider owns, and every
+        // saved-view preference, is held at system context. If the Privacy API
+        // approved some other context, this plugin has nothing to erase there -
+        // erase nothing rather than treating a non-empty list as consent.
+        $hassystem = false;
+        foreach ($contextlist->get_contexts() as $context) {
+            if ($context->contextlevel == CONTEXT_SYSTEM) {
+                $hassystem = true;
+                break;
+            }
+        }
+        if (!$hassystem) {
             return;
         }
         self::delete_for_userids([(int) $contextlist->get_user()->id]);
@@ -573,7 +657,14 @@ class provider implements
             }
         }
 
-        // 6. Authorship rows are deliberately NOT deleted - see the class docblock.
+        // 6. Saved table views (v6.3.32). These are the erasing person\'s own
+        // private display preferences, not somebody else\'s compliance record,
+        // so they are SUBJECT data and go with the rest.
+        foreach ($userids as $userid) {
+            saved_views::delete_user_preferences((int) $userid);
+        }
+
+        // 7. Authorship rows are deliberately NOT deleted - see the class docblock.
     }
 
     /**

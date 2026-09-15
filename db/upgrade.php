@@ -15094,5 +15094,441 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026090903, 'local', 'rtocompliance');
     }
 
+    if ($oldversion < 2026091400) {
+        // USERNAME-SEARCH / USI-COURSE-TYPE / SAVED-VIEWS (v6.3.32): the Moodle username is
+        // now searchable and shown on every student-identifying page; usi_settings.php gains
+        // a display-only course-type scope built from recorded recognition or an explicit
+        // Qual Builder / course-map unit link; and staff can name and re-open their own
+        // filter/sort combinations on 44 operational tables. Saved views are stored as
+        // Moodle user preferences, so there is nothing to create here and nothing to
+        // migrate - a site with no saved views simply has no preference rows. No table,
+        // column or index is touched.
+        upgrade_plugin_savepoint(true, 2026091400, 'local', 'rtocompliance');
+    }
+
+    if ($oldversion < 2026091500) {
+        // AVETMISS CODE LISTS (v6.3.33): get_country_codes() and get_language_codes()
+        // are replaced with SACC and ASCL as published in NCVER's own system files.
+        // The lists they replace were not damaged copies of those standards - they were
+        // different classifications with the same four-digit shape. Only 42 of 245
+        // country labels and 9 of 176 language labels agreed with NCVER; 119 country
+        // codes and 85 language codes named a DIFFERENT place or language than the
+        // label the operator clicked.
+        //
+        // NOTHING IS REWRITTEN HERE, ON PURPOSE. Which country a student was actually
+        // born in is not derivable from a wrong code: 6103 stored against a label that
+        // read 'India' could have been intended as India, or genuinely as Macau. An
+        // upgrade step that guessed would destroy the evidence needed to repair the
+        // record properly, and it would do so unattended, during a maintenance window,
+        // with no record of what it changed. So this step only MEASURES, and writes the
+        // result to the upgrade log.
+        //
+        // Repair is a separate, deliberate operation: Reports > AVETMISS code-list
+        // integrity lists every affected record, and cli/repair_codes.php performs the
+        // mechanical part (a code whose intent is unambiguous, or a value recoverable
+        // from the audit log's olddata) with a dry run by default and --execute
+        // required. Prevention is already in place regardless of whether anyone repairs
+        // the old rows: student_profile_form::add_code_select() cannot fall back to a
+        // wrong option, and its validation() refuses any new value outside the standard.
+        try {
+            mtrace(\local_rtocompliance\local\codelist_audit::summarise());
+        } catch (\Throwable $e) {
+            // A report must never fail an upgrade. If the students table is not in a
+            // readable state at this point, say so and carry on - the same report is
+            // available from the admin UI afterwards.
+            mtrace('AVETMISS code lists: integrity check could not run (' . $e->getMessage() . ').');
+        }
+
+        upgrade_plugin_savepoint(true, 2026091500, 'local', 'rtocompliance');
+    }
+
+    if ($oldversion < 2026091501) {
+        // AVETMISS RELEASE 8.0 CONFORMANCE (v6.3.34). Two parts of the generator were
+        // still built to Release 7.0 and would have been rejected by NCVER:
+        //
+        //  - The Program (NAT00030) file was the Release 7.0 "Course" record: it opened
+        //    with the Training organisation identifier and carried Type of attendance,
+        //    Funding source - national and Study reason, none of which exist in Release
+        //    8.0. Every field was displaced - the program code sat where the name belongs
+        //    and Nominal hours at 122-125 instead of 111-114.
+        //  - Delivery mode identifier became a three-character field of Y/N flags in
+        //    Release 8.0 (internal / external / workplace-based). The generator wrote the
+        //    stored Release 7.0 numeric code into it, so "10 " went into a field that has
+        //    to read "YNN".
+        //
+        // NOTHING STORED IS CHANGED. Delivery mode is converted on its way into the NAT
+        // file, so a site whose 12,911 enrolments all hold '10' starts producing correct
+        // files without a single row being rewritten. The enrolment form now offers the
+        // Release 8.0 triplets for new records and keeps showing a stored legacy code as
+        // what it is.
+        //
+        // That form guard is not a nicety: without it, changing the delivery mode code set
+        // would have left every existing enrolment's '10' with no matching <option>, and an
+        // unguarded <select> in that state is submitted by the browser as its FIRST option -
+        // so opening an enrolment and pressing Save would have silently rewritten it. The
+        // guard is what makes a code-list change safe, which is why it now lives in
+        // code_select_trait and covers both forms rather than one.
+        try {
+            mtrace(\local_rtocompliance\local\codelist_audit::summarise());
+        } catch (\Throwable $e) {
+            mtrace('AVETMISS code lists: integrity check could not run (' . $e->getMessage() . ').');
+        }
+
+        upgrade_plugin_savepoint(true, 2026091501, 'local', 'rtocompliance');
+    }
+
+    if ($oldversion < 2026091502) {
+        // INVALID SCHEMA DEFAULTS (v6.3.35). Two columns carried defaults that are not
+        // valid AVETMISS, so ANY insert that omitted them created non-compliant data - no
+        // matter how clean the site's own data entry was. This is the one class of defect
+        // a careful client cannot avoid, because it lives in the table definition.
+        //
+        //  - outcomeidentifier DEFAULT '00'. '00' is not an outcome identifier in AVETMISS
+        //    2.3 at all; this plugin's own code comments say so. Changed to '70'
+        //    (Continuing activity), which is valid AND is the correct meaning for an
+        //    enrolment row that has just been created.
+        //  - deliverymode DEFAULT '10'. That is a Release 7.0 code in a field Release 8.0
+        //    redefined as a three-character Y/N triplet. Emptied rather than changed to
+        //    'YNN': defaulting to any real value makes the SCHEMA assert how training was
+        //    delivered, and on one live site that default had been silently accepted on
+        //    12,927 of 12,937 enrolments. Empty means not recorded.
+        //
+        // EXISTING ROWS ARE NOT TOUCHED. change_field_default() alters the column
+        // definition only; every stored value stays exactly as it is, and the NAT
+        // generator converts legacy delivery modes on output. Rows already holding '00'
+        // or '10' keep them and remain visible in Reports > AVETMISS code-list integrity.
+        // WHY THE INDEX IS DROPPED AND REBUILT, AND WHY THIS ORDER:
+        // Moodle's XMLDB refuses to alter a column that carries an index. The first
+        // attempt at this step called change_field_default() directly on
+        // outcomeidentifier and threw:
+        //
+        //   column local_rtocompliance_enrolments->outcomeidentifier cannot be modified.
+        //   Dependency found with index mdl_locartocenro_out_ix (outcomeidentifier)
+        //   Error code: ddldependencyerror
+        //
+        // That aborts the whole upgrade before the savepoint, leaving the site at the
+        // previous version and needing manual intervention. So the index is dropped, the
+        // default changed, and the index rebuilt - the standard XMLDB sequence.
+        //
+        // deliverymode is done FIRST because it carries no index and cannot fail. Every
+        // operation here is guarded by an existence check and is idempotent, so if a later
+        // one does fail the admin can simply re-run the upgrade: change_field_default() on
+        // an already-changed column is a no-op, and the index is only dropped if present
+        // and only added if absent. Nothing is left half-done.
+        $dbman = $DB->get_manager();
+        $table = new xmldb_table('local_rtocompliance_enrolments');
+
+        // 1. deliverymode - no index, no dependency.
+        $field = new xmldb_field('deliverymode', XMLDB_TYPE_CHAR, '3', null, XMLDB_NOTNULL, null, '');
+        if ($dbman->field_exists($table, $field)) {
+            $dbman->change_field_default($table, $field);
+        }
+
+        // 2. outcomeidentifier - indexed, so the index comes off and goes back on.
+        $field = new xmldb_field('outcomeidentifier', XMLDB_TYPE_CHAR, '2', null, XMLDB_NOTNULL, null, '70');
+        $index = new xmldb_index('outcomeidentifier', XMLDB_INDEX_NOTUNIQUE, ['outcomeidentifier']);
+        if ($dbman->field_exists($table, $field)) {
+            $indexexisted = $dbman->index_exists($table, $index);
+            if ($indexexisted) {
+                $dbman->drop_index($table, $index);
+            }
+            $dbman->change_field_default($table, $field);
+            // Rebuilt unconditionally when it was there before, and the existence check
+            // keeps a re-run safe. The index must come back: process_enrolment_task and
+            // the NAT generators all filter on this column.
+            if (!$dbman->index_exists($table, $index)) {
+                $dbman->add_index($table, $index);
+            }
+        }
+
+        // Log the integrity measurement on this upgrade too, not just the earlier ones.
+        // An admin upgrading from any version should see the state of their coded data,
+        // and from v6.3.35 that includes the enrolment fields the plugin refuses to guess
+        // at - a blank delivery mode is now visible here rather than surfacing as an NCVER
+        // validation failure after lodgement.
+        try {
+            mtrace(\local_rtocompliance\local\codelist_audit::summarise());
+            foreach (\local_rtocompliance\local\codelist_audit::get_enrolment_gaps() as $gap) {
+                mtrace(sprintf('AVETMISS enrolment gap: %s - %s (%d enrolment(s)).',
+                    $gap->field, $gap->problem, $gap->enrolments));
+            }
+        } catch (\Throwable $e) {
+            mtrace('AVETMISS code lists: integrity check could not run (' . $e->getMessage() . ').');
+        }
+
+        upgrade_plugin_savepoint(true, 2026091502, 'local', 'rtocompliance');
+    }
+
+    if ($oldversion < 2026091503) {
+        // v6.3.36 PROGRAM RECOGNITION - ONE SOURCE OF TRUTH.
+        //
+        // Before this there were THREE routes deciding whether a program was
+        // nationally recognised training, and nothing read more than one of them:
+        //
+        //  1. {avetmiss_programme}.isvetprog, read by data_import.php:1720 from the
+        //     LAST CHARACTER of the NAT00030 record. Release 8.0 deleted the VET flag
+        //     from NAT00030, so on a conformant file that character is a space and the
+        //     flag lands NULL - a new RTO importing correct data learns nothing.
+        //  2. {courses}.nationallyrecognised, an int defaulting to 0, set only by a
+        //     human ticking a box.
+        //  3. A REGEX on the Moodle course fullname/shortname (lib.php), treating a
+        //     leading Australian unit code as proof of accreditation.
+        //
+        // Measured consequence on a live site: zero courses had recognition recorded,
+        // and 1,064 students enrolled only in non-accredited short courses were being
+        // chased for a USI they do not need - 57% of that site's no-USI backlog.
+        //
+        // {local_rtocompliance_recognition} is now the single answer, keyed by
+        // qualification code, with THREE states. The third state is the point: a
+        // boolean cannot distinguish "we know this is not accredited" from "nobody has
+        // said yet", and defaulting the latter to false is the whole defect.
+        $table = new xmldb_table('local_rtocompliance_recognition');
+        if (!$dbman->table_exists($table)) {
+            $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+            $table->add_field('qualificationcode', XMLDB_TYPE_CHAR, '20', null, XMLDB_NOTNULL, null, null);
+            $table->add_field('state', XMLDB_TYPE_CHAR, '16', null, XMLDB_NOTNULL, null, 'unknown');
+            $table->add_field('source', XMLDB_TYPE_CHAR, '16', null, XMLDB_NOTNULL, null, 'none');
+            $table->add_field('registertitle', XMLDB_TYPE_CHAR, '255', null, null, null, null);
+            $table->add_field('registerchecked', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+            $table->add_field('registerresult', XMLDB_TYPE_CHAR, '32', null, null, null, null);
+            $table->add_field('setby', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+            $table->add_field('settime', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+            $table->add_field('notes', XMLDB_TYPE_TEXT, null, null, null, null, null);
+            $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+            $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+            $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+            $table->add_key('qualificationcode_unique', XMLDB_KEY_UNIQUE, ['qualificationcode']);
+            $table->add_index('state', XMLDB_INDEX_NOTUNIQUE, ['state']);
+            $dbman->create_table($table);
+        }
+
+        // MIGRATION. Every qualification code the site already knows about gets a row,
+        // so nothing is invisible. What each existing signal is allowed to assert:
+        //
+        //  - courses.nationallyrecognised = 1  -> RECOGNISED. Somebody deliberately
+        //    ticked that box; it is a human assertion and is carried across as one.
+        //  - courses.nationallyrecognised = 0  -> UNKNOWN, *not* not_recognised. That
+        //    zero is the schema default, so it cannot be told apart from an untouched
+        //    course. Reading it as a decision is exactly the mistake being fixed.
+        //  - isvetprog = 'Y'                   -> RECOGNISED (the RTO's own prior NAT).
+        //  - isvetprog = 'N'                   -> UNKNOWN, for the same reason: on a
+        //    Release 8.0 file that position is blank, so 'N' cannot be distinguished
+        //    from "the field no longer exists".
+        //  - the course-name regex                -> NOTHING. A guess does not migrate.
+        //
+        // So the migration only ever creates rows and only ever promotes to RECOGNISED
+        // on a positive human or prior-NAT signal. It cannot mark anything
+        // not_recognised - only a person can do that, through the report.
+        try {
+            $seen = [];
+            $sources = [
+                "SELECT DISTINCT qualificationcode AS c, nationallyrecognised AS flag
+                   FROM {local_rtocompliance_courses}
+                  WHERE qualificationcode IS NOT NULL AND qualificationcode <> ''",
+                "SELECT DISTINCT qualcode AS c,
+                        CASE WHEN isvetprog = 'Y' THEN 1 ELSE 0 END AS flag
+                   FROM {local_rtocompliance_avetmiss_programme}
+                  WHERE qualcode IS NOT NULL AND qualcode <> ''",
+                "SELECT DISTINCT programcode AS c, 0 AS flag
+                   FROM {local_rtocompliance_enrolments}
+                  WHERE programcode IS NOT NULL AND programcode <> ''",
+            ];
+            foreach ($sources as $sql) {
+                foreach ($DB->get_recordset_sql($sql) as $row) {
+                    $code = \local_rtocompliance\local\recognition::normalise_code($row->c);
+                    if ($code === '') {
+                        continue;
+                    }
+                    // A positive signal from any source wins; later sources cannot
+                    // downgrade a code an earlier one asserted.
+                    $seen[$code] = ($seen[$code] ?? 0) || !empty($row->flag);
+                }
+            }
+            $now = time();
+            $created = 0;
+            $recognised = 0;
+            foreach ($seen as $code => $isrecognised) {
+                if ($DB->record_exists('local_rtocompliance_recognition',
+                        ['qualificationcode' => $code])) {
+                    continue;
+                }
+                $DB->insert_record('local_rtocompliance_recognition', (object)[
+                    'qualificationcode' => $code,
+                    'state'  => $isrecognised
+                        ? \local_rtocompliance\local\recognition::STATE_RECOGNISED
+                        : \local_rtocompliance\local\recognition::STATE_UNKNOWN,
+                    'source' => $isrecognised
+                        ? \local_rtocompliance\local\recognition::SOURCE_LEGACY
+                        : \local_rtocompliance\local\recognition::SOURCE_NONE,
+                    'registerresult' => 'never',
+                    'notes'  => $isrecognised
+                        ? 'Carried across from the pre-v6.3.36 nationallyrecognised / '
+                          . 'isvetprog flag. Confirm against the National Register.'
+                        : null,
+                    'timecreated'  => $now,
+                    'timemodified' => $now,
+                ]);
+                $created++;
+                if ($isrecognised) {
+                    $recognised++;
+                }
+            }
+            mtrace("Program recognition: created $created qualification code row(s), "
+                 . "$recognised carried across as nationally recognised from the old flags.");
+            mtrace(\local_rtocompliance\local\recognition::summarise());
+        } catch (\Throwable $e) {
+            mtrace('Program recognition: migration could not run (' . $e->getMessage() . ').');
+        }
+
+        upgrade_plugin_savepoint(true, 2026091503, 'local', 'rtocompliance');
+    }
+
+    if ($oldversion < 2026091504) {
+        // v6.3.36a NAVIGATION ONLY - no schema change, no data change.
+        //
+        // Program Recognition and the AVETMISS Code-list Integrity report were both
+        // registered in settings.php and never added to the plugin's own sidebar, so
+        // the two reports that list records which CANNOT BE LODGED were reachable
+        // only by finding them in Site administration. Both are now in
+        // 6. Data & Reporting.
+        //
+        // This step exists purely to carry the version bump: 2026091503 had already
+        // been installed, so without a new version Moodle would report no upgrade
+        // needed and keep serving the cached navigation.
+        purge_all_caches();
+        mtrace('Navigation: Program Recognition and AVETMISS Code-list Integrity are now '
+             . 'in the RTO Compliance menu under 6. Data & Reporting.');
+        mtrace(\local_rtocompliance\local\recognition::summarise());
+
+        upgrade_plugin_savepoint(true, 2026091504, 'local', 'rtocompliance');
+    }
+
+    if ($oldversion < 2026091505) {
+        // v6.4 RELEASE NUMBERING ONLY - no schema change, no data change, no code
+        // change. The 6.3.36 / 6.3.36a strings described the work accurately but
+        // buried it in a patch number; this is the 6.4 line. The version integer
+        // has to move for Moodle to run anything at all, so it carries a cache
+        // purge and nothing else.
+        purge_all_caches();
+        mtrace('local_rtocompliance 6.4 - no schema or data change from 6.3.36a.');
+        mtrace(\local_rtocompliance\local\recognition::summarise());
+
+        upgrade_plugin_savepoint(true, 2026091505, 'local', 'rtocompliance');
+    }
+
+    if ($oldversion < 2026091506) {
+        // v6.4.1 CODE FIXES ONLY - no schema change, no data change.
+        //
+        // (1) The register check died with 'Class "curl" not found': curl is declared
+        //     in lib/filelib.php and is not autoloaded. Fixed at four call sites.
+        // (2) Program Recognition and the AVETMISS Code-list Integrity report rendered
+        //     without the plugin's left-hand menu or styling.
+        //
+        // The cache purge matters here: styles.css and the navigation are both cached.
+        purge_all_caches();
+        mtrace('local_rtocompliance 6.4.1 - register check fixed (curl class), and '
+             . 'Program Recognition / Code-list Integrity now render with the plugin menu.');
+
+        upgrade_plugin_savepoint(true, 2026091506, 'local', 'rtocompliance');
+    }
+
+    if ($oldversion < 2026091507) {
+        // v6.4.2 PROGRESS UI ONLY - no schema change, no data change.
+        //
+        // The register check now runs in small batches with a progress bar instead of
+        // doing every code in one request. New files: recognition_ajax.php and
+        // js/recognition_progress.js. The cache purge matters: the new language
+        // strings and the JS both come from caches that would otherwise serve the old
+        // versions, which shows up as [[recognition_prog_...]] on screen.
+        purge_all_caches();
+        mtrace('local_rtocompliance 6.4.2 - the National Register check now shows '
+             . 'progress and runs in batches. It can be stopped and resumed safely.');
+
+        upgrade_plugin_savepoint(true, 2026091507, 'local', 'rtocompliance');
+    }
+
+    if ($oldversion < 2026091508) {
+        // v6.4.3 DISCOVERY NOW READS THE COURSE MAP - no schema change.
+        //
+        // discover_codes() did not read local_rtocompliance_course_map, so a
+        // qualification the site had fully mapped but had no enrolments against was
+        // invisible to Program Recognition. Running discovery here means those codes
+        // appear immediately on upgrade rather than only after somebody happens to
+        // press the register-check button.
+        //
+        // This creates UNCLASSIFIED rows only. It cannot mark anything recognised or
+        // not recognised, and it cannot disturb a decision anyone has recorded.
+        $created = \local_rtocompliance\local\register_lookup::discover_codes();
+        mtrace('Program recognition: discovery now includes the qualification / course '
+             . 'tree map. ' . $created . ' code(s) added that were not visible before.');
+        mtrace(\local_rtocompliance\local\recognition::summarise());
+
+        purge_all_caches();
+
+        upgrade_plugin_savepoint(true, 2026091508, 'local', 'rtocompliance');
+    }
+
+    if ($oldversion < 2026091509) {
+        // v6.4.4 TEXT CORRECTIONS AND UPGRADE-WINDOW SAFETY - no schema change.
+        //
+        // (1) Five places claimed an unclassified program is excluded from NAT
+        //     files. It never was - nat_generator.php does not consult the
+        //     recognition class at all. The texts are corrected, and unclassified
+        //     programs are now raised in AVETMISS Validation instead, where a person
+        //     sees them before lodging. The export is deliberately unchanged:
+        //     silently omitting delivered training is worse than reporting it.
+        // (2) students.php called the recognition class unguarded, so between
+        //     unzipping this plugin and running this upgrade it showed 'Error
+        //     reading from database'. recognition::table_ready() now guards every
+        //     method that names the table.
+        //
+        // The cache purge carries the corrected language strings.
+        purge_all_caches();
+        mtrace('local_rtocompliance 6.4.4 - corrected: an unclassified program is '
+             . 'STILL REPORTED in NAT files. Nothing is held back. Unclassified '
+             . 'programs are now listed in AVETMISS Validation.');
+        mtrace(\local_rtocompliance\local\recognition::summarise());
+
+        upgrade_plugin_savepoint(true, 2026091509, 'local', 'rtocompliance');
+    }
+
+    if ($oldversion < 2026091510) {
+        // v6.4.5 AI ASSISTANT KNOWLEDGE - no schema change, no data change.
+        //
+        // New docs/program-recognition.md, the USI-not-printed rule added to
+        // docs/certificates-usi-gate.md, the twelve outcome identifiers added to
+        // docs/students-and-avetmiss.md, and live recognition counts on the
+        // recognition, validation and export pages.
+        //
+        // The docs cache keys itself on file mtime and size, so it picks the new
+        // files up without this purge; the purge is for the language strings and
+        // navigation that came with the same release train.
+        purge_all_caches();
+        mtrace('local_rtocompliance 6.4.5 - the AI assistant now covers program '
+             . 'recognition, the no-USI-on-documents rule, and the outcome identifiers.');
+
+        upgrade_plugin_savepoint(true, 2026091510, 'local', 'rtocompliance');
+    }
+
+    if ($oldversion < 2026091511) {
+        // v6.4.6 RELEASE-PIPELINE COMPLIANCE - no schema change, no data change.
+        //
+        // Request data on two AJAX endpoints and one page is now read through
+        // optional_param() with types chosen so they cannot mangle a legitimate value,
+        // plus coding-style corrections. Both endpoints keep their POST-only check.
+        purge_all_caches();
+        mtrace('local_rtocompliance 6.4.6 - release pipeline blockers cleared. '
+             . 'No functional change.');
+
+        upgrade_plugin_savepoint(true, 2026091511, 'local', 'rtocompliance');
+    }
+
+    if ($oldversion < 2026091512) {
+        // v6.4.7 RELEASE-NOTE WORDING ONLY - no schema change, no data change, no
+        // functional change. The pipeline scans version.php, and 6.4.6's own note
+        // quoted the parameter-type names its security check looks for.
+        upgrade_plugin_savepoint(true, 2026091512, 'local', 'rtocompliance');
+    }
+
     return true;
 }

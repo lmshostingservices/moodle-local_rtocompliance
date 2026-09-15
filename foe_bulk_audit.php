@@ -499,7 +499,7 @@ if ($_fh) {
             'deleted_at','deleted_by','student_username','student_name','client_id',
             'course_shortname','course_fullname','unit_code','enrol_method',
             'should_exist_today','should_reason','exists_today','verdict',
-    ]);
+    ], ',', '"', '\\');
     foreach ($_rows as $_r) {
         fputcsv(
             $_fh, [
@@ -508,7 +508,7 @@ if ($_fh) {
                 $_r['course_fullname'], $_r['unit_code'],    $_r['enrol_method'],
                 $_r['should_exist'],    $_r['should_reason'],$_r['exists_now'],
                 $_r['verdict'],
-        ]);
+        ], ',', '"', '\\');
     }
     fclose($_fh);
 }

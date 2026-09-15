@@ -100,3 +100,35 @@ Ticking *Force regenerate* voids the student's existing certificate and issues a
 From v6.3.13 the old certificate is superseded **only after** the replacement exists. On
 earlier builds it was voided first, so a refused replacement left the student holding nothing
 at all while the summary reported it as a success.
+
+## The USI must NOT be printed on the document
+
+This is the mirror image of the gate above, and the two are easy to confuse. A student
+must **have** a verified USI before AQF certification can issue. The USI must **not
+appear on** the certification document itself.
+
+ASQA states it plainly: *RTOs must not enter a USI on these documents.* It applies to
+testamurs and statements of attainment, and a Record of Results is listed alongside
+them. The permitted student identifiers on certification documentation are things like
+a student ID number and a date of birth — a USI is not one of them. Printing one is a
+breach, not a formatting preference.
+
+So from v6.3.36 nothing carries it:
+
+- The USI column has been **removed from the student identity table** on every
+  certificate type. It cannot be switched back on from a template, because there is no
+  longer a column to configure. That table still draws the student name and the
+  qualification, both of which are required.
+- The standalone USI field is blocked on every certificate type, and the block is
+  applied globally rather than listed type by type — so a certificate type added later
+  cannot be missed.
+- The page furniture on a multi-page document never carries it either.
+
+**If your certificates used to show a USI, they will not any more, and that is the
+fix.** Templates that were edited by hand may still contain a USI field; it will simply
+render as nothing. Documents already issued are not retrospectively changed — reissue
+any that carry one.
+
+None of this affects the gate. You still record and verify the USI, and the plugin
+still refuses AQF certification without it. It is held in the student record and
+lodged in NAT00080, which is where it belongs; it is not printed.

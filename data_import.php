@@ -3258,6 +3258,24 @@ if (($action === 'fix_overenrolments' || $action === 'fix_overenrolments_apply')
         }
     }
 
+    // Keep the live Moodle username alongside the client-ID match. The
+    // over-enrolment review table is searchable by this identifier as well as
+    // the imported name/client ID, which makes ambiguous matches auditable.
+    $foeUseridToUsername = [];
+    if (!empty($foeClientToUserid)) {
+        list($_userSql, $_userParams) = $DB->get_in_or_equal(
+            array_unique(array_values($foeClientToUserid)), SQL_PARAMS_NAMED, 'foeuser'
+        );
+        $_userRs = $DB->get_recordset_sql(
+            "SELECT id, username FROM {user} WHERE id $_userSql AND deleted = 0",
+            $_userParams
+        );
+        foreach ($_userRs as $_foeUser) {
+            $foeUseridToUsername[(int)$_foeUser->id] = (string)$_foeUser->username;
+        }
+        $_userRs->close();
+    }
+
     $foeMatchedUserids  = array_unique(array_values($foeClientToUserid));
     $_foeViaIdnumber    = count(array_filter($foeMatchedVia, fn($v) => $v === 'idnumber'));
     $_foeViaProfile     = count(array_filter($foeMatchedVia, fn($v) => $v === 'profile'));
@@ -3490,6 +3508,7 @@ if (($action === 'fix_overenrolments' || $action === 'fix_overenrolments_apply')
             $foeToUnenrol[] = [
                 'userid'     => $_uid,
                 'clientid'   => $_lcCid,
+                'username'   => $foeUseridToUsername[$_uid] ?? '',
                 'name'       => $foeClientToName[$_lcCid] ?? ('User ' . $_uid),
                 'courseid'   => $_cid,
                 'coursename' => $_courseNames[$_cid] ?? ('Course ' . $_cid),
@@ -3828,7 +3847,7 @@ if (($action === 'fix_overenrolments' || $action === 'fix_overenrolments_apply')
     echo '<div class="input-group" style="max-width:420px;">';
     echo '<div class="input-group-prepend"><span class="input-group-text" style="background:#fff;">&#128270;</span></div>';
     echo '<input type="text" id="foe-search" class="form-control" '
-       . 'placeholder="Search by name, client ID, course or unit code…" '
+       . 'placeholder="Search by name, username, client ID, course or unit code…" '
        . 'autocomplete="off" '
        . 'style="border-left:0;" '
        . 'oninput="foeFilter()">';
@@ -3854,13 +3873,17 @@ if (($action === 'fix_overenrolments' || $action === 'fix_overenrolments_apply')
             foreach ($_rows as $_row) {
                 $_searchVal = strtolower(
                     ($_row['name']       ?? '') . ' ' .
+                    ($_row['username']   ?? '') . ' ' .
                     ($_row['clientid']   ?? '') . ' ' .
                     ($_row['coursename'] ?? '') . ' ' .
                     ($_row['unitcode']   ?? '') . ' ' .
                     ($_row['reason']     ?? '')
                 );
-                echo '<tr data-foe-search="' . htmlspecialchars($_searchVal) . '">';
-                echo '<td style="font-weight:600;">'    . htmlspecialchars($_row['name'])       . '</td>';
+                echo '<tr data-foe-search="' . s($_searchVal) . '">';
+                echo '<td style="font-weight:600;">'    . htmlspecialchars($_row['name'])
+                    . (!empty($_row['username'])
+                        ? '<small class="d-block text-muted">' . s($_row['username']) . '</small>' : '')
+                    . '</td>';
                 echo '<td style="color:#6c757d;">'      . htmlspecialchars($_row['clientid'])   . '</td>';
                 echo '<td>'                             . htmlspecialchars($_row['coursename'])  . '</td>';
                 echo '<td><code>'                       . htmlspecialchars($_row['unitcode'])    . '</code></td>';

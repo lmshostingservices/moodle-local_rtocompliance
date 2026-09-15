@@ -41,3 +41,46 @@ A date of birth before 1 January 1970 is a negative Unix timestamp. Anywhere the
 treated "not greater than zero" as "not answered", such a student was permanently marked
 incomplete. That is fixed, but it is worth knowing as the explanation for an older student
 whose profile refuses to count as complete however many times they fill it in.
+
+## Outcome identifiers: the twelve that exist
+
+The authority is the NCVER *AVETMISS data element definitions*, edition 2.3, under
+CLASSIFICATION SCHEME for Outcome identifier — national. Twelve codes are current:
+
+| Code | Meaning |
+|---|---|
+| 20 | Competency achieved / pass |
+| 30 | Competency not achieved / fail |
+| 40 | Withdrawn / discontinued |
+| 41 | Non-assessable enrolment — module completed |
+| 51 | Recognition of prior learning granted |
+| 52 | Recognition of prior learning not granted |
+| 60 | Credit transfer / national recognition |
+| 61 | Superseded subject |
+| 70 | Continuing enrolment |
+| 81 | Non-assessable enrolment — satisfactorily completed |
+| 82 | Non-assessable enrolment — withdrawn or not satisfactorily completed |
+| 85 | Not yet started |
+
+Codes `41` and `85` were added on 1 January 2018. Several codes people still expect are
+**gone**: `50` was deleted in 2007, `53` and `54` on 1 January 2012, `90` on 1 January
+2018, and `10` was recoded between 1999 and 2002. `00` never existed at all — where it
+appears in data it is a schema default that was never overwritten, not a reported value.
+
+A record holding a code that is not in that list cannot be lodged. **AVETMISS Code-list
+Integrity** under Data & Reporting lists every field holding a value the standard does
+not define, with how many students each affects. It is read-only; repair is a separate,
+explicit step.
+
+## What AVETMISS does and does not govern
+
+AVETMISS governs the NAT files you lodge with NCVER. It says nothing whatsoever about
+what an RTO prints on a certificate.
+
+This distinction matters because it is a common and expensive mistake. The reporting
+standard defines no abbreviations for a transcript — no "NYC", no "Not Yet Competent";
+those words do not appear in the specification or the data element definitions. What
+gets printed on certification documentation is governed by the Standards for RTOs and
+the AQF, and the reference for it is ASQA's sample forms of AQF certification
+documentation, which establishes C, NYC, CT and RPL. Do not reason from a reporting
+rule to a printing rule, in either direction.
