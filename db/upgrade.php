@@ -15551,5 +15551,12 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026091600, 'local', 'rtocompliance');
     }
 
+    if ($oldversion < 2026091601) {
+        // SAVEDVIEW-STABLE-TABLE-IDENTITY: no DB schema changes.
+        // Sort-indicator characters are no longer folded into a table's identity,
+        // so a remembered saved view survives a change of sort column.
+        upgrade_plugin_savepoint(true, 2026091601, 'local', 'rtocompliance');
+    }
+
     return true;
 }

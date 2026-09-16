@@ -1,3 +1,38 @@
+## [v6.5.1] - 2026-09-16
+
+A remembered saved view was lost when leaving the page and coming back.
+
+### Fixed
+
+- **The sort arrow was being folded into the table's identity.** The remembered view
+  is stored against a page and a table, and a table with no explicit key is identified
+  by its column headings. Several pages render the current-sort arrow as a character
+  inside a plain styled span, and the identity routine strips decorative *elements* but
+  not decorative *characters* - so the arrow became part of the identity. That identity
+  changed whenever the sort column or direction changed, moving the saved-view namespace
+  with it and making the remembered view invisible.
+
+  This is why the fault looked like it only happened on navigation. A refresh keeps the
+  same address and therefore the same sort, so the identity was unchanged and the view
+  came back. Opening the page fresh used the default sort, produced a different identity,
+  and found nothing remembered.
+
+  The identity routine now strips sort-indicator characters as well as elements, so a
+  table keeps one identity whichever column it is sorted by.
+
+### Verified
+
+The same heading normalised in its four sort states - ascending, descending, unsorted
+and plain - now yields one identical value. Before the fix it yielded four different ones.
+
+### Note
+
+Any view saved on the **Certificates**, **USI Verification** or **Statement of
+Attainment** pages before this release needs saving once more. The corrected identity is
+a different namespace from the unstable one it replaces.
+
+No schema change. Savepoint 2026091601.
+
 ## [v6.5] - 2026-09-16
 
 Release roll-up. Four fixes, no schema change.

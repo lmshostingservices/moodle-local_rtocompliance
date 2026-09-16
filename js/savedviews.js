@@ -151,6 +151,19 @@
         return String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
     }
 
+    /* Characters a sortable header adds to show the current sort. They are part of
+     * the header's TEXT, not a recognisable icon element, so stripping elements is
+     * not enough - the glyphs have to come out of the string as well.
+     *
+     * This mattered: several pages render the arrow inside a plain styled span, so
+     * the arrow was being hashed into the table's identity. The identity therefore
+     * changed whenever the sort column or direction changed, which changed the
+     * saved-view namespace with it - a view saved while sorted one way became
+     * invisible when the page was next opened with a different sort. A refresh kept
+     * working, because the URL kept the same sort, which is what made the fault look
+     * like it only happened when navigating away and back. */
+    var SORT_GLYPHS = /[\u25B2\u25BC\u25B4\u25BE\u2191\u2193\u2195\u21C5\u2B06\u2B07\uFE0F]/g;
+
     function stableHeaderValue(header, index) {
         var explicit = header.getAttribute('data-sort-key') ||
             header.getAttribute('data-field') ||
@@ -164,7 +177,8 @@
         )).forEach(function (decorative) {
             decorative.remove();
         });
-        return normaliseHeader(clone.textContent || ('column-' + index));
+        var text = (clone.textContent || ('column-' + index)).replace(SORT_GLYPHS, '');
+        return normaliseHeader(text);
     }
 
     function stableHash(value) {
