@@ -471,7 +471,7 @@ echo '<span style="background:#1e3a5f;color:#fff;border-radius:50%;width:22px;he
 echo '<span id="rtoc-unit-heading">Eligible Units</span></h3>';
 echo '<div style="display:flex;flex-direction:column;gap:8px;width:100%;">';
 echo '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">';
-echo '<input type="text" id="rtoc-unit-search" placeholder="Search unit code, name or TP prefix\u2026" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.85rem;flex:1;min-width:180px;">';
+echo '<input type="text" id="rtoc-unit-search" placeholder="Search unit code, name or TP prefix&hellip;" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.85rem;flex:1;min-width:180px;">';
 echo '<select id="rtoc-unit-filter-group" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.85rem;"><option value="">All qualifications</option></select>';
 echo '<select id="rtoc-unit-filter-compliance" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.85rem;">';
 echo '<option value="">All compliance</option>';

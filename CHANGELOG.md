@@ -1,3 +1,135 @@
+## [v6.6.1] - 2026-09-16
+
+Documentation and the AI assistant caught up with the exemption pathway, plus two
+user-visible text defects. No behavioural change and no schema change.
+
+### Fixed — the assistant contradicted the page
+
+- **The assistant reported a different outstanding figure from the page the admin was
+  looking at.** The USI Verification page now excludes recorded exemptions from *No USI
+  recorded*; the assistant still counted every blank identifier field. The two numbers
+  disagreed with nothing to say which was right. It now reports three distinct facts —
+  the adjusted figure, the exempt figure, and the unadjusted total — and names which one
+  the page is showing.
+- **A breakdown by exemption ground** was added, so an offshore cohort that is *not*
+  actually recorded as offshore is visible rather than buried in a single total.
+- **It told an admin standing on an exempt student's record that the student had no
+  identifier and could not be issued.** True of the field, false of the outcome — an
+  exemption has cleared the issuance gate since v6.3.19. It now says the student meets
+  the gate and explains why.
+- **Six releases were invisible to the assistant.** Release notes are parsed out of
+  `version.php`, and no note had been recorded there for v6.4.7 through v6.5.2 — so the
+  assistant knew nothing about the saved-view work, the import fix, or the date-of-birth
+  fix. All six are now recorded. The v6.6 note was present but indented by one space,
+  which the parser's line anchor rejected, so it was silently skipped too.
+
+### Fixed — documentation
+
+- **`docs/usi-verification.md` made four false claims about USI exemptions:** that the
+  exemption was captured only, that the plugin's student table had no column for it, that
+  it was written to no NAT file, and that it did not release the certificate. All four
+  were true when written and none is true now. The section is rewritten, and the two
+  exemption grounds, the count card and the three filters are documented.
+- **`docs/students-and-avetmiss.md`** now documents residential country and the overseas
+  postcode value — what each is for, which view reads them, and why the postcode is gated
+  on the country.
+
+### Fixed — text defects, both pre-existing
+
+- **A unicode escape sequence sat unprocessed in a PHP single-quoted string**, where the
+  language does not interpret it, so the exemption-type language string carried a literal
+  escape where a dash belonged.
+- **The unit search box on the Statement of Attainment page** rendered a literal escape
+  instead of an ellipsis, for the same reason: a JavaScript escape written into an HTML
+  attribute.
+
+## [v6.6] - 2026-09-16
+
+Offshore online delivery: exempt from holding a Unique Student Identifier.
+
+The plugin could already record *that* a student was exempt — a flag, a free-text
+reason, who granted it and when. Nothing in the system did anything with it. The
+collection standard defines a code to lodge in the identifier field for an exempt
+client, and the exporter never consulted the flag, so it wrote ten blank bytes where
+that code belongs. The USI page never consulted it either, so an exempt student was
+counted under "No USI recorded" as though they were a compliance failure.
+
+### Added
+
+- **Exemption type.** A free-text reason cannot be turned into a reportable token
+  without pattern-matching prose, so the code is now stored as its own value
+  (`INTOFF` offshore, or `INDIV` individual) while the reason stays as the human
+  explanation for audit. Existing exempt students are backfilled to `INTOFF`, the
+  only ground the interface has ever described.
+- **Residential country** on the student profile, drawn from the same area-code list
+  as country of birth. It had no control anywhere in the interface, so it was empty
+  for every student while still being exported — yet it is the field that establishes
+  offshore study.
+- **Offshore Online Delivery USI Exempt** count card and filter on the USI
+  Verification page, so these students can be seen and filtered out. It matches on
+  any of three grounds: the `INTOFF` code, a residential country outside Australia,
+  or an overseas postcode.
+- **Any recorded exemption** and **unadjusted no-USI** filters alongside it, so the
+  adjusted and raw figures can be compared directly.
+
+### Fixed
+
+- **"No USI recorded" now excludes recorded exemptions.** The headline outstanding
+  figure no longer counts students who are not required to hold an identifier. The
+  unadjusted figure is still available as its own filter.
+- **The overseas postcode value was rejected.** `OSPC` is a literal, not a number,
+  and is required alongside the offshore code — both validators demanded four digits,
+  so an offshore student could not be recorded correctly at all. It is now accepted,
+  and only when the residential country is outside Australia, so it cannot be used to
+  make a domestic student look exempt.
+- **The export now lodges the exemption code** in the identifier field and pairs the
+  overseas postcode in both the client and the enrolment record, as the standard
+  requires. A real identifier always wins: the code is only ever lodged *in place of*
+  an identifier the student does not have, never over one they do.
+- **Date-of-birth off-by-one.** The date control stored midnight in the operator's
+  timezone while the exporter formatted in Australia/Sydney, so a date entered from
+  another timezone could export as the previous day. Dates are now re-encoded at
+  midday Sydney on save.
+- **The importer fabricated identifiers.** It searched each fixed-width line for
+  anything USI-shaped, which matched suburb text — `PARRAMATTA` and `NKALLANGUR` both
+  pass a USI character test. It now reads the identifier from its defined position,
+  confirmed by three neighbouring anchor fields, and only falls back to searching when
+  the layout cannot be confirmed. Exemption codes in the file are no longer discarded.
+
+## [v6.5.2] - 2026-09-16
+
+A second, separate cause of the same symptom.
+
+### Fixed
+
+- **A table's own key or id was not authoritative.** The column headings were appended
+  to the identity even when an explicit key or id existed, which defeated the point of
+  having one. A table with a column that appears only under some conditions changed
+  identity when that column appeared, taking the saved-view namespace with it. One table
+  does exactly this - a Qualifications column shown only when a qualification file is
+  present. A key or id is now the identity on its own, and headings are the fallback
+  only for tables carrying no key.
+
+### Corrected
+
+The v6.5.1 note said the arrow-in-heading fault affected three pages. It affected **two**
+- USI Verification and Certificates. The Statement of Attainment page already wraps its
+indicator in the recognised icon class and was never affected, and the alignment control
+on the certificate template editor is a button label, not a table heading.
+
+### Verified
+
+The identity of the affected table computed with and without its conditional column
+present now yields one value where it previously yielded two. Tables with no key still
+fall back to headings, confirmed separately.
+
+### Note
+
+A view saved before this release on a page whose table carries an id needs saving once
+more.
+
+No schema change. Savepoint 2026091602.
+
 ## [v6.5.1] - 2026-09-16
 
 A remembered saved view was lost when leaving the page and coming back.

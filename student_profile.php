@@ -128,13 +128,22 @@ if ($usiexemptaction !== '' && confirm_sesskey()) {
         if ($reason === '') {
             $reason = 'International student — all study completed outside Australia.';
         }
+        // v6.6 Store the code the export has to lodge. Anything other than the two the
+        // standard defines falls back to the offshore code, which is the only ground the
+        // interface has ever described and the one the default reason text states.
+        $code = strtoupper(trim(optional_param('usiexemptcode', 'INTOFF', PARAM_ALPHA)));
+        if (!in_array($code, ['INTOFF', 'INDIV'], true)) {
+            $code = 'INTOFF';
+        }
         $upd->usiexempt       = 1;
+        $upd->usiexemptcode   = $code;
         $upd->usiexemptreason = core_text::substr($reason, 0, 255);
         $upd->usiexemptby     = $USER->id;
         $upd->usiexemptdate   = time();
         $exemptmsg = 'USI exemption recorded. Certificates can now be issued for this student.';
     } else {
         $upd->usiexempt       = 0;
+        $upd->usiexemptcode   = null;
         $upd->usiexemptreason = null;
         $upd->usiexemptby     = null;
         $upd->usiexemptdate   = null;
@@ -768,6 +777,16 @@ if (!$isnewprofile && ($usiexempt || $usi === '' || $usiverified !== 1)) {
             echo '<input type="hidden" name="sesskey" value="' . sesskey() . '">';
             echo '<input type="hidden" name="userid" value="' . (int) $userid . '">';
             echo '<input type="hidden" name="usiexemptaction" value="grant">';
+            // v6.6 WHICH exemption. Previously only a free-text reason was captured, so
+            // the export had no code to lodge and sent a blank identifier instead.
+            echo '<label for="usiexemptcode" style="display:block;font-weight:600;margin-bottom:4px;">'
+                . 'Exemption type</label>';
+            echo '<select id="usiexemptcode" name="usiexemptcode" class="form-control" '
+                . 'style="max-width:640px;margin-bottom:10px;">';
+            echo '<option value="INTOFF" selected>Offshore international &mdash; studying wholly '
+                . 'outside Australia (reported as INTOFF)</option>';
+            echo '<option value="INDIV">Individual exemption (reported as INDIV)</option>';
+            echo '</select>';
             echo '<label for="usiexemptreason" style="display:block;font-weight:600;margin-bottom:4px;">'
                 . 'Reason for exemption</label>';
             echo '<input type="text" id="usiexemptreason" name="usiexemptreason" maxlength="255" '

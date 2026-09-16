@@ -35,6 +35,24 @@ Moodle user id, computed at export time and never stored. That is stable only wh
 stays blank: entering a real identifier later changes what the STA sees and reads as a
 different person.
 
+## Residential country and the overseas postcode
+
+**Residential country** on the AVETMISS profile is the field that establishes offshore study.
+It is drawn from the same NCVER area-code list as country of birth, and it defaults to
+Australia (`1101`). Until it had a control in the interface nobody could set it, so it was
+empty on every student while still being exported.
+
+It matters in two places. It is what the **Offshore Online Delivery USI Exempt** view on the
+USI Verification page matches on when no exemption has been recorded explicitly, and it gates
+the overseas postcode.
+
+**Postcode** is normally four digits. For a student living outside Australia the collection
+standard uses the literal value `OSPC` instead, and the export pairs that with an offshore USI
+exemption code. Both validators used to demand four digits and rejected `OSPC` outright, so an
+offshore student could not be recorded correctly at all. `OSPC` is now accepted — but only when
+the residential country is set to something other than Australia, so it cannot be used to make
+a domestic student look exempt.
+
 ## Dates of birth before 1970
 
 A date of birth before 1 January 1970 is a negative Unix timestamp. Anywhere the code once

@@ -226,7 +226,38 @@ class student_scope {
                 $where .= " AND $hasusi AND (s.dateofbirth IS NULL OR s.dateofbirth = 0)";
                 break;
             case 'nousi':
+                // A student carrying a recorded exemption is not a missing identifier.
+                // They were never required to hold one, so counting them as outstanding
+                // reports a compliance failure that does not exist. This is why the
+                // reference site's outstanding figure was overstated by the number of
+                // offshore international clients on its books.
+                $where .= " AND (s.usi IS NULL OR s.usi = '')"
+                        . " AND COALESCE(s.usiexempt, 0) = 0";
+                break;
+            case 'nousiincludingexempt':
+                // The unadjusted figure, kept so the two can be compared and the
+                // difference explained rather than silently absorbed.
                 $where .= " AND (s.usi IS NULL OR s.usi = '')";
+                break;
+            case 'offshoreexempt':
+                // Offshore online delivery, exempt from holding an identifier.
+                //
+                // Three independent grounds, any one of which qualifies. The standard's
+                // own test is that the client has an overseas address, studies at an
+                // offshore location and is not an Australian resident, and it provides a
+                // specific code for the identifier field in that case.
+                //   1. the exemption is recorded with the offshore code
+                //   2. the residential country is recorded and is not Australia
+                //   3. the postcode is the collection standard's overseas value
+                $where .= " AND (s.usi IS NULL OR s.usi = '')"
+                        . " AND ("
+                        . "   (COALESCE(s.usiexempt, 0) = 1 AND UPPER(TRIM(COALESCE(s.usiexemptcode, ''))) = 'INTOFF')"
+                        . "   OR TRIM(COALESCE(s.residentialcountry, '')) NOT IN ('', '1101', '@@@@')"
+                        . "   OR UPPER(TRIM(COALESCE(s.postcode, ''))) = 'OSPC'"
+                        . ")";
+                break;
+            case 'exemptany':
+                $where .= " AND COALESCE(s.usiexempt, 0) = 1";
                 break;
             case 'withusi':
                 $where .= " AND $hasusi";

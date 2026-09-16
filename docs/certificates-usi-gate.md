@@ -15,7 +15,7 @@ A **Testamur**, a **Record of Results** and a **Statement of Attainment** are AQ
 certification. All three are gated. A **Completion Certificate** for a non-accredited or
 local course is not AQF certification and is not gated by any of these.
 
-### 1. The student must have a USI that is VERIFIED
+### 1. The student must have a USI that is VERIFIED — or be recorded as exempt
 
 Under the Student Identifiers Act an RTO must not issue AQF certification to a student
 without a Unique Student Identifier. The plugin enforces the stronger form of that rule: the
@@ -27,6 +27,12 @@ USI that is present but unverified is refused exactly like a blank one.
   for the whole cohort is on the USI Verification page.
 - A student can complete every unit of a qualification and still be held here. Completing the
   training and being legally issuable are different questions.
+- **There is one lawful way past this check without a USI: a recorded exemption.** A student
+  who genuinely cannot obtain an identifier — the common ground being study wholly offshore —
+  is exempt in the legislation, and an exemption recorded on their profile clears this check.
+  The readiness panel then reads *USI verified or exempt*. The exemption is a compliance
+  record, not an override: it is typed, reasoned, attributed and dated, and the type is
+  reported to NCVER in place of the identifier. See *USI verification* for how to record one.
 
 ### 2. The RTO's own identity must be configured
 

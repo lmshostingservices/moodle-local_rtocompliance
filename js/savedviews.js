@@ -201,9 +201,19 @@
             table.getAttribute('data-view-key') ||
             table.id ||
             '';
+        /* An explicit key or id is the table's identity ON ITS OWN.
+         *
+         * Previously the column headings were appended even when an explicit key
+         * existed, which defeated the point of having one: a table with a column
+         * that only appears under some conditions - for example a Qualifications
+         * column shown only when a qualification file is present - changed identity
+         * with that column, and took the saved-view namespace with it. Headings are
+         * now the fallback for tables that carry no key of their own. */
+        if (explicit) {
+            return 'table:' + explicit;
+        }
         var headers = Array.prototype.slice.call(table.querySelectorAll('thead th')).map(stableHeaderValue);
-        return (explicit ? 'table:' + explicit : 'headers:' + headers.join('|')) +
-            '|headers:' + headers.join('|');
+        return 'headers:' + headers.join('|');
     }
 
     function tableKey(table, allTables) {

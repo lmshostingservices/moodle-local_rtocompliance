@@ -43,6 +43,7 @@ class student_profile_form extends \moodleform {
         'sex'                 => ['get_sex_codes', '@'],
         'statecode'           => ['get_state_codes', '@@'],
         'countryofbirth'      => ['get_country_codes', '@@@@'],
+        'residentialcountry'  => ['get_country_codes', '@@@@'],
         'languageathome'      => ['get_language_codes', '@@@@'],
         'englishproficiency'  => ['get_english_proficiency_codes', '@'],
         'indigenousstatus'    => ['get_indigenous_status_codes', '@'],
@@ -125,6 +126,18 @@ class student_profile_form extends \moodleform {
         // Australia on the CREATE path only; set_data() overrides this for an existing
         // student, so it cannot reach a record that already holds a value.
         $mform->setDefault('countryofbirth', '1101');
+
+        // v6.6 RESIDENTIAL COUNTRY. This is the field that decides whether a student is
+        // studying offshore, and it had no control anywhere in the interface - so nobody
+        // could set it, and it was empty for every student on the reference site while
+        // still being exported. An offshore international client is exempt from holding
+        // an identifier, and this is what establishes that status, so without an input
+        // the exemption could not be evidenced and those students were reported as
+        // missing an identifier instead.
+        $this->add_code_select('residentialcountry',
+            get_string('residentialcountry', 'local_rtocompliance'));
+        $mform->addHelpButton('residentialcountry', 'residentialcountry', 'local_rtocompliance');
+        $mform->setDefault('residentialcountry', '1101');
 
         $this->add_code_select('languageathome', get_string('languageathome', 'local_rtocompliance'));
         $mform->setDefault('languageathome', '1201');
@@ -278,15 +291,32 @@ class student_profile_form extends \moodleform {
             }
         }
 
-        if (!empty($data['postcode']) && !empty($data['statecode'])) {
+        // v6.6 OVERSEAS POSTCODE. The collection standard's value for a client with an
+        // overseas address is the literal OSPC, not a number, and it is REQUIRED where
+        // the identifier field carries the offshore exemption code. Both checks below
+        // demanded four digits, so that value could not be entered through this form at
+        // all - which made it impossible to record an offshore student correctly.
+        $isoverseas = (strtoupper(trim((string) ($data['postcode'] ?? ''))) === 'OSPC');
+
+        if (!$isoverseas && !empty($data['postcode']) && !empty($data['statecode'])) {
             $result = avetmiss_codes::validate_postcode($data['postcode'], $data['statecode']);
             if (!$result['valid']) {
                 $errors['postcode'] = $result['error'];
             }
         }
 
-        if (!empty($data['postcode']) && !preg_match('/^\d{4}$/', $data['postcode'])) {
+        if (!$isoverseas && !empty($data['postcode']) && !preg_match('/^\d{4}$/', $data['postcode'])) {
             $errors['postcode'] = get_string('error_postcode_format', 'local_rtocompliance');
+        }
+
+        // OSPC only makes sense alongside a residential country outside Australia. Left
+        // unchecked, it would be a way to put a meaningless postcode on a domestic
+        // student and have them silently treated as exempt.
+        if ($isoverseas) {
+            $rc = trim((string) ($data['residentialcountry'] ?? ''));
+            if ($rc === '' || $rc === '1101' || $rc === '@@@@') {
+                $errors['postcode'] = get_string('error_ospc_needs_country', 'local_rtocompliance');
+            }
         }
 
         return $errors;

@@ -19,7 +19,7 @@ namespace local_rtocompliance\assistant;
 defined('MOODLE_INTERNAL') || die();
 
 /**
- * Assistant knowledge sources (v6.3.14).
+ * Assistant knowledge sources (introduced v6.3.14; site facts exemption-aware as of v6.6.1).
  *
  * Before this class the assistant's knowledge lived entirely in hand-maintained PHP arrays,
  * which had two consequences. Prose describing behaviour had to be edited in three separate
@@ -288,14 +288,58 @@ final class knowledge {
                 $verified = (int) $DB->count_records(
                     'local_rtocompliance_students',
                     ['usiverified' => \local_rtocompliance\usi\usi_verification_service::STATUS_VERIFIED]);
-                $blank = (int) $DB->count_records_select(
+                $noidentifier = '(' . $DB->sql_isempty('local_rtocompliance_students', 'usi', true, true)
+                    . ' OR usi IS NULL)';
+                // The raw blank count, and the count the USI Verification page actually shows.
+                // These MUST be reported separately: the page excludes recorded exemptions from
+                // "No USI recorded", so quoting the raw figure here would contradict the number
+                // the admin is looking at while they ask the question.
+                $blankall = (int) $DB->count_records_select(
+                    'local_rtocompliance_students', $noidentifier);
+                $exempt = (int) $DB->count_records_select(
                     'local_rtocompliance_students',
-                    $DB->sql_isempty('local_rtocompliance_students', 'usi', true, true) . ' OR usi IS NULL');
+                    $noidentifier . ' AND COALESCE(usiexempt, 0) = 1');
+                $blank = max(0, $blankall - $exempt);
                 $facts[] = 'Students on this site: ' . $total . '. USI verified with the Registry: ' . $verified
-                    . '. No USI recorded at all: ' . $blank . '. The remaining '
-                    . max(0, $total - $verified - $blank) . ' have a USI on file that is not yet verified.';
+                    . '. No USI recorded and NOT exempt: ' . $blank . ' — this is the figure the USI '
+                    . 'Verification page shows as "No USI recorded". A further ' . $exempt . ' have no USI '
+                    . 'but ARE recorded as exempt, so they are not a compliance gap; the unadjusted blank '
+                    . 'count is ' . $blankall . '. The remaining '
+                    . max(0, $total - $verified - $blankall) . ' have a USI on file that is not yet verified.';
                 $facts[] = 'A student is only issuable for a Testamur, Record of Results or Statement of '
-                    . 'Attainment when their USI is VERIFIED — a USI that is merely present is not enough.';
+                    . 'Attainment when their USI is VERIFIED, OR when they are recorded as USI-exempt — '
+                    . 'a USI that is merely present is not enough.';
+
+                // Which exemption ground, where the column exists. This is what tells an admin
+                // whether their offshore cohort is actually recorded as offshore, which is the
+                // difference between a clean lodgement and blank bytes in the identifier field.
+                if ($DB->get_manager()->field_exists('local_rtocompliance_students', 'usiexemptcode')) {
+                    // Counted among students WITH NO IDENTIFIER, which is what the USI page's
+                    // exemption views count and the only set where a code is ever lodged. An
+                    // exemption flag on a student who has a real USI changes nothing — the
+                    // identifier wins — so counting those here would restate the page's number
+                    // wrongly, which is the exact fault this fact exists to stop.
+                    $intoff = (int) $DB->count_records_select(
+                        'local_rtocompliance_students',
+                        $noidentifier . " AND COALESCE(usiexempt, 0) = 1 AND UPPER(TRIM(COALESCE(usiexemptcode, ''))) = 'INTOFF'");
+                    $indiv = (int) $DB->count_records_select(
+                        'local_rtocompliance_students',
+                        $noidentifier . " AND COALESCE(usiexempt, 0) = 1 AND UPPER(TRIM(COALESCE(usiexemptcode, ''))) = 'INDIV'");
+                    $facts[] = 'Of those exempt students with no identifier, by exemption type — INTOFF '
+                        . '(offshore international, studying wholly outside Australia): ' . $intoff . '; INDIV '
+                        . '(individual exemption granted by the Registrar): ' . $indiv . '; no type recorded: '
+                        . max(0, $exempt - $intoff - $indiv) . '. The exemption code is lodged in the USI field '
+                        . 'of NAT00080 and NAT00085 in place of an identifier the student does not have, and '
+                        . 'INTOFF is paired with the OSPC postcode value. A real USI always wins — an exemption '
+                        . 'code is never written over an identifier that exists, so an exemption flag on a '
+                        . 'student who has a USI has no effect on the file.';
+                    $facts[] = 'The USI Verification page also counts offshore students under "Offshore Online '
+                        . 'Delivery USI Exempt" on two further grounds beyond the INTOFF code — a residential '
+                        . 'country outside Australia, or the OSPC postcode value — so that figure can be larger '
+                        . 'than the INTOFF count above. If an offshore cohort is not appearing there, nothing on '
+                        . 'those records says they are offshore: set Residential country on the AVETMISS profile '
+                        . 'or record the exemption explicitly.';
+                }
             }
         } catch (\Throwable $e) {
             self::debug('site_facts: USI counts failed', $e);
@@ -446,7 +490,7 @@ final class knowledge {
                 // page shows the row disabled as a duplicate. Detect it instead.
                 $sturows = $DB->get_records(
                     'local_rtocompliance_students', ['userid' => $userid],
-                    'id ASC', 'id, usi, usiverified');
+                    'id ASC', 'id, usi, usiverified, usiexempt');
                 $stu     = empty($sturows) ? false : reset($sturows);
                 // The fullname() call must get a COMPLETE user object: called with a partial one it
                 // emits a debugging notice per alternate-name field on developer-mode sites.
@@ -459,9 +503,18 @@ final class knowledge {
                 } else if (!$stu) {
                     $facts[] = $name . ' has no RTO Compliance student record, so no USI is on file and no '
                         . 'nationally recognised certificate can be issued for them.';
+                } else if (!empty($stu->usiexempt)) {
+                    // An exempt student CLEARS the issuance gate. Reporting them as "no USI, cannot
+                    // be issued" — which this did before the exemption pathway existed — sends an
+                    // admin looking for a fault that is not there.
+                    $facts[] = $name . ' is recorded as USI-exempt, so they meet the USI gate and CAN be '
+                        . 'issued a Testamur, Record of Results or Statement of Attainment without a '
+                        . 'verified USI. Their exemption code is lodged in the NAT files in place of an '
+                        . 'identifier.';
                 } else if (trim((string) $stu->usi) === '') {
-                    $facts[] = $name . ' has NO USI recorded. That is why they cannot be selected for a '
-                        . 'Testamur or Record of Results. No credits are charged for a refused certificate.';
+                    $facts[] = $name . ' has NO USI recorded and is NOT recorded as exempt. That is why they '
+                        . 'cannot be selected for a Testamur or Record of Results. No credits are charged for '
+                        . 'a refused certificate.';
                 } else if (!\local_rtocompliance_usi_is_verified($stu->usiverified)) {
                     $facts[] = $name . ' has a USI on file but it is NOT verified with the USI Registry, '
                         . 'so certificate issuance is refused until it is verified.';

@@ -40,15 +40,64 @@ lose an existing verification.
 
 ## Students who cannot get one
 
-A student who genuinely cannot obtain a USI — for example wholly-offshore delivery — is a
-real exemption in the legislation. The plugin has a **USI exemption** field on the student's
-AVETMISS profile, but it is captured only — there is no column for it on the plugin's student
-table and it is not written to any NAT file.
+A student who genuinely cannot obtain a USI is a real exemption in the legislation, and the
+plugin supports it end to end. Open the student's record, set the **Exemption type** and the
+**Reason for exemption**, and click **Record USI exemption**. The plugin also stores who
+granted it and when, for audit. **Remove exemption** reverses it.
 
-It does **not**, however, release the certificate. The issuance gate has a bypass parameter
-in the code, but nothing anywhere passes it — so an exempt student is still refused, and the
-refusal message's advice to "mark the student USI-exempt / override" cannot currently be
-acted on. If you hit this, treat it as a gap to raise rather than a setting to find.
+There are exactly two exemption types, because the collection standard defines exactly two
+codes to lodge in place of an identifier:
+
+- **`INTOFF`** — the student is studying wholly offshore, by online or distance delivery, and
+  is not in Australia. This is the ground the great majority of exemptions rest on.
+- **`INDIV`** — an individual exemption granted by the Student Identifiers Registrar.
+
+The type is stored as its own value rather than being inferred from the reason text. That is
+deliberate: guessing a reportable code out of prose is how address text once ended up in an
+identifier field. The reason stays as the human explanation; the code is what gets lodged.
+
+An exemption does three things:
+
+1. **It clears the certificate gate.** An exempt student can be issued a Testamur, Record of
+   Results or Statement of Attainment without a verified USI. The readiness panel shows the
+   gate as *USI verified or exempt*.
+2. **It is reported.** The export writes the exemption code into the USI field of both
+   NAT00080 and NAT00085, and pairs it with the overseas postcode value where the standard
+   requires that. Blank bytes are no longer sent where a code belongs.
+3. **It stops inflating your outstanding count.** See below.
+
+One rule worth knowing: **a real USI always wins.** If a student has an identifier on file,
+that identifier is exported, and the exemption code is never written over it. The code is only
+ever lodged *in place of* an identifier the student does not have.
+
+## Offshore online delivery, and the outstanding count
+
+**No USI recorded** on the USI Verification page counts students who are *required* to hold an
+identifier and do not have one. It excludes recorded exemptions, because an exempt student is
+not a compliance failure and counting them as one overstates the problem — sometimes badly.
+
+There is a count card beside it, **Offshore online delivery, USI exempt**, and three filters:
+
+- **Offshore Online Delivery USI Exempt** — students exempt on offshore grounds. A student
+  matches on any of three signals: the `INTOFF` exemption code, a residential country outside
+  Australia, or the overseas postcode value on their address.
+- **Any recorded USI exemption** — both exemption types together.
+- **No USI recorded (including exempt)** — the raw figure, for when you want to see what the
+  adjustment is doing. The difference between this and *No USI recorded* is your exempt cohort.
+
+Because they are filters and not only counts, you can pull the offshore cohort out of a chase
+list, or exclude them from it.
+
+If your offshore students are *not* appearing under the offshore filter, the usual cause is
+that nothing on their record says they are offshore. Set **Residential country** on their
+AVETMISS profile — see *Student records and AVETMISS data* — or record the exemption
+explicitly.
+
+**The two cards deliberately overlap, so do not expect them to sum.** A student whose address
+says they are offshore but who has *no exemption recorded* appears under both: offshore by
+address, and still outstanding because nobody has recorded the exemption. That is the right
+answer for them — they are the students to act on. Recording the exemption moves them out of
+*No USI recorded* and is also what puts a code in the NAT file for them.
 
 ## Why the profile gate does not demand a USI
 

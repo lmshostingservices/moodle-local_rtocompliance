@@ -15558,5 +15558,30 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026091601, 'local', 'rtocompliance');
     }
 
+    if ($oldversion < 2026091602) {
+        // SAVEDVIEW-EXPLICIT-KEY-AUTHORITATIVE: no DB schema changes.
+        // A table's own key or id is now its identity on its own, so a column that
+        // appears only under some conditions no longer moves the saved-view namespace.
+        upgrade_plugin_savepoint(true, 2026091602, 'local', 'rtocompliance');
+    }
+
+    if ($oldversion < 2026091700) {
+        // USI-EXEMPTION-CODE: record WHICH exemption applies, not merely that one does.
+        $table = new xmldb_table('local_rtocompliance_students');
+        $field = new xmldb_field('usiexemptcode', XMLDB_TYPE_CHAR, '10', null, null, null, null, 'usiexemptreason');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        // Any student already flagged exempt was flagged for the offshore-international
+        // ground - that is the only case the interface has ever described, and the
+        // default reason text it pre-fills says exactly that. Backfill accordingly so
+        // the export has a code to lodge rather than a blank.
+        $DB->execute("UPDATE {local_rtocompliance_students}
+                         SET usiexemptcode = 'INTOFF'
+                       WHERE usiexempt = 1
+                         AND (usiexemptcode IS NULL OR usiexemptcode = '')");
+        upgrade_plugin_savepoint(true, 2026091700, 'local', 'rtocompliance');
+    }
+
     return true;
 }

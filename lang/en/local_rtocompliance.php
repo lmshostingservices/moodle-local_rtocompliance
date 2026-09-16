@@ -3702,3 +3702,13 @@ $string['recognition_prog_reload'] = 'Refresh the list';
 $string['recognition_notupgraded'] = 'Program recognition is not available yet because the plugin upgrade has not been completed on this site. Go to Site administration > Notifications and run the pending upgrade, then come back to this page.';
 $string['recognition_lookupmore'] = '{$a} code(s) still to check - click the button again to carry on. (The progress bar does this for you automatically when JavaScript is available.)';
 $string['privacy:metadata:recognition'] = 'Which programs are nationally recognised training, and who recorded each decision. Contains no student information.';
+
+// v6.6: residential country and the USI exemption code.
+$string['residentialcountry'] = 'Residential country';
+$string['residentialcountry_help'] = 'The country the student normally resides in, as a SACC code. Australia for a domestic student. Set this to the student\'s actual country of residence for an international student studying wholly offshore &mdash; it is what establishes that they are exempt from holding a USI, and it is reported to NCVER in the client contact file.';
+$string['usiexemptcode'] = 'Exemption type';
+$string['usiexemptcode_help'] = 'Which exemption applies, as the collection standard names it. Offshore international is for a client with an overseas address who is studying at an offshore location and is not an Australian resident. Individual is for an exemption granted on other grounds. The code is reported in place of the identifier, so recording it is what keeps the file conformant.';
+$string['usiexemptcode_intoff'] = 'Offshore international — studying wholly outside Australia (INTOFF)';
+$string['usiexemptcode_indiv'] = 'Individual exemption (INDIV)';
+$string['usifilter_offshoreexempt'] = 'Offshore Online Delivery USI Exempt';
+$string['error_ospc_needs_country'] = 'OSPC is the overseas postcode value, so it can only be used when the residential country is set to a country other than Australia.';

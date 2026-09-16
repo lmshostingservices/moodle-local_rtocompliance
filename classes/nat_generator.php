@@ -868,7 +868,13 @@ class nat_generator {
             $record .= $this->pad($student->highestschoollevel ?: '@@', 2);            // Pos 71-72:  Highest school level completed identifier
             $record .= $this->pad($student->sex ?: '@', 1);                            // Pos 73:     Gender
             $record .= $this->formatdate($student->dateofbirth);                       // Pos 74-81:  Date of birth (DDMMYYYY)
-            $record .= $this->pad($student->postcode ?: '@@@@', 4);                   // Pos 82-85:  Postcode
+            // The standard pairs the offshore exemption with its overseas postcode value.
+            // Lodging the code while sending a numeric Australian postcode contradicts it.
+            $pc = $student->postcode ?: '@@@@';
+            if ($exemptcode === 'INTOFF') {
+                $pc = 'OSPC';
+            }
+            $record .= $this->pad($pc, 4);                   // Pos 82-85:  Postcode
             $record .= $this->pad($student->indigenousstatus ?: '@', 1);               // Pos 86:     Indigenous status identifier
             $record .= $this->pad($student->languageathome ?: '1201', 4);             // Pos 87-90:  Language identifier
             // BUG-9 FIX: The ?? (null-coalescing) operator only substitutes defaults for NULL,
@@ -882,7 +888,26 @@ class nat_generator {
             $record .= $this->pad($student->atschoolflag ?: 'N', 1);                  // Pos 99:     At school flag
             $record .= $this->pad($student->suburb ?: '', 50);                        // Pos 100-149: Address – suburb, locality or town (50). NOT 110-159: that
             // overlapped the USI at 150-159 in the old comment, which cannot both be true.
-            $record .= $this->pad($student->usi ?: '', 10);                           // Pos 150-159: Unique student identifier
+            // v6.6 EXEMPTION CODE IN THE IDENTIFIER FIELD. An exempt client is not a
+            // client with a blank identifier - the standard defines a code to lodge in
+            // its place, and this exporter previously emitted ten spaces because it
+            // never consulted the exemption columns at all. On the reference site that
+            // meant 27 offshore international clients were lodged as though their
+            // identifier were simply missing.
+            //
+            // AN ACTUAL IDENTIFIER ALWAYS WINS. The standard's wording is that the code
+            // may be used IN PLACE OF an identifier - so it applies when there is none.
+            // A student who holds one is reported with it, exemption flag or not, because
+            // lodging the code over a real identifier would discard a verified value and
+            // break the client's history at NCVER.
+            $exemptcode = '';
+            if (trim((string) ($student->usi ?? '')) === '' && !empty($student->usiexempt)) {
+                $candidate = strtoupper(trim((string) ($student->usiexemptcode ?? '')));
+                if (in_array($candidate, ['INTOFF', 'INDIV'], true)) {
+                    $exemptcode = $candidate;
+                }
+            }
+            $record .= $this->pad($exemptcode !== '' ? $exemptcode : ($student->usi ?: ''), 10);                           // Pos 150-159: Unique student identifier
             $record .= $this->pad($student->statecode ?: $this->defaultstate, 2);                   // Pos 160-161: State identifier
             $record .= $this->pad($student->buildingname ?: '', 50);                  // Pos 162-211: Address building/property name
             $record .= $this->pad($student->unitno ?: '', 30);                        // Pos 212-241: Address flat/unit details
@@ -981,7 +1006,16 @@ class nat_generator {
             $record .= $this->pad($student->streetname ?: '', 70);             // Pos 200-269: Address street name
             $record .= $this->pad('', 22);                                     // Pos 270-291: Address postal delivery box
             $record .= $this->pad($student->suburb ?: '', 50);                 // Pos 292-341: Address suburb/locality/town
-            $record .= $this->pad($student->postcode ?: '@@@@', 4);           // Pos 342-345: Postcode
+            // v6.6 The client contact file carries the same postcode, so it must agree
+            // with the identifier file. An exempt offshore client gets the overseas value
+            // here too, otherwise the two files contradict each other on the same client.
+            $pc85 = $student->postcode ?: '@@@@';
+            if (trim((string) ($student->usi ?? '')) === ''
+                    && !empty($student->usiexempt)
+                    && strtoupper(trim((string) ($student->usiexemptcode ?? ''))) === 'INTOFF') {
+                $pc85 = 'OSPC';
+            }
+            $record .= $this->pad($pc85, 4);                                   // Pos 342-345: Postcode
             $record .= $this->pad($student->statecode ?: $this->defaultstate, 2);            // State identifier
             // NAT00085-COUNTRY-REMOVED (v6.2.35): the v5.9.319 country field is not part of the
             // NAT00085 postal record (country of birth is carried in NAT00080) and broke the

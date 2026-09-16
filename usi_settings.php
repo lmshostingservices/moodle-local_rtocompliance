@@ -188,7 +188,15 @@ $usi_scope_counts = function (string $search, int $catid, int $courseid, string 
                 COUNT(CASE WHEN s.usi IS NOT NULL AND s.usi <> '' AND s.usiverified = 4 THEN 1 END) AS review,
                 COUNT(CASE WHEN s.usi IS NOT NULL AND s.usi <> ''
                             AND (s.dateofbirth IS NULL OR s.dateofbirth = 0) THEN 1 END) AS missingdob,
-                COUNT(CASE WHEN s.usi IS NULL OR s.usi = '' THEN 1 END) AS nousi
+                COUNT(CASE WHEN (s.usi IS NULL OR s.usi = '')
+                            AND COALESCE(s.usiexempt, 0) = 0 THEN 1 END) AS nousi,
+                COUNT(CASE WHEN (s.usi IS NULL OR s.usi = '')
+                            AND (
+                                 (COALESCE(s.usiexempt, 0) = 1
+                                  AND UPPER(TRIM(COALESCE(s.usiexemptcode, ''))) = 'INTOFF')
+                                 OR TRIM(COALESCE(s.residentialcountry, '')) NOT IN ('', '1101', '@@@@')
+                                 OR UPPER(TRIM(COALESCE(s.postcode, ''))) = 'OSPC'
+                                ) THEN 1 END) AS offshoreexempt
               FROM {user} u
               JOIN {local_rtocompliance_students} s ON s.userid = u.id
              WHERE $w";
@@ -202,6 +210,7 @@ $usi_scope_counts = function (string $search, int $catid, int $courseid, string 
         'review'     => (int) ($rec->review ?? 0),
         'missingdob' => (int) ($rec->missingdob ?? 0),
         'nousi'      => (int) ($rec->nousi ?? 0),
+        'offshoreexempt' => (int) ($rec->offshoreexempt ?? 0),
     ];
 };
 
@@ -455,6 +464,9 @@ if ($usiexport === 'pdf') {
         'verified' => 'Verified (usi.gov.au)', 'unverified' => 'Not yet verified',
         'failed' => 'Verification failed', 'review' => 'Manual review required',
         'missingdob' => 'USI present, DOB missing', 'nousi' => 'No USI recorded',
+        'offshoreexempt' => 'Offshore Online Delivery USI Exempt',
+        'nousiincludingexempt' => 'No USI recorded (including exempt)',
+        'exemptany' => 'Any recorded USI exemption',
     ];
     $scopebits = ['Status: ' . ($filterlabels[$usifilter] ?? $usifilter)];
     $classlabels = \local_rtocompliance\usi\student_scope::classification_labels();
@@ -1403,6 +1415,10 @@ $cards = [
     ['USI present, DOB missing',  $scope['missingdob'], '#b45309', 'missingdob',
      'Cannot be verified until a date of birth is recorded.'],
     ['No USI recorded',           $scope['nousi'],      '#64748b', 'nousi',
+    ['Offshore online delivery, USI exempt', $scope['offshoreexempt'], '#0d9488', 'offshoreexempt',
+        'Studying wholly offshore with an overseas address. Exempt from holding a USI under the '
+        . 'Registrar\'s international exemption, and reported to NCVER with the INTOFF exemption '
+        . 'code rather than a blank identifier. These students are NOT counted in No USI recorded.'],
      'No USI on file — results cannot be reported and certificates cannot be issued.'],
 ];
 echo '<div class="rtoc-usi-cards">';
@@ -1427,6 +1443,9 @@ $filteropts = [
     'review'     => 'Manual review required',
     'missingdob' => 'USI present, DOB missing',
     'nousi'      => 'No USI recorded',
+    'offshoreexempt' => 'Offshore Online Delivery USI Exempt',
+    'nousiincludingexempt' => 'No USI recorded (including exempt)',
+    'exemptany'  => 'Any recorded USI exemption',
 ];
 // SUBCATEGORY-FILTER (v6.3.3): three levels, not two.
 //   Category     — top-level categories only (depth 1)
