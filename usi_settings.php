@@ -196,7 +196,9 @@ $usi_scope_counts = function (string $search, int $catid, int $courseid, string 
                                   AND UPPER(TRIM(COALESCE(s.usiexemptcode, ''))) = 'INTOFF')
                                  OR TRIM(COALESCE(s.residentialcountry, '')) NOT IN ('', '1101', '@@@@')
                                  OR UPPER(TRIM(COALESCE(s.postcode, ''))) = 'OSPC'
-                                ) THEN 1 END) AS offshoreexempt
+                                ) THEN 1 END) AS offshoreexempt,
+                COUNT(CASE WHEN COALESCE(s.usiexempt, 0) = 1 THEN 1 END) AS exemptany,
+                COUNT(CASE WHEN (s.usi IS NULL OR s.usi = '') THEN 1 END) AS nousiincludingexempt
               FROM {user} u
               JOIN {local_rtocompliance_students} s ON s.userid = u.id
              WHERE $w";
@@ -211,6 +213,8 @@ $usi_scope_counts = function (string $search, int $catid, int $courseid, string 
         'missingdob' => (int) ($rec->missingdob ?? 0),
         'nousi'      => (int) ($rec->nousi ?? 0),
         'offshoreexempt' => (int) ($rec->offshoreexempt ?? 0),
+        'exemptany'      => (int) ($rec->exemptany ?? 0),
+        'nousiincludingexempt' => (int) ($rec->nousiincludingexempt ?? 0),
     ];
 };
 
@@ -1225,14 +1229,31 @@ $usi_url = function (array $overrides = []) use ($usifilter, $usisearch, $usicat
 echo '<style>
 .rtoc-usi-wrap{--usi-line:#e5e7eb;--usi-ink:#0f172a;--usi-mute:#64748b;}
 .rtoc-usi-card{background:#fff;border:1px solid var(--usi-line);border-radius:10px;}
-.rtoc-usi-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:10px;margin:0 0 14px;}
+/* FOUR ACROSS, then wrap. auto-fit previously laid every card out on one line on a wide
+   screen, which made them narrow, and because a grid item stretches to its row height one
+   long label made the entire row tall. Four fixed columns and align-items:start fix both. */
+.rtoc-usi-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:start;
+  gap:12px;margin:0 0 14px;}
+@media (max-width:1100px){.rtoc-usi-cards{grid-template-columns:repeat(3,minmax(0,1fr));}}
+@media (max-width:820px){.rtoc-usi-cards{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media (max-width:520px){.rtoc-usi-cards{grid-template-columns:minmax(0,1fr);}}
 .rtoc-usi-stat{display:block;text-decoration:none;background:#fff;border:1px solid var(--usi-line);
-  border-left:4px solid #cbd5e1;border-radius:10px;padding:12px 14px;transition:box-shadow .15s,transform .15s,border-color .15s;}
+  border-left:4px solid #cbd5e1;border-radius:10px;padding:12px 14px;min-height:74px;
+  transition:box-shadow .15s,transform .15s,border-color .15s;}
 .rtoc-usi-stat:hover{box-shadow:0 4px 14px rgba(15,23,42,.10);transform:translateY(-1px);text-decoration:none;}
 .rtoc-usi-stat .n{font-size:23px;font-weight:700;line-height:1.1;}
 .rtoc-usi-stat .l{font-size:12.5px;color:#475569;margin-top:2px;}
 .rtoc-usi-stat.is-active{box-shadow:0 0 0 2px rgba(37,99,235,.35);background:#f8fbff;}
 .rtoc-usi-stat.is-active .l{font-weight:600;color:#1d4ed8;}
+/* Exemption views — a slim chip row under the eight cards. */
+.rtoc-usi-exempts{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:-4px 0 14px;}
+.rtoc-usi-exempts-lead{font-size:12.5px;font-weight:600;color:#475569;}
+.rtoc-usi-chip{display:inline-block;text-decoration:none;font-size:12.5px;color:#0f766e;
+  background:#f0fdfa;border:1px solid #99f6e4;border-radius:999px;padding:4px 11px;line-height:1.35;}
+.rtoc-usi-chip b{font-weight:700;}
+.rtoc-usi-chip:hover{background:#ccfbf1;text-decoration:none;color:#0f766e;}
+.rtoc-usi-chip.is-active{background:#0d9488;border-color:#0d9488;color:#fff;}
+.rtoc-usi-chip.is-active:hover{background:#0f766e;color:#fff;}
 .rtoc-usi-toolbar{padding:14px 16px;margin-bottom:14px;}
 .rtoc-usi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;align-items:end;}
 .rtoc-usi-grid label{display:block;font-weight:600;font-size:12px;color:#334155;margin:0 0 4px;
@@ -1415,23 +1436,79 @@ $cards = [
     ['USI present, DOB missing',  $scope['missingdob'], '#b45309', 'missingdob',
      'Cannot be verified until a date of birth is recorded.'],
     ['No USI recorded',           $scope['nousi'],      '#64748b', 'nousi',
-    ['Offshore online delivery, USI exempt', $scope['offshoreexempt'], '#0d9488', 'offshoreexempt',
-        'Studying wholly offshore with an overseas address. Exempt from holding a USI under the '
-        . 'Registrar\'s international exemption, and reported to NCVER with the INTOFF exemption '
-        . 'code rather than a blank identifier. These students are NOT counted in No USI recorded.'],
      'No USI on file — results cannot be reported and certificates cannot be issued.'],
 ];
+
+// EXEMPTIONS ARE A SLIM ROW, NOT A NINTH CARD. Eight cards fill a four-column grid in two
+// clean rows; a ninth would sit alone on a third row. These three are also secondary to the
+// eight above - an exemption explains an adjustment to "No USI recorded" rather than being
+// another status a student can be in - and two of them had previously existed only in the
+// filter dropdown, where nobody would find them.
+$exemptchips = [
+    ['offshoreexempt', 'Offshore online delivery, USI exempt', $scope['offshoreexempt'],
+     'Studying wholly offshore with an overseas address. Exempt from holding a USI under the '
+     . 'Registrar\'s international exemption, and reported to NCVER with the INTOFF exemption '
+     . 'code rather than a blank identifier. These students are NOT counted in No USI recorded.'],
+    ['exemptany', 'Any recorded USI exemption', $scope['exemptany'] ?? null,
+     'Every student carrying a recorded exemption, offshore or individual.'],
+    ['nousiincludingexempt', 'No USI recorded (including exempt)', $scope['nousiincludingexempt'] ?? null,
+     'The unadjusted figure. The difference between this and No USI recorded is the exempt cohort.'],
+];
+
+// Every card must be [label, count, colour, filter, tooltip] — four strings and a number.
+// A malformed row previously nested one card inside another, which put an ARRAY where the
+// tooltip string belongs and took the WHOLE PAGE down with a type error at output. PHP
+// accepts that shape silently and the file still lints, so the shape is checked here.
+// A bad card is DROPPED, not thrown: a broken definition must cost one card, never the
+// page, because this page is where an administrator goes to find out what is wrong.
+$cards = array_values(array_filter($cards, function($cdef) {
+    if (!is_array($cdef) || count($cdef) !== 5
+            || !is_string($cdef[0]) || !is_string($cdef[2])
+            || !is_string($cdef[3]) || !is_string($cdef[4])
+            || !is_numeric($cdef[1])) {
+        debugging('local_rtocompliance: malformed USI stat card definition dropped',
+            DEBUG_DEVELOPER);
+        return false;
+    }
+    return true;
+}));
 echo '<div class="rtoc-usi-cards">';
 foreach ($cards as $c) {
     $isactive = ($usifilter === $c[3]);
     $curl = $usi_url(['usifilter' => $c[3], 'usipage' => 0]);
+    // Every interpolated value is escaped or cast, including the colour (an attribute
+    // context) and the count (cast, so a non-numeric value can never reach the markup).
+    $colour = preg_match('/^#[0-9a-fA-F]{3,8}$/', (string) $c[2]) ? (string) $c[2] : '#cbd5e1';
     echo '<a href="' . s($curl->out(false)) . '" class="rtoc-usi-stat' . ($isactive ? ' is-active' : '') . '"'
-        . ' style="border-left-color:' . $c[2] . ';" title="' . s($c[4]) . '">';
-    echo '<div class="n" style="color:' . $c[2] . ';">' . $c[1] . '</div>';
+        . ' style="border-left-color:' . $colour . ';" title="' . s($c[4]) . '">';
+    echo '<div class="n" style="color:' . $colour . ';">' . (int) $c[1] . '</div>';
     echo '<div class="l">' . s($c[0]) . '</div>';
     echo '</a>';
 }
 echo '</div>';
+
+// Exemption views: a slim row under the eight cards, not a ninth card. Rendered only when
+// there is something to say, so a site with no exemptions recorded sees nothing extra.
+$anyexempt = false;
+foreach ($exemptchips as $chip) {
+    if ((int) $chip[2] > 0) {
+        $anyexempt = true;
+        break;
+    }
+}
+if ($anyexempt || in_array($usifilter, ['offshoreexempt', 'exemptany', 'nousiincludingexempt'], true)) {
+    echo '<div class="rtoc-usi-exempts">';
+    echo '<span class="rtoc-usi-exempts-lead">USI exemptions:</span>';
+    foreach ($exemptchips as $chip) {
+        list($key, $label, $count, $tip) = $chip;
+        $active = ($usifilter === $key);
+        $churl = $usi_url(['usifilter' => $key, 'usipage' => 0]);
+        echo '<a href="' . s($churl->out(false)) . '" class="rtoc-usi-chip'
+            . ($active ? ' is-active' : '') . '" title="' . s($tip) . '">'
+            . s($label) . ' <b>' . (int) $count . '</b></a>';
+    }
+    echo '</div>';
+}
 
 // ── Filter toolbar ───────────────────────────────────────────────────────────
 $filteropts = [

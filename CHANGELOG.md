@@ -1,3 +1,45 @@
+## [v6.6.2] - 2026-09-16
+
+**The USI Verification page was down.** A fatal error shipped in v6.6. Install this over it.
+
+### Fixed — the page-breaking defect
+
+- **A malformed array literal.** The new offshore-exemption stat card was written *inside*
+  the preceding card's definition instead of beside it. That put an array where the card's
+  tooltip string belongs, and the escaping call at output raised
+  `htmlspecialchars(): Argument #1 ($string) must be of type string, array given` — taking
+  the whole page with it. Nothing else on the site was affected: the fault was confined to
+  this one page, and no data was touched.
+
+  The file was syntactically valid, so it passed `php -l` and every other lint. The card
+  list had never been *executed* in isolation — reading it was not enough, and running it
+  would have taken seconds.
+
+- **The card list is now checked before output.** Each definition must be four strings and
+  a number. One that is not is **dropped with a developer notice**, not thrown: a broken
+  card definition must cost one card and never the page an administrator visits to find out
+  what is wrong. Verified against the exact shape that caused the outage, plus six other
+  malformations — every one drops cleanly, none reaches a fatal.
+- **Output hardened to match.** The count is cast to an integer and the colour must match a
+  hex pattern or falls back to the default, so no value in a card definition can reach the
+  markup unescaped.
+- **Swept every array-of-arrays literal in the plugin** for inconsistent row arity — the
+  shape of this defect. No other instance exists.
+
+### Changed — card layout
+
+- **Four across, in two rows.** The cards previously used `auto-fit`, which laid all of them
+  out on a single line on a wide screen, making each one narrow; and because a grid item
+  stretches to its row height, one long label made the entire row tall. The grid is now four
+  fixed columns, top-aligned, dropping to three, two and one column as the screen narrows.
+- **The three exemption views are a slim chip row beneath the cards**, not a ninth card that
+  would sit alone on a third row. Two of the three previously existed only in the filter
+  dropdown, where nobody would find them. All three now carry live counts, and each count was
+  verified to agree with the filter it links to — a card whose number disagrees with its own
+  filter is the next defect, so the two are tested against the same fixture.
+
+No schema change.
+
 ## [v6.6.1] - 2026-09-16
 
 Documentation and the AI assistant caught up with the exemption pathway, plus two
