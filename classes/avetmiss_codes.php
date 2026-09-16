@@ -83,9 +83,20 @@ class avetmiss_codes {
      * DO NOT hand-edit this array. Re-download the file, replace the copy in
      * db/codelists/, and regenerate. The list this replaced in v6.3.32 and earlier
      * was NOT a damaged copy of SACC - it was a different, partly invented
-     * classification. It put the Virgin Islands at 8527/8528 (SACC says 8427/8428),
-     * omitted 2102 England and every 2xxx UK constituent, and carried '9999' =>
-     * 'Not stated', which is not a SACC identifier at all. On one production site
+     * classification. It put the Virgin Islands at 8527/8528 (SACC says 8427/8428)
+     * and carried '9999' => 'Not stated', which is not a SACC identifier at all.
+     *
+     * CORRECTION (v6.4.8): this comment previously also said the old list "omitted
+     * 2102 England and every 2xxx UK constituent". That is FALSE, and it was checked
+     * by extracting the old list from the v6.3.32 package rather than trusted: the
+     * old list held 2100 and 2102 through 2108, all correctly labelled. Only 2101 was
+     * absent - and 2101 is not a SACC identifier either, so a stored 2101 (one
+     * student on the ITALC site) cannot have come from that dropdown and must have
+     * arrived by import.
+     *
+     * The mislabelling claim below IS correct and is the serious one: the old list
+     * had 7103 => Iran where SACC says India, and 6103 => India where SACC says
+     * Macau. On one production site
      * 798 of 948 non-Australian students (84%) held a country that either does not
      * exist in SACC or names a different country than the label the operator clicked.
      *

@@ -181,6 +181,19 @@ try {
         }
         $registryclass::save_view((int)$USER->id, $page, $table, $name, $state, $id === '' ? null : $id);
         $views = $registryclass::list_views((int)$USER->id, $page, $table);
+    } else if ($action === 'remember') {
+        // No state is accepted here. This only records which of the user's own
+        // existing views should be reapplied on a later visit, so a chosen view
+        // survives a refresh and a logout/login cycle.
+        $id = optional_param('id', null, PARAM_ALPHANUM);
+        if (!is_string($id) || $id === '') {
+            throw new \local_rtocompliance\local\saved_views_exception('invalid_id');
+        }
+        $registryclass::set_last_view((int)$USER->id, $page, $table, $id);
+        $views = $registryclass::list_views((int)$USER->id, $page, $table);
+    } else if ($action === 'forget') {
+        $registryclass::clear_last_view((int)$USER->id, $page, $table);
+        $views = $registryclass::list_views((int)$USER->id, $page, $table);
     } else {
         $id = optional_param('id', null, PARAM_ALPHANUM);
         if (!is_string($id) || $id === '') {
@@ -190,7 +203,11 @@ try {
         $views = $registryclass::list_views((int)$USER->id, $page, $table);
     }
 
-    local_rtocompliance_saved_views_reply(['ok' => true, 'views' => $views]);
+    local_rtocompliance_saved_views_reply([
+        'ok' => true,
+        'views' => $views,
+        'lastview' => $registryclass::get_last_view((int)$USER->id, $page, $table),
+    ]);
 } catch (\local_rtocompliance\local\saved_views_exception $exception) {
     $error = $exception->get_errorcode();
     $messages = [

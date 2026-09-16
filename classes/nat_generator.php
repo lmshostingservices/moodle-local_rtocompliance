@@ -851,24 +851,37 @@ class nat_generator {
             // (spec 150-159) and the DOB off-position, and failed AVS validation + the plugin's
             // own unit test. Prefix removed; all fields below sit at their correct spec positions.
             $record = '';
+            // FIELD POSITIONS CORRECTED (v6.4.8). Every comment from position 71
+            // onward used to read 10 characters too high - 81-82 for highest school
+            // level, 83 for gender, 84-91 for date of birth, and so on. The OUTPUT was
+            // always right; only the comments were wrong, which is worse than useless
+            // on a fixed-width file because anyone checking a field position against
+            // them reaches the wrong conclusion.
+            //
+            // Verified two ways rather than read: by locating known seeded values in
+            // the generated record, and by probing the SAME columns in this client's
+            // OWN lodged NAT00080 (6,244 records, 327 bytes) - highest school level at
+            // 71-72, gender at 73, date of birth at 74-81, language at 87-90, country
+            // at 93-96. Both agree. The record is 327 bytes, matching the real file.
             $record .= $this->pad($clientid, 10);                                      // Pos 1-10:   Client identifier
             $record .= $this->nameforencryption($lastname, $firstname);                // Pos 11-70:  Name for encryption (60)
-            $record .= $this->pad($student->highestschoollevel ?: '@@', 2);            // Pos 81-82:  Highest school level completed identifier
-            $record .= $this->pad($student->sex ?: '@', 1);                            // Pos 83:     Gender
-            $record .= $this->formatdate($student->dateofbirth);                       // Pos 84-91:  Date of birth (DDMMYYYY)
-            $record .= $this->pad($student->postcode ?: '@@@@', 4);                   // Pos 92-95:  Postcode
-            $record .= $this->pad($student->indigenousstatus ?: '@', 1);               // Pos 96:     Indigenous status identifier
-            $record .= $this->pad($student->languageathome ?: '1201', 4);             // Pos 97-100: Language identifier
+            $record .= $this->pad($student->highestschoollevel ?: '@@', 2);            // Pos 71-72:  Highest school level completed identifier
+            $record .= $this->pad($student->sex ?: '@', 1);                            // Pos 73:     Gender
+            $record .= $this->formatdate($student->dateofbirth);                       // Pos 74-81:  Date of birth (DDMMYYYY)
+            $record .= $this->pad($student->postcode ?: '@@@@', 4);                   // Pos 82-85:  Postcode
+            $record .= $this->pad($student->indigenousstatus ?: '@', 1);               // Pos 86:     Indigenous status identifier
+            $record .= $this->pad($student->languageathome ?: '1201', 4);             // Pos 87-90:  Language identifier
             // BUG-9 FIX: The ?? (null-coalescing) operator only substitutes defaults for NULL,
             // not for empty string ''. AVETMISS coded fields must not contain blank values —
             // NCVER validation rejects '  ' or ' ' as unknown codes. Using ?: (falsy check)
             // ensures both NULL and '' are replaced with the correct AVETMISS not-stated code.
-            $record .= $this->pad($student->labourforcestatus ?: '@@', 2);            // Pos 101-102: Labour force status identifier
-            $record .= $this->pad($student->countryofbirth ?: '1101', 4);             // Pos 103-106: Country identifier
-            $record .= $this->pad($student->disabilityflag ?: 'N', 1);                // Pos 107:    Disability flag
-            $record .= $this->pad($student->prioreducationflag ?: '@', 1);            // Pos 108:    Prior educational achievement flag
-            $record .= $this->pad($student->atschoolflag ?: 'N', 1);                  // Pos 109:    At school flag
-            $record .= $this->pad($student->suburb ?: '', 50);                        // Pos 110-159: Address – suburb, locality or town
+            $record .= $this->pad($student->labourforcestatus ?: '@@', 2);            // Pos 91-92:  Labour force status identifier
+            $record .= $this->pad($student->countryofbirth ?: '1101', 4);             // Pos 93-96:  Country identifier
+            $record .= $this->pad($student->disabilityflag ?: 'N', 1);                // Pos 97:     Disability flag
+            $record .= $this->pad($student->prioreducationflag ?: '@', 1);            // Pos 98:     Prior educational achievement flag
+            $record .= $this->pad($student->atschoolflag ?: 'N', 1);                  // Pos 99:     At school flag
+            $record .= $this->pad($student->suburb ?: '', 50);                        // Pos 100-149: Address – suburb, locality or town (50). NOT 110-159: that
+            // overlapped the USI at 150-159 in the old comment, which cannot both be true.
             $record .= $this->pad($student->usi ?: '', 10);                           // Pos 150-159: Unique student identifier
             $record .= $this->pad($student->statecode ?: $this->defaultstate, 2);                   // Pos 160-161: State identifier
             $record .= $this->pad($student->buildingname ?: '', 50);                  // Pos 162-211: Address building/property name

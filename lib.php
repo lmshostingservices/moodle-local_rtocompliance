@@ -6522,7 +6522,8 @@ function local_rtocompliance_sync_student_demographics_from_staging(): int {
                 s.postcode, s.buildingname, s.unitno, s.streetname,
                 s.indigenousstatus, s.labourforcestatus, s.highestschoollevel,
                 s.languageathome, s.countryofbirth, s.disabilityflag,
-                s.prioreducationflag, s.atschoolflag
+                s.prioreducationflag, s.atschoolflag,
+                s.usi, s.residentialcountry
            FROM {local_rtocompliance_avetmiss_student} s
            INNER JOIN (SELECT clientid, MAX(importid) AS mx
                          FROM {local_rtocompliance_avetmiss_student}
@@ -6572,6 +6573,35 @@ function local_rtocompliance_sync_student_demographics_from_staging(): int {
             if ($rv !== null) { $upd[$col] = $rv; }
         }
 
+        // v6.4.8 SYNC-USI-AND-RESIDENTIALCOUNTRY: both columns exist in staging and
+        // in the student table, and neither was in this function's SELECT list, so an
+        // imported USI was parsed, stored in staging, and then never reached the
+        // student record. On the reference site that cost 32 students a USI they had
+        // already supplied, and left residentialcountry blank for every student,
+        // which is why the offshore-exemption filter had nothing to read.
+        //
+        // USI IS FILL-BLANK-ONLY AND IS NEVER OVERWRITTEN. A USI already on the record
+        // may have been verified against the Registry, and a stale or mis-keyed import
+        // row must not be able to replace a verified identifier. The condition below
+        // therefore requires the existing value to be absent, and the incoming value to
+        // satisfy the NCVER format rule (exactly ten characters from A-H, J-N, P-Z and
+        // 2-9 - never 0, 1, I or O). The AVETMISS exemption codes INTOFF and INDIV are
+        // deliberately NOT accepted here: they are not identifiers, they belong in the
+        // exemption fields, and writing one into the usi column would fail every
+        // downstream format check.
+        $incomingusi = strtoupper(trim((string) ($st->usi ?? '')));
+        if ($incomingusi !== '' && preg_match('/^[2-9A-HJ-NP-Z]{10}$/', $incomingusi)) {
+            $current = $DB->get_field('local_rtocompliance_students', 'usi', ['id' => $existing->id]);
+            if (trim((string) $current) === '') {
+                $upd['usi'] = $incomingusi;
+            }
+        }
+
+        // residentialcountry is a plain SACC code and carries no verification state, so
+        // it follows the same real-value rule as the other demographics above.
+        $rc = $realval($st->residentialcountry ?? '');
+        if ($rc !== null) { $upd['residentialcountry'] = $rc; }
+
         if (count($upd) > 2) { // More than id + timemodified
             $DB->update_record('local_rtocompliance_students', (object) $upd);
             $updated++;
@@ -6579,6 +6609,58 @@ function local_rtocompliance_sync_student_demographics_from_staging(): int {
     }
     $rs->close();
     return $updated;
+}
+
+/**
+ * Snap a date-only timestamp so its calendar date cannot be changed by a timezone.
+ *
+ * v6.4.8 DOB-TIMEZONE-DRIFT. Date of birth is a DATE, but it is stored as a unix
+ * timestamp and rendered for the NAT files by nat_generator::formatdate(), which
+ * hardcodes Australia/Sydney. Moodle's date_selector, however, encodes whatever the
+ * user picked as MIDNIGHT IN THE USER'S OWN TIMEZONE. Those two are not the same
+ * instant, so for any user east or west of Sydney the exported calendar date lands a
+ * day away from the date they actually typed. Midnight in Perth is 02:00 the NEXT day
+ * in Sydney, so a student born on the 11th is lodged to NCVER as born on the 12th.
+ *
+ * Observed on the reference site: four students whose date of birth differed from the
+ * previously lodged value by exactly one day in one direction or the other, including
+ * one born on 29 February who was being exported as 1 March.
+ *
+ * The fix stores the date at MIDDAY in the export timezone instead of midnight. Midday
+ * survives a shift of up to eleven hours in either direction without crossing into
+ * another calendar day, so the date renders identically whoever reads it and wherever
+ * they are. The calendar day is re-derived in the timezone the value was entered in, so
+ * the day the user picked is the day that is kept.
+ *
+ * Historical values are deliberately left alone - this is applied at save time only.
+ *
+ * @param mixed $timestamp Unix timestamp as stored by a date_selector, or empty.
+ * @return int Normalised timestamp, or 0 when there was no usable date.
+ */
+function local_rtocompliance_normalise_dateonly($timestamp): int {
+    $ts = (int) $timestamp;
+    if ($ts <= 0) {
+        return 0;
+    }
+    try {
+        // The calendar day the user meant is the day this instant falls on in THEIR
+        // timezone, which is the timezone date_selector used to encode it.
+        $entered = new \DateTime('@' . $ts);
+        $entered->setTimezone(\core_date::get_user_timezone_object());
+        $y = (int) $entered->format('Y');
+        $m = (int) $entered->format('n');
+        $d = (int) $entered->format('j');
+
+        // Re-encode that same calendar day at midday in the timezone the NAT export
+        // renders in, so export and display agree.
+        $export = new \DateTime('now', new \DateTimeZone('Australia/Sydney'));
+        $export->setDate($y, $m, $d);
+        $export->setTime(12, 0, 0);
+        return (int) $export->getTimestamp();
+    } catch (\Throwable $e) {
+        debugging('normalise_dateonly: ' . $e->getMessage(), DEBUG_DEVELOPER);
+        return $ts;
+    }
 }
 
 /**

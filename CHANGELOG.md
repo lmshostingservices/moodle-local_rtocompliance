@@ -1,3 +1,125 @@
+## [v6.5] - 2026-09-16
+
+Release roll-up. Four fixes, no schema change.
+
+- **Saved views stay where you left them.** Applying a view is remembered against
+  your account, so it survives a refresh, a new tab and a logout. A "Page default"
+  button clears it.
+- **The AVETMISS import no longer invents student identifiers.** The USI is read at
+  its defined field position instead of being searched for by pattern, and the
+  published exemption markers are recorded rather than discarded.
+- **Imported USIs and residential country now reach the student record.** Both were
+  missing from the staging sync. The USI fills blanks only and never overwrites.
+- **Date of birth is no longer exported a day out** for users outside the export
+  time zone.
+
+Full detail for each is in the v6.4.8 and v6.4.9 entries below.
+
+No schema change. Savepoint 2026091600.
+
+## [v6.4.9] - 2026-09-16
+
+The AVETMISS import was inventing student identifiers out of address text.
+
+### Fixed
+
+- **The NAT00080 reader searched for a USI instead of reading the USI field.** It
+  scanned each record for any ten characters from the permitted set and voted on which
+  offset looked most popular. That scan window covers the suburb field, and a ten-letter
+  suburb drawn from the permitted set is indistinguishable from a real USI under a format
+  test alone. Confirmed on a live site: `PARRAMATTA`, `NGREENACRE`, `NKALLANGUR` and
+  `NPARANAQUE` had been stored as USIs, and comparing stored values against the lodged
+  file found **40 distinct values that appear nowhere in that file** - all manufactured
+  by the scan.
+- **The same routine read twelve bytes and accepted ten to twelve.** Positions 160-161
+  hold the State identifier, and state code `99` is made of permitted characters, so a
+  clean ten-character USI followed by state 99 was stored as a twelve-character value.
+  Three student records carried one.
+
+### How it works now
+
+A NAT00080 record is fixed width. The USI occupies positions 150-159 and nothing else,
+so when the layout is confirmed those ten bytes are read directly and no searching
+happens. The layout is confirmed from three independent anchors that cannot all hold by
+chance - Gender at 73, Date of birth at 74-81, Postcode at 82-85. If any anchor fails,
+the record is not this layout and the previous methods run unchanged, so vendor exports
+in other shapes are unaffected.
+
+`INTOFF` and `INDIV` are no longer discarded silently. They are not identifiers and are
+not stored as one, but each is recorded against the record so the exemption is visible.
+Ten bytes that are neither blank, an exemption, nor valid are recorded as unreadable
+rather than triggering a search that would invent a replacement.
+
+### Verified
+
+The live 6,244-record file was re-parsed with the position voter **deliberately pointed
+at the suburb field**. All 6,244 records came back identical to a raw read of positions
+150-159 - nothing fabricated, nothing lost.
+
+No schema change. Savepoint 2026091514.
+
+## [v6.4.8] - 2026-09-16
+
+Imported USIs and residential country now reach the student record.
+
+### Fixed
+
+- **`local_rtocompliance_sync_student_demographics_from_staging()` omitted `usi` and
+  `residentialcountry` from its SELECT list**, though both columns exist in the staging
+  table and on the student record. An imported USI was parsed, stored in staging, and
+  then never copied any further - and `residentialcountry` was left blank for every
+  student on the site, which is why the offshore USI-exemption filter had nothing to
+  read. On the reference site this cost 32 students a USI they had already supplied.
+
+### Added
+
+- **A chosen saved view now survives a refresh, a new tab and a logout.** Applying a
+  view records it in a Moodle user preference, so it is reapplied the next time that
+  page is opened with no filters of its own. Previously only the views themselves
+  persisted - which one was active did not, so every page load returned to the default.
+  A new "Page default" button clears the remembered view. Two new endpoint actions,
+  `remember` and `forget`, neither of which accepts any state: they can only point at a
+  view the user already owns in that exact page and table namespace.
+- Redirect loops are structurally impossible rather than merely unlikely: the reapply
+  navigation always stamps a marker on the URL, whether or not the view contributes a
+  single query parameter, and the marker's presence is what suppresses a second reapply.
+  Deleting the remembered view clears the preference, and a view whose payload has been
+  purged is healed the next time the list is read. The preference is included in the
+  privacy export and erasure paths alongside the existing two.
+
+- **Date of birth was being lodged a day out for any user not in the export timezone.**
+  `nat_generator::formatdate()` renders dates in a hardcoded `Australia/Sydney`, but
+  Moodle's `date_selector` encodes the chosen day as *midnight in the user's own
+  timezone*. Those are different instants, so for a user east of Sydney the exported
+  calendar date fell on the previous day - NAT00080 positions 74-81, and every
+  downstream identity match built on it. Reproduced and fixed: a date of birth is now
+  stored at midday in the export timezone, which survives an eleven-hour shift in
+  either direction without crossing into another calendar day, and the calendar day is
+  re-derived in the timezone it was entered in so the day the user picked is the day
+  that is kept. Verified across five timezones including a leap-day date. Applied at
+  save time only - historical values are deliberately left untouched.
+
+### Safety
+
+- **The USI is fill-blank-only and is never overwritten.** A USI already on a record may
+  have been verified against the USI Registry, so a stale or mis-keyed staging row must
+  not be able to replace a verified identifier. The new branch requires the stored value
+  to be empty *and* the incoming value to satisfy NCVER's format rule - exactly ten
+  characters from A-H, J-N, P-Z and 2-9, never 0, 1, I or O.
+- **`INTOFF` and `INDIV` are deliberately refused** by this path. They are AVETMISS
+  exemption codes, not identifiers, they belong in the exemption columns, and writing
+  one into `usi` would fail every downstream format check.
+- `residentialcountry` carries no verification state, so it follows the same real-value
+  rule as the other demographics and skips blanks and `@` placeholders.
+
+### Verified
+
+Four cases run through the real sync function against a database, not a mock: a blank
+record takes the imported USI, a populated record is left untouched, an exemption code
+is refused, and a ten-character value containing the forbidden letters is refused.
+
+No schema change. Savepoint 2026091513.
+
 ## [v6.4.7] - 2026-09-15
 
 The 6.4.6 blocker was in 6.4.6's own release note. No functional change.

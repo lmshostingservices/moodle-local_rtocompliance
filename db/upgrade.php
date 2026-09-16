@@ -15530,5 +15530,26 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026091512, 'local', 'rtocompliance');
     }
 
+    if ($oldversion < 2026091513) {
+        // SYNC-USI-AND-RESIDENTIALCOUNTRY: no DB schema changes.
+        // The staging-to-student demographics sync now also copies usi and
+        // residentialcountry. The USI is fill-blank-only and never overwrites an
+        // existing value, and the published exemption markers are refused by that
+        // path because they are not identifiers.
+        upgrade_plugin_savepoint(true, 2026091513, 'local', 'rtocompliance');
+    }
+
+    if ($oldversion < 2026091514) {
+        // NAT00080-POSITIONAL-USI-READ: no DB schema changes.
+        // The client identifier field is now read at its defined position when the
+        // record layout is confirmed, instead of being searched for by pattern.
+        upgrade_plugin_savepoint(true, 2026091514, 'local', 'rtocompliance');
+    }
+
+    if ($oldversion < 2026091600) {
+        // RELEASE-6.5-ROLLUP: no DB schema changes, no functional change.
+        upgrade_plugin_savepoint(true, 2026091600, 'local', 'rtocompliance');
+    }
+
     return true;
 }

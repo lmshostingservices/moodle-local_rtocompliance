@@ -24,6 +24,20 @@
     var QUERY_VALUE_MAX_LENGTH = 240;
     var STATE_MAX_LENGTH = 1200;
 
+    /* Marker proving this page load has already settled its saved view.
+     *
+     * It is added to every URL this file navigates to, whether or not the view
+     * being applied contributes a single query parameter. That is what makes a
+     * redirect loop impossible: the marker's presence is decided by the
+     * navigation, never by the contents of the view. It is not a registered
+     * field on any page, so safeTarget() drops it rather than carrying it into
+     * a saved state or a later re-apply, and no PHP reads it. */
+    var STICKY_PARAM = 'rtocsv';
+
+    /* At most one automatic apply per page load, so two tables on the same
+     * page cannot race each other into competing navigations. */
+    var autoApplied = false;
+
     var OFFSET_FIELDS = {
         page: true,
         p: true,
@@ -238,9 +252,26 @@
         instance.apply.disabled = !hasView;
         instance.update.disabled = !hasView;
         instance.delete.disabled = !hasView;
+        if (instance.reset) {
+            instance.reset.disabled = !instance.lastViewId;
+        }
     }
 
-    function renderViews(instance, views, preserveId) {
+    /* True when the current URL already carries one of this page's own
+     * registered filter fields. A deliberate link or a submitted filter form
+     * always wins over the remembered view. */
+    function urlCarriesPageFilters(instance) {
+        var search = new URL(window.location.href).searchParams;
+        return Object.keys(instance.config.allowed).some(function (name) {
+            return search.has(name);
+        });
+    }
+
+    function stickyMarkerPresent() {
+        return new URL(window.location.href).searchParams.has(STICKY_PARAM);
+    }
+
+    function renderViews(instance, views, preserveId, lastViewId) {
         instance.views = {};
         instance.select.textContent = '';
         instance.select.appendChild(makeElement('option', '', 'Choose a saved view'));
@@ -258,8 +289,16 @@
             option.value = id;
             instance.select.appendChild(option);
         });
+        if (lastViewId !== undefined) {
+            instance.lastViewId = lastViewId && instance.views[lastViewId] ? String(lastViewId) : '';
+        }
         if (preserveId && instance.views[preserveId]) {
             instance.select.value = preserveId;
+        } else if (instance.lastViewId && instance.views[instance.lastViewId]) {
+            // Show the remembered view as the current one, so the dropdown
+            // agrees with the rows on screen after a refresh or a fresh login.
+            instance.select.value = instance.lastViewId;
+            instance.name.value = instance.views[instance.lastViewId].name;
         }
         updateActionState(instance);
     }
@@ -468,7 +507,7 @@
         instance.update.disabled = true;
         post(instance, updateId ? 'save' : 'save', extra).then(function (data) {
             var previous = updateId || '';
-            renderViews(instance, data.views || [], previous);
+            renderViews(instance, data.views || [], previous, data.lastview || '');
             if (!previous && name) {
                 var found = Object.keys(instance.views).filter(function (id) {
                     return existingIds.indexOf(id) === -1 && instance.views[id].name === name;
@@ -500,7 +539,7 @@
         setStatus(instance, 'Deleting saved view…', false);
         instance.delete.disabled = true;
         post(instance, 'delete', {id: view.id}).then(function (data) {
-            renderViews(instance, data.views || []);
+            renderViews(instance, data.views || [], '', data.lastview || '');
             setStatus(instance, 'Saved view deleted.', false);
         }).catch(function (error) {
             setStatus(instance, error.message, true);
@@ -571,6 +610,22 @@
         }
     }
 
+    /* Navigate to a view's URL, handing the client-side sort across the one
+     * navigation and stamping the sticky marker so this page load is not
+     * re-settled on arrival. */
+    function navigateToView(instance, target, sort) {
+        target.searchParams.set(STICKY_PARAM, '1');
+        try {
+            window.sessionStorage.setItem(storageKey(instance), JSON.stringify({
+                target: target.pathname + target.search,
+                sort: sort
+            }));
+        } catch (ignore) {
+            // A storage restriction should not prevent a safe URL apply.
+        }
+        window.location.assign(target.toString());
+    }
+
     function applyView(instance) {
         var view = selectedView(instance);
         if (!view) {
@@ -584,16 +639,62 @@
             setStatus(instance, error.message, true);
             return;
         }
-        var sort = state.sort;
-        try {
-            window.sessionStorage.setItem(storageKey(instance), JSON.stringify({
-                target: target.pathname + target.search,
-                sort: sort
-            }));
-        } catch (ignore) {
-            // A storage restriction should not prevent a safe URL apply.
+
+        // Record the choice before leaving, so it is reapplied on the next
+        // visit. A failure to record must not block the apply itself - the
+        // view still opens, it just will not be remembered.
+        instance.apply.disabled = true;
+        setStatus(instance, 'Applying saved view…', false);
+        post(instance, 'remember', {id: view.id}).then(function () {
+            navigateToView(instance, target, state.sort);
+        }).catch(function () {
+            navigateToView(instance, target, state.sort);
+        });
+    }
+
+    /* Reapply the remembered view on a page opened without filters of its own.
+     *
+     * This is what carries a chosen view across a refresh, a new tab and a
+     * logout/login cycle: the choice lives in a Moodle user preference rather
+     * than in the URL or in browser storage. */
+    function autoApplyLastView(instance) {
+        if (autoApplied || !instance.lastViewId || stickyMarkerPresent() || urlCarriesPageFilters(instance)) {
+            return;
         }
-        window.location.assign(target.toString());
+        var view = instance.views[instance.lastViewId];
+        if (!view) {
+            return;
+        }
+        var state = validState(view.state);
+        var target;
+        try {
+            target = safeTarget(instance, state);
+        } catch (error) {
+            return;
+        }
+        autoApplied = true;
+        setStatus(instance, 'Restoring “' + view.name + '”…', false);
+        navigateToView(instance, target, state.sort);
+    }
+
+    /* Stop reapplying the remembered view and return the table to the page's
+     * own default. Without this a sticky view could never be escaped. */
+    function resetToDefault(instance) {
+        var target;
+        try {
+            target = safeTarget(instance, {query: {}, sort: null});
+        } catch (error) {
+            setStatus(instance, error.message, true);
+            return;
+        }
+        instance.reset.disabled = true;
+        setStatus(instance, 'Clearing saved view…', false);
+        post(instance, 'forget', {}).then(function () {
+            navigateToView(instance, target, null);
+        }).catch(function (error) {
+            setStatus(instance, error.message, true);
+            updateActionState(instance);
+        });
     }
 
     function createControls(instance) {
@@ -631,6 +732,11 @@
         apply.title = 'Apply the selected saved view';
         section.appendChild(apply);
 
+        var reset = makeElement('button', 'rtoc-savedviews-button rtoc-savedviews-reset', 'Page default');
+        reset.type = 'button';
+        reset.title = 'Stop reopening this table with the remembered saved view';
+        section.appendChild(reset);
+
         var remove = makeElement('button', 'rtoc-savedviews-button rtoc-savedviews-delete', 'Delete');
         remove.type = 'button';
         remove.title = 'Delete the selected saved view';
@@ -646,6 +752,7 @@
         instance.save = save;
         instance.update = update;
         instance.apply = apply;
+        instance.reset = reset;
         instance.delete = remove;
         instance.status = status;
 
@@ -665,6 +772,9 @@
         apply.addEventListener('click', function () {
             applyView(instance);
         });
+        reset.addEventListener('click', function () {
+            resetToDefault(instance);
+        });
         remove.addEventListener('click', function () {
             deleteView(instance);
         });
@@ -682,8 +792,9 @@
         // applied, safe local sort.
         restoreSort(instance);
         post(instance, 'list', {}).then(function (data) {
-            renderViews(instance, data.views || []);
+            renderViews(instance, data.views || [], '', data.lastview || '');
             setStatus(instance, '', false);
+            autoApplyLastView(instance);
         }).catch(function (error) {
             // The table remains useful if the optional saved-view endpoint is
             // unavailable; controls stay visible and communicate the failure.
@@ -692,6 +803,7 @@
             instance.update.disabled = true;
             instance.delete.disabled = true;
             instance.apply.disabled = true;
+            instance.reset.disabled = true;
         });
     }
 

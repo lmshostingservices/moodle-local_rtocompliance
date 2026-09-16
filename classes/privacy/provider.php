@@ -270,6 +270,12 @@ class provider implements
             saved_views::MANIFEST_PREFERENCE_PREFIX . '*',
             'privacy:metadata:preference:savedviews'
         );
+        // v6.4.8: the third family records WHICH view the user last applied in a
+        // page/table namespace, so a chosen view survives a refresh and a logout.
+        $collection->add_user_preference(
+            saved_views::LAST_PREFERENCE_PREFIX . '*',
+            'privacy:metadata:preference:savedviews'
+        );
 
         return $collection;
     }
@@ -285,10 +291,12 @@ class provider implements
     protected static function saved_view_preference_like(): array {
         global $DB;
         $like = $DB->sql_like('name', ':savedviewprefix')
-            . ' OR ' . $DB->sql_like('name', ':savedmanifestprefix');
+            . ' OR ' . $DB->sql_like('name', ':savedmanifestprefix')
+            . ' OR ' . $DB->sql_like('name', ':savedlastprefix');
         return [$like, [
             'savedviewprefix' => $DB->sql_like_escape(saved_views::VIEW_PREFERENCE_PREFIX) . '%',
             'savedmanifestprefix' => $DB->sql_like_escape(saved_views::MANIFEST_PREFERENCE_PREFIX) . '%',
+            'savedlastprefix' => $DB->sql_like_escape(saved_views::LAST_PREFERENCE_PREFIX) . '%',
         ]];
     }
 

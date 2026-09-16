@@ -322,6 +322,14 @@ if ($form->is_cancelled()) {
         }
     }
 
+    // v6.4.8 DOB-TIMEZONE-DRIFT: date_selector encodes the chosen day as midnight in
+    // the user's timezone, but the NAT export renders dates in Australia/Sydney, so a
+    // user in any other zone had their date of birth lodged a day out. Snap it to
+    // midday in the export timezone, keeping the calendar day the user actually picked.
+    if (isset($data->dateofbirth)) {
+        $data->dateofbirth = local_rtocompliance_normalise_dateonly($data->dateofbirth);
+    }
+
     if (!$iscreate) {
         $DB->update_record('local_rtocompliance_students', $data);
         $message = get_string('profileupdated', 'local_rtocompliance');

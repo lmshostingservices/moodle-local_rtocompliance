@@ -681,6 +681,76 @@ function local_rtocompliance_parse_nat00080(string $line, int $detectedUsiPos = 
     // This prevents other fixed-width fields (client IDs, numeric codes) from
     // being accepted as a USI — the previous [A-Z0-9] regex was too broad.
 
+    // ── Method -1 — AUTHORITATIVE POSITIONAL READ (v6.4.9) ─────────────────────
+    // This runs BEFORE every other method and, when it applies, it is final.
+    //
+    // WHY IT EXISTS. The methods below search for a USI-shaped string instead of
+    // reading the field, and that produced two distinct corruptions on a live site:
+    //
+    //   1. FABRICATED IDENTIFIERS. The position voter scans a window that covers the
+    //      suburb field, so a ten-letter suburb drawn from the USI character set was
+    //      voted a USI and stored as one. Real examples, all valid under the format
+    //      rule: PARRAMATTA, NGREENACRE, NKALLANGUR, NPARANAQUE. Verified against the
+    //      lodged file: the file held no such values at all - they were manufactured
+    //      by the scan.
+    //
+    //   2. TWO EXTRA CHARACTERS. Methods 0 to 2 read TWELVE bytes and accept ten to
+    //      twelve. Positions 160-161 hold the State identifier, and state code 99 is
+    //      made of characters the USI charset allows, so a clean ten-character USI
+    //      followed by state 99 was stored as a twelve-character value. Three student
+    //      records carried one.
+    //
+    // A NAT00080 record in AVETMISS 8.0 is fixed width. The USI occupies positions
+    // 150-159 (0-indexed 149-158) and nothing else. So when the record is confirmed
+    // to be that layout, the field is read - exactly ten bytes, never twelve - and no
+    // searching happens.
+    //
+    // The layout is confirmed from three independent anchors that cannot all hold by
+    // chance: Gender at 73 is one of M, F, X or @; Date of birth at 74-81 is eight
+    // digits or the not-stated marker; Postcode at 82-85 is four digits, OSPC or the
+    // not-stated marker. If any anchor fails the record is not this layout and the
+    // existing methods run unchanged, so non-standard vendor exports are unaffected.
+    //
+    // Exemption markers are NOT returned as identifiers. They are not USIs, and the
+    // format check every consumer applies would reject them. They are recorded as a
+    // data issue so the exemption is visible rather than silently dropped - the
+    // export side needs its own change to lodge them, which this is not.
+    $positionalusi = null;
+    if (!$usi && strlen($line) >= 161) {
+        $anchorsex = substr($lineUp, 72, 1);
+        $anchordob = substr($lineUp, 73, 8);
+        $anchorpc  = substr($lineUp, 81, 4);
+        $sexok = in_array($anchorsex, ['M', 'F', 'X', '@'], true);
+        $dobok = (bool) preg_match('/^(?:\d{8}|@{8})$/', $anchordob);
+        $pcok  = (bool) preg_match('/^(?:\d{4}|@{4}|OSPC)$/', $anchorpc);
+
+        if ($sexok && $dobok && $pcok) {
+            // Confirmed AVETMISS 8.0 fixed-width layout. Read the field itself.
+            $field = trim(substr($lineUp, 149, 10));
+            if ($field === '') {
+                $positionalusi = '';                       // Legitimately blank.
+            } else if (in_array($field, ['INTOFF', 'INDIV'], true)) {
+                $positionalusi = '';                       // Exemption, not an identifier.
+                $dataissuefields[] = 'usi_exemption_' . strtolower($field);
+            } else if (preg_match('/^[2-9A-HJ-NP-Z]{10}$/', $field)) {
+                $positionalusi = $field;
+            } else {
+                // Ten bytes that are neither blank, an exemption, nor a valid USI.
+                // Do not guess and do not fall through to a scan that would invent
+                // something - record it and leave the value empty.
+                $positionalusi = '';
+                $dataissuefields[] = 'usi_unreadable_at_position_150';
+            }
+            $usi = ($positionalusi === '') ? null : $positionalusi;
+        }
+    }
+
+    // Every method below is a fallback for records whose layout could NOT be
+    // confirmed above. When Method -1 applied, it has already decided, and a blank
+    // result there means the field really is blank - so the fallbacks must not run
+    // and re-introduce a searched value.
+    $layoutconfirmed = ($positionalusi !== null);
+
     // Method 0 — Admin-confirmed or auto-detected position.
     // FIX-METHOD0-10CHAR-FALLBACK (v4.9.166): Australian USIs are exactly 10 chars from the
     // charset [2-9A-HJ-NP-Z].  In NAT00080 fixed-width exports the 10-char USI is immediately
@@ -692,7 +762,7 @@ function local_rtocompliance_parse_nat00080(string $line, int $detectedUsiPos = 
     // the hardcoded 149 or 90.  Zero USIs extracted despite the voter being exactly right.
     // Fix: if the 12-char read fails charset validation, fall back to just the first 10 chars.
     // 12-char vendor USI formats (where all 12 chars are valid USI charset) continue to work.
-    if ($detectedUsiPos >= 0 && strlen($lineUp) >= $detectedUsiPos + 10) {
+    if (!$layoutconfirmed && $detectedUsiPos >= 0 && strlen($lineUp) >= $detectedUsiPos + 10) {
         $candidate = rtrim(substr($lineUp, $detectedUsiPos, 12));
         if (preg_match('/^[2-9A-HJ-NP-Z]{10,12}$/', $candidate)) {
             $usi = $candidate;
@@ -701,6 +771,7 @@ function local_rtocompliance_parse_nat00080(string $line, int $detectedUsiPos = 
         }
     }
 
+
     // Method 1 — Standard AVETMISS 8.0: pos 149–158 (or 149–160 for 12-char vendors).
     // Skipped when $strict=true (admin confirmed position via column-picker).
     // FIX-METHOD1-10CHAR-FALLBACK (v5.2.23): Mirror the same 10-char fallback applied to
@@ -708,7 +779,7 @@ function local_rtocompliance_parse_nat00080(string $line, int $detectedUsiPos = 
     // immediately followed by a 2-char check-digit suffix (e.g. "MNJ4UPAPDX05").
     // The 12-char read fails /[2-9A-HJ-NP-Z]{10,12}/ because '0' and '5' are excluded
     // from the USI charset — returning null when preview/fallback used usiPos=-1.
-    if (!$usi && !$strict && strlen($line) >= 159) {
+    if (!$layoutconfirmed && !$usi && !$strict && strlen($line) >= 159) {
         $candidate = rtrim(substr($lineUp, 149, 12));
         if (preg_match('/^[2-9A-HJ-NP-Z]{10,12}$/', $candidate)) {
             $usi = $candidate;
@@ -720,7 +791,7 @@ function local_rtocompliance_parse_nat00080(string $line, int $detectedUsiPos = 
     // Method 2 — Pre-2022 short format: pos 90–99 (or 90–101 for 12-char vendors).
     // Skipped when $strict=true.
     // FIX-METHOD2-10CHAR-FALLBACK (v5.2.23): Same 10-char fallback as Methods 0 and 1.
-    if (!$usi && !$strict && strlen($line) >= 100) {
+    if (!$layoutconfirmed && !$usi && !$strict && strlen($line) >= 100) {
         $candidate = rtrim(substr($lineUp, 90, 12));
         if (preg_match('/^[2-9A-HJ-NP-Z]{10,12}$/', $candidate)) {
             $usi = $candidate;
@@ -731,7 +802,7 @@ function local_rtocompliance_parse_nat00080(string $line, int $detectedUsiPos = 
 
     // Method 3 — DOB-anchored offsets (last resort).
     // Skipped when $strict=true.
-    if (!$usi && !$strict && $dobAbsEnd !== null) {
+    if (!$layoutconfirmed && !$usi && !$strict && $dobAbsEnd !== null) {
         foreach ([19, 68, 69, 20, 18, 17, 67, 70] as $off) {
             $tryPos = $dobAbsEnd + $off;
             if (strlen($lineUp) < $tryPos + 10) continue;

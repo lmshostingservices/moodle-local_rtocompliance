@@ -64,6 +64,17 @@ class saved_views {
     /** Preference name prefix for the per-page/table manifest. */
     public const MANIFEST_PREFERENCE_PREFIX = 'local_rtocompliance_saved_views_manifest_';
 
+    /**
+     * Preference name prefix recording the view this user last applied in a
+     * page/table namespace.
+     *
+     * This is what makes a chosen view survive a refresh, a new tab, and a
+     * logout/login cycle: a Moodle user preference is stored server-side
+     * against the user, unlike the session storage used to carry client-side
+     * sort state across a single navigation.
+     */
+    public const LAST_PREFERENCE_PREFIX = 'local_rtocompliance_saved_views_last_';
+
     /** Maximum number of views for one page/table namespace. */
     public const MAX_VIEWS_PER_TABLE = 10;
 
@@ -153,7 +164,94 @@ class saved_views {
             return $byname !== 0 ? $byname : strcmp($left['id'], $right['id']);
         });
 
+        // A remembered view whose payload has since been purged or truncated
+        // must not keep being re-applied on every page load. Self-heal here so
+        // the stale preference is cleared the first time the list is read.
+        $last = self::get_last_view($userid, $page, $table);
+        if ($last !== null) {
+            $stillthere = false;
+            foreach ($views as $view) {
+                if ($view['id'] === $last) {
+                    $stillthere = true;
+                    break;
+                }
+            }
+            if (!$stillthere) {
+                self::clear_last_view($userid, $page, $table);
+            }
+        }
+
         return array_values($views);
+    }
+
+    /**
+     * Record the view this user last applied in a page/table namespace.
+     *
+     * The id must already exist in the user's own manifest for that exact
+     * namespace, so this cannot be used to point a user at another user's
+     * view or at an unregistered page.
+     *
+     * @param int $userid Owner.
+     * @param string $page Registered page basename.
+     * @param string $table Stable client table key.
+     * @param string $id Opaque id of a view the user owns.
+     * @return void
+     */
+    public static function set_last_view(int $userid, string $page, string $table, string $id): void {
+        self::validate_userid($userid);
+        [$page, $table] = self::validate_namespace($page, $table);
+        self::validate_id($id);
+
+        $found = false;
+        foreach (self::read_manifest($userid, $page, $table) as $entry) {
+            if ($entry['id'] === $id) {
+                $found = true;
+                break;
+            }
+        }
+        if (!$found) {
+            throw new saved_views_exception('not_found');
+        }
+
+        set_user_preference(self::last_preference_name($page, $table), $id, $userid);
+    }
+
+    /**
+     * Return the view this user last applied, or null when there is none.
+     *
+     * @param int $userid Owner.
+     * @param string $page Registered page basename.
+     * @param string $table Stable client table key.
+     * @return string|null Opaque view id.
+     */
+    public static function get_last_view(int $userid, string $page, string $table): ?string {
+        self::validate_userid($userid);
+        [$page, $table] = self::validate_namespace($page, $table);
+
+        $raw = get_user_preferences(self::last_preference_name($page, $table), null, $userid);
+        if (!is_string($raw) || $raw === '') {
+            return null;
+        }
+        try {
+            self::validate_id($raw);
+        } catch (saved_views_exception $exception) {
+            return null;
+        }
+        return $raw;
+    }
+
+    /**
+     * Forget the remembered view so the page returns to its own default.
+     *
+     * @param int $userid Owner.
+     * @param string $page Registered page basename.
+     * @param string $table Stable client table key.
+     * @return void
+     */
+    public static function clear_last_view(int $userid, string $page, string $table): void {
+        self::validate_userid($userid);
+        [$page, $table] = self::validate_namespace($page, $table);
+        unset_user_preference(self::last_preference_name($page, $table), $userid);
     }
 
     /**
@@ -268,6 +366,12 @@ class saved_views {
         $transaction = $DB->start_delegated_transaction();
         try {
             unset_user_preference(self::view_preference_name($page, $table, $id), $userid);
+            // Deleting the remembered view must also stop it being reapplied,
+            // otherwise the page would keep redirecting to a view that no
+            // longer exists until the next list call healed it.
+            if (self::get_last_view($userid, $page, $table) === $id) {
+                unset_user_preference(self::last_preference_name($page, $table), $userid);
+            }
             if ($kept) {
                 self::write_manifest($userid, $page, $table, $kept);
             } else {
@@ -383,13 +487,16 @@ class saved_views {
     }
 
     /**
-     * Accept only the three documented actions after normal form decoding.
+     * Accept only the five documented actions after normal form decoding.
+     *
+     * remember and forget carry no state: they only record, or clear, which
+     * of the user's own existing views should be reapplied on a later visit.
      *
      * @param string $action Request action.
      * @return string
      */
     public static function validate_action(string $action): string {
-        if (!in_array($action, ['list', 'save', 'delete'], true)) {
+        if (!in_array($action, ['list', 'save', 'delete', 'remember', 'forget'], true)) {
             throw new saved_views_exception('invalid_request');
         }
         return $action;
@@ -414,15 +521,18 @@ class saved_views {
         // clause the current driver needs, so use it rather than raw LIKE.
         $viewprefix = $DB->sql_like_escape(self::VIEW_PREFERENCE_PREFIX) . '%';
         $manifestprefix = $DB->sql_like_escape(self::MANIFEST_PREFERENCE_PREFIX) . '%';
+        $lastprefix = $DB->sql_like_escape(self::LAST_PREFERENCE_PREFIX) . '%';
         $likeview = $DB->sql_like('name', ':viewprefix');
         $likemanifest = $DB->sql_like('name', ':manifestprefix');
+        $likelast = $DB->sql_like('name', ':lastprefix');
         $records = $DB->get_records_select(
             'user_preferences',
-            "userid = :userid AND ($likeview OR $likemanifest)",
+            "userid = :userid AND ($likeview OR $likemanifest OR $likelast)",
             [
                 'userid' => $userid,
                 'viewprefix' => $viewprefix,
                 'manifestprefix' => $manifestprefix,
+                'lastprefix' => $lastprefix,
             ],
             '',
             'name'
@@ -751,6 +861,15 @@ class saved_views {
      */
     private static function manifest_preference_name(string $page, string $table): string {
         return self::MANIFEST_PREFERENCE_PREFIX . hash('sha256', $page . "\0" . $table);
+    }
+
+    /**
+     * @param string $page Page.
+     * @param string $table Table.
+     * @return string
+     */
+    private static function last_preference_name(string $page, string $table): string {
+        return self::LAST_PREFERENCE_PREFIX . hash('sha256', $page . "\0" . $table);
     }
 
     /**
