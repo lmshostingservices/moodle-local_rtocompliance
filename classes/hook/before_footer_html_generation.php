@@ -68,45 +68,41 @@ class before_footer_html_generation {
         // ── MISSING AVETMISS DATA PROMPT (v5.9.440) — site-wide student nudge ──────────
         // A logged-in student whose AVETMISS profile is incomplete gets a modal prompting
         // them to complete it (and telling them where to download their certificates). It
-        // reads only the student's OWN row (one indexed lookup by userid), never shows for
-        // admins/guests or on the profile page itself, and appears once per browser session
+        // never shows on the profile page itself, and appears once per browser session
         // (the external js/avetmiss_prompt.js reveals it and remembers "Remind me later").
         // The primary button is a plain link, so a student can always reach their profile.
+        //
+        // PROMPT-OBEYS-ENFORCEMENT (v6.6.3): the prompt used to run its OWN eligibility
+        // check - any non-admin with a students row and a blank field - so it ignored the
+        // "Student data enforcement" switch, the staff bypass capability, "log in as",
+        // the nationally-recognised-training condition and the configured mandatory field
+        // list (it always demanded the USI, which the lock deliberately does not). It was
+        // dead code until the v6.3.32 PAGE-URL-GUARD fix made this callback run, which is
+        // when sites with enforcement switched off started seeing it. It now asks the
+        // lock's own predicate, so the prompt and the lock can never disagree about who
+        // is held or for what. The config.php emergency switch silences it too.
+        $missing = [];
         if (isloggedin() && !isguestuser() && !is_siteadmin()
+                && empty($CFG->local_rtocompliance_disable_profile_gate)
+                && get_config('local_rtocompliance', 'enforceprofile')
                 && strpos($path, '/local/rtocompliance/my_profile.php') === false) {
-            $student = $DB->get_record('local_rtocompliance_students', ['userid' => (int)$USER->id]);
-            if ($student) {
-                $labels = [
-                    'usi' => 'USI (Unique Student Identifier)', 'dateofbirth' => 'Date of birth',
-                    'sex' => 'Sex', 'postcode' => 'Postcode', 'statecode' => 'State', 'suburb' => 'Suburb',
-                    'indigenousstatus' => 'Indigenous status', 'countryofbirth' => 'Country of birth',
-                    'languageathome' => 'Language spoken at home', 'labourforcestatus' => 'Labour force status',
-                    'highestschoollevel' => 'Highest school level completed',
-                ];
-                $missing = [];
-                foreach ($labels as $f => $lbl) {
-                    if ($f === 'dateofbirth') {
-                        if (empty($student->dateofbirth)) {
-                            $missing[] = $lbl;
-                        }
-                        continue;
-                    }
-                    $v = trim((string)($student->$f ?? ''));
-                    if ($v === '' || $v === '@' || $v === '@@') {
-                        $missing[] = $lbl;
-                    }
-                }
-                if (!empty($missing)) {
-                    $profileurl = (new \moodle_url('/local/rtocompliance/my_profile.php'))->out(false);
-                    $jsurl      = (new \moodle_url('/local/rtocompliance/js/avetmiss_prompt.js'))->out();
-                    $items = '';
-                    foreach (array_slice($missing, 0, 8) as $mlbl) {
-                        $items .= '<li>' . s($mlbl) . '</li>';
-                    }
-                    if (count($missing) > 8) {
-                        $items .= '<li>&hellip;and ' . (count($missing) - 8) . ' more</li>';
-                    }
-                    $hook->add_html(
+            require_once($CFG->dirroot . '/local/rtocompliance/lib.php');
+            $gate = local_rtocompliance_profile_gate_applies((int)$USER->id);
+            if ($gate !== false && !empty($gate['missing'])) {
+                $missing = array_values($gate['missing']);
+            }
+        }
+        if (!empty($missing)) {
+            $profileurl = (new \moodle_url('/local/rtocompliance/my_profile.php'))->out(false);
+            $jsurl      = (new \moodle_url('/local/rtocompliance/js/avetmiss_prompt.js'))->out();
+            $items = '';
+            foreach (array_slice($missing, 0, 8) as $mlbl) {
+                $items .= '<li>' . s($mlbl) . '</li>';
+            }
+            if (count($missing) > 8) {
+                $items .= '<li>&hellip;and ' . (count($missing) - 8) . ' more</li>';
+            }
+            $hook->add_html(
 '<style>
 .rtoc-avm-backdrop{position:fixed;inset:0;z-index:100050;background:rgba(15,23,42,.55);display:none;align-items:center;justify-content:center;padding:20px;}
 .rtoc-avm-card{background:#fff;max-width:520px;width:100%;border-radius:16px;box-shadow:0 24px 60px -12px rgba(15,23,42,.45);padding:26px 28px;font-family:inherit;box-sizing:border-box;}
@@ -135,8 +131,6 @@ class before_footer_html_generation {
   </div>
 </div>
 <script src="' . s($jsurl) . '"></script>');
-                }
-            }
         }
 
         // ── ENROLLED USERS PAGE: inject "Fix Placeholder Student Names" banner ──

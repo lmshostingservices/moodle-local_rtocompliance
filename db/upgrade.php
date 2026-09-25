@@ -15583,5 +15583,11 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026091700, 'local', 'rtocompliance');
     }
 
+    if ($oldversion < 2026092500) {
+        // PROMPT-OBEYS-ENFORCEMENT: no DB schema changes.
+        // The site-wide complete-your-details prompt now follows the profile lock setting.
+        upgrade_plugin_savepoint(true, 2026092500, 'local', 'rtocompliance');
+    }
+
     return true;
 }

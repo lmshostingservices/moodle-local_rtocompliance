@@ -1,3 +1,36 @@
+## [v6.6.3] - 2026-09-25
+
+**The "Complete your student details" popup ignored the Student data enforcement setting.**
+
+### Fixed
+
+- **Popup shown with the profile lock switched off.** With *Lock students out until their
+  AVETMISS profile is complete* disabled, students were still shown the popup at login and
+  on every page. The popup (`classes/hook/before_footer_html_generation.php`) ran its own
+  eligibility check — any non-admin with a student record and a blank field — rather than
+  asking the lock. It never read `enforceprofile`.
+- **Why it appeared now.** The popup had never actually run: the footer callback returned
+  early on every page until the v6.3.32 `$PAGE->has_set_url()` fix. That fix was correct,
+  and it brought this dormant check to life.
+- **Now uses the lock's own predicate** (`local_rtocompliance_profile_gate_applies()`), so
+  the popup and the lock cannot disagree. As a result the popup also now respects:
+  - the staff bypass capability and "log in as" sessions
+  - the nationally-recognised-training condition (non-accredited learners are not prompted)
+  - the configured *mandatory profile fields* list — it no longer asks for the USI unless
+    the lock does
+  - the `$CFG->local_rtocompliance_disable_profile_gate` emergency switch
+
+With the setting **off**, no popup and no lock. With it **on**, behaviour is as before, except
+that the field list now matches the lock's.
+
+### Tests
+
+- `tests/profile_gate_test.php`: four new cases run the footer hook directly — popup absent
+  when enforcement is off, present when on, absent for non-accredited learners, and absent
+  when only the USI is blank under the default field list.
+
+No database change; a no-op savepoint is included for version tracking.
+
 ## [v6.6.2] - 2026-09-16
 
 **The USI Verification page was down.** A fatal error shipped in v6.6. Install this over it.

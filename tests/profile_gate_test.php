@@ -303,4 +303,58 @@ class profile_gate_test extends \advanced_testcase {
         $this->assertContains('login/index.php', $allowlist);
         $this->assertContains('user/policy.php', $allowlist);
     }
+
+    // ── Site-wide "Complete your student details" prompt (v6.6.3) ────────────
+
+    /**
+     * Run the footer hook as a student on an ordinary course page and return its output.
+     */
+    protected function footer_output(): string {
+        global $PAGE;
+        $PAGE->set_url('/course/view.php', ['id' => $this->course->id]);
+        $PAGE->set_context(\context_course::instance($this->course->id));
+        $hook = new \core\hook\output\before_footer_html_generation($PAGE->get_renderer('core'));
+        \local_rtocompliance\hook\before_footer_html_generation::callback($hook);
+        return $hook->get_output();
+    }
+
+    public function test_prompt_is_not_shown_when_enforcement_is_off(): void {
+        set_config('enforceprofile', 0, 'local_rtocompliance');
+        $this->mark_recognised($this->course->id);
+        $this->getDataGenerator()->enrol_user($this->student->id, $this->course->id);
+        $this->make_student_record($this->student->id);
+        $this->setUser($this->student);
+
+        $this->assertStringNotContainsString('rtoc-avetmiss-modal', $this->footer_output(),
+            'Switching Student data enforcement off must silence the login prompt as well as the lock');
+    }
+
+    public function test_prompt_is_shown_when_enforcement_is_on(): void {
+        $this->mark_recognised($this->course->id);
+        $this->getDataGenerator()->enrol_user($this->student->id, $this->course->id);
+        $this->make_student_record($this->student->id);
+        $this->setUser($this->student);
+
+        $this->assertStringContainsString('rtoc-avetmiss-modal', $this->footer_output());
+    }
+
+    public function test_prompt_ignores_students_not_in_recognised_training(): void {
+        $this->getDataGenerator()->enrol_user($this->student->id, $this->course->id);
+        $this->make_student_record($this->student->id);
+        $this->setUser($this->student);
+
+        $this->assertStringNotContainsString('rtoc-avetmiss-modal', $this->footer_output());
+    }
+
+    public function test_prompt_does_not_ask_for_the_usi_unless_the_lock_does(): void {
+        $this->mark_recognised($this->course->id);
+        $this->getDataGenerator()->enrol_user($this->student->id, $this->course->id);
+        $answers = $this->complete_answers();
+        $answers['usi'] = null;
+        $this->make_student_record($this->student->id, $answers);
+        $this->setUser($this->student);
+
+        // Only the USI is blank, and the default lock list excludes it.
+        $this->assertStringNotContainsString('rtoc-avetmiss-modal', $this->footer_output());
+    }
 }
