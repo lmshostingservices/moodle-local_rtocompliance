@@ -145,6 +145,21 @@ class process_enrolment_task extends \core\task\adhoc_task {
         $userid   = $data->userid;
         $courseid = $data->courseid;
 
+        // STAFF-NOT-LEARNER (v6.6.4): a trainer, assessor or manager enrolled in a course
+        // linked to a qualification was given an AVETMISS learner enrolment (outcome 70,
+        // continuing) for the unit they teach, plus a learner record if they had none. That
+        // row made the profile lock treat them as a current learner and would have been
+        // reported to NCVER in NAT00120. Nothing here looked at the person's role. Skipped
+        // only when they are staff AND hold no student role in this course - a staff member
+        // enrolled as a student is a real learner and is still recorded. Checked at task run
+        // time, not in the observer: core assigns the enrolment role AFTER the enrolment
+        // event fires, so the role only exists by the time this task runs.
+        if (local_rtocompliance_user_is_staff_in_course((int)$userid, (int)$courseid)) {
+            mtrace('rtocompliance process_enrolment_task: skipping courseid=' . (int)$courseid
+                . ' userid=' . (int)$userid . ' - holds a staff role in this course, not a learner.');
+            return;
+        }
+
         // --- Resolve all units and qualifications from Qual Builder (primary source of truth) ---
         // FIX: A single Moodle course can be linked to multiple qual units (e.g. shared
         // delivery course covering the same unit in two qualifications). We must create

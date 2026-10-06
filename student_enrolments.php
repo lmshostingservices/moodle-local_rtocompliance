@@ -105,9 +105,12 @@ $PAGE->navbar->add(fullname($user), new moodle_url('/local/rtocompliance/student
 $PAGE->navbar->add(get_string('enrolments', 'local_rtocompliance'));
 
 // Helper: fetch this student's Moodle-native course enrolments (excluding site course).
+// STAFF-NOT-LEARNER (v6.6.4): courses where the person is staff and not also a student are
+// left out, so "Import from Moodle enrolments" cannot create learner rows for the courses a
+// trainer teaches, and the not-yet-imported panel does not offer them.
 function rtocompliance_get_moodle_enrolments($userid) {
     global $DB;
-    return $DB->get_records_sql(
+    $rows = $DB->get_records_sql(
         "SELECT DISTINCT c.id AS courseid, c.fullname, c.shortname, c.startdate AS coursestart,
                 ue.timestart, ue.timecreated AS enrolled_at
            FROM {user_enrolments} ue
@@ -120,6 +123,9 @@ function rtocompliance_get_moodle_enrolments($userid) {
           ORDER BY c.fullname",
         ['userid' => $userid]
     );
+    return array_filter($rows, function ($row) use ($userid) {
+        return !local_rtocompliance_user_is_staff_in_course((int)$userid, (int)$row->courseid);
+    });
 }
 
 // ============================================================

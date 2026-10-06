@@ -15589,5 +15589,11 @@ function xmldb_local_rtocompliance_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026092500, 'local', 'rtocompliance');
     }
 
+    if ($oldversion < 2026100600) {
+        // PRE-1970-DOB-SAVE and STAFF-NOT-LEARNER: no DB schema changes.
+        // Existing rows are deliberately left as they are.
+        upgrade_plugin_savepoint(true, 2026100600, 'local', 'rtocompliance');
+    }
+
     return true;
 }

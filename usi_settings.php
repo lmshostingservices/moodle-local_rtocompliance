@@ -1461,7 +1461,7 @@ $exemptchips = [
 // accepts that shape silently and the file still lints, so the shape is checked here.
 // A bad card is DROPPED, not thrown: a broken definition must cost one card, never the
 // page, because this page is where an administrator goes to find out what is wrong.
-$cards = array_values(array_filter($cards, function($cdef) {
+$cards = array_values(array_filter($cards, function ($cdef) {
     if (!is_array($cdef) || count($cdef) !== 5
             || !is_string($cdef[0]) || !is_string($cdef[2])
             || !is_string($cdef[3]) || !is_string($cdef[4])

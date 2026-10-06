@@ -6634,12 +6634,25 @@ function local_rtocompliance_sync_student_demographics_from_staging(): int {
  *
  * Historical values are deliberately left alone - this is applied at save time only.
  *
+ * PRE-1970 DATES (v6.6.4): a date before 1 January 1970 is a NEGATIVE timestamp and
+ * is a real date. Only an empty, non-numeric or exactly-zero value means "no date".
+ * v6.4.8 introduced this function with a "less than or equal to zero" test, which
+ * turned every pre-1970 date of birth into 0 on save - the same defect v6.3.10 had
+ * already fixed in local_rtocompliance_avetmiss_value_missing(). Because the profile
+ * completeness flag is worked out before this runs, the record was saved as complete
+ * with no date of birth, and the profile lock then asked the student again at every
+ * login. For users east of UTC (all of Australia) 1 January 1970 itself is negative
+ * too, so the cut-off they saw was "1969 or earlier".
+ *
  * @param mixed $timestamp Unix timestamp as stored by a date_selector, or empty.
  * @return int Normalised timestamp, or 0 when there was no usable date.
  */
 function local_rtocompliance_normalise_dateonly($timestamp): int {
+    if ($timestamp === null || $timestamp === '' || !is_numeric($timestamp)) {
+        return 0;
+    }
     $ts = (int) $timestamp;
-    if ($ts <= 0) {
+    if ($ts === 0) {
         return 0;
     }
     try {
@@ -6953,6 +6966,86 @@ function local_rtocompliance_programmatic_issue_cert(
 
 function local_rtocompliance_get_course_settings($courseid) {
     return \local_rtocompliance\cache_helper::get_course_settings($courseid);
+}
+
+/**
+ * Role shortnames and archetypes that make a person staff rather than a learner.
+ *
+ * The same list Student Records uses to keep staff out of the learner register
+ * (students.php, which still carries its own copy of it in SQL).
+ *
+ * @return array ['shortnames' => string[], 'archetypes' => string[]]
+ */
+function local_rtocompliance_staff_role_definition(): array {
+    return [
+        'shortnames' => ['editingteacher', 'teacher', 'manager', 'coursecreator',
+                         'trainer', 'assessor', 'trainerassessor'],
+        'archetypes' => ['editingteacher', 'teacher', 'manager'],
+    ];
+}
+
+/**
+ * Is this user staff - and NOT also a learner - in this course?
+ *
+ * STAFF-NOT-LEARNER (v6.6.4): true when the user holds a staff role in the course context
+ * or any parent context (category, system) AND holds no student-archetype role in the
+ * course context itself.
+ *
+ * The second condition matters as much as the first. RTO staff often complete units
+ * in-house - a manager or category-level trainer enrolled as a student in a TAE or
+ * Diploma course is a genuine learner whose enrolment MUST be reported. A staff role
+ * alone must never suppress a real student enrolment; only a staff role with no student
+ * role in that course does (the case of a trainer enrolled to teach it).
+ *
+ * This must be asked when the AVETMISS enrolment task RUNS, never inside the enrolment
+ * event. Moodle core fires user_enrolment_created BEFORE it assigns the role chosen at
+ * enrolment (enrol_plugin::enrol_user(), "this must be done after the enrolment event"),
+ * so at event time a trainer does not have their trainer role yet.
+ *
+ * @param int $userid
+ * @param int $courseid
+ * @return bool
+ */
+function local_rtocompliance_user_is_staff_in_course(int $userid, int $courseid): bool {
+    global $DB;
+
+    if ($userid <= 0 || $courseid <= 0) {
+        return false;
+    }
+    $context = \context_course::instance($courseid, IGNORE_MISSING);
+    if (!$context) {
+        return false;
+    }
+
+    // A student role in this course means they are a learner here, whatever else they are.
+    $islearnerhere = $DB->record_exists_sql(
+        "SELECT 1
+           FROM {role_assignments} ra
+           JOIN {role} r ON r.id = ra.roleid
+          WHERE ra.userid = :lrnuserid
+            AND ra.contextid = :lrnctx
+            AND r.archetype = :lrnarch",
+        ['lrnuserid' => $userid, 'lrnctx' => $context->id, 'lrnarch' => 'student']
+    );
+    if ($islearnerhere) {
+        return false;
+    }
+
+    $contextids = $context->get_parent_context_ids(true);
+    $def = local_rtocompliance_staff_role_definition();
+    list($ctxsql, $ctxparams) = $DB->get_in_or_equal($contextids, SQL_PARAMS_NAMED, 'stfctx');
+    list($snsql, $snparams)   = $DB->get_in_or_equal($def['shortnames'], SQL_PARAMS_NAMED, 'stfsn');
+    list($atsql, $atparams)   = $DB->get_in_or_equal($def['archetypes'], SQL_PARAMS_NAMED, 'stfat');
+
+    return $DB->record_exists_sql(
+        "SELECT 1
+           FROM {role_assignments} ra
+           JOIN {role} r ON r.id = ra.roleid
+          WHERE ra.userid = :stfuserid
+            AND ra.contextid $ctxsql
+            AND (r.shortname $snsql OR r.archetype $atsql)",
+        array_merge(['stfuserid' => $userid], $ctxparams, $snparams, $atparams)
+    );
 }
 
 function local_rtocompliance_user_requires_avetmiss($userid) {

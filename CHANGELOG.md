@@ -1,3 +1,74 @@
+## [v6.6.4] - 2026-10-06
+
+**Two fixes: dates of birth before 1970 were erased on save, and trainers were given AVETMISS learner enrolments.**
+
+### Fixed
+
+- **A date of birth before 1970 was saved as "no date".** A date before 1 January 1970 is a
+  negative timestamp. `local_rtocompliance_normalise_dateonly()` (added in v6.4.8 for the
+  timezone drift fix) returned `0` for any value `<= 0`, so both *My AVETMISS Profile*
+  (`my_profile.php`) and the staff profile editor (`student_profile.php`) stored `0`.
+  `profilecomplete` is calculated *before* that step, so a student with a USI was saved as
+  complete with no date of birth, and the profile lock asked for it again at every login.
+  To the student it looked as if no year before about 1968 was accepted; the form itself
+  always offered 1920 onwards. For users east of UTC (all of Australia, Thailand)
+  1 January 1970 was rejected too. This is the defect v6.3.10 fixed in
+  `local_rtocompliance_avetmiss_value_missing()`, reintroduced in the new save step.
+  Only an empty, non-numeric or exactly-zero value now means "no date".
+  - Known limit, unchanged: a user whose own timezone is UTC entering exactly
+    1 January 1970 produces `0`, which the whole plugin treats as "no date".
+  - Records already saved as `0` are not changed. Those students are asked once more and
+    their date is now kept.
+- **Trainers enrolled in a course linked to a qualification were given an AVETMISS learner
+  enrolment** for the unit they teach (outcome `70`, status `active`), plus a learner record
+  if they had none. The row made the profile lock treat them as a current learner, and it
+  would have been lodged in NAT00120. Neither the enrolment observer nor
+  `process_enrolment_task` looked at the person's role. The task now skips a person who holds
+  a staff role in that course or any parent context **and holds no student role in that
+  course**, using the same role list Student Records uses (new
+  `local_rtocompliance_staff_role_definition()` and
+  `local_rtocompliance_user_is_staff_in_course()`), and writes the reason to the task log.
+  - **A staff member enrolled as a student is still a learner.** RTO staff often complete
+    units in-house; a site manager or category-level trainer enrolled as a student in a
+    course keeps their AVETMISS enrolment. Any student-archetype role counts, including
+    custom ones such as a CPD student role.
+  - **"Import from Moodle enrolments"** (`student_enrolments.php`) applies the same rule: it
+    no longer offers, or creates learner rows for, courses the person teaches. Before, it
+    created an outcome-70 row for every Qual Builder-linked course a trainer taught.
+  - The check runs when the task runs, **not** in the observer: core's
+    `enrol_plugin::enrol_user()` fires `user_enrolment_created` *before* it assigns the
+    enrolment role, so at event time a trainer does not have their trainer role yet.
+  - Existing rows are not changed. Find any with the scope query in the release notes.
+  - Not covered: a person enrolled with no role and given a trainer role later, after the
+    task has run. Cohort sync and meta-course sync work this way (enrol first, assign roles
+    in a later pass), so a trainer added through them can still get a row if the task runs
+    between the two passes.
+  - A trainer who also holds a student role in the course is treated as a learner there.
+    External database enrolment and Upload users can give the default (student) role when
+    no role is supplied; if a trainer is then also made a teacher without that role being
+    removed, they keep a learner row. That is a role-configuration matter, not a code path.
+  - Not changed: the observer still auto-sends the suitability checklist on enrolment when
+    that setting is on, and at that moment the role does not exist yet, so trainers can
+    receive it. Same root cause; left for a separate change.
+
+### Tests
+
+- `tests/dateonly_normalise_test.php`: 26 cases - dates from 1920 to 1990, including
+  29 February 1964, 31 December 1969 and 1 January 1970, in Bangkok, Perth and Sydney,
+  plus empty inputs. 19 fail on v6.6.3.
+- `tests/staff_enrolment_task_test.php`: 10 cases - editing and non-editing teachers get no
+  row; a student still does; a teacher in another course is still a learner here; a
+  category-level trainer role is recognised; a person who is teacher and student in the same
+  course, a site manager enrolled as a student, and a category trainer enrolled as a student
+  all keep their row; and the real sequence (manual enrolment, observer, task runner). The two
+  teacher cases and the real-sequence case fail on the v6.6.3 task code (the learner cases
+  pass there, because the old task created a row for everyone). The three "still a learner"
+  cases fail if the student-role exception is removed.
+- Full plugin suite on Moodle 4.5.15 / PHP 8.3 / PostgreSQL 16: the failing set is
+  identical on v6.6.3 and v6.6.4 (31, all pre-existing); no regressions.
+
+No schema change. Savepoint `2026100600`.
+
 ## [v6.6.3] - 2026-09-25
 
 **The "Complete your student details" popup ignored the Student data enforcement setting.**
