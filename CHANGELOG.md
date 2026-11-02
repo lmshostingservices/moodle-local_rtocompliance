@@ -1,3 +1,27 @@
+## [v6.6.5] - 2026-11-02
+
+**Prevents a Moodle/RTO profile name mismatch from silently producing a USI NoMatch.**
+
+### Added
+
+- Student Records now flags learner rows where the name in the RTO Compliance profile differs
+  from the Moodle account, with a direct link to edit the RTO name.
+- Added a paginated, read-only comparison page so staff can review all mismatches, including
+  suspended learner accounts. It shows the exact Moodle name and the exact RTO name used for
+  USI verification. It sends no USI requests and changes no student data.
+- Staff with the RTO manage capability can edit the RTO profile's first and family names
+  without changing Moodle's account name. Blank local values are prefilled from Moodle in the
+  form, but are only stored after staff save the profile.
+
+### Fixed
+
+- Manual USI verification now stops before the registry call when RTO and Moodle names differ.
+  It shows both names and asks staff to confirm before sending the RTO profile name.
+- Automatic verification on profile save and scheduled batch verification do not send
+  mismatched names to the registry. Batch selection excludes mismatches so older records
+  cannot starve correctly matched students.
+- No schema changes and no existing student names are automatically rewritten.
+
 ## [v6.6.4] - 2026-10-06
 
 **Two fixes: dates of birth before 1970 were erased on save, and trainers were given AVETMISS learner enrolments.**

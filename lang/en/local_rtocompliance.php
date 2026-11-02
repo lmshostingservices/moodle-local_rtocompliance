@@ -24,6 +24,27 @@
 defined('MOODLE_INTERNAL') || die();
 
 $string['pluginname'] = 'RTO Compliance';
+$string['rto_firstname'] = 'RTO first/given name';
+$string['rto_firstname_help'] = 'This is the first/given name stored in the RTO Compliance profile and used for USI verification. It does not change the Moodle account name.';
+$string['rto_lastname'] = 'RTO family/last name';
+$string['rto_lastname_help'] = 'This is the family/last name stored in the RTO Compliance profile and used for USI verification. It does not change the Moodle account name.';
+$string['rto_name_profile_note'] = 'These names belong to the RTO Compliance student record. Review them against your source evidence. Saving here does not change the Moodle account.';
+$string['name_mismatch_badge'] = 'Name mismatch';
+$string['name_mismatch_review'] = 'The RTO Compliance name differs from the Moodle account. Review the exact name before USI verification.';
+$string['name_compare_button'] = 'Compare Moodle and RTO names';
+$string['name_compare_title'] = 'Compare Moodle and RTO names';
+$string['name_compare_intro'] = 'This read-only comparison checks the name saved in each RTO Compliance profile against the Moodle account. It does not edit records or send USI requests. Use “Edit RTO name” to review one profile.';
+$string['name_compare_none'] = 'No name mismatches found.';
+$string['name_compare_count'] = '{$a} student profile(s) need name review.';
+$string['name_compare_moodle'] = 'Moodle account name';
+$string['name_compare_rto'] = 'RTO Compliance name used for USI';
+$string['name_compare_status'] = 'Account status';
+$string['name_compare_edit'] = 'Edit RTO name';
+$string['name_compare_page'] = 'Page {$a->page} of {$a->pages}';
+$string['usi_name_confirm'] = 'The RTO Compliance name differs from the Moodle account. The USI check will use the RTO Compliance name shown below. Continue?';
+$string['usi_auto_name_mismatch'] = 'Automatic USI verification was skipped because the RTO Compliance name differs from the Moodle account. Review the name before verifying.';
+$string['usi_batch_no_eligible'] = 'No eligible pending USI verifications. Automatic batches exclude profiles whose saved RTO name differs from the Moodle account; review those on the name-comparison page.';
+$string['usi_batch_name_guard'] = 'Profiles with Moodle/RTO name differences are held for staff review and are not sent automatically.';
 $string['privacy:metadata'] = 'The RTO Compliance plugin stores student AVETMISS data, trainer credentials, and issued certificates.';
 $string['privacy:metadata:core_files'] = 'The RTO Compliance plugin stores files uploaded as RPL evidence and credit-transfer source certificates against the relevant records.';
 $string['privacy:metadata:preference:savedviews'] = 'Private saved table views, including the view name, approved filter values, and display sort choice.';

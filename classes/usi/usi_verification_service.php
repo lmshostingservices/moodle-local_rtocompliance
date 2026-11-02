@@ -25,6 +25,8 @@ namespace local_rtocompliance\usi;
 
 defined('MOODLE_INTERNAL') || die();
 
+use local_rtocompliance\local\student_name_comparison;
+
 require_once(__DIR__ . '/usi_platform_client.php');
 
 /**
@@ -50,9 +52,9 @@ class usi_verification_service {
     private $client;
     private $config;
     
-    public function __construct() {
+    public function __construct($client = null) {
         $this->load_config();
-        $this->client = new usi_platform_client($this->config);
+        $this->client = $client ?? new usi_platform_client($this->config);
     }
     
     /**
@@ -74,9 +76,10 @@ class usi_verification_service {
      * Verify a student's USI
      * 
      * @param int $studentid The local_rtocompliance_students record ID
+     * @param bool $confirmnamemismatch Staff confirmation to send a differing RTO profile name
      * @return array Verification result
      */
-    public function verify_student_usi($studentid) {
+    public function verify_student_usi($studentid, $confirmnamemismatch = false) {
         global $DB;
         
         $student = $DB->get_record('local_rtocompliance_students', ['id' => $studentid]);
@@ -104,8 +107,6 @@ class usi_verification_service {
             ];
         }
         
-        $firstname = $student->firstname ?? $user->firstname;
-        $lastname = $student->lastname ?? $user->lastname;
         $dateofbirth = $student->dateofbirth ? date('Y-m-d', $student->dateofbirth) : null;
         
         if (empty($dateofbirth)) {
@@ -114,6 +115,24 @@ class usi_verification_service {
                 'message' => 'Date of birth is required for USI verification',
             ];
         }
+
+        // A different name can produce a valid-USI / NoMatch response. Do not send
+        // personal details to the registry until staff have seen the exact values.
+        $namecomparison = student_name_comparison::compare_records($student, $user);
+        if ($namecomparison['mismatch'] && !$confirmnamemismatch) {
+            return [
+                'success' => false,
+                'confirmation_required' => true,
+                'message' => get_string('usi_name_confirm', 'local_rtocompliance'),
+                'rto_firstname' => $namecomparison['rto_firstname'],
+                'rto_lastname' => $namecomparison['rto_lastname'],
+                'moodle_firstname' => $namecomparison['moodle_firstname'],
+                'moodle_lastname' => $namecomparison['moodle_lastname'],
+            ];
+        }
+
+        $firstname = $namecomparison['rto_firstname'];
+        $lastname = $namecomparison['rto_lastname'];
         
         $result = $this->client->verify_usi(
             $student->usi,
@@ -212,7 +231,7 @@ class usi_verification_service {
     public function verify_pending_batch($limit = 50) {
         global $DB;
         
-        $limit = min($limit, self::BATCH_SIZE);
+        $limit = max(0, min((int)$limit, self::BATCH_SIZE));
         
         // USI-STUCK-PENDING-FIX (v5.9.302): previously this query only fetched
         // usiverified = 0 (never attempted).  Students whose first verification
@@ -222,12 +241,22 @@ class usi_verification_service {
         // batch appeared to process 0 students on every run.
         // Fix: also include usiverified = 3 so pending-retry students are re-tried
         // automatically on the next scheduled run without any admin intervention.
-        $students = $DB->get_records_select(
-            'local_rtocompliance_students',
-            "usi IS NOT NULL AND usi != '' AND usiverified IN (0, 3) AND dateofbirth IS NOT NULL AND dateofbirth != 0",
+        // Keep mismatched-name profiles out of scheduled registry calls. Filter at
+        // the query boundary so a run of old mismatches cannot occupy every batch
+        // and starve later, correctly matched students.
+        $students = $DB->get_records_sql(
+            "SELECT s.*
+               FROM {local_rtocompliance_students} s
+               JOIN {user} u ON u.id = s.userid
+              WHERE s.usi IS NOT NULL
+                AND s.usi != ''
+                AND s.usiverified IN (0, 3)
+                AND s.dateofbirth IS NOT NULL
+                AND s.dateofbirth != 0
+                AND u.deleted = 0
+                AND NOT " . student_name_comparison::sql_mismatch_condition() . "
+              ORDER BY s.timemodified ASC",
             null,
-            'timemodified ASC',
-            '*',
             0,
             $limit
         );
@@ -237,7 +266,7 @@ class usi_verification_service {
                 'processed' => 0,
                 'verified' => 0,
                 'failed' => 0,
-                'message' => 'No pending USI verifications',
+                'message' => get_string('usi_batch_no_eligible', 'local_rtocompliance'),
             ];
         }
         
@@ -322,7 +351,8 @@ class usi_verification_service {
             'message' => ($authhalted
                 ? 'USI verification stopped: the platform rejected the site credentials (authentication / not configured). Fix the API key or upload the credential on the USI settings page, then re-run. '
                 : '')
-                . "Processed {$verified} verified, {$failed} failed of " . count($batch) . " students",
+                . "Processed {$verified} verified, {$failed} failed of " . count($batch) . " students. "
+                . get_string('usi_batch_name_guard', 'local_rtocompliance'),
         ];
     }
     

@@ -29,6 +29,7 @@
  *   profileid  (int)  — local_rtocompliance_students.id
  *   sesskey    (string) — Moodle sesskey for CSRF protection
  *   ajax       (int,  1 = return JSON, else redirect)
+ *   confirm_name_mismatch (bool) — explicit staff confirmation to send differing RTO names
  *
  * Returns JSON: { success, html, message }
  * or redirects back to students.php on non-AJAX use.
@@ -47,6 +48,7 @@ require_capability('local/rtocompliance:manage', context_system::instance());
 
 $profileid = required_param('profileid', PARAM_INT);
 $ajax      = optional_param('ajax',      0, PARAM_INT);
+$confirmnamemismatch = optional_param('confirm_name_mismatch', 0, PARAM_BOOL);
 
 // CSRF protection — always enforce sesskey
 require_sesskey();
@@ -88,9 +90,26 @@ if (empty($student->usi)) {
 // ── Run verification via usi_verification_service ────────────────────────────
 try {
     $service = new usi_verification_service();
-    $result  = $service->verify_student_usi($student->id);
+    $result  = $service->verify_student_usi($student->id, $confirmnamemismatch);
 } catch (\Throwable $ex) {
     $result = ['success' => false, 'message' => $ex->getMessage()];
+}
+
+// A mismatch response is intentionally returned before any registry request or
+// status write. The browser asks staff to confirm the exact names, then retries
+// once with confirm_name_mismatch=1 only if they accept.
+if ($ajax && !empty($result['confirmation_required'])) {
+    header('Content-Type: application/json');
+    echo json_encode([
+        'success' => false,
+        'confirmation_required' => true,
+        'message' => $result['message'],
+        'rto_firstname' => $result['rto_firstname'],
+        'rto_lastname' => $result['rto_lastname'],
+        'moodle_firstname' => $result['moodle_firstname'],
+        'moodle_lastname' => $result['moodle_lastname'],
+    ]);
+    exit;
 }
 
 // Reload the updated student record so we can build the fresh HTML
@@ -150,6 +169,10 @@ $cellhtml = rtoc_build_usi_cell($student);
 $success  = !empty($result['success']);
 $message  = $result['message'] ?? ($success ? 'USI verified successfully.' : 'Verification could not be completed.');
 
+if (!empty($result['confirmation_required'])) {
+    $message = get_string('usi_auto_name_mismatch', 'local_rtocompliance');
+}
+
 if ($ajax) {
     header('Content-Type: application/json');
     echo json_encode(
@@ -166,5 +189,7 @@ redirect(
     new moodle_url('/local/rtocompliance/students.php'),
     $message,
     null,
-    $success ? \core\output\notification::NOTIFY_SUCCESS : \core\output\notification::NOTIFY_ERROR
+    !empty($result['confirmation_required'])
+        ? \core\output\notification::NOTIFY_WARNING
+        : ($success ? \core\output\notification::NOTIFY_SUCCESS : \core\output\notification::NOTIFY_ERROR)
 );

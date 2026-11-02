@@ -74,6 +74,35 @@ class student_profile_form extends \moodleform {
         $mform->setType('clientid', PARAM_ALPHANUMEXT);
         $mform->addHelpButton('clientid', 'clientid', 'local_rtocompliance');
 
+        // The Moodle account is not editable here. Only staff with the RTO manage
+        // capability receive these separate RTO profile fields.
+        if (!empty($this->_customdata['caneditidentity'])) {
+            $mform->addElement(
+                'text',
+                'firstname',
+                get_string('rto_firstname', 'local_rtocompliance'),
+                ['size' => 50, 'maxlength' => 100]
+            );
+            $mform->setType('firstname', PARAM_TEXT);
+            $mform->addHelpButton('firstname', 'rto_firstname', 'local_rtocompliance');
+
+            $mform->addElement(
+                'text',
+                'lastname',
+                get_string('rto_lastname', 'local_rtocompliance'),
+                ['size' => 50, 'maxlength' => 100]
+            );
+            $mform->setType('lastname', PARAM_TEXT);
+            $mform->addHelpButton('lastname', 'rto_lastname', 'local_rtocompliance');
+
+            $mform->addElement(
+                'static',
+                'rtonameprofilehint',
+                '',
+                get_string('rto_name_profile_note', 'local_rtocompliance')
+            );
+        }
+
         $mform->addElement('text', 'usi', get_string('usi', 'local_rtocompliance'), ['size' => 15, 'maxlength' => 10]);
         $mform->setType('usi', PARAM_ALPHANUMEXT);
         $mform->addRule('usi', get_string('error_usi_format', 'local_rtocompliance'), 'maxlength', 10, 'client');

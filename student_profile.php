@@ -65,6 +65,7 @@ if ($isownprofile) {
 }
 
 $user = $DB->get_record('user', ['id' => $userid], '*', MUST_EXIST);
+$caneditidentity = has_capability('local/rtocompliance:manage', $context);
 
 $requiresavetmiss = local_rtocompliance_user_requires_avetmiss($userid);
 $nrcourses = local_rtocompliance_get_user_nationally_recognised_courses($userid);
@@ -100,6 +101,17 @@ if (!$student) {
     $student->usiverified = 0;
     $student->timecreated = 0;
     $student->timemodified = 0;
+}
+
+// Missing/blank local names are presented with the Moodle name as a staff-editable
+// starting point. Nothing is written unless staff save this RTO profile.
+if ($caneditidentity) {
+    if (trim((string)($student->firstname ?? '')) === '') {
+        $student->firstname = $user->firstname;
+    }
+    if (trim((string)($student->lastname ?? '')) === '') {
+        $student->lastname = $user->lastname;
+    }
 }
 
 // USI-EXEMPTION (v6.3.19) ---------------------------------------------------
@@ -171,7 +183,10 @@ if ($usiexemptaction !== '' && confirm_sesskey()) {
     );
 }
 
-$form = new student_profile_form(null, ['student' => $student]);
+$form = new student_profile_form(null, [
+    'student' => $student,
+    'caneditidentity' => $caneditidentity,
+]);
 $form->set_data($student);
 
 if ($form->is_cancelled()) {
@@ -199,7 +214,7 @@ if ($form->is_cancelled()) {
         // USI-VERIFY-PRESERVE-FIX (v5.9.304): usiverified and usiverifieddate are set
         // explicitly below based on whether the USI changed — never from form POST data.
         'id', 'userid', 'clientid', 'usi',
-        'firstname', 'lastname', 'dateofbirth', 'sex', 'indigenousstatus',
+        'dateofbirth', 'sex', 'indigenousstatus',
         'countryofbirth', 'languageathome', 'englishproficiency', 'disabilityflag',
         'disabilitytypes', 'buildingname', 'unitno', 'streetno', 'streetname',
         'suburb', 'postcode', 'statecode', 'highestschoollevel', 'yearschoolcompleted',
@@ -211,6 +226,12 @@ if ($form->is_cancelled()) {
         // SCHOOLTYPE-VALIDCOLUMNS-FIX (v5.9.299): schooltype is a DB column shown in the form
         // but was missing from $validcolumns, so it was silently dropped on every admin save.
     ];
+    // RTO profile names are editable only by staff with the manage capability.
+    // Do not accept crafted name fields from a learner's self-profile request.
+    if ($caneditidentity) {
+        $validcolumns[] = 'firstname';
+        $validcolumns[] = 'lastname';
+    }
     $cleandata = new stdClass();
     foreach ($validcolumns as $col) {
         if (isset($data->$col)) {
@@ -218,6 +239,10 @@ if ($form->is_cancelled()) {
         }
     }
     $data = $cleandata;
+    if ($caneditidentity) {
+        $data->firstname = trim((string)($data->firstname ?? ''));
+        $data->lastname = trim((string)($data->lastname ?? ''));
+    }
     
     $olddata = $iscreate ? null : [
         'usi' => $student->usi ?? '',
@@ -231,6 +256,10 @@ if ($form->is_cancelled()) {
         'statecode' => $student->statecode ?? '',
         'profilecomplete' => $student->profilecomplete ?? 0,
     ];
+    if ($caneditidentity && !$iscreate) {
+        $olddata['firstname'] = $student->firstname ?? '';
+        $olddata['lastname'] = $student->lastname ?? '';
+    }
 
     $validationerrors = validate_student_profile($data, !empty($student->usiexempt));
     $data->validationerrors = !empty($validationerrors) ? json_encode($validationerrors) : null;
@@ -362,6 +391,10 @@ if ($form->is_cancelled()) {
         'statecode' => $data->statecode ?? '',
         'profilecomplete' => $data->profilecomplete,
     ];
+    if ($caneditidentity) {
+        $newdata['firstname'] = $data->firstname ?? '';
+        $newdata['lastname'] = $data->lastname ?? '';
+    }
 
     if ($iscreate) {
         audit_logger::log_create(
@@ -392,6 +425,8 @@ if ($form->is_cancelled()) {
                 $vresult = $usiservice->verify_student_usi($data->id);
                 if (!empty($vresult['success'])) {
                     $message .= ' ' . get_string('usi_auto_verified', 'local_rtocompliance');
+                } else if (!empty($vresult['confirmation_required'])) {
+                    $message .= ' ' . get_string('usi_auto_name_mismatch', 'local_rtocompliance');
                 }
             }
         } catch (\Throwable $e) {
@@ -483,6 +518,27 @@ $PAGE->add_body_class("path-local-rtocompliance");
 echo $OUTPUT->header();
 echo local_rtocompliance_render_nav_header(get_string('studentprofile', 'local_rtocompliance'), get_string('students', 'local_rtocompliance'), '/local/rtocompliance/students.php', 'students');
 echo local_rtocompliance_page_banner(get_string('studentprofile', 'local_rtocompliance'));
+
+if ($caneditidentity) {
+    $namecomparison = \local_rtocompliance\local\student_name_comparison::compare_records($student, $user);
+    if ($namecomparison['mismatch']) {
+        $moodlename = trim($namecomparison['moodle_firstname'] . ' ' . $namecomparison['moodle_lastname']);
+        $rtoname = trim($namecomparison['rto_firstname'] . ' ' . $namecomparison['rto_lastname']);
+        $namewarning = html_writer::tag(
+            'p',
+            get_string('name_mismatch_review', 'local_rtocompliance')
+        );
+        $namewarning .= html_writer::tag(
+            'div',
+            get_string('name_compare_moodle', 'local_rtocompliance') . ': ' . s($moodlename === '' ? '(blank)' : $moodlename)
+        );
+        $namewarning .= html_writer::tag(
+            'div',
+            get_string('name_compare_rto', 'local_rtocompliance') . ': ' . s($rtoname === '' ? '(blank)' : $rtoname)
+        );
+        echo $OUTPUT->notification($namewarning, \core\output\notification::NOTIFY_WARNING);
+    }
+}
 
 $studentinfo = new stdClass();
 $studentinfo->fullname = fullname($user);

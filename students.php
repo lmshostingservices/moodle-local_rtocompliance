@@ -907,6 +907,15 @@ echo html_writer::start_div('students-container');
 
 echo html_writer::start_div('students-header');
 echo html_writer::tag('h2', get_string('student_records', 'local_rtocompliance'));
+echo html_writer::link(
+    new moodle_url('/local/rtocompliance/usi_name_mismatches.php'),
+    get_string('name_compare_button', 'local_rtocompliance'),
+    [
+        'class' => 'btn btn-outline-primary btn-sm',
+        'title' => get_string('name_compare_intro', 'local_rtocompliance'),
+        'style' => 'margin-left:12px;',
+    ]
+);
 echo html_writer::end_div();
 
 // Plain-English explainer card for the student roster table.
@@ -1365,6 +1374,7 @@ $sql = "SELECT u.id, u.firstname, u.lastname, u.username, u.email,
                u.firstnamephonetic, u.lastnamephonetic, u.middlename, u.alternatename,
                u.suspended,
                s.id as profileid, s.usi, s.usiverified, s.usiverifieddate, s.usiexempt, s.profilecomplete,
+               s.firstname AS rtofirstname, s.lastname AS rtolastname,
                s.statecode, s.postcode, s.suburb, s.dateofbirth,
                suit.id as suitabilityid, suit.status as suitabilitystatus
         FROM {user} u
@@ -1578,6 +1588,28 @@ foreach ($students as $student) {
         $fullname,
         ['class' => 'rtoc-student-name-link', 'title' => get_string('studentprofile', 'local_rtocompliance')]
     );
+    $namecomparison = \local_rtocompliance\local\student_name_comparison::compare_values(
+        $student->rtofirstname,
+        $student->rtolastname,
+        $student->firstname,
+        $student->lastname
+    );
+    if ($namecomparison['mismatch']) {
+        $nameediturl = new moodle_url(
+            '/local/rtocompliance/student_profile.php',
+            ['userid' => $student->id],
+            'id_firstname'
+        );
+        $namecell .= ' ' . html_writer::link(
+            $nameediturl,
+            get_string('name_mismatch_badge', 'local_rtocompliance'),
+            [
+                'class' => 'badge badge-warning',
+                'title' => get_string('name_mismatch_review', 'local_rtocompliance'),
+                'style' => 'white-space:nowrap;',
+            ]
+        );
+    }
 
     // ── USI cell: rich verification status display ──────────────────────────
     // Pattern: USI code in monospace + status badge referencing usi.gov.au
@@ -1961,6 +1993,57 @@ echo html_writer::script(
         rtocPositionMenu(btn, menu);
     }
 
+    function rtocRequestUsiVerification(cell, profileid, origHtml, confirmNameMismatch) {
+        cell.innerHTML = origHtml;
+        var currentButton = cell.querySelector(".rtoc-usi-verify-btn");
+        if (currentButton) currentButton.disabled = true;
+        var spinner = document.createElement("span");
+        spinner.className = "rtoc-usi-badge rtoc-usi-pending";
+        spinner.style.marginTop = "3px";
+        spinner.textContent = "Verifying via usi.gov.au...";
+        cell.appendChild(spinner);
+
+        var url = USI_VERIFY_URL
+            + "?profileid=" + encodeURIComponent(profileid)
+            + "&sesskey=" + encodeURIComponent(USI_SESSKEY)
+            + "&ajax=1"
+            + "&confirm_name_mismatch=" + (confirmNameMismatch ? "1" : "0");
+
+        fetch(url, {
+            method: "GET",
+            headers: { "Accept": "application/json" },
+            credentials: "same-origin"
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data && data.confirmation_required) {
+                cell.innerHTML = origHtml;
+                var rtoName = (data.rto_firstname + " " + data.rto_lastname).trim() || "(blank)";
+                var moodleName = (data.moodle_firstname + " " + data.moodle_lastname).trim() || "(blank)";
+                var promptText = data.message
+                    + "\n\nRTO Compliance name to be sent: " + rtoName
+                    + "\nMoodle account name: " + moodleName;
+                if (window.confirm(promptText)) {
+                    rtocRequestUsiVerification(cell, profileid, origHtml, true);
+                }
+                return;
+            }
+            if (!data || typeof data.html === "undefined") {
+                cell.innerHTML = origHtml;
+                rtocShowVerifyError(cell, "Verification request failed — please try again.");
+                return;
+            }
+            cell.innerHTML = data.html;
+            if (!data.success && data.message) {
+                rtocShowVerifyError(cell, data.message);
+            }
+        })
+        .catch(function () {
+            cell.innerHTML = origHtml;
+            rtocShowVerifyError(cell, "Could not reach the verification service — check your connection.");
+        });
+    }
+
     document.addEventListener("click", function (e) {
         var btn = e.target && e.target.closest && e.target.closest(".rtoc-act-btn");
         if (btn) {
@@ -2013,40 +2096,8 @@ echo html_writer::script(
         var cell = btn.closest("td");
         if (!cell) return;
 
-        // Show spinner inline while we wait for the API call
-        btn.disabled = true;
         var origHtml = cell.innerHTML;
-        var codeEl = cell.querySelector(".rtoc-usi-code");
-        var usiCode = codeEl ? codeEl.textContent : "";
-        var spinner = "<span class=\"rtoc-usi-badge rtoc-usi-pending\" style=\"margin-top:3px\">"
-            + "<span class=\"rtoc-usi-spinner\"></span> Verifying via usi.gov.au..."
-            + "</span>";
-        if (codeEl) {
-            // Keep the USI code visible, replace just the badge+button portion
-            codeEl.nextSibling && (codeEl.parentNode.innerHTML = "<code class=\"rtoc-usi-code\">" + usiCode + "</code>" + spinner);
-        }
-
-        fetch(USI_VERIFY_URL + "?profileid=" + encodeURIComponent(profileid) + "&sesskey=" + encodeURIComponent(USI_SESSKEY) + "&ajax=1", {
-            method: "GET",
-            headers: { "Accept": "application/json" },
-            credentials: "same-origin"
-        })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-            if (!data || typeof data.html === "undefined") {
-                cell.innerHTML = origHtml;
-                rtocShowVerifyError(cell, "Verification request failed — please try again.");
-                return;
-            }
-            cell.innerHTML = data.html;
-            if (!data.success && data.message) {
-                rtocShowVerifyError(cell, data.message);
-            }
-        })
-        .catch(function () {
-            cell.innerHTML = origHtml;
-            rtocShowVerifyError(cell, "Could not reach the verification service — check your connection.");
-        });
+        rtocRequestUsiVerification(cell, profileid, origHtml, false);
     }, true);
 })();
 ');
