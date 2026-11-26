@@ -73,15 +73,16 @@
         var cfg = document.getElementById('rtoc-ai-config') || document.getElementById('rtoc-sb-api-config');
         var valEl = document.getElementById('rtoc-sb-credits-val');
         if (!cfg || !valEl) return;
-        var apikey = cfg.dataset.apikey || '';
-        var apiurl = (cfg.dataset.apiurl || 'https://lms-labs.com').replace(/\/$/, '');
-        var siteid = cfg.dataset.siteid || '';
-        if (!apikey) return;
+        // The balance comes through this site (byok_ai.php), which adds the API key on the server.
+        var aiUrl = cfg.getAttribute('data-ai-url') || '';
+        var sesskey = cfg.getAttribute('data-sesskey') || '';
+        if (!aiUrl || cfg.getAttribute('data-ai-ready') !== '1') return;
         // POST /api/credits — returns { credits, creditsRaw, isUnlimited }
-        fetch(apiurl + '/api/credits', {
+        fetch(aiUrl, {
             method: 'POST',
+            credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ siteId: siteid, apiKey: apikey })
+            body: JSON.stringify({ sesskey: sesskey, route: '/api/credits', body: {} })
         })
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (d) {
@@ -256,7 +257,7 @@
         if (!fieldsets.length) return;
 
         fieldsets.forEach(function (fs) {
-            var header = fs.querySelector('> div:first-child');
+            var header = fs.querySelector(':scope > div:first-child');
             if (!header || header.dataset.rtocInited) return;
             header.dataset.rtocInited = '1';
 

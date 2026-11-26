@@ -233,16 +233,72 @@ final class byok_test extends \advanced_testcase {
     public function test_pages_and_switching_off(): void {
         $attributes = byok::page_attributes();
         $this->assertStringEndsWith('/local/rtocompliance/byok_ai.php', $attributes['data-byok-url']);
+        $this->assertSame($attributes['data-ai-url'], $attributes['data-byok-url']);
         $this->assertSame(sesskey(), $attributes['data-sesskey']);
+        $this->assertSame('1', $attributes['data-ai-ready']);
         $this->assertStringContainsString('data-byok-url="', byok::page_attributes_html());
 
         // With LMS Labs credits chosen, nothing is answered here.
         set_config('src_text', 'credits', 'local_aiconfig');
         $this->assertFalse(byok::uses());
         $this->assertNull(byok::post('https://lms-labs.com/api/rto/ai-suggest', '{"field":"targetcohort"}'));
-        $this->assertSame([], byok::page_attributes());
-        $this->assertSame('', byok::page_attributes_html());
+        // With no LMS Labs key either, the scripts are told AI is not available.
+        $attributes = byok::page_attributes();
+        $this->assertSame('0', $attributes['data-ai-ready']);
+        $this->assertArrayNotHasKey('data-byok-url', $attributes);
+        $this->assertStringNotContainsString('data-byok-url', byok::page_attributes_html());
         $this->assertFalse(local_rtocompliance_assistant_creds()['ready']);
         $this->assertSame([], $this->requests);
+    }
+
+    public function test_credits_requests_keep_the_key_on_the_server(): void {
+        global $CFG, $PAGE;
+        require_once($CFG->libdir . '/filelib.php');
+        set_config('src_text', 'credits', 'local_aiconfig');
+        set_config('apikey', 'lmsl-secret-key', 'local_rtocompliance');
+        set_config('siteid', 'site-42', 'local_rtocompliance');
+
+        // The page carries the endpoint and session key, never the API key.
+        $PAGE->set_url('/local/rtocompliance/index.php');
+        $attributes = byok::page_attributes();
+        $this->assertSame('1', $attributes['data-ai-ready']);
+        $this->assertStringNotContainsString('lmsl-secret-key', byok::page_attributes_html());
+        $this->assertStringNotContainsString('lmsl-secret-key', local_rtocompliance_render_sidebar());
+
+        // The request is sent on with the key added on the server, and LMS Labs' answer comes back as given.
+        \curl::mock_response('{"success":true,"suggestions":["A draft"],"creditsRemaining":95}');
+        [$status, $json] = byok::forward('/api/rto/ai-suggest', (object)['field' => 'targetcohort', 'apiKey' => 'spoofed']);
+        $this->assertSame(200, $status);
+        $this->assertSame(['A draft'], json_decode($json)->suggestions);
+
+        // The balance is sent with the site id; a reply that is not JSON is a 502.
+        \curl::mock_response('<html>Bad gateway</html>');
+        [$status] = byok::forward(byok::CREDITS_ROUTE, new \stdClass());
+        $this->assertSame(502, $status);
+
+        // No key: nothing is sent.
+        set_config('apikey', '', 'local_rtocompliance');
+        $this->assertSame(409, byok::forward('/api/rto/ai-suggest', new \stdClass())[0]);
+        $this->assertSame('0', byok::page_attributes()['data-ai-ready']);
+        $this->assertSame([], $this->requests);
+    }
+
+    public function test_validation_trainers_on_a_fresh_install(): void {
+        global $DB;
+        $dg = $this->getDataGenerator();
+        $mia = $dg->create_user(['firstname' => 'Mia', 'lastname' => 'Tran']);
+        $raj = $dg->create_user(['firstname' => 'Raj', 'lastname' => 'Anand']);
+        $old = $dg->create_user(['firstname' => 'Old', 'lastname' => 'Trainer']);
+        $row = function (int $userid, string $status) use ($DB): int {
+            $record = ['userid' => $userid, 'status' => $status, 'cpdhours' => 0, 'timecreated' => 1, 'timemodified' => 1];
+            return $DB->insert_record('local_rtocompliance_trainers', (object)$record);
+        };
+        $miaid = $row($mia->id, 'current');
+        $rajid = $row($raj->id, 'expiring');
+        $row($old->id, 'inactive');
+
+        $this->assertSame([$rajid => 'Raj Anand', $miaid => 'Mia Tran'], \local_rtocompliance\local\trainer_names::active());
+        $this->assertSame('Mia Tran', \local_rtocompliance\local\trainer_names::name($miaid));
+        $this->assertSame('', \local_rtocompliance\local\trainer_names::name(-1));
     }
 }

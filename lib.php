@@ -8437,25 +8437,10 @@ function local_rtocompliance_render_sidebar(): string {
 
     $html .= '</div>'; // .rtoc-sb-footer
 
-    // Hidden config div for JS credit fetch (only if not already injected by edit pages)
-    // Resolve API key via same priority chain as external.php.
-    $_rtoc_sb_cfglib = $CFG->dirroot . '/local/aiconfig/lib.php';
-    if (file_exists($_rtoc_sb_cfglib) && !function_exists('local_aiconfig_get_apikey')) {
-        require_once($_rtoc_sb_cfglib);
-    }
-    $_rtoc_sb_apikey  = function_exists('local_aiconfig_get_apikey')
-        ? (local_aiconfig_get_apikey('local_rtocompliance') ?: get_config('local_rtocompliance', 'apikey') ?: '')
-        : (get_config('local_rtocompliance', 'apikey') ?: '');
-    $_rtoc_sb_apibase = rtrim(get_config('local_rtocompliance', 'apiurl') ?: 'https://lms-labs.com', '/');
-    $_rtoc_sb_siteid  = function_exists('local_aiconfig_get_siteid')
-        ? (local_aiconfig_get_siteid('local_rtocompliance') ?: get_config('local_rtocompliance', 'siteid') ?: '')
-        : (get_config('local_rtocompliance', 'siteid') ?: '');
-
-    // Only inject if no existing rtoc-ai-config div (edit pages already do this)
+    // Hidden config div for the sidebar credit balance. The balance is fetched through byok_ai.php, which adds
+    // the LMS Labs API key on the server, so the key is never printed into the page.
     $html .= '<div id="rtoc-sb-api-config" style="display:none"'
-           . ' data-apikey="' . htmlspecialchars($_rtoc_sb_apikey, ENT_QUOTES) . '"'
-           . ' data-apiurl="' . htmlspecialchars($_rtoc_sb_apibase, ENT_QUOTES) . '"'
-           . ' data-siteid="' . htmlspecialchars($_rtoc_sb_siteid, ENT_QUOTES) . '"'
+           . \local_rtocompliance\byok::page_attributes_html()
            . '></div>';
 
     $html .= '</nav>'; // #rtoc-sidebar
@@ -9064,7 +9049,7 @@ CSSEND;
         if (!fieldsets.length) return;
 
         fieldsets.forEach(function (fs) {
-            var header = fs.querySelector('> div:first-child');
+            var header = fs.querySelector(':scope > div:first-child');
             if (!header || header.dataset.rtocInited) return;
             header.dataset.rtocInited = '1';
 

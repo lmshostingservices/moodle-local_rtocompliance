@@ -145,15 +145,9 @@ class validation_form extends \moodleform {
             }
         }
         if ($DB->get_manager()->table_exists('local_rtocompliance_trainers')) {
-            $trainers = $DB->get_records_sql(
-                "SELECT id, fullname FROM {local_rtocompliance_trainers} WHERE status = 'active' ORDER BY fullname ASC",
-                [],
-                0,
-                200
-            );
-            foreach ($trainers as $t) {
-                if (!isset($validatoroptions['trainer_' . $t->id])) {
-                    $validatoroptions['trainer_' . $t->id] = $t->fullname . ' (Trainer)';
+            foreach (\local_rtocompliance\local\trainer_names::active() as $trainerid => $name) {
+                if (!isset($validatoroptions['trainer_' . $trainerid])) {
+                    $validatoroptions['trainer_' . $trainerid] = $name . ' (Trainer)';
                 }
             }
         }

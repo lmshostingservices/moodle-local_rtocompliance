@@ -290,7 +290,6 @@ if ($selectedstudent) {
 
     // AI Auto-Fill controls.
     echo '<div style="margin-top:1rem;" id="rtocSupportInputConfig"'
-        . ' data-api-key="' . s($_rtoc_apikey) . '"'
         . ' data-api-base="' . s($_rtoc_apibase) . '"'
         . ' data-student-name="' . s($selectedname) . '"'
         . \local_rtocompliance\byok::page_attributes_html() . '>';
@@ -425,10 +424,11 @@ echo html_writer::end_div(); // compliance-container
     // ---------------------------------------------------------------
     var _rtocCfg = document.getElementById('rtocSupportInputConfig');
     if (!_rtocCfg) { return; }
-    var API_KEY  = _rtocCfg.getAttribute('data-api-key')  || '';
-    var API_BASE = _rtocCfg.getAttribute('data-api-base') || 'https://lms-labs.com';
     var STUDENT  = _rtocCfg.getAttribute('data-student-name') || '';
-    // Bring your own AI: the request goes to this site (byok_ai.php) and uses no LMS Labs credits.
+    // The request goes to this site (byok_ai.php): on Bring your own AI it runs on the site's own AI and uses
+    // no LMS Labs credits; on credits the site sends it on to LMS Labs with the key, which is never in the page.
+    var AI_URL   = _rtocCfg.getAttribute('data-ai-url') || '';
+    var AI_READY = _rtocCfg.getAttribute('data-ai-ready') === '1';
     var BYOK_URL = _rtocCfg.getAttribute('data-byok-url') || '';
     var SESSKEY  = _rtocCfg.getAttribute('data-sesskey') || '';
 
@@ -449,7 +449,7 @@ echo html_writer::end_div(); // compliance-container
         var risk     = document.getElementById('risk').value;
         var status   = document.getElementById('autofillStatus');
 
-        if (!API_KEY && !BYOK_URL) {
+        if (!AI_READY) {
             status.textContent = 'API key not configured — check Plugin Settings.';
             status.style.color = '#b91c1c';
             setTimeout(function () { status.textContent = ''; }, 5000);
@@ -463,18 +463,12 @@ echo html_writer::end_div(); // compliance-container
         status.style.color  = '#6b7280';
 
         var request = { studentName: STUDENT, llnLevel: llnLevel, riskLevel: risk };
-        (BYOK_URL
-            ? fetch(BYOK_URL, {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sesskey: SESSKEY, route: '/api/rto/ai-support-autofill', body: request })
-            })
-            : fetch(API_BASE + '/api/rto/ai-support-autofill', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
-                body: JSON.stringify(Object.assign({ apiKey: API_KEY }, request))
-            }))
+        fetch(AI_URL, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sesskey: SESSKEY, route: '/api/rto/ai-support-autofill', body: request })
+        })
         .then(function (r) { return r.json(); })
         .then(function (data) {
             btn.disabled    = false;

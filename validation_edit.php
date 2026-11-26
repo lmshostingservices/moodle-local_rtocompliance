@@ -186,8 +186,7 @@ if ($form->is_cancelled()) {
         global $DB;
         if (strpos($data->leadvalidatorid, 'trainer_') === 0) {
             $trainerId = str_replace('trainer_', '', $data->leadvalidatorid);
-            $trainer = $DB->get_record('local_rtocompliance_trainers', ['id' => $trainerId], 'fullname');
-            $record->leadvalidator = $trainer ? $trainer->fullname : '';
+            $record->leadvalidator = \local_rtocompliance\local\trainer_names::name((int)$trainerId);
         } else {
             $validator = $DB->get_record('local_rtocompliance_validators', ['id' => $data->leadvalidatorid], 'fullname');
             $record->leadvalidator = $validator ? $validator->fullname : '';
@@ -201,9 +200,9 @@ if ($form->is_cancelled()) {
         foreach ($data->panelmemberids as $memberId) {
             if (strpos($memberId, 'trainer_') === 0) {
                 $trainerId = str_replace('trainer_', '', $memberId);
-                $trainer = $DB->get_record('local_rtocompliance_trainers', ['id' => $trainerId], 'fullname');
-                if ($trainer) {
-                    $panelNames[] = $trainer->fullname;
+                $trainername = \local_rtocompliance\local\trainer_names::name((int)$trainerId);
+                if ($trainername !== '') {
+                    $panelNames[] = $trainername;
                 }
             } else {
                 $validator = $DB->get_record('local_rtocompliance_validators', ['id' => $memberId], 'fullname');
@@ -333,7 +332,6 @@ echo '<script>
 
 // AI Suggest button — injected after the form renders so DOM is ready.
 echo '<div id="rtoc-val-ai-config"'
-    . ' data-api-key="' . s($_rtoc_apikey) . '"'
     . ' data-api-base="' . s($_rtoc_apibase) . '"'
     . \local_rtocompliance\byok::page_attributes_html()
     . ' style="display:none;"></div>';
@@ -342,9 +340,9 @@ echo '<div id="rtoc-val-ai-config"'
 (function () {
     var cfg = document.getElementById('rtoc-val-ai-config');
     if (!cfg) return;
-    var API_KEY  = cfg.getAttribute('data-api-key')  || '';
-    var API_BASE = cfg.getAttribute('data-api-base') || 'https://lms-labs.com';
-    // Bring your own AI: the request goes to this site (byok_ai.php) and uses no LMS Labs credits.
+    // The request goes to this site (byok_ai.php): on Bring your own AI it runs on the site's own AI and uses
+    // no LMS Labs credits; on credits the site sends it on to LMS Labs with the key, which is never in the page.
+    var AI_URL   = cfg.getAttribute('data-ai-url') || '';
     var BYOK_URL = cfg.getAttribute('data-byok-url') || '';
     var SESSKEY  = cfg.getAttribute('data-sesskey') || '';
 
@@ -386,15 +384,15 @@ echo '<div id="rtoc-val-ai-config"'
 
         btn.addEventListener('click', function () {
             // Gather checked methodology checkboxes.
-            // FIX-METHODOLOGY-CHECKBOX: Use hardcoded element IDs matching the exact Moodle
-            // rendering pattern (id_methodologiesgroup_method_<code>) for reliable detection
-            // across all Moodle versions, instead of name-attribute selectors which can vary.
+            // FIX-METHODOLOGY-CHECKBOX: the form renders each checkbox as id_method_<code>
+            // (older builds used id_methodologiesgroup_method_<code>); check both.
             var methodKeys = ['tool_review', 'evidence_review', 'judgement_review', 'mapping_check',
                               'industry_feedback', 'moderator_review', 'compliance_check', 'rpl_review',
                               'observation_review', 'benchmarking'];
             var checked = [];
             methodKeys.forEach(function (key) {
-                var cb = document.getElementById('id_methodologiesgroup_method_' + key);
+                var cb = document.getElementById('id_method_' + key)
+                    || document.getElementById('id_methodologiesgroup_method_' + key);
                 if (cb && cb.checked) {
                     checked.push(key);
                 }
@@ -424,21 +422,12 @@ echo '<div id="rtoc-val-ai-config"'
             status.textContent = 'Generating\u2026';
 
             var request = { methods: checked, productname: productname, productcode: productcode };
-            (BYOK_URL
-                ? fetch(BYOK_URL, {
-                    method: 'POST',
-                    credentials: 'same-origin',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sesskey: SESSKEY, route: '/api/rto/ai-methodology-suggest', body: request })
-                })
-                : fetch(API_BASE + '/api/rto/ai-methodology-suggest', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-API-Key': API_KEY
-                    },
-                    body: JSON.stringify(request)
-                }))
+            fetch(AI_URL, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sesskey: SESSKEY, route: '/api/rto/ai-methodology-suggest', body: request })
+            })
             .then(function (r) { return r.json(); })
             .then(function (d) {
                 btn.disabled = false;

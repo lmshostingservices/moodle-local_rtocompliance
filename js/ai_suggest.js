@@ -56,9 +56,10 @@
     var CREDIT_COST = 5;
 
     /* -- State -------------------------------------------------------------- */
-    var apiKey   = '';
-    var apiBase  = 'https://lms-labs.com';
-    // Bring your own AI: requests go to this site (byok_ai.php) and use no LMS Labs credits.
+    // Requests go to this site (byok_ai.php). On Bring your own AI (byokUrl set) they run on the site's own AI
+    // and use no LMS Labs credits; on credits the site sends them on to LMS Labs with the API key, which is
+    // never printed into the page.
+    var aiUrl     = '';
     var byokUrl   = '';
     var sesskey   = '';
     var byokLabel = '';
@@ -71,12 +72,11 @@
     function init() {
         var cfgEl = document.getElementById('rtoc-ai-config');
         if (!cfgEl) return;
-        apiKey  = cfgEl.getAttribute('data-api-key')  || '';
-        apiBase = (cfgEl.getAttribute('data-api-base') || 'https://lms-labs.com').replace(/\/$/, '');
+        aiUrl     = cfgEl.getAttribute('data-ai-url') || '';
         byokUrl   = cfgEl.getAttribute('data-byok-url') || '';
         sesskey   = cfgEl.getAttribute('data-sesskey') || '';
         byokLabel = cfgEl.getAttribute('data-byok-label') || '';
-        if (!apiKey && !byokUrl) { return; }
+        if (!aiUrl || cfgEl.getAttribute('data-ai-ready') !== '1') { return; }
         attachButtons();
     }
 
@@ -267,19 +267,11 @@
 
     /* -- API call ---------------------------------------------------------- */
     function aiPost(route, body) {
-        if (byokUrl) {
-            return fetch(byokUrl, {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sesskey: sesskey, route: route, body: body })
-            });
-        }
-        body.apiKey = apiKey;
-        return fetch(apiBase + route, {
+        return fetch(aiUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-API-Key': apiKey },
-            body: JSON.stringify(body)
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sesskey: sesskey, route: route, body: body })
         });
     }
 

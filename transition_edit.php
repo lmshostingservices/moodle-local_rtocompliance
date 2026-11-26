@@ -165,7 +165,6 @@ $_rtoc_apibase = rtrim(get_config('local_rtocompliance', 'apiurl') ?: 'https://l
 echo html_writer::tag(
     'div', '', \local_rtocompliance\byok::page_attributes() + [
         'id'            => 'rtoc-ai-config',
-        'data-api-key'  => $_rtoc_apikey,
         'data-api-base' => $_rtoc_apibase,
         'style'         => 'display:none',
         'aria-hidden'   => 'true',
