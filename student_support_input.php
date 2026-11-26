@@ -292,9 +292,11 @@ if ($selectedstudent) {
     echo '<div style="margin-top:1rem;" id="rtocSupportInputConfig"'
         . ' data-api-key="' . s($_rtoc_apikey) . '"'
         . ' data-api-base="' . s($_rtoc_apibase) . '"'
-        . ' data-student-name="' . s($selectedname) . '">';
+        . ' data-student-name="' . s($selectedname) . '"'
+        . \local_rtocompliance\byok::page_attributes_html() . '>';
     echo '<button type="button" id="autoFillBtn" class="btn btn-outline-primary btn-sm" style="margin-right:0.5rem;">&#9889; Auto Fill (AI)</button>';
-    echo '<span style="margin-left:0.25rem;font-size:0.82rem;color:#9ca3af;">50 credits (&frac12;&cent;)</span>';
+    echo '<span style="margin-left:0.25rem;font-size:0.82rem;color:#9ca3af;">' . (\local_rtocompliance\byok::uses()
+        ? s(get_string('byok_ownai', 'local_rtocompliance')) : '50 credits (&frac12;&cent;)') . '</span>';
     echo '<span id="autofillStatus" style="margin-left:0.75rem;font-size:0.88rem;color:#6b7280;"></span>';
     echo '</div>';
 
@@ -426,6 +428,9 @@ echo html_writer::end_div(); // compliance-container
     var API_KEY  = _rtocCfg.getAttribute('data-api-key')  || '';
     var API_BASE = _rtocCfg.getAttribute('data-api-base') || 'https://lms-labs.com';
     var STUDENT  = _rtocCfg.getAttribute('data-student-name') || '';
+    // Bring your own AI: the request goes to this site (byok_ai.php) and uses no LMS Labs credits.
+    var BYOK_URL = _rtocCfg.getAttribute('data-byok-url') || '';
+    var SESSKEY  = _rtocCfg.getAttribute('data-sesskey') || '';
 
     function stripMd(s) {
         return String(s)
@@ -444,7 +449,7 @@ echo html_writer::end_div(); // compliance-container
         var risk     = document.getElementById('risk').value;
         var status   = document.getElementById('autofillStatus');
 
-        if (!API_KEY) {
+        if (!API_KEY && !BYOK_URL) {
             status.textContent = 'API key not configured — check Plugin Settings.';
             status.style.color = '#b91c1c';
             setTimeout(function () { status.textContent = ''; }, 5000);
@@ -454,19 +459,22 @@ echo html_writer::end_div(); // compliance-container
         var btn = document.getElementById('autoFillBtn');
         btn.disabled    = true;
         btn.textContent = 'Generating…';
-        status.textContent = 'Calling AI (50 credits)…';
+        status.textContent = BYOK_URL ? 'Calling AI…' : 'Calling AI (50 credits)…';
         status.style.color  = '#6b7280';
 
-        fetch(API_BASE + '/api/rto/ai-support-autofill', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
-            body: JSON.stringify({
-                apiKey:      API_KEY,
-                studentName: STUDENT,
-                llnLevel:    llnLevel,
-                riskLevel:   risk
+        var request = { studentName: STUDENT, llnLevel: llnLevel, riskLevel: risk };
+        (BYOK_URL
+            ? fetch(BYOK_URL, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sesskey: SESSKEY, route: '/api/rto/ai-support-autofill', body: request })
             })
-        })
+            : fetch(API_BASE + '/api/rto/ai-support-autofill', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+                body: JSON.stringify(Object.assign({ apiKey: API_KEY }, request))
+            }))
         .then(function (r) { return r.json(); })
         .then(function (data) {
             btn.disabled    = false;
@@ -500,7 +508,7 @@ echo html_writer::end_div(); // compliance-container
             } else if (data.creditsRemaining === -1) {
                 credMsg = ' • Unlimited credits';
             }
-            status.textContent = '50 credits used' + credMsg + ' — review and edit before saving.';
+            status.textContent = (BYOK_URL ? 'Done' : '50 credits used' + credMsg) + ' — review and edit before saving.';
             status.style.color  = '#166534';
             setTimeout(function () { status.textContent = ''; }, 8000);
         })

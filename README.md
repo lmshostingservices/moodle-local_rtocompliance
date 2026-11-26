@@ -16,6 +16,16 @@ for Australian Registered Training Organisations, built as a Moodle local plugin
 - Training and Assessment Strategy (TAS) generator
 - Compliance Health command centre and ASQA Standards mapping
 - Guided What / Why / How / Key Features help card on every page
+- AI drafting, survey analysis and a compliance assistant, on LMS Labs credits or your own AI
+
+## Bring your own AI
+
+With a yearly LMS Labs licence, an administrator can choose the site's own AI for text in AI Grader
+Central Config (`local_aiconfig`). The AI features then run on that AI, with no LMS Labs credits:
+AI Suggest on the compliance forms, complaint and appeal drafts, survey analysis, student support
+Auto Fill, validation methodology notes and the compliance assistant. Training.gov.au and USI
+look-ups keep using LMS Labs. The assistant answers from the plugin's knowledge base, without the
+LMS Labs ASQA document library.
 
 ## Requirements
 

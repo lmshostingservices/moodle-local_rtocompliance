@@ -6222,6 +6222,16 @@
     flex: 1;
 }
 
+/* Bring your own AI: the notice says the request runs on the site's own AI (MDS success feedback). */
+.rtoc-ai-credit-notice--ownai {
+    background: #ebf5eb;
+    border-bottom-color: #c2dfc1;
+    color: #1d4a1b;
+}
+.rtoc-ai-credit-notice--ownai svg {
+    stroke: #357a32;
+}
+
 /* ── Keyword refinement bar ──────────────────────────────────── */
 .rtoc-ai-keyword-bar {
     padding: 14px 20px 12px;

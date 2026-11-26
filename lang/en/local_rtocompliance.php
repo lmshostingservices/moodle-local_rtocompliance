@@ -24,6 +24,8 @@
 defined('MOODLE_INTERNAL') || die();
 
 $string['pluginname'] = 'RTO Compliance';
+$string['privacy:metadata:byok_ai'] = 'When the administrator has chosen the site\'s own AI in AI Grader Central Config, AI requests are sent from this site to that AI provider instead of LMS Labs.';
+$string['privacy:metadata:byok_ai:prompt'] = 'The request text: form content for drafts, survey responses for analysis, a student\'s name, LLN level and risk level for support auto-fill, and the assistant conversation.';
 $string['rto_firstname'] = 'RTO first/given name';
 $string['rto_firstname_help'] = 'This is the first/given name stored in the RTO Compliance profile and used for USI verification. It does not change the Moodle account name.';
 $string['rto_lastname'] = 'RTO family/last name';
@@ -97,6 +99,10 @@ $string['assistant_claude_key'] = 'Direct Claude API key (optional)';
 $string['assistant_claude_key_desc'] = 'Leave blank to use the lms-labs.com platform (recommended — one credit per question). Only set this on a self-hosted install that bills Anthropic directly on its own key; when set, questions call the Anthropic API with this key instead of the platform.';
 $string['assistant_model'] = 'Claude model (direct key only)';
 $string['assistant_model_desc'] = 'The Anthropic model ID used when a direct Claude API key is set. Ignored when using the platform. See docs.claude.com for current model IDs.';
+$string['byok_off'] = 'Your own AI is not switched on for RTO Compliance. Ask your administrator to choose it in AI Grader Central Config.';
+$string['byok_ownai'] = 'Runs on your own AI, no credits';
+$string['byok_settings'] = 'Bring your own AI is on: AI drafts, survey analysis, student support auto-fill, validation notes and the compliance assistant run on this site\'s own AI and use no LMS Labs credits. Training.gov.au and USI look-ups still use LMS Labs. The assistant answers from this plugin\'s knowledge base; the LMS Labs ASQA document library is not used on your own AI.';
+$string['byok_survey'] = 'Each analysis runs on your own AI, set up in AI Grader Central Config, and uses no LMS Labs credits.';
 $string['certheadercolour'] = 'Units table header colour';
 $string['certheadercolour_desc'] = 'The fill colour of the units table header bar on the Statement of Attainment and Record of Results certificates (the row that reads Unit Code / Unit Title / Completion Date). Header text prints white. Defaults to your Moodle site\'s primary brand colour.';
 $string['certtableheadings'] = 'Certificate table column headings';

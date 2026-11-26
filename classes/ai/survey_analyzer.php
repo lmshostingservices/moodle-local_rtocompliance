@@ -48,7 +48,7 @@ class survey_analyzer {
     }
 
     public function is_configured(): bool {
-        return !empty($this->apikey);
+        return !empty($this->apikey) || \local_rtocompliance\byok::uses();
     }
 
     /**
@@ -254,27 +254,34 @@ class survey_analyzer {
         // Release session lock before long-running API call.
         \core\session\manager::write_close();
 
-        // curl is declared in lib/filelib.php and is NOT autoloaded - see the note
-        // in local/register_lookup.php. Required explicitly so this cannot die with
-        // 'Class "curl" not found' when called from a page that has not loaded it.
-        global $CFG;
-        require_once($CFG->libdir . '/filelib.php');
+        // Bring your own AI: analysed on this site's own AI, with no LMS Labs credits.
+        $ownai = \local_rtocompliance\byok::answer('/api/rto/ai-survey-analyze', $payload);
+        if ($ownai !== null) {
+            [$httpcode, $response] = $ownai;
+            $curlerr = '';
+        } else {
+            // curl is declared in lib/filelib.php and is NOT autoloaded - see the note
+            // in local/register_lookup.php. Required explicitly so this cannot die with
+            // 'Class "curl" not found' when called from a page that has not loaded it.
+            global $CFG;
+            require_once($CFG->libdir . '/filelib.php');
 
-        $c = new \curl(['ignoresecurity' => true]);
-        $c->setopt(
-            [
-                'CURLOPT_TIMEOUT'        => 120,
-                'CURLOPT_RETURNTRANSFER' => true,
-        ]);
-        $c->setHeader(
-            [
-                'Content-Type: application/json',
-                'X-API-Key: ' . $this->apikey,
-        ]);
+            $c = new \curl(['ignoresecurity' => true]);
+            $c->setopt(
+                [
+                    'CURLOPT_TIMEOUT'        => 120,
+                    'CURLOPT_RETURNTRANSFER' => true,
+            ]);
+            $c->setHeader(
+                [
+                    'Content-Type: application/json',
+                    'X-API-Key: ' . $this->apikey,
+            ]);
 
-        $response = $c->post($this->apibase . '/api/rto/ai-survey-analyze', $payload);
-        $httpcode = $c->get_info(CURLINFO_HTTP_CODE);
-        $curlerr  = $c->error;
+            $response = $c->post($this->apibase . '/api/rto/ai-survey-analyze', $payload);
+            $httpcode = $c->get_info(CURLINFO_HTTP_CODE);
+            $curlerr  = $c->error;
+        }
 
         // BUG-SURVEY-HTTP-ARRAY FIX: Some Moodle versions return the full curl_getinfo() array
         // from get_info() regardless of the $opt argument (older implementations ignore $opt).

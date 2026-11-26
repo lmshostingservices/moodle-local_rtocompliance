@@ -375,7 +375,7 @@ $_rtoc_apikey = function_exists('local_aiconfig_get_apikey')
     : (get_config('local_rtocompliance', 'apikey') ?: '');
 $_rtoc_apibase = rtrim(get_config('local_rtocompliance', 'apiurl') ?: 'https://lms-labs.com', '/');
 echo html_writer::tag(
-    'div', '', [
+    'div', '', \local_rtocompliance\byok::page_attributes() + [
         'id'            => 'rtoc-ai-config',
         'data-api-key'  => $_rtoc_apikey,
         'data-api-base' => $_rtoc_apibase,

@@ -337,12 +337,14 @@ if (!$analyzer->is_configured()) {
     echo html_writer::end_div();
 }
 
+$ownai = \local_rtocompliance\byok::uses();
 echo html_writer::start_div('info-card');
-echo html_writer::tag('h4', 'AI-Powered Survey Insights — 5 Credits');
+echo html_writer::tag('h4', $ownai ? 'AI-Powered Survey Insights' : 'AI-Powered Survey Insights — 5 Credits');
 echo html_writer::tag(
     'p',
         'Analyse your Quality Indicator survey responses using AI to generate actionable insights, identify themes, and track sentiment trends for continuous improvement. ' .
-        'Each analysis uses <strong>' . survey_analyzer::CREDIT_COST . ' platform credits</strong> and is deducted automatically when you run the analysis.'
+        ($ownai ? s(get_string('byok_survey', 'local_rtocompliance')) :
+        'Each analysis uses <strong>' . survey_analyzer::CREDIT_COST . ' platform credits</strong> and is deducted automatically when you run the analysis.')
 );
 echo html_writer::end_div();
 
@@ -366,7 +368,7 @@ echo html_writer::tag(
             '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>',
             ['xmlns' => 'http://www.w3.org/2000/svg', 'viewBox' => '0 0 24 24', 'width' => '14', 'height' => '14',
              'fill' => 'currentColor', 'style' => 'flex-shrink:0;']
-    ) . ' ' . $creditcost . ' credits per analysis',
+    ) . ' ' . ($ownai ? s(get_string('byok_ownai', 'local_rtocompliance')) : $creditcost . ' credits per analysis'),
     ['class' => 'rtoc-credit-badge']
 );
 

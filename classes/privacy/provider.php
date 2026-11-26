@@ -240,6 +240,13 @@ class provider implements
             'privacy:metadata:assistant'
         );
 
+        // Bring your own AI: with the site's own AI chosen, AI requests go to that provider instead of LMS Labs.
+        $collection->add_external_location_link(
+            'byok_ai',
+            ['prompt' => 'privacy:metadata:byok_ai:prompt'],
+            'privacy:metadata:byok_ai'
+        );
+
         foreach (self::subject_tables() as $table => $columns) {
             $collection->add_database_table(
                 $table, self::field_map($table, $columns), self::summary_key($table));
