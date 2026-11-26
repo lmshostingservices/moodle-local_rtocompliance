@@ -50,6 +50,9 @@ class byok {
     /** @var string[] The routes the browser may ask for through byok_ai.php. */
     const BROWSER_ROUTES = ['/api/rto/ai-suggest', '/api/rto/ai-support-autofill', '/api/rto/ai-methodology-suggest'];
 
+    /** @var string The LMS Labs credit balance route, which the sidebar asks for through byok_ai.php. */
+    const CREDITS_ROUTE = '/api/credits';
+
     /** @var int The largest request body accepted, in bytes. */
     const MAX_BODY = 1048576;
 
@@ -126,19 +129,83 @@ class byok {
     }
 
     /**
-     * Data attributes for a page's AI config element, so its scripts send AI requests to byok_ai.php.
+     * The site's LMS Labs connection: the same look-up the plugin's server calls use.
      *
-     * @return array attribute => value; empty when the site uses LMS Labs credits
+     * @return array ['apibase' => string, 'siteid' => string, 'apikey' => string]
+     */
+    public static function credentials(): array {
+        global $CFG;
+        if (!function_exists('local_aiconfig_get_apikey') && file_exists($CFG->dirroot . '/local/aiconfig/lib.php')) {
+            require_once($CFG->dirroot . '/local/aiconfig/lib.php');
+        }
+        $apikey = function_exists('local_aiconfig_get_apikey') ? (string)local_aiconfig_get_apikey(self::COMPONENT) : '';
+        $siteid = function_exists('local_aiconfig_get_siteid') ? (string)local_aiconfig_get_siteid(self::COMPONENT) : '';
+        return [
+            'apibase' => rtrim((string)(get_config(self::COMPONENT, 'apiurl') ?: 'https://lms-labs.com'), '/'),
+            'siteid' => trim($siteid !== '' ? $siteid : (string)get_config(self::COMPONENT, 'siteid')),
+            'apikey' => trim($apikey !== '' ? $apikey : (string)get_config(self::COMPONENT, 'apikey')),
+        ];
+    }
+
+    /**
+     * Whether the page scripts' AI features can run: on the site's own AI, or on LMS Labs credits with a key set.
+     *
+     * @return bool
+     */
+    public static function ai_ready(): bool {
+        return self::uses() || self::credentials()['apikey'] !== '';
+    }
+
+    /**
+     * A page script's request sent on to LMS Labs from the server, with the site's key added here.
+     *
+     * The key never reaches the browser: the scripts post to byok_ai.php and this adds it, as the plugin's
+     * server calls do.
+     *
+     * @param string $route one of BROWSER_ROUTES or CREDITS_ROUTE
+     * @param \stdClass $body the script's request
+     * @return array [HTTP status, JSON response body]
+     */
+    public static function forward(string $route, \stdClass $body): array {
+        global $CFG;
+        require_once($CFG->libdir . '/filelib.php');
+        $creds = self::credentials();
+        if ($creds['apikey'] === '') {
+            return [409, json_encode(['success' => false, 'error' => 'The LMS Labs API key is not set up.'])];
+        }
+        $body->apiKey = $creds['apikey'];
+        if ($route === self::CREDITS_ROUTE) {
+            $body->siteId = $creds['siteid'];
+        }
+        $curl = new \curl(['ignoresecurity' => true]);
+        $curl->setHeader(['Content-Type: application/json', 'X-API-Key: ' . $creds['apikey']]);
+        $json = json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $options = ['CURLOPT_TIMEOUT' => self::TEXT_TIMEOUT, 'CURLOPT_CONNECTTIMEOUT' => 15];
+        $response = $curl->post($creds['apibase'] . $route, $json, $options);
+        $status = (int)($curl->get_info()['http_code'] ?? 0);
+        if ($curl->get_errno() || $status === 0 || json_decode((string)$response) === null) {
+            return [502, json_encode(['success' => false, 'error' => 'Could not reach LMS Labs. Please try again.'])];
+        }
+        return [$status, (string)$response];
+    }
+
+    /**
+     * Data attributes for a page's AI config element. The scripts send every AI request to byok_ai.php, which
+     * answers it on the site's own AI or sends it on to LMS Labs with the key, so the key is never in the page.
+     *
+     * @return array attribute => value
      */
     public static function page_attributes(): array {
-        if (!self::uses()) {
-            return [];
-        }
-        return [
-            'data-byok-url' => (new \moodle_url('/local/rtocompliance/byok_ai.php'))->out(false),
+        $attributes = [
+            'data-ai-url' => (new \moodle_url('/local/rtocompliance/byok_ai.php'))->out(false),
             'data-sesskey' => sesskey(),
-            'data-byok-label' => get_string('byok_ownai', 'local_rtocompliance'),
+            'data-ai-ready' => self::ai_ready() ? '1' : '0',
         ];
+        if (self::uses()) {
+            $attributes['data-byok-url'] = $attributes['data-ai-url'];
+            $attributes['data-byok-label'] = get_string('byok_ownai', 'local_rtocompliance');
+        }
+        return $attributes;
     }
 
     /**

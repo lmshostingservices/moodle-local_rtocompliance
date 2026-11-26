@@ -1,3 +1,29 @@
+## [v6.7.1] - 2026-11-26
+
+**The LMS Labs API key is no longer in the page source, and validation events open on fresh installs.**
+
+### Security
+
+- The LMS Labs API key was printed into the TAS, trainer, transition, risk, RPL, validation and
+  student support pages, and into the sidebar on every plugin page, where anyone who could open
+  the page could read it. The page scripts now send AI requests and the credit balance check to
+  `byok_ai.php` on the site, which adds the key on the server (as the plugin's server calls
+  already do). AI requests need the manage capability and the session key; the balance needs a
+  logged-in, non-guest user. Rotate the key at lms-labs.com if pages may have been viewed by
+  people who should not hold it.
+
+### Fixed
+
+- New and Edit Validation Event failed with "Error reading from database" on sites installed at a
+  recent version, because the trainers table has no `fullname` column there. Trainer names now come
+  from their user accounts.
+- The trainer list on that form was always empty, even on upgraded sites, because it asked for a
+  trainer status ("active") the plugin never sets. It now lists every trainer who is not inactive.
+- Every form page logged "'> div:first-child' is not a valid selector", so the collapsible-section
+  fallback never ran. The selector is fixed; sections open and close exactly as before.
+- The validation methodology AI Suggest looked for checkbox ids the form does not render and only
+  worked through a fallback; it now reads the real ids first.
+
 ## [v6.7.0] - 2026-11-26
 
 **Bring your own AI: the AI features can run on your site's own AI, with no LMS Labs credits.**
