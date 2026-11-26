@@ -1196,7 +1196,12 @@ if ($canviewfull) {
             new admin_setting_heading(
                 'local_rtocompliance/apiheading',
                 get_string('apiheading', 'local_rtocompliance'),
-                get_string('apiheading_desc', 'local_rtocompliance')
+                get_string('apiheading_desc', 'local_rtocompliance') . (\local_rtocompliance\byok::uses()
+                    ? html_writer::div(
+                        html_writer::tag('i', '', ['class' => 'fa fa-microchip me-2', 'aria-hidden' => 'true']) .
+                            s(get_string('byok_settings', 'local_rtocompliance')),
+                        'alert alert-success d-flex align-items-center py-2'
+                    ) : '')
         ));
 
         $apisettings->add(

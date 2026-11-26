@@ -37,6 +37,11 @@ require_sesskey();
 // Falls back to file_get_contents() + stream_context on servers where ext-curl
 // is unavailable (rare but possible on some shared hosting environments).
 function rtocompliance_curl_post(string $url, string $body, array $headers, int $timeout = 60): array {
+    // Bring your own AI: the AI routes are answered on this site's own AI, with no LMS Labs credits.
+    $ownai = \local_rtocompliance\byok::post($url, $body);
+    if ($ownai !== null) {
+        return $ownai;
+    }
     if (function_exists('curl_init')) {
         $ch = curl_init($url);
         curl_setopt_array(
@@ -242,7 +247,7 @@ if ($action === 'generate_resolution') {
         $apikey = trim(get_config('local_rtocompliance', 'apikey') ?? '');
     }
 
-    if (empty($siteid) || empty($apikey)) {
+    if ((empty($siteid) || empty($apikey)) && !\local_rtocompliance\byok::uses()) {
         echo json_encode(['success' => false, 'error' => 'AI assist is not configured. Ask your administrator to set up local_aiconfig.']);
         exit;
     }
@@ -408,7 +413,7 @@ if ($action === 'ai_draft_text') {
     }
     if (empty($apikey)) { $apikey = trim(get_config('local_rtocompliance', 'apikey') ?? ''); }
 
-    if (empty($siteid) || empty($apikey)) {
+    if ((empty($siteid) || empty($apikey)) && !\local_rtocompliance\byok::uses()) {
         echo json_encode(['success' => false, 'error' => 'AI assist is not configured. Ask your administrator to set up local_aiconfig.']);
         exit;
     }

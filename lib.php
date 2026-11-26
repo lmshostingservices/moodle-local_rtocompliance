@@ -11556,7 +11556,8 @@ function local_rtocompliance_assistant_creds(): array {
         'directkey'      => $directkey,
         'model'          => $model,
         'platform_ready' => $platformready,
-        'ready'          => ($platformready || $directkey !== ''),
+        'ownai'          => \local_rtocompliance\byok::uses(),
+        'ready'          => ($platformready || $directkey !== '' || \local_rtocompliance\byok::uses()),
     ];
 }
 
@@ -11596,6 +11597,19 @@ function local_rtocompliance_assistant_ask(array $messages, string $page = '', a
     // 'Class "curl" not found'. Load it here (idempotent) before either curl branch below.
     global $CFG;
     require_once($CFG->libdir . '/filelib.php');
+
+    // Bring your own AI: answered on this site's own AI, with no LMS Labs credits.
+    if (!empty($creds['ownai'])) {
+        $request = ['page' => $page, 'knowledge_base' => $kb, 'messages' => $clean];
+        $payload = json_encode($request, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
+        [$code, $raw] = \local_rtocompliance\byok::answer('/api/assistant/ask', (string) $payload);
+        $data = json_decode($raw, true);
+        if ($code === 200 && is_array($data) && !empty($data['reply'])) {
+            return ['ok' => true, 'reply' => (string) $data['reply'], 'credits' => null, 'mode' => 'ownai', 'error' => ''];
+        }
+        return ['ok' => false, 'reply' => '', 'credits' => null, 'mode' => 'ownai',
+            'error' => is_array($data) && !empty($data['error']) ? (string) $data['error'] : 'Assistant unavailable'];
+    }
 
     // ── Primary: platform broker (1 credit/question) ─────────────────────────────
     if ($apiurl !== '' && $siteid !== '' && $apikey !== '') {

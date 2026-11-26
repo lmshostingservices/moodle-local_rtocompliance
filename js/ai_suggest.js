@@ -1,7 +1,8 @@
 /**
  * RTO Compliance  -  AI Content Suggestion Engine
  * Attaches a sparkle AI button to every registered textarea in the plugin.
- * Calls /api/rto/ai-suggest on lms-labs.com (5 credits per call).
+ * Calls /api/rto/ai-suggest on lms-labs.com (5 credits per call), or this site's own AI through byok_ai.php
+ * when the admin has chosen it (no credits).
  * Version: 4.0.0
  */
 (function () {
@@ -57,6 +58,10 @@
     /* -- State -------------------------------------------------------------- */
     var apiKey   = '';
     var apiBase  = 'https://lms-labs.com';
+    // Bring your own AI: requests go to this site (byok_ai.php) and use no LMS Labs credits.
+    var byokUrl   = '';
+    var sesskey   = '';
+    var byokLabel = '';
     var activeOverlay   = null;
     var activeModal     = null;
     var activeTextarea  = null;
@@ -68,7 +73,10 @@
         if (!cfgEl) return;
         apiKey  = cfgEl.getAttribute('data-api-key')  || '';
         apiBase = (cfgEl.getAttribute('data-api-base') || 'https://lms-labs.com').replace(/\/$/, '');
-        if (!apiKey) { return; }
+        byokUrl   = cfgEl.getAttribute('data-byok-url') || '';
+        sesskey   = cfgEl.getAttribute('data-sesskey') || '';
+        byokLabel = cfgEl.getAttribute('data-byok-label') || '';
+        if (!apiKey && !byokUrl) { return; }
         attachButtons();
     }
 
@@ -97,7 +105,7 @@
         btn.type = 'button';
         btn.className = 'rtoc-ai-btn';
         btn.setAttribute('data-field', name);
-        btn.setAttribute('title', 'Generate AI suggestion  -  ' + CREDIT_COST + ' credits');
+        btn.setAttribute('title', 'Generate AI suggestion  -  ' + (byokUrl ? byokLabel : CREDIT_COST + ' credits'));
         btn.setAttribute('aria-label', 'Generate AI suggestion for ' + (FIELD_REGISTRY[name] ? FIELD_REGISTRY[name].label : name));
         btn.innerHTML =
             '<svg class="rtoc-ai-star-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
@@ -235,9 +243,9 @@
                     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>' +
                 '</button>' +
             '</div>' +
-            '<div class="rtoc-ai-credit-notice">' +
+            '<div class="rtoc-ai-credit-notice' + (byokUrl ? ' rtoc-ai-credit-notice--ownai' : '') + '">' +
                 '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>' +
-                '<span class="rtoc-ai-credit-text">' + CREDIT_COST + ' AI credits per generation &bull; ' + countDesc + '</span>' +
+                '<span class="rtoc-ai-credit-text">' + (byokUrl ? escHtml(byokLabel) : CREDIT_COST + ' AI credits per generation') + ' &bull; ' + countDesc + '</span>' +
             '</div>' +
             '<div class="rtoc-ai-keyword-bar">' +
                 '<label class="rtoc-ai-keyword-label">Refine with a keyword or context <em>(optional)</em></label>' +
@@ -258,6 +266,23 @@
     }
 
     /* -- API call ---------------------------------------------------------- */
+    function aiPost(route, body) {
+        if (byokUrl) {
+            return fetch(byokUrl, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sesskey: sesskey, route: route, body: body })
+            });
+        }
+        body.apiKey = apiKey;
+        return fetch(apiBase + route, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-API-Key': apiKey },
+            body: JSON.stringify(body)
+        });
+    }
+
     function generateSuggestions(keyword) {
         if (!activeModal || !activeField) return;
         var reg = FIELD_REGISTRY[activeField] || { count: 1 };
@@ -273,35 +298,27 @@
         var qual = getQualInfo();
         var ctx  = collectContext(activeField);
 
-        fetch(apiBase + '/api/rto/ai-suggest', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-API-Key': apiKey
-            },
-            body: JSON.stringify({
-                apiKey:       apiKey,
-                field:        activeField,
-                qualCode:     qual.qualCode,
-                qualName:     qual.qualName,
-                deliveryMode: qual.deliveryMode,
-                context:      ctx,
-                keyword:      keyword,
-                count:        count,
-                // TAS-AI-GUIDANCE (v6.2.38): send ASQA 2025 grounding + anti-fabrication +
-                // online-authenticity + responsible-AI rules to the server model so the draft
-                // reflects current practice and is clearly a review-required draft.
-                guidance:     'Draft against the 2025 Standards for RTOs (Quality Area 1). '
-                    + 'Do not invent facts, hours, cohort data, industry findings, unit codes or '
-                    + 'statistics — where a fact is unknown, insert a clearly bracketed '
-                    + '[RTO to confirm: ...] placeholder instead of fabricating. Reflect this '
-                    + "qualification's real training-product requirements, not generic boilerplate. "
-                    + 'For any online or blended delivery, address learner identity verification, '
-                    + 'supervision, authenticity of student work (including that it is not plagiarised '
-                    + 'or AI-generated), and scheduled human touchpoints. This output is an AI-assisted '
-                    + 'draft that an RTO staff member must review, edit and validate before it becomes '
-                    + 'part of a compliance document.'
-            })
+        aiPost('/api/rto/ai-suggest', {
+            field:        activeField,
+            qualCode:     qual.qualCode,
+            qualName:     qual.qualName,
+            deliveryMode: qual.deliveryMode,
+            context:      ctx,
+            keyword:      keyword,
+            count:        count,
+            // TAS-AI-GUIDANCE (v6.2.38): send ASQA 2025 grounding + anti-fabrication +
+            // online-authenticity + responsible-AI rules to the server model so the draft
+            // reflects current practice and is clearly a review-required draft.
+            guidance:     'Draft against the 2025 Standards for RTOs (Quality Area 1). '
+                + 'Do not invent facts, hours, cohort data, industry findings, unit codes or '
+                + 'statistics — where a fact is unknown, insert a clearly bracketed '
+                + '[RTO to confirm: ...] placeholder instead of fabricating. Reflect this '
+                + "qualification's real training-product requirements, not generic boilerplate. "
+                + 'For any online or blended delivery, address learner identity verification, '
+                + 'supervision, authenticity of student work (including that it is not plagiarised '
+                + 'or AI-generated), and scheduled human touchpoints. This output is an AI-assisted '
+                + 'draft that an RTO staff member must review, edit and validate before it becomes '
+                + 'part of a compliance document.'
         })
         .then(function (r) { return r.json(); })
         .then(function (data) {
@@ -312,7 +329,9 @@
             }
             // Update credit display
             var creditText = activeModal.querySelector('.rtoc-ai-credit-text');
-            if (creditText && data.creditsRemaining !== undefined && data.creditsRemaining !== -1) {
+            if (byokUrl) {
+                // Runs on the site's own AI: no credits to show.
+            } else if (creditText && data.creditsRemaining !== undefined && data.creditsRemaining !== -1) {
                 creditText.textContent = CREDIT_COST + ' credits used \u2022 ' + data.creditsRemaining + ' credits remaining';
             } else if (creditText && data.creditsRemaining === -1) {
                 creditText.textContent = CREDIT_COST + ' credits used \u2022 Unlimited credits';

@@ -1,3 +1,30 @@
+## [v6.7.0] - 2026-11-26
+
+**Bring your own AI: the AI features can run on your site's own AI, with no LMS Labs credits.**
+
+### Added
+
+- When an administrator chooses the site's own AI for text in AI Grader Central Config (a yearly
+  LMS Labs licence), these features run on that AI instead of at LMS Labs and use no credits:
+  AI Suggest on the TAS, trainer, transition, risk and RPL forms; complaint and appeal drafts;
+  vocational competency, industry consultation and transition plan drafts; Quality Indicator
+  survey analysis; student support Auto Fill; validation methodology notes; and the compliance
+  assistant.
+- They use the same instructions, settings and checks as the LMS Labs service. This was checked
+  against the service's own code on 60,000 generated requests and AI answers, with no differences.
+- Browser requests go through a new `byok_ai.php` endpoint on the site (manager capability and
+  session key required), so no key is needed in the page for them.
+- Pages say "Runs on your own AI, no credits" in place of the credit cost, and the API settings
+  page shows when it is on.
+
+### Notes
+
+- Training.gov.au and USI look-ups still use LMS Labs.
+- On your own AI the compliance assistant answers from the plugin's knowledge base. The LMS Labs
+  ASQA and legislation document library stays at LMS Labs, so its passages and source links are
+  not included.
+- Without the site's own AI chosen, nothing changes.
+
 ## [v6.6.5] - 2026-11-02
 
 **Prevents a Moodle/RTO profile name mismatch from silently producing a USI NoMatch.**

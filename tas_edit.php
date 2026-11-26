@@ -854,7 +854,7 @@ $_rtoc_apikey = function_exists('local_aiconfig_get_apikey')
     : (get_config('local_rtocompliance', 'apikey') ?: '');
 $_rtoc_apibase = rtrim(get_config('local_rtocompliance', 'apiurl') ?: 'https://lms-labs.com', '/');
 echo html_writer::tag(
-    'div', '', [
+    'div', '', \local_rtocompliance\byok::page_attributes() + [
         'id'             => 'rtoc-ai-config',
         'data-api-key'   => $_rtoc_apikey,
         'data-api-base'  => $_rtoc_apibase,
@@ -868,7 +868,8 @@ echo $OUTPUT->heading($id ? 'Edit Training & Assessment Strategy' : 'Create Trai
 
 // FIX-AI-NOTICE: if API key not configured, show a clear admin-only notice so
 // the user understands why the AI sparkle buttons are absent from textareas.
-if (empty($_rtoc_apikey) && has_capability('moodle/site:config', context_system::instance())) {
+$rtocnoai = empty($_rtoc_apikey) && !\local_rtocompliance\byok::uses();
+if ($rtocnoai && has_capability('moodle/site:config', context_system::instance())) {
     echo html_writer::tag(
         'div',
             html_writer::tag('strong', 'AI Content Suggestions unavailable: ') .

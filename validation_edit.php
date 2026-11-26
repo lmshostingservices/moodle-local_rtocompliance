@@ -335,6 +335,7 @@ echo '<script>
 echo '<div id="rtoc-val-ai-config"'
     . ' data-api-key="' . s($_rtoc_apikey) . '"'
     . ' data-api-base="' . s($_rtoc_apibase) . '"'
+    . \local_rtocompliance\byok::page_attributes_html()
     . ' style="display:none;"></div>';
 ?>
 <script>
@@ -343,6 +344,9 @@ echo '<div id="rtoc-val-ai-config"'
     if (!cfg) return;
     var API_KEY  = cfg.getAttribute('data-api-key')  || '';
     var API_BASE = cfg.getAttribute('data-api-base') || 'https://lms-labs.com';
+    // Bring your own AI: the request goes to this site (byok_ai.php) and uses no LMS Labs credits.
+    var BYOK_URL = cfg.getAttribute('data-byok-url') || '';
+    var SESSKEY  = cfg.getAttribute('data-sesskey') || '';
 
     // Wait for Moodle's own JS to finish initialising the form.
     document.addEventListener('DOMContentLoaded', function () { injectBtn(); });
@@ -369,7 +373,7 @@ echo '<div id="rtoc-val-ai-config"'
 
         var cost = document.createElement('span');
         cost.style.cssText = 'font-size:0.78rem;color:#9ca3af;';
-        cost.textContent = '5 credits (5\u00a2)';
+        cost.textContent = BYOK_URL ? (cfg.getAttribute('data-byok-label') || '') : '5 credits (5\u00a2)';
 
         var status = document.createElement('span');
         status.id = 'rtoc-method-ai-status';
@@ -419,26 +423,30 @@ echo '<div id="rtoc-val-ai-config"'
             status.style.color = '#6b7280';
             status.textContent = 'Generating\u2026';
 
-            fetch(API_BASE + '/api/rto/ai-methodology-suggest', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-API-Key': API_KEY
-                },
-                body: JSON.stringify({
-                    methods: checked,
-                    productname: productname,
-                    productcode: productcode
+            var request = { methods: checked, productname: productname, productcode: productcode };
+            (BYOK_URL
+                ? fetch(BYOK_URL, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sesskey: SESSKEY, route: '/api/rto/ai-methodology-suggest', body: request })
                 })
-            })
+                : fetch(API_BASE + '/api/rto/ai-methodology-suggest', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': API_KEY
+                    },
+                    body: JSON.stringify(request)
+                }))
             .then(function (r) { return r.json(); })
             .then(function (d) {
                 btn.disabled = false;
                 if (d.success && d.text) {
                     ta.value = d.text;
                     status.style.color = '#16a34a';
-                    status.textContent = 'Done — review and edit before saving. ('
-                        + d.creditsRemaining + ' credits remaining)';
+                    status.textContent = 'Done — review and edit before saving.'
+                        + (BYOK_URL ? '' : ' (' + d.creditsRemaining + ' credits remaining)');
                 } else {
                     status.style.color = '#dc2626';
                     status.textContent = 'Error: ' + (d.error || 'Unknown error');
